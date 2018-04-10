@@ -2,7 +2,8 @@
 ![license MIT](https://img.shields.io/badge/license-MIT-lightgrey.svg)
 ![version dev](https://img.shields.io/badge/version-dev-orange.svg)
 
-Multiple Sequence Alignment using hybrid parallel computing. This project is initially based on @ferlete 's MSA project.
+Multiple Sequence Alignment using hybrid parallel computing. This project is initially based on
+[@ferlete](https://github.com/ferlete)'s MSA project.
 
 ## Install
 
