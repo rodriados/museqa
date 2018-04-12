@@ -1,72 +1,91 @@
-/*! \file interface.cpp
- * \brief Parallel Multiple Sequence Alignment command line interface file.
- * \author Rodrigo Siqueira <rodriados@gmail.com>
- * \copyright 2018 Rodrigo Siqueira
+/** @file interface.cpp
+ * @brief Parallel Multiple Sequence Alignment command line interface file.
+ * @author Rodrigo Siqueira <rodriados@gmail.com>
+ * @copyright 2018 Rodrigo Siqueira
  */
 #include <iostream>
-#include <getopt.h>
+#include <iomanip>
+#include <cstring>
 
-#include "msa.hpp"
+#include "msa.h"
 #include "interface.hpp"
+
+struct cli_data cli_data;
 
 using namespace std;
 
-/*! \fn help(char *)
- * Prints out the help menu.
- * \param pname The name used to start the software.
+/** @fn void help(int, char **, int*)
+ * @brief Prints out the help menu.
+ * @param pname The name used to start the software.
  */
-void help(char *pname)
+void help(int, char **argv, int *)
 {
-    cerr << "Usage: " << pname << " [options] file" << endl;
+    cerr << "Usage: "  << argv[0] << " [options] --file fname" << endl;
     cerr << "Options:" << endl;
-    cerr << "  -f file     File to be loaded into application" << endl;
-    cerr << "  -h          Displays this help menu" << endl;
-    cerr << endl;
-    cerr << "version: " << VERSION << endl;
+
+    for(int i = 0; cli_command[i].abbrev; ++i)
+        cerr << setw(4) << right << cli_command[i].abbrev   << ", "
+             << setw(9) << left  << cli_command[i].complete
+             << setw(9) << left  << (cli_command[i].arg ? " arg" : " ")
+             << cli_command[i].desc << endl;
+
+    finish(0);
 }
 
-/*! \fn unknown(char *)
- * Informs the user an unknown argument was used.
- * \param arg The unknown argument used.
- */
-void unknown(char arg)
+void version(int, char **, int *)
 {
-    cerr << "Unknown option: -" << arg << endl;
-    cerr << "Try `-h' for more information" << endl;
+    cerr << setw(4) << left << MSA << VERSION << endl;
+    finish(0);
 }
 
-/*! \fn argparse(int, char **)
- * Parses the command line arguments and fills up the command line struct.
- * \param argc Number of arguments sent by command line.
- * \param argv The arguments sent by command line.
- */
-void argparse(int argc, char **argv)
+void file(int argc, char **argv, int *j)
 {
-    char option;
+    if(argc <= *j + 1)
+        finish(0);
 
-    if(argc < 2) {
-        help(argv[0]);
-        finish();
+    cli_data.fname = argv[++*j];
+}
+
+/** @fn void unknown(int, char **, int *)
+ * @brief Informs the user an unknown argument was used.
+ * @param arg The unknown argument used.
+ */
+void unknown(int, char **argv, int *j)
+{
+    cerr << "Unknown option: " << argv[*j] << endl;
+    cerr << "Try `" << argv[0] << " -h' for more information." << endl;
+    finish(0);
+}
+
+struct cli_command cli_command[] = {
+    {&help,    "-h", "--help",    "Displays this help menu."}
+,   {&version, "-v", "--version", "Displays the version information."}
+,   {&file,    "-f", "--file",    "File to be loaded into application.", true}
+,   {&unknown}
+};
+
+struct cli_command *search(const char *arg)
+{
+    int i;
+
+    for(i = 0; cli_command[i].abbrev || cli_command[i].complete; ++i)
+        if(!strcmp(cli_command[i].abbrev, arg) || !strcmp(cli_command[i].complete, arg))
+            break;
+
+    return &cli_command[i];
+}
+
+/** @fn void parse_cli(int, char **)
+ * @brief Parses the command line arguments and fills up the command line struct.
+ * @param argc Number of arguments sent by command line.
+ * @param argv The arguments sent by command line.
+ */
+void parse_cli(int argc, char **argv)
+{
+    struct cli_command *actual;
+
+    for(int i = 1; i < argc; ++i) {
+        actual = search(argv[i]);
+        (actual->func)(argc, argv, &i);
     }
-
-    while((option = getopt(argc, argv, "hf:")) != -1)
-        switch(option) {
-            case 'h':
-                help(argv[0]);
-                finish();
-
-            case 'f':
-                gldata.fname = optarg;
-                break;
-
-            case '?':
-                unknown(optopt);
-
-            default:
-                finish();
-        }
-
-    gldata.fname = gldata.fname
-        ? gldata.fname
-        : argv[optind];
 }

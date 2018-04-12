@@ -5,7 +5,8 @@ ODIR = obj
 LDIR = /usr/lib/openmpi/lib
 
 NVCC = nvcc
-MPCC = mpic++
+MPCC = mpicc
+MPPP = mpic++
 
 MPFLAGS = -Wall -pedantic -std=c++14
 NVFLAGS = -arch sm_20 -lmpi -lcuda -lcudart -w
@@ -13,7 +14,8 @@ NVLINKFLAGS = -L$(LDIR) -lmpi_cxx -lmpi
 
 NVFILES := $(shell find $(SDIR) -name '*.cu')
 MPFILES := $(shell find $(SDIR) -name '*.cpp')
-DEPS = $(NVFILES:src/%.cu=obj/%.o) $(MPFILES:src/%.cpp=obj/%.o)
+MCFILES := $(shell find $(SDIR) -name '*.c')
+DEPS = $(NVFILES:src/%.cu=obj/%.o) $(MPFILES:src/%.cpp=obj/%.o) $(MCFILES:src/%.c=obj/%.o)
 
 all: $(NAME)
 
@@ -23,8 +25,11 @@ $(NAME): $(DEPS)
 $(ODIR)/%.o: src/%.cu $(NVFILES)
 	$(NVCC) -c $< -o $@ $(NVFLAGS)
 
-$(ODIR)/%.o: src/%.cpp $(MPFILES)
+$(ODIR)/%.o: src/%.c $(MCFILES)
 	$(MPCC) -c $< -o $@ $(MPFLAGS)
+
+$(ODIR)/%.o: src/%.cpp $(MPFILES)
+	$(MPPP) -c $< -o $@ $(MPFLAGS)
 
 .phony: clean
 

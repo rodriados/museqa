@@ -1,33 +1,31 @@
-/*! \file msa.cpp
- * \brief Parallel Multiple Sequence Alignment main file.
- * \author Rodrigo Siqueira <rodriados@gmail.com>
- * \copyright 2018 Rodrigo Siqueira
+/** @file msa.cpp
+ * @brief Parallel Multiple Sequence Alignment main file.
+ * @author Rodrigo Siqueira <rodriados@gmail.com>
+ * @copyright 2018 Rodrigo Siqueira
  */
-#include <iostream>
 #include <mpi.h>
 
-#include "msa.hpp"
+#include "msa.h"
 #include "interface.hpp"
 
-struct msadata gldata;
+struct mpi_data mpi_data;
+struct msa_data msa_data;
 
-using namespace std;
-
-/*! \fn main(int, char **)
- * Starts, manages and finishes the software's execution.
- * \param argc Number of arguments sent by command line.
- * \param argv The arguments sent by command line.
+/** @fn int main(int, char **)
+ * @brief Starts, manages and finishes the software's execution.
+ * @param argc Number of arguments sent by command line.
+ * @param argv The arguments sent by command line.
+ * @return The error code for the operating system.
  */
 int main(int argc, char **argv)
 {
     MPI_Init(&argc, &argv);
-    MPI_Comm_rank(MPI_COMM_WORLD, &gldata.rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &gldata.nproc);
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_data.rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &mpi_data.nproc);
 
-    if(gldata.rank == 0) {
-        argparse(argc, argv);
-        cout << gldata.fname << endl;
-        //loadfasta(gldata.fname);
+    if(mpi_data.rank == 0) {
+        parse_cli(argc, argv);
+        //fasta::load(msa_data.fname);
         //distribute();
     } else {
         //pairwise();
@@ -37,9 +35,9 @@ int main(int argc, char **argv)
     return 0;
 }
 
-/*! \fn finish(int = 0)
- * Aborts the execution and exits the software.
- * \param code Error code to send to operational system.
+/** @fn void finish(int)
+ * @brief Aborts the execution and exits the software.
+ * @param code Error code to send to operational system.
  */
 void finish(int code)
 {
