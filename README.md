@@ -20,7 +20,7 @@ $ make
 To use the project, you must execute via MPI. This can be achieved like the following:
 
 ```
-$ mpirun -np <nproc> ./msa <file>
+$ mpirun -np <nproc> ./msa -f <file>
 ```
 
 Where `nproc` is the number of processing nodes to use, being one of these the master node; and `file` being

@@ -8,7 +8,7 @@ NVCC = nvcc
 MPCC = mpicc
 MPPP = mpic++
 
-MPFLAGS = -Wall -pedantic -std=c++14
+MPFLAGS = -Wall -pedantic -std=c++17
 NVFLAGS = -arch sm_20 -lmpi -lcuda -lcudart -w
 NVLINKFLAGS = -L$(LDIR) -lmpi_cxx -lmpi
 

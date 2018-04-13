@@ -25,8 +25,7 @@ int main(int argc, char **argv)
 
     if(mpi_data.rank == 0) {
         parse_cli(argc, argv);
-        //fasta::load(msa_data.fname);
-        //distribute();
+        
     } else {
         //pairwise();
     }
