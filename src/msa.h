@@ -28,11 +28,11 @@
  * print out debugging information.
  */ 
 #ifdef DEBUG
-#  define __debugh(msg) fprintf(stderr, "[  msa:host] %s\n", msg)
-#  define __debugd(msg) fprintf(stderr, "[msa:device] %s\n", msg)
+#  define __debugh(...) fprintf(stderr, "[  msa:host] " __VA_ARGS__)
+#  define __debugd(...) fprintf(stderr, "[msa:device] " __VA_ARGS__)
 #else
-#  define __debugh(msg)
-#  define __debugd(msg)
+#  define __debugh(...) if(verbose) {fprintf(stderr, "[  msa:host] " __VA_ARGS__);}
+#  define __debugd(...) if(verbose) {fprintf(stderr, "[msa:device] " __VA_ARGS__);}
 #endif
 
 #ifdef __cplusplus
@@ -49,14 +49,38 @@ struct mpi_data {
     int nproc;
 };
 
+/** @struct sequence
+ * @brief Represents a sequence to be processed.
+ * @var length The sequence length.
+ * @var data The sequence data.
+ */
+typedef struct {
+    int length;
+    char *data;
+} sequence;
+
 /** @struct msa_data
  * @brief Holds relevant data for common MSA functions.
+ * @var scount The number of sequences given.
+ * @var seq The list of sequences given.
  */
 struct msa_data {
+    int scount;
+    sequence *seq;
+};
+
+/** @enum error_num
+ * @brief Enumerates errors so their message can be easily printed.
+ */
+enum error_num {
+    NOERROR = 0
+,   NOFILE
+,   INVALIDFILE
 };
 
 extern struct mpi_data mpi_data;
 extern struct msa_data msa_data;
+extern short verbose;
 
 extern void finish(int);
 

@@ -14,7 +14,8 @@
 struct cli_data cli_data;
 struct cli_command cli_command[] = {
     {CLI_HELP, "-h", "--help",    "Displays this help menu."}
-,   {CLI_VERS, "-v", "--version", "Displays the version information."}
+,   {CLI_VERS, "-e", "--version", "Displays the version information."}
+,   {CLI_VERB, "-v", "--verbose", "Activates the verbose mode."}
 ,   {CLI_FILE, "-f", "--file",    "File to be loaded into application.", "fn"}
 ,   {CLI_UNKN}
 };
@@ -29,10 +30,8 @@ using namespace std;
  */
 void file(int argc, char **argv, int *i)
 {
-    if(argc <= *i + 1) {
-        cerr << MSA << ": fatal error: no input file." << endl;
-        finish(0);
-    }
+    if(argc <= *i + 1)
+        finish(NOFILE);
 
     cli_data.fname = argv[++*i];
 }
@@ -56,16 +55,25 @@ void help(char *pname)
         ss.str(string());
     }
 
-    finish(0);
+    finish(NOERROR);
 }
 
-/** @fn void version(int, char **, int *)
+/** @fn void version()
  * @brief Prints out the software version number.
  */
 void version()
 {
     cerr << setw(4) << left << MSA << VERSION << endl;
-    finish(0);
+    finish(NOERROR);
+}
+
+/** @fn void vmode()
+ * @brief Activates the verbose mode to print execution information.
+ */
+void vmode()
+{
+    verbose = 1;
+    __debugh("verbose mode on\n");
 }
 
 /** @fn void unknown(char *, char *)
@@ -77,7 +85,7 @@ void unknown(char *pname, char *comm)
 {
     cerr << "Unknown option: " << comm << endl;
     cerr << "Try `" << pname << " -h' for more information." << endl;
-    finish(0);
+    finish(NOERROR);
 }
 
 /** @fn struct cli_command *search(const char *)
@@ -96,23 +104,22 @@ struct cli_command *search(const char *comm)
     return &cli_command[i];
 }
 
-/** @fn void parse_cli(int, char **)
+/** @fn void parsecli(int, char **)
  * @brief Parses the command line arguments and fills up the command line struct.
  * @param argc Number of arguments sent by command line.
  * @param argv The arguments sent by command line.
  */
-void parse_cli(int argc, char **argv)
+void parsecli(int argc, char **argv)
 {
     for(int i = 1; i < argc; ++i)
         switch(search(argv[i])->id) {
             case CLI_HELP: help(argv[0]);               break;
             case CLI_VERS: version();                   break;
+            case CLI_VERB: vmode();                     break;
             case CLI_FILE: file(argc, argv, &i);        break;
             case CLI_UNKN: unknown(argv[0], argv[i]);   break;
         }
 
-    if(!cli_data.fname) {
-        cerr << MSA << ": fatal error: no input file." << endl;
-        finish(0);
-    }
+    if(!cli_data.fname)
+        finish(NOFILE);
 }

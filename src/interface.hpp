@@ -13,6 +13,7 @@ enum command : short int {
     CLI_UNKN = 0,
     CLI_HELP,
     CLI_VERS,
+    CLI_VERB,
     CLI_FILE,
 };
 
@@ -41,8 +42,6 @@ struct cli_data {
 };
 
 extern struct cli_data cli_data;
-extern struct cli_command cli_command[];
-
-extern void parse_cli(int, char **);
+extern void parsecli(int, char **);
 
 #endif

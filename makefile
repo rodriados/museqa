@@ -9,6 +9,7 @@ MPCC = mpicc
 MPPP = mpic++
 
 MPFLAGS = -Wall -pedantic -std=c++17
+MCFLAGS = -Wall -pedantic -std=c99
 NVFLAGS = -arch sm_20 -lmpi -lcuda -lcudart -w
 NVLINKFLAGS = -L$(LDIR) -lmpi_cxx -lmpi
 
@@ -26,7 +27,7 @@ $(ODIR)/%.o: src/%.cu $(NVFILES)
 	$(NVCC) -c $< -o $@ $(NVFLAGS)
 
 $(ODIR)/%.o: src/%.c $(MCFILES)
-	$(MPCC) -c $< -o $@ $(MPFLAGS)
+	$(MPCC) -c $< -o $@ $(MCFLAGS)
 
 $(ODIR)/%.o: src/%.cpp $(MPFILES)
 	$(MPPP) -c $< -o $@ $(MPFLAGS)
