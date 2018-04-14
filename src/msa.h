@@ -39,50 +39,60 @@
 extern "C" {
 #endif
 
-/** @struct mpi_data
+/** @enum errornum_t
+ * @brief Enumerates errors so their message can be easily printed.
+ */
+typedef enum {
+    NOERROR = 0
+,   NOFILE
+,   INVALIDFILE
+} errornum_t;
+
+/** @struct mpidata_t
  * @brief Holds relevant data for MPI processing threads.
  * @var rank The current MPI thread rank.
  * @var nproc The total number of processing threads.
  */
-struct mpi_data {
+typedef struct {
     int rank;
     int nproc;
-};
+} mpidata_t;
 
-/** @struct sequence
+/** @struct sequence_t
  * @brief Represents a sequence to be processed.
  * @var length The sequence length.
  * @var data The sequence data.
  */
 typedef struct {
-    int length;
+    unsigned int length;
     char *data;
-} sequence;
+} sequence_t;
 
-/** @struct msa_data
+/**
+ * @struct workpair_t
+ * @brief Holds a pair of sequences to be aligned.
+ * @var seq The pair of sequences to align.
+ */
+typedef struct {
+    short seq[2];
+} workpair_t;
+
+/** @struct msadata_t
  * @brief Holds relevant data for common MSA functions.
- * @var scount The number of sequences given.
- * @var seq The list of sequences given.
+ * @var npair The number of given work-pairs.
+ * @var nseq The number of given sequences.
+ * @var pair The list of given work-pairs.
+ * @var seq The list of given sequences.
  */
-struct msa_data {
-    int scount;
-    sequence *seq;
-};
+typedef struct {
+    int npair;
+    short nseq;
+    workpair_t *pair;
+    sequence_t *seq;
+} msadata_t;
 
-/** @enum error_num
- * @brief Enumerates errors so their message can be easily printed.
- */
-enum error_num {
-    NOERROR = 0
-,   NOFILE
-,   INVALIDFILE
-};
-
-extern struct mpi_data mpi_data;
-extern struct msa_data msa_data;
 extern short verbose;
-
-extern void finish(int);
+extern void finish(errornum_t);
 
 #ifdef __cplusplus
 }

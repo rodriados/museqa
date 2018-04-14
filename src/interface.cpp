@@ -11,11 +11,11 @@
 #include "msa.h"
 #include "interface.hpp"
 
-struct cli_data cli_data;
-struct cli_command cli_command[] = {
+clidata_t cli_data;
+clicommand_t cli_command[] = {
     {CLI_HELP, "-h", "--help",    "Displays this help menu."}
-,   {CLI_VERS, "-e", "--version", "Displays the version information."}
-,   {CLI_VERB, "-v", "--verbose", "Activates the verbose mode."}
+,   {CLI_VERS, "-v", "--version", "Displays the version information."}
+,   {CLI_VERB, "-b", "--verbose", "Activates the verbose mode."}
 ,   {CLI_FILE, "-f", "--file",    "File to be loaded into application.", "fn"}
 ,   {CLI_UNKN}
 };
@@ -88,12 +88,12 @@ void unknown(char *pname, char *comm)
     finish(NOERROR);
 }
 
-/** @fn struct cli_command *search(const char *)
+/** @fn clicommand_t *search(const char *)
  * @brief Searches for a command in the command list.
  * @param comm Command to be searched for.
  * @return The selected command.
  */
-struct cli_command *search(const char *comm)
+clicommand_t *search(const char *comm)
 {
     int i;
 

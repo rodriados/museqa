@@ -12,7 +12,7 @@
 extern "C" {
 #endif
 
-extern int allocfasta(const char *);
+extern int loadfasta(const char *);
 extern void freefasta();
 
 #ifdef __cplusplus

@@ -9,7 +9,7 @@ MPCC = mpicc
 MPPP = mpic++
 
 MPFLAGS = -Wall -pedantic -std=c++17
-MCFLAGS = -Wall -pedantic -std=c99
+MCFLAGS = -Wall -pedantic -std=c99 -lm
 NVFLAGS = -arch sm_20 -lmpi -lcuda -lcudart -w
 NVLINKFLAGS = -L$(LDIR) -lmpi_cxx -lmpi
 

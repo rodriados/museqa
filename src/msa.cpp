@@ -8,11 +8,14 @@
 
 #include "msa.h"
 #include "fasta.h"
+#include "distribute.h"
 #include "interface.hpp"
 
-struct mpi_data mpi_data;
-struct msa_data msa_data;
 short verbose = 0;
+mpidata_t mpi_data;
+msadata_t msa_data;
+
+extern clidata_t cli_data;
 
 using namespace std;
 
@@ -30,11 +33,16 @@ int main(int argc, char **argv)
 
     if(mpi_data.rank == 0) {
         parsecli(argc, argv);
-        allocfasta(cli_data.fname);
+        loadfasta(cli_data.fname);
+        distribute();
+        freefasta();
     } else {
+        collect(0);
         //pairwise();
+        freefasta();
     }
 
+    MPI_Barrier(MPI_COMM_WORLD);
     MPI_Finalize();
     return 0;
 }
@@ -48,11 +56,11 @@ static const char *error_str[] = {
 ,   "file could not be read."   // INVALIDFILE
 };
 
-/** @fn void finish(int)
+/** @fn void finish(errornum_t)
  * @brief Aborts the execution and exits the software.
  * @param code Error code to send to operational system.
  */
-void finish(int code)
+void finish(errornum_t code)
 {
     if(code)
         cerr << MSA ": fatal error: " << error_str[code] << endl;
