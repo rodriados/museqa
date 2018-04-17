@@ -10,11 +10,13 @@
  * @brief Lists all possible commands from the terminal.
  */
 typedef enum : short int {
-    CLI_UNKN = 0,
-    CLI_HELP,
-    CLI_VERS,
-    CLI_VERB,
-    CLI_FILE,
+    CLI_UNKN = 0
+,   CLI_HELP
+,   CLI_VERS
+,   CLI_VERB
+,   CLI_FILE
+,   CLI_MGPU
+,   CLI_BSIZ
 } command_t;
 
 /** @struct clicommand_t
@@ -36,11 +38,18 @@ typedef struct {
 /** @struct clidata_t
  * @brief Holds obtained via command line parsing.
  * @var fname The name of file to be processed.
+ * @var batchsize The number of pairwise alignments computed in parallel.
+ * @var multigpu Indicates whether multiple devices should be used.
  */
 typedef struct {
     const char *fname = NULL;
+    short batchsize = 1024;
+    bool multigpu = false;
 } clidata_t;
 
-extern void parsecli(int, char **);
+namespace cli
+{
+    extern void parse(int, char **);
+}
 
 #endif

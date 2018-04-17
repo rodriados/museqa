@@ -18,21 +18,7 @@
  */
 #if defined(unix) || defined(__unix__) || defined(__unix)                   \
     || defined(__linux__) || (defined(__APPLE__) && defined(__MACH__))
-#  define __msa_posix__
-#else
-#  define __msa_noposix__
-#endif
-
-/*
- * Defines some debug macro functions. These functions should be used to
- * print out debugging information.
- */ 
-#ifdef DEBUG
-#  define __debugh(...) fprintf(stderr, "[  msa:host] " __VA_ARGS__)
-#  define __debugd(...) fprintf(stderr, "[msa:device] " __VA_ARGS__)
-#else
-#  define __debugh(...) if(verbose) {fprintf(stderr, "[  msa:host] " __VA_ARGS__);}
-#  define __debugd(...) if(verbose) {fprintf(stderr, "[msa:device] " __VA_ARGS__);}
+#  define __msaposix__
 #endif
 
 #ifdef __cplusplus
@@ -46,16 +32,19 @@ typedef enum {
     NOERROR = 0
 ,   NOFILE
 ,   INVALIDFILE
+,   INVALIDARG
+,   NOGPUFOUND
+,   CUDAERROR
 } errornum_t;
 
 /** @struct mpidata_t
  * @brief Holds relevant data for MPI processing threads.
  * @var rank The current MPI thread rank.
- * @var nproc The total number of processing threads.
+ * @var size The total number of processing threads.
  */
 typedef struct {
     int rank;
-    int nproc;
+    int size;
 } mpidata_t;
 
 /** @struct sequence_t
@@ -64,38 +53,40 @@ typedef struct {
  * @var data The sequence data.
  */
 typedef struct {
-    unsigned int length;
     char *data;
+    unsigned length;
 } sequence_t;
 
-/**
- * @struct workpair_t
- * @brief Holds a pair of sequences to be aligned.
- * @var seq The pair of sequences to align.
- */
-typedef struct {
-    short seq[2];
-} workpair_t;
+extern mpidata_t mpi_data;
+extern unsigned char verbose;
 
-/** @struct msadata_t
- * @brief Holds relevant data for common MSA functions.
- * @var npair The number of given work-pairs.
- * @var nseq The number of given sequences.
- * @var pair The list of given work-pairs.
- * @var seq The list of given sequences.
- */
-typedef struct {
-    int npair;
-    short nseq;
-    workpair_t *pair;
-    sequence_t *seq;
-} msadata_t;
-
-extern short verbose;
 extern void finish(errornum_t);
 
 #ifdef __cplusplus
 }
 #endif
+
+/*
+ * Defines some debug macro functions. These functions should be used to
+ * print out debugging information.
+ */ 
+#ifdef DEBUG
+#  define __debugh(msg, ...) fprintf(stderr, "[  msa:host] " msg "\n", ##__VA_ARGS__)
+#  define __debugd(msg, ...) printf("[msa:device] " msg "\n", ##__VA_ARGS__)
+#else
+#  define __debugh(msg, ...) if(verbose) {fprintf(stderr, "[  msa:host] " msg "\n", ##__VA_ARGS__);}
+#  define __debugd(msg, ...) if(verbose) {printf("[msa:device] " msg "\n", ##__VA_ARGS__);}
+#endif
+
+/*
+ * Defines some process control macros. These macros are to be used when
+ * it is needed to check whether the current process is master or not.
+ */
+#define __master 0
+#define __ismaster() (mpi_data.rank == __master)
+#define __isslave()  (mpi_data.rank != __master)
+#define __onlymaster   if(__ismaster())
+#define __onlyslaves   if(__isslave())
+#define __onlyslave(i) if(__isslave() && mpi_data.rank == i)
 
 #endif

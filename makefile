@@ -8,15 +8,17 @@ NVCC = nvcc
 MPCC = mpicc
 MPPP = mpic++
 
-MPFLAGS = -Wall -pedantic -std=c++17
-MCFLAGS = -Wall -pedantic -std=c99 -lm
-NVFLAGS = -arch sm_20 -lmpi -lcuda -lcudart -w
+MPFLAGS = -Wall -std=c++17 -I./$(SDIR)
+MCFLAGS = -Wall -std=c99 -lm -I./$(SDIR)
+NVFLAGS = -arch sm_20 -lmpi -lcuda -lcudart -w -I./$(SDIR)
 NVLINKFLAGS = -L$(LDIR) -lmpi_cxx -lmpi
 
 NVFILES := $(shell find $(SDIR) -name '*.cu')
 MPFILES := $(shell find $(SDIR) -name '*.cpp')
 MCFILES := $(shell find $(SDIR) -name '*.c')
 DEPS = $(NVFILES:src/%.cu=obj/%.o) $(MPFILES:src/%.cpp=obj/%.o) $(MCFILES:src/%.c=obj/%.o)
+
+.phony: all clean install
 
 all: $(NAME)
 
@@ -32,7 +34,8 @@ $(ODIR)/%.o: src/%.c $(MCFILES)
 $(ODIR)/%.o: src/%.cpp $(MPFILES)
 	$(MPPP) -c $< -o $@ $(MPFLAGS)
 
-.phony: clean
+install:
+	@mkdir -p obj/pairwise
 
 clean:
-	rm -rf $(ODIR)/*.o $(SDIR)/*~ *~ $(NAME)
+	@rm -rf $(ODIR)/*.o $(SDIR)/*~ *~ $(NAME)

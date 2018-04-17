@@ -7,17 +7,17 @@
 #include <mpi.h>
 
 #include "msa.h"
-#include "fasta.h"
-#include "distribute.h"
+#include "gpu.hpp"
+#include "fasta.hpp"
 #include "interface.hpp"
 
-short verbose = 0;
+#include "pairwise/distribute.hpp"
+#include "pairwise/pairwise.hpp"
+
 mpidata_t mpi_data;
-msadata_t msa_data;
+unsigned char verbose = 0;
 
 extern clidata_t cli_data;
-
-using namespace std;
 
 /** @fn int main(int, char **)
  * @brief Starts, manages and finishes the software's execution.
@@ -27,20 +27,25 @@ using namespace std;
  */
 int main(int argc, char **argv)
 {
+    fasta_t fasta;
+
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_data.rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &mpi_data.nproc);
+    MPI_Comm_size(MPI_COMM_WORLD, &mpi_data.size);
 
-    if(mpi_data.rank == 0) {
-        parsecli(argc, argv);
-        loadfasta(cli_data.fname);
-        distribute();
-        freefasta();
-    } else {
-        collect(0);
-        //pairwise();
-        freefasta();
-    }
+    if(!gpu::check())
+        finish(NOGPUFOUND);
+
+    cli::parse(argc, argv);
+    MPI_Barrier(MPI_COMM_WORLD);
+    
+    __onlymaster fasta.load(cli_data.fname);
+
+    pairwise::sync(fasta);
+    pairwise::scatter();
+    pairwise::prepare();
+    pairwise::pairwise();
+    pairwise::clean();
 
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Finalize();
@@ -54,17 +59,21 @@ static const char *error_str[] = {
     ""                          // NOERROR
 ,   "no input file."            // NOFILE
 ,   "file could not be read."   // INVALIDFILE
+,   "invalid argument."         // INVALIDARG
+,   "no GPU device detected."   // NOGPUFOUND
+,   "GPU runtime error."        // CUDAERROR
 };
 
 /** @fn void finish(errornum_t)
- * @brief Aborts the execution and exits the software.
- * @param code Error code to send to operational system.
+ * @brief Aborts the execution and kills all processes.
+ * @param code Code of detected error.
  */
 void finish(errornum_t code)
 {
-    if(code)
-        cerr << MSA ": fatal error: " << error_str[code] << endl;
+    if(code) {
+        std::cerr << MSA ": fatal error: " << error_str[code] << std::endl;
+    }
 
-    MPI_Finalize();
+    MPI_Abort(MPI_COMM_WORLD, MPI_SUCCESS);
     exit(0);
 }
