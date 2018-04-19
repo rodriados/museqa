@@ -6,8 +6,6 @@
 #ifndef _PAIRWISE_HPP
 #define _PAIRWISE_HPP
 
-#include "fasta.hpp"
-
 /** @struct position_t
  * @brief Informs how to access a sequence from a continuous char-pointer.
  * @var offset Indicates the sequence offset to the pointer.
@@ -26,14 +24,19 @@ typedef struct {
     short seq[2];
 } workpair_t;
 
+/** @struct score_t
+ * @brief Stores score information about a sequence pair.
+ * @var cached The cached score value for a sequence pair.
+ * @var matches The number of matches in the pair.
+ * @var mismatches The number of mismatches in the pair.
+ * @var gaps The number of gaps in the pair.
+ */
 typedef struct {
     short cached;
     unsigned short matches;
-    unsigned short misses;
+    unsigned short mismatches;
     unsigned short gaps;
 } score_t;
-
-
 
 /** @struct pairwise_t
  * @brief Stores data and structures needed for executing pairwise algorithm.
@@ -54,7 +57,8 @@ typedef struct {
 namespace pairwise
 {
     extern void prepare();
-    extern void pairwise();
+    extern score_t *pairwise();
+    extern void clean();
 }
 
 #endif

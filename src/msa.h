@@ -18,7 +18,7 @@
  */
 #if defined(unix) || defined(__unix__) || defined(__unix)                   \
     || defined(__linux__) || (defined(__APPLE__) && defined(__MACH__))
-#  define __msaposix__
+#  define __msa_posix__
 #endif
 
 #ifdef __cplusplus

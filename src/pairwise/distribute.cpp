@@ -104,13 +104,4 @@ void scatter()
     __onlymaster free(workpairs);
 }
 
-/** @fn pairwise::clean()
- * @brief Cleans up all dynamicaly allocated data for pairwise.
- */
-void clean()
-{
-    delete[] pairdata.seq;
-    delete[] pairdata.pair;
-}
-
 }

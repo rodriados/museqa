@@ -12,7 +12,6 @@ namespace pairwise
 {
     extern void sync(const fasta_t&);
     extern void scatter();
-    extern void clean();
 }
 
 #endif
