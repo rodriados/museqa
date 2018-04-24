@@ -11,8 +11,7 @@
 #include "fasta.hpp"
 #include "interface.hpp"
 
-#include "pairwise/distribute.hpp"
-#include "pairwise/pairwise.hpp"
+#include "pairwise.cuh"
 
 mpidata_t mpi_data;
 unsigned char verbose = 0;
@@ -27,8 +26,6 @@ extern clidata_t cli_data;
  */
 int main(int argc, char **argv)
 {
-    fasta_t fasta;
-
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_data.rank);
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_data.size);
@@ -39,13 +36,16 @@ int main(int argc, char **argv)
     cli::parse(argc, argv);
     MPI_Barrier(MPI_COMM_WORLD);
     
-    __onlymaster fasta.load(cli_data.fname);
+    fasta_t *fasta = new fasta_t;
+    pairwise_t *pairwise = new pairwise_t;
 
-    pairwise::sync(fasta);
-    pairwise::scatter();
-    pairwise::prepare();
-    pairwise::pairwise();
-    pairwise::clean();
+    __onlymaster fasta->load(cli_data.fname);
+
+    pairwise->load(fasta);
+    pairwise->pairwise();
+
+    delete fasta;
+    delete pairwise;
 
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Finalize();

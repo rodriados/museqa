@@ -100,6 +100,7 @@ int fasta_t::load(const char *fname)
             break;
 
     __debugh("loaded %d sequences", this->nseq);
+    fclose(ffasta);
 
     return this->nseq;
 }

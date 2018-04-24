@@ -19,7 +19,7 @@ clicommand_t cli_command[] = {
 ,   {CLI_VERB, "-v", "--verbose",  "Activates the verbose mode."}
 ,   {CLI_FILE, "-f", "--file",     "File to be loaded into application.", "fn"}
 ,   {CLI_MGPU, "-m", "--multigpu", "Use multiple GPU devices if possible."}
-,   {CLI_BSIZ, "-b", "--batch",    "Pairwise alignments batch size", "num"}
+,   {CLI_MTRX, "-x", "--matrix",   "Inform the scoring matrix to use.", "mat"}
 ,   {CLI_UNKN}
 };
 
@@ -41,19 +41,18 @@ void file(int argc, char **argv, int *i)
     cli_data.fname = argv[++*i];
 }
 
-/** @fn void cli::batch(int, char **, int *)
- * @brief Gets the pairwise alignments batch size.
+/** @fn void cli::matrix(int, char **, int *)
+ * @brief Informs the scoring matrix to be used.
  * @param argc The number of command line arguments.
  * @param argv The command line arguments.
  * @param i The current command line argument index.
  */
-void batch(int argc, char **argv, int *i)
+void matrix(int argc, char **argv, int *i)
 {
     if(argc <= *i + 1)
         finish(INVALIDARG);
 
-    int aux = atoi(argv[++*i]);
-    cli_data.batchsize = aux < 2048 ? aux : 2048;
+    cli_data.matrix = argv[++*i];
 }
 
 /** @fn void cli::help(char *)
@@ -115,26 +114,26 @@ clicommand_t *search(const char *cm)
     return &cli_command[i];
 }
 
+}
+
 /** @fn void cli::parse(int, char **)
  * @brief Parses the command line arguments and fills up the command line struct.
  * @param argc Number of arguments sent by command line.
  * @param argv The arguments sent by command line.
  */
-void parse(int argc, char **argv)
+void cli::parse(int argc, char **argv)
 {
     for(int i = 1; i < argc; ++i)
         switch(search(argv[i])->id) {
-            case CLI_VERB: verbose = 1;                    break;
-            case CLI_MGPU: cli_data.multigpu = true;       break;
-            case CLI_VERS: version();                      break;
-            case CLI_HELP: help(argv[0]);                  break;
-            case CLI_FILE: file(argc, argv, &i);           break;
-            case CLI_BSIZ: batch(argc, argv, &i);          break;
-            case CLI_UNKN: unknown(argv[0], argv[i]);      break;
+            case CLI_VERB: verbose = 1;                     break;
+            case CLI_VERS: version();                       break;
+            case CLI_HELP: help(argv[0]);                   break;
+            case CLI_FILE: file(argc, argv, &i);            break;
+            case CLI_MGPU: cli_data.multigpu = true;        break;
+            case CLI_MTRX: matrix(argc, argv, &i);          break;
+            case CLI_UNKN: unknown(argv[0], argv[i]);       break;
         }
 
     if(!cli_data.fname)
         finish(NOFILE);
-}
-
 }

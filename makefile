@@ -10,7 +10,7 @@ MPPP = mpic++
 
 MPFLAGS = -Wall -std=c++17 -I./$(SDIR)
 MCFLAGS = -Wall -std=c99 -lm -I./$(SDIR)
-NVFLAGS = -arch sm_20 -lmpi -lcuda -lcudart -w -I./$(SDIR)
+NVFLAGS = -std=c++11 -arch sm_20 -lmpi -lcuda -lcudart -w -I./$(SDIR)
 NVLINKFLAGS = -L$(LDIR) -lmpi_cxx -lmpi
 
 NVFILES := $(shell find $(SDIR) -name '*.cu')

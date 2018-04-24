@@ -10,8 +10,6 @@
 
 #include "msa.h"
 
-#define NV_ALIGN_BYTES 16
-
 #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ < 200)
 #  error A device of compute capability 2.0 or higher is required.
 #endif
@@ -36,7 +34,6 @@ namespace gpu
     extern bool check();
     extern bool multi();
     extern int assign();
-    extern unsigned align(unsigned);
 }
 
 #endif

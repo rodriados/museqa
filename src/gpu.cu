@@ -12,17 +12,15 @@
 extern clidata_t cli_data;
 extern mpidata_t mpi_data;
 
-namespace gpu
-{
 /** @fn int gpu::count()
  * @brief Informs the number of GPU devices connected.
  * @return The number of GPU devices found.
  */
-int count()
+int gpu::count()
 {
     int count = 0;
-    cudaGetDeviceCount(&count);
 
+    __cudacheck(cudaGetDeviceCount(&count));
     return cli_data.multigpu ? count : 1;
 }
 
@@ -30,7 +28,7 @@ int count()
  * @brief Checks whether at least one GPU device is connected.
  * @return Is there any GPU device connected?
  */
-bool check()
+bool gpu::check()
 {
     return count() > 0;
 }
@@ -39,7 +37,7 @@ bool check()
  * @brief Checks whether more than one GPU devices are connected.
  * @return Are there more than one GPU devices connected?
  */
-bool multi()
+bool gpu::multi()
 {
     return cli_data.multigpu && count() > 1;
 }
@@ -48,21 +46,9 @@ bool multi()
  * @brief Assigns a GPU device according to the process rank.
  * @return Assigned GPU identifier.
  */
-int assign()
+int gpu::assign()
 {
     return cli_data.multigpu
         ? (mpi_data.rank - 1) % count()
         : 0;
-}
-
-/** @fn unsigned gpu::align(unsigned)
- * @brief Calculates the alignment for a given size.
- * @param size The size to be byte-aligned.
- * @return The new aligned size.
- */
-unsigned align(unsigned size)
-{
-    return (size / NV_ALIGN_BYTES + !!(size % NV_ALIGN_BYTES)) * NV_ALIGN_BYTES;
-}
-
 }

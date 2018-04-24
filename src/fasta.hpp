@@ -8,15 +8,18 @@
 
 #include "msa.h"
 
-/** @struct fasta_t
+/** @class fasta_t
  * @brief Holds all data extracted from a fasta file.
  * @var nseq The number of extracted sequences.
  * @var seq The list of extracted sequences.
  */
-struct fasta_t {
+class fasta_t
+{
+public:
     short nseq;
     sequence_t *seq;
 
+public:
     fasta_t();
     ~fasta_t();
     int load(const char *);

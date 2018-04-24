@@ -6,17 +6,19 @@
 #ifndef _INTERFACE_HPP
 #define _INTERFACE_HPP
 
+#include <cstdint>
+
 /** @enum command_t
  * @brief Lists all possible commands from the terminal.
  */
-typedef enum : short int {
+typedef enum : uint8_t {
     CLI_UNKN = 0
 ,   CLI_HELP
 ,   CLI_VERS
 ,   CLI_VERB
 ,   CLI_FILE
 ,   CLI_MGPU
-,   CLI_BSIZ
+,   CLI_MTRX
 } command_t;
 
 /** @struct clicommand_t
@@ -38,12 +40,12 @@ typedef struct {
 /** @struct clidata_t
  * @brief Holds obtained via command line parsing.
  * @var fname The name of file to be processed.
- * @var batchsize The number of pairwise alignments computed in parallel.
+ * @var matrix The scoring matrix to use.
  * @var multigpu Indicates whether multiple devices should be used.
  */
 typedef struct {
     const char *fname = NULL;
-    short batchsize = 1024;
+    const char *matrix = NULL;
     bool multigpu = false;
 } clidata_t;
 
