@@ -11,6 +11,7 @@
 #define VERSION "0.1-alpha"
 
 #include <stdio.h>
+#include <stdint.h>
 
 /* 
  * Checks whether the system we are compiling in is POSIX compatible. If it
@@ -43,8 +44,8 @@ typedef enum {
  * @var size The total number of processing threads.
  */
 typedef struct {
-    int rank;
-    int size;
+    int16_t rank;
+    int16_t size;
 } mpidata_t;
 
 /** @struct sequence_t
@@ -54,7 +55,7 @@ typedef struct {
  */
 typedef struct {
     char *data;
-    unsigned length;
+    uint32_t length;
 } sequence_t;
 
 extern mpidata_t mpi_data;
@@ -83,8 +84,10 @@ extern void finish(errornum_t);
  * it is needed to check whether the current process is master or not.
  */
 #define __master 0
+
 #define __ismaster() (mpi_data.rank == __master)
 #define __isslave()  (mpi_data.rank != __master)
+
 #define __onlymaster   if(__ismaster())
 #define __onlyslaves   if(__isslave())
 #define __onlyslave(i) if(__isslave() && mpi_data.rank == i)

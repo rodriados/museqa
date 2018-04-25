@@ -5,6 +5,7 @@
  */
 #include <cstdint>
 #include <cstdlib>
+#include <vector>
 #include <cuda.h>
 
 #include "msa.h"
@@ -23,9 +24,21 @@ static cudaDeviceProp dprop;
  * @return The new aligned size.
  */
 template <typename N>
-inline N align(N size, N align)
+inline N align(N size, N align = 4)
 {
     return (size / align + !!(size % align)) * align;
+}
+
+/** @fn N max<N>(N, N)
+ * @brief Returns the maximum between two values.
+ * @param a First given value.
+ * @param b Second given value.
+ * @return The maximum value between a and b.
+ */
+template <typename N>
+inline N max(N a, N b)
+{
+    return a > b ? a : b;
 }
 
 /** @fn pairwise_t::pairwise_t()
@@ -58,57 +71,67 @@ pairwise_t::~pairwise_t()
 void pairwise_t::pairwise()
 {
     int gpu;
-    needleman_t indata;
+    needleman_t in;
 
     __cudacheck(cudaSetDevice(gpu = gpu::assign()));
     __cudacheck(cudaGetDeviceProperties(&dprop, gpu));
 
-    this->scatter();
-    this->filter();
-    this->blosum(indata);
-    this->run(indata);
+    dprop.totalGlobalMem -= sizeof(uint8_t) * 625;
 
-    __cudacheck(cudaFree(indata.table));
+    this->scatter();
+    this->blosum(in);
+    this->run(in);
+
+    __cudacheck(cudaFree(in.table));
 }
 
-/** @fn void pairwise_t::filter()
+/** @fn bool pairwise_t::filter(bool[], std::vector<uint32_t>&)
  * @brief Filters the sequences needed for processor.
  */
-void pairwise_t::filter()
+bool pairwise_t::filter(bool control[], std::vector<uint32_t>& pairs)
 {
-    uint16_t *map = new uint16_t [this->nseq] ();
+    uint32_t totalmem = dprop.totalGlobalMem;
+    uint32_t pairmem, npair = 0, maxsize = 0;
 
-    uint32_t length = 0;
-    uint16_t count = 0;
+    uint16_t *used = new uint16_t [this->nseq] ();
 
-    for(int i = 0; i < this->npair; ++i) {
-        map[this->pair[i].seq[0]] = 1;
-        map[this->pair[i].seq[1]] = 1;
-    }
+    for(int i = 0; i < this->npair; ++i)
+        if(!control[i]) {
+            // For each workpair to process, at least two sequences and an output score are needed.
+            pairmem = sizeof(workpair_t) + 2*sizeof(position_t) + sizeof(score_t) + sizeof(char) *
+               ((used[this->pair[i].seq[0]] ? 0 : align(this->seq[this->pair[i].seq[0]].length)) +
+                (used[this->pair[i].seq[1]] ? 0 : align(this->seq[this->pair[i].seq[1]].length)));
+            
+            maxsize = max(maxsize, max(
+                this->seq[this->pair[i].seq[0]].length + 1
+            ,   this->seq[this->pair[i].seq[1]].length + 1
+            ));
 
-    for(int i = 0; i < this->nseq; ++i)
-        if(map[i] != 0) {
-            this->seq[count].offset = this->seq[i].offset;
-            this->seq[count].length = this->seq[i].length;
-            map[i] = count++;
+            if(pairmem + (npair + 1) * maxsize * sizeof(score_t) < totalmem) {
+                used[this->pair[i].seq[0]] = 1;
+                used[this->pair[i].seq[1]] = 1;
+
+                totalmem -= pairmem;
+                pairs.push_back(i);
+                ++npair;
+            }
         }
 
-    for(int i = 0; i < this->npair; ++i) {
-        this->pair[i].seq[0] = map[this->pair[i].seq[0]];
-        this->pair[i].seq[1] = map[this->pair[i].seq[1]];
-    }
-
-    delete[] map;
-
-    this->nseq = count;
+    delete[] used;
+    return npair;
 }
 
 /** @fn void pairwise_t::run(needleman_t&)
  * @brief Executes the pairwise algorithm.
+ * @param in The needleman input data.
  */
-void pairwise_t::run(needleman_t& indata)
-{
-    score_t *outdata;
+void pairwise_t::run(needleman_t& in)
+{    
+    bool *control = new bool [this->npair] ();
+    std::vector<uint32_t> pairs;
+    
+    this->score = new score_t [this->npair] ();
+    score_t *out;
 
 #ifdef __msa_use_shared_mem_for_temp_storage__
     __cudacheck(cudaFuncSetCacheConfig(pairwise::needleman, cudaFuncCachePreferShared));
@@ -116,22 +139,24 @@ void pairwise_t::run(needleman_t& indata)
     __cudacheck(cudaFuncSetCacheConfig(pairwise::needleman, cudaFuncCachePreferL1));
 #endif
 
-    indata.nseq = this->nseq;
-    indata.npair = this->npair;
+    while(this->filter(control, pairs)) {
+        in.alloc(pairs);
 
-    __cudacheck(cudaMalloc(&indata.seq, sizeof(position_t) * indata.nseq));
-    __cudacheck(cudaMalloc(&indata.pair, sizeof(workpair_t) * indata.npair));
-    __cudacheck(cudaMalloc(&outdata, sizeof(score_t) * indata.npair));
+        /*__cudacheck(cudaMalloc(&in.seq, sizeof(position_t) * in.nseq));
+        __cudacheck(cudaMalloc(&in.pair, sizeof(workpair_t) * in.npair));
+        __cudacheck(cudaMalloc(&out, sizeof(score_t) * in.npair));*/
 
-    this->score = new score_t [this->npair] ();
+        // Put sequences and pairs into GPU's global memory according to the available space.
+        // Memcpy only the sequences for the selected pairs to execute.
 
-    // Put sequences and pairs into GPU's global memory according to the available space.
-    // Memcpy only the sequences for the selected pairs to execute.
+        pairwise::needleman<<<1,1>>>(in, out);
+        __cudacheck(cudaThreadSynchronize());
 
-    pairwise::needleman<<<1,1>>>(indata, outdata);
-    __cudacheck(cudaThreadSynchronize());
+        /*__cudacheck(cudaFree(in.seq));
+        __cudacheck(cudaFree(in.pair));
+        __cudacheck(cudaFree(out));*/
+        in.free();
+    }
 
-    __cudacheck(cudaFree(indata.seq));
-    __cudacheck(cudaFree(indata.pair));
-    __cudacheck(cudaFree(outdata));
+    delete[] control;
 }

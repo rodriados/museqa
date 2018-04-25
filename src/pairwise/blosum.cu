@@ -202,9 +202,9 @@ static const int8_t scoring_tables[COUNT][25][25] = {
 
 /** @fn void pairwise_t::blosum(needleman_t&)
  * @brief Loads a scoring table into the device.
- * @param indata The needleman input data.
+ * @param in The needleman input data.
  */
-void pairwise_t::blosum(needleman_t& indata)
+void pairwise_t::blosum(needleman_t& in)
 {
     int table = 0;
 
@@ -217,6 +217,6 @@ void pairwise_t::blosum(needleman_t& indata)
 
     __debugh("using score table %s", table_names[table]);
 
-    __cudacheck(cudaMalloc(&indata.table, sizeof(int8_t) * 625));
-    __cudacheck(cudaMemcpy(indata.table, scoring_tables[table], sizeof(int8_t) * 625, cudaMemcpyHostToDevice));
+    __cudacheck(cudaMalloc(&in.table, sizeof(int8_t) * 625));
+    __cudacheck(cudaMemcpy(in.table, scoring_tables[table], sizeof(int8_t) * 625, cudaMemcpyHostToDevice));
 }

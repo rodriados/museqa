@@ -7,6 +7,7 @@
 #define _PAIRWISE_CUH
 
 #include <cstdint>
+#include <vector>
 
 #include "fasta.hpp"
 
@@ -42,7 +43,7 @@ typedef struct {
     uint16_t gaps;
 } score_t;
 
-/** @struct needleman_t
+/** @class needleman_t
  * @brief Groups all data required for needleman execution.
  * @var seqchar The pointer to character sequences.
  * @var nseq The number of sequences loaded from file.
@@ -50,14 +51,20 @@ typedef struct {
  * @var seq The sequences' positions.
  * @var pair The working pairs to process.
  */
-typedef struct {
+class needleman_t
+{
+public:
     char *seqchar;
     int8_t *table;
     uint16_t nseq;
     uint32_t npair;
     position_t *seq;
     workpair_t *pair;
-} needleman_t;
+
+public:
+    void alloc(std::vector<uint32_t>&);
+    void free();
+};
 
 /** @class pairwise_t
  * @brief Stores data and structures needed for executing pairwise algorithm.
@@ -87,7 +94,7 @@ public:
 
 private:
     void scatter();
-    void filter();
+    bool filter(bool[], std::vector<uint32_t>&);
     void blosum(needleman_t&);
     void run(needleman_t&);
 };
