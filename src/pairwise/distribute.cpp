@@ -28,7 +28,7 @@ void pairwise_t::load(const fasta_t *fasta)
     __onlymaster {
         for(int i = 0; i < fasta->nseq; ++i) {
             this->seq[i].offset = bfsize;
-            bfsize += this->seq[i].length = this->seq[i].length;
+            bfsize += this->seq[i].length = fasta->seq[i].length;
         }
     }
 

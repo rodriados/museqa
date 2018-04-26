@@ -44,8 +44,8 @@ typedef enum {
  * @var size The total number of processing threads.
  */
 typedef struct {
-    int16_t rank;
-    int16_t size;
+    int32_t rank;
+    int32_t size;
 } mpidata_t;
 
 /** @struct sequence_t

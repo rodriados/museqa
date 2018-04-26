@@ -38,4 +38,4 @@ install:
 	@mkdir -p obj/pairwise
 
 clean:
-	@rm -rf $(ODIR)/*.o $(SDIR)/*~ *~ $(NAME)
+	@rm -rf $(ODIR)/*.o $(SDIR)/*~ *~ $(NAME) $(ODIR)/pairwise/*.o

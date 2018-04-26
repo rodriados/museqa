@@ -215,7 +215,7 @@ void pairwise_t::blosum(needleman_t& in)
                 table = i;
     }
 
-    __debugh("using score table %s", table_names[table]);
+    __onlymaster __debugh("using score table %s", table_names[table]);
 
     __cudacheck(cudaMalloc(&in.table, sizeof(int8_t) * 625));
     __cudacheck(cudaMemcpy(in.table, scoring_tables[table], sizeof(int8_t) * 625, cudaMemcpyHostToDevice));

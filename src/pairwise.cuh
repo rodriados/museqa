@@ -11,6 +11,9 @@
 
 #include "fasta.hpp"
 
+#define __msa_threads_per_block__ 32
+//#define __msa_prefer_shared_mem__ 1
+
 /** @struct position_t
  * @brief Informs how to access a sequence from a continuous char-pointer.
  * @var offset Indicates the sequence offset to the pointer.
@@ -43,7 +46,7 @@ typedef struct {
     uint16_t gaps;
 } score_t;
 
-/** @class needleman_t
+/** @struct needleman_t
  * @brief Groups all data required for needleman execution.
  * @var seqchar The pointer to character sequences.
  * @var nseq The number of sequences loaded from file.
@@ -51,20 +54,14 @@ typedef struct {
  * @var seq The sequences' positions.
  * @var pair The working pairs to process.
  */
-class needleman_t
-{
-public:
+typedef struct {
     char *seqchar;
     int8_t *table;
-    uint16_t nseq;
-    uint32_t npair;
+    uint16_t nseq = 0;
+    uint32_t npair = 0;
     position_t *seq;
     workpair_t *pair;
-
-public:
-    void alloc(std::vector<uint32_t>&);
-    void free();
-};
+} needleman_t;
 
 /** @class pairwise_t
  * @brief Stores data and structures needed for executing pairwise algorithm.
@@ -94,10 +91,36 @@ public:
 
 private:
     void scatter();
-    bool filter(bool[], std::vector<uint32_t>&);
+    bool select(bool[], std::vector<uint32_t>&) const;
     void blosum(needleman_t&);
     void run(needleman_t&);
+
+    void alloc(needleman_t&, std::vector<uint32_t>&) const;
+    void allocseq(needleman_t&, std::vector<uint16_t>&) const;
+    void free(needleman_t&) const;
 };
+
+/** @fn int divceil(int, int)
+ * @brief Calculates the division between two numbers and rounds it up.
+ * @param a The number to be divided.
+ * @param b The number to divide by.
+ * @return The resulting number.
+ */
+inline int divceil(int a, int b)
+{
+    return (a / b) + !!(a % b);
+}
+
+/** @fn int align(int, int)
+ * @brief Calculates the alignment for a given size.
+ * @param size The size to be aligned.
+ * @param align The alignment to use for given size.
+ * @return The new aligned size.
+ */
+inline int align(int size, int align = 4)
+{
+    return divceil(size, align) * align;
+}
 
 namespace pairwise
 {
