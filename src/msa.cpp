@@ -42,7 +42,7 @@ int main(int argc, char **argv)
     __onlymaster fasta->load(cli_data.fname);
 
     pairwise->load(fasta);
-    pairwise->pairwise();
+    __onlyslaves pairwise->pairwise();
 
     delete fasta;
     delete pairwise;
