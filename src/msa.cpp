@@ -39,12 +39,16 @@ int main(int argc, char **argv)
     fasta_t *fasta = new fasta_t;
     pairwise_t *pairwise = new pairwise_t;
 
-    __onlymaster fasta->load(cli_data.fname);
-
-    pairwise->load(fasta);
+    __onlymaster fasta->read(cli_data.fname);    
+                 pairwise->load(fasta);
+    __onlymaster pairwise->daemon();
     __onlyslaves pairwise->pairwise();
 
+    MPI_Barrier(MPI_COMM_WORLD);
+
     delete fasta;
+
+    //__onlymaster pairwise->gather();
     delete pairwise;
 
     MPI_Barrier(MPI_COMM_WORLD);

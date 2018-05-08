@@ -49,6 +49,7 @@ typedef struct {
 /** @struct needleman_t
  * @brief Groups all data required for needleman execution.
  * @var seqchar The pointer to character sequences.
+ * @var table The scoring table selected.
  * @var nseq The number of sequences loaded from file.
  * @var npair The number of working pairs received to process.
  * @var seq The sequences' positions.
@@ -78,6 +79,7 @@ public:
     char *seqchar;
     uint16_t nseq;
     uint32_t npair;
+    uint32_t clength;
     position_t *seq;
     workpair_t *pair;
     score_t *score;
@@ -87,18 +89,46 @@ public:
     ~pairwise_t();
 
     void load(const fasta_t *);
+
+    void daemon();
     void pairwise();
 
 private:
-    void scatter();
+    void generate();
+
     bool select(bool[], std::vector<uint32_t>&) const;
     void blosum(needleman_t&);
     void run(needleman_t&);
 
-    void alloc(needleman_t&, std::vector<uint32_t>&) const;
-    void allocseq(needleman_t&, std::vector<uint16_t>&) const;
-    void free(needleman_t&) const;
+    void alloc(needleman_t&, std::vector<uint32_t>&);
+    void allocseq(needleman_t&, std::vector<uint16_t>&);
+    void request(std::vector<uint16_t>&);
+    void destroy(needleman_t&) const;
 };
+
+namespace pairwise
+{   
+#ifdef __CUDACC__
+    extern __global__ void needleman(needleman_t, score_t *);
+#endif
+}
+
+namespace daemon
+{
+    enum tag_t {
+        SYN = 0x11  // Initiates a new request
+    ,   END         // Destroys a daemon thread
+    ,   PLD         // The requested sequences payload
+    ,   BSZ         // The buffer size response
+    ,   CHR         // The characters response
+    ,   POS         // The positions response
+    };
+
+    extern void run(const pairwise_t *, int);
+    extern void response(const pairwise_t *, int, int, short[]);
+    extern char *request(std::vector<uint16_t>&, position_t *, int&);
+    extern void destroy();
+}
 
 /** @fn int divceil(int, int)
  * @brief Calculates the division between two numbers and rounds it up.
@@ -120,13 +150,6 @@ inline int divceil(int a, int b)
 inline int align(int size, int align = 4)
 {
     return divceil(size, align) * align;
-}
-
-namespace pairwise
-{
-#ifdef __CUDACC__
-    extern __global__ void needleman(needleman_t, score_t *);
-#endif
 }
 
 #endif

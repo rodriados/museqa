@@ -10,6 +10,13 @@
 #include "msa.h"
 #include "fasta.hpp"
 
+static const unsigned char map[26] = {
+  /* A     B     C     D     E     F     G     H     I     J     K     L     M */
+    0x00, 0x14, 0x01, 0x06, 0x08, 0x0E, 0x03, 0x09, 0x0A, 0x15, 0x0C, 0x0B, 0x0D,
+  /* N     O     P     Q     R     S     T     U     V     W     X     Y     Z */
+    0x05, 0x17, 0x0F, 0x07, 0x04, 0x10, 0x02, 0x17, 0x13, 0x11, 0x17, 0x12, 0x16,
+};
+
 /** @fn fasta_t::fasta_t()
  * @brief Initializes the object.
  */
@@ -53,8 +60,10 @@ int fasta_t::tobuffer(FILE *ffile, char **dest)
             if(size % 2048 == 0)
                 *dest = (char *)realloc(*dest, sizeof(char) * (size + 2049));
 
-            (*dest)[size++] = *bc;
+            (*dest)[size++] = map[toupper(*bc) - 'A'];
         }
+
+    (*dest)[size++] = 0x18;
 
     return size;
 }
@@ -81,12 +90,12 @@ int fasta_t::loadsequence(FILE *ffile)
     return size;
 }
 
-/** @fn int fasta_t::load(const char *)
+/** @fn int fasta_t::read(const char *)
  * @brief Reads a file and allocates memory to all sequences contained in it.
  * @param fname The name of the file to be read.
  * @return Number of sequences read.
  */
-int fasta_t::load(const char *fname)
+int fasta_t::read(const char *fname)
 {
     FILE *ffasta = fopen(fname, "r");
 

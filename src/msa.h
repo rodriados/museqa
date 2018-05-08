@@ -83,7 +83,7 @@ extern void finish(errornum_t);
  * Defines some process control macros. These macros are to be used when
  * it is needed to check whether the current process is master or not.
  */
-#define __master 0
+#define __master (0)
 
 #define __ismaster() (mpi_data.rank == __master)
 #define __isslave()  (mpi_data.rank != __master)

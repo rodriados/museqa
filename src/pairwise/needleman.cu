@@ -26,5 +26,5 @@ pairwise::needleman(needleman_t in, score_t out[])
     if(id >= in.npair)
         return;
     
-    __debugd("thread %2d", id);
+    __debugd("thread %2d: (%2ux%2u)", id, in.pair[id].seq[0], in.pair[id].seq[1]);
 }

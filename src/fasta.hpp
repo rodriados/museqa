@@ -16,13 +16,13 @@
 class fasta_t
 {
 public:
-    short nseq;
+    unsigned short nseq;
     sequence_t *seq;
 
 public:
     fasta_t();
     ~fasta_t();
-    int load(const char *);
+    int read(const char *);
 
 private:
     int tobuffer(FILE *, char **);

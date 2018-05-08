@@ -38,7 +38,8 @@ pairwise_t::~pairwise_t()
     delete[] this->seq;
     delete[] this->pair;
     delete[] this->score;
-    delete[] this->seqchar;
+    
+    free(this->seqchar);
 }
 
 /** @fn void pairwise_t::pairwise()
@@ -54,11 +55,35 @@ void pairwise_t::pairwise()
 
     dprop.totalGlobalMem -= sizeof(uint8_t) * 625;
 
-    this->scatter();
+    this->generate();
     this->blosum(in);
     this->run(in);
 
     __cudacheck(cudaFree(in.table));
+}
+
+/** @fn void pairwise_t::generate()
+ * @brief Generates all sequence workpairs for slave nodes.
+ */
+void pairwise_t::generate()
+{
+    int i, wp, count = 0;
+    int nproc = mpi_data.size - 1;
+    int nrank = mpi_data.rank - 1;
+
+    int div = this->npair / nproc;
+    int rem = this->npair % nproc;
+
+    this->npair = div + (nrank < rem);
+    this->pair  = new workpair_t [this->npair];
+
+    for(i = 0, wp = 0; i < this->nseq; ++i)
+        for(int j = i + 1; j < this->nseq; ++j, ++wp)
+            if(wp % nproc == nrank) {
+                this->pair[count].seq[0] = i;
+                this->pair[count].seq[1] = j;
+                ++count;
+            }
 }
 
 /** @fn bool pairwise_t::select(bool[], std::vector<uint32_t>&) const
@@ -131,20 +156,22 @@ void pairwise_t::run(needleman_t& in)
         pairwise::needleman<<<blocks, threads>>>(in, out);
         __cudacheck(cudaThreadSynchronize());
 
-        this->free(in);
+        this->destroy(in);
         pairs.clear();
         __cudacheck(cudaFree(out));
     }
 
     delete[] control;
+
+    daemon::destroy();
 }
 
-/** @fn void pairwise_t::alloc(needleman_t&, std::vector<uint32_t>&) const
+/** @fn void pairwise_t::alloc(needleman_t&, std::vector<uint32_t>&)
  * @brief Allocates all memory needed for needleman's execution.
  * @param in The object owning all allocated pointers.
  * @param pairs The selected pairs' identifiers.
  */
-void pairwise_t::alloc(needleman_t& in, std::vector<uint32_t>& pairs) const
+void pairwise_t::alloc(needleman_t& in, std::vector<uint32_t>& pairs)
 {
     std::vector<uint16_t> slist;
     uint16_t *used = new uint16_t [this->nseq] ();
@@ -179,17 +206,25 @@ void pairwise_t::alloc(needleman_t& in, std::vector<uint32_t>& pairs) const
     delete[] wp;
 }
 
-/** @fn void pairwise_t::allocseq(needleman_t&, std::vector<uint16_t>&) const
+/** @fn void pairwise_t::allocseq(needleman_t&, std::vector<uint16_t>&)
  * @brief Allocates memory needed for storing sequences and copies them.
  * @param in The object owning all allocated pointers.
  * @param slist The list of sequences to copy.
  */
-void pairwise_t::allocseq(needleman_t& in, std::vector<uint16_t>& slist) const
+void pairwise_t::allocseq(needleman_t& in, std::vector<uint16_t>& slist)
 {
     uint32_t length = 0;
+    std::vector<uint16_t> request;
 
-    for(int i = 0; i < in.nseq; ++i)
+    for(int i = 0; i < in.nseq; ++i) {
         length += align(this->seq[slist[i]].length);
+
+        if(this->seq[slist[i]].offset == ~0)
+        	request.push_back(slist[i]);
+    }
+
+    if(request.size())
+    	this->request(request);
 
     char *data = new char [length] ();
     position_t *pos = new position_t [in.nseq] ();
@@ -212,11 +247,36 @@ void pairwise_t::allocseq(needleman_t& in, std::vector<uint16_t>& slist) const
     delete[] data;
 }
 
-/** @fn void pairwise_t::free(needleman_t&) const
+/** @fn void pairwise_t::request(std::vector<uint16_t>&)
+ * @brief Requests the sequences needed from master node.
+ * @param seqlist The list of needed sequences.
+ */
+void pairwise_t::request(std::vector<uint16_t>& seqlist)
+{
+    int bfsize;
+
+    position_t *position = new position_t [seqlist.size()];
+    char *buffer = daemon::request(seqlist, position, bfsize);
+
+    this->seqchar = (char *)realloc(this->seqchar, sizeof(char) * (this->clength + bfsize));
+    memcpy(this->seqchar + this->clength, buffer, bfsize);
+
+    for(int i = 0; i < nseq; ++i) {
+        this->seq[seqlist.at(i)].offset = this->clength + position[i].offset;
+        this->seq[seqlist.at(i)].length = position[i].length;
+    }
+
+    this->clength += bfsize;
+
+    delete[] buffer;
+    delete[] position;
+}
+
+/** @fn void pairwise_t::destroy(needleman_t&) const
  * @brief Frees all alloc'd memory for executing needleman.
  * @param in The object containing the references to clean.
  */
-void pairwise_t::free(needleman_t& in) const
+void pairwise_t::destroy(needleman_t& in) const
 {
     __cudacheck(cudaFree(in.seq));
     __cudacheck(cudaFree(in.pair));
