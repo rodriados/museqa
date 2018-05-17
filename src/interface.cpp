@@ -9,11 +9,11 @@
 #include <cstdlib>
 #include <cstring>
 
-#include "msa.h"
+#include "msa.hpp"
 #include "interface.hpp"
 
-clidata_t cli_data;
-clicommand_t cli_command[] = {
+cli::Data cli_data;
+cli::Command cli_command[] = {
     {CLI_HELP, "-h", "--help",     "Displays this help menu."}
 ,   {CLI_VERS, "-e", "--version",  "Displays the version information."}
 ,   {CLI_VERB, "-v", "--verbose",  "Activates the verbose mode."}
@@ -23,12 +23,10 @@ clicommand_t cli_command[] = {
 ,   {CLI_UNKN}
 };
 
-using namespace std;
+namespace cli {
 
-namespace cli
-{
-/** @fn void cli::file(int, char **, int *)
- * @brief Gets the name of file to be loaded and processed.
+/** 
+ * Gets the name of file to be loaded and processed.
  * @param argc The number of command line arguments.
  * @param argv The command line arguments.
  * @param i The current command line argument index.
@@ -36,13 +34,13 @@ namespace cli
 void file(int argc, char **argv, int *i)
 {
     if(argc <= *i + 1)
-        finish(NOFILE);
+        finalize(NOFILE);
 
     cli_data.fname = argv[++*i];
 }
 
-/** @fn void cli::matrix(int, char **, int *)
- * @brief Informs the scoring matrix to be used.
+/** 
+ * Informs the scoring matrix to be used.
  * @param argc The number of command line arguments.
  * @param argv The command line arguments.
  * @param i The current command line argument index.
@@ -50,60 +48,60 @@ void file(int argc, char **argv, int *i)
 void matrix(int argc, char **argv, int *i)
 {
     if(argc <= *i + 1)
-        finish(INVALIDARG);
+        finalize(INVALIDARG);
 
     cli_data.matrix = argv[++*i];
 }
 
-/** @fn void cli::help(char *)
- * @brief Prints out the help menu.
+/**
+ * Prints out the help menu.
  * @param pname The name used to start the software.
  */
 void help(char *pname)
 {
-    stringstream ss;
+    std::stringstream ss;
 
-    cerr << "Usage: "  << pname << " [options] -f fn" << endl;
-    cerr << "Options:" << endl;
+    std::cerr << "Usage: "  << pname << " [options] -f fn" << std::endl;
+    std::cerr << "Options:" << std::endl;
 
     for(int i = 0; cli_command[i].abb; ++i) {
         ss << cli_command[i].full << ' ' << cli_command[i].arg;
-        cerr << setw(4) << right << cli_command[i].abb   << ", "
-             << setw(15) << left  << ss.str()
-             << cli_command[i].desc << endl;
-        ss.str(string());
+        std::cerr << std::setw(4)  << std::right << cli_command[i].abb << ", "
+                  << std::setw(15) << std::left  << ss.str()
+                  << cli_command[i].desc << std::endl;
+        ss.str(std::string());
     }
 
-    finish(NOERROR);
+    finalize(NOERROR);
 }
 
-/** @fn void cli::version()
- * @brief Prints out the software version number.
+/**
+ * Prints out the software version number.
  */
 void version()
 {
-    cerr << setw(4) << left << MSA << VERSION << endl;
-    finish(NOERROR);
+    std::cerr << std::setw(4) << std::left << MSA << VERSION << std::endl;
+    finalize(NOERROR);
 }
 
-/** @fn void cli::unknown(char *, char *)
- * @brief Informs the user an unknown argument was used.
+/** 
+ * Informs the user an unknown argument was used.
  * @param pname The name used to start the software.
  * @param cm The unknown command detected.
  */
 void unknown(char *pname, char *cm)
 {
-    cerr << "Unknown option: " << cm << endl;
-    cerr << "Try `" << pname << " -h' for more information." << endl;
-    finish(NOERROR);
+    std::cerr << "Unknown option: " << cm << std::endl;
+    std::cerr << "Try `" << pname << " -h' for more information." << std::endl;
+    finalize(NOERROR);
 }
 
-/** @fn clicommand_t *cli::search(const char *)
- * @brief Searches for a command in the command list.
+/**
+ * Searches for a command in the command list.
  * @param cm Command to be searched for.
  * @return The selected command.
  */
-clicommand_t *search(const char *cm)
+Command *search(const char *cm)
 {
     int i;
 
@@ -116,8 +114,8 @@ clicommand_t *search(const char *cm)
 
 }
 
-/** @fn void cli::parse(int, char **)
- * @brief Parses the command line arguments and fills up the command line struct.
+/** 
+ * Parses the command line arguments and fills up the command line struct.
  * @param argc Number of arguments sent by command line.
  * @param argv The arguments sent by command line.
  */
@@ -135,5 +133,5 @@ void cli::parse(int argc, char **argv)
         }
 
     if(!cli_data.fname)
-        finish(NOFILE);
+        finalize(NOFILE);
 }
