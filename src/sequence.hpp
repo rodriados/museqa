@@ -11,6 +11,11 @@
 #include <string>
 #include <vector>
 
+/**
+ * Creates a general-purpose buffer. This buffer should only be written via
+ * inherited classes' instances.
+ * @since 0.1.alpha
+ */
 class Buffer
 {
     protected:
@@ -18,19 +23,39 @@ class Buffer
         uint32_t length = 0;
 
     public:
-        inline char *getBuffer() const {
+        /**
+         * Gives access to buffer's data.
+         * @return Buffer's pointer.
+         */
+        inline char *getBuffer() const
+        {
             return this->buffer;
         }
 
-        inline uint32_t getLength() const {
+        /**
+         * Informs the length of data stored in buffer.
+         * @return Buffer's length.
+         */
+        inline uint32_t getLength() const
+        {
             return this->length;
         }
 
-        inline char *operator& () const {
+        /**
+         * Gives access to buffer's data.
+         * @return Buffer's pointer.
+         */
+        inline char *operator& () const
+        {
             return this->buffer;
         }
 
-        inline char& operator[] (uint32_t offset) const {
+        /**
+         * Gives access to a specific location in buffer's data.
+         * @return Buffer's position pointer.
+         */
+        inline char& operator[] (uint32_t offset) const
+        {
             return this->buffer[offset];
         }
 
@@ -39,6 +64,11 @@ class Buffer
     friend std::ostream& operator<< (std::ostream&, const Buffer&);
 };
 
+/**
+ * Creates an immutable sequence. This sequence is a buffer that should not be
+ * changed after its instantiation.
+ * @since 0.1.alpha
+ */
 class Sequence : public Buffer
 {
     protected:
@@ -54,6 +84,12 @@ class Sequence : public Buffer
         Sequence& operator= (const Buffer&);
 };
 
+/**
+ * Creates a sequence list. This sequence list is responsible for keeping
+ * track of sequences within its scope. Once a sequence is put into the
+ * list, it cannot leave.
+ * @since 0.1.alpha
+ */
 class SequenceList
 {
     protected:
@@ -69,12 +105,21 @@ class SequenceList
 
         ~SequenceList() noexcept;
 
-
-        inline uint16_t getCount() const {
+        /**
+         * Informs the number of sequences in the list.
+         * @return The list's number of sequences.
+         */
+        inline uint16_t getCount() const
+        {
             return this->list.size();
         }
 
-        inline Sequence& operator[] (uint16_t offset) const {
+        /**
+         * Gives access to a specific sequence of the list.
+         * @return The requested sequence.
+         */
+        inline Sequence& operator[] (uint16_t offset) const
+        {
             return *(this->list.at(offset));
         }
 
@@ -87,6 +132,12 @@ class SequenceList
         class CompactSequenceList compact() const;
 };
 
+/**
+ * Creates a compact sequence list. This immutable sequence list keeps all
+ * of its sequences together in memory. This is useful not to worry about
+ * moving these sequences separately.
+ * @since 0.1.alpha
+ */
 class CompactSequenceList : public Sequence
 {
     protected:
@@ -101,11 +152,21 @@ class CompactSequenceList : public Sequence
 
         ~CompactSequenceList() noexcept;
 
-        inline uint16_t getCount() const {
+        /**
+         * Informs the number of sequences in the list.
+         * @return The list's number of sequences.
+         */
+        inline uint16_t getCount() const
+        {
             return this->count;
         }
 
-        inline Buffer& operator[] (uint16_t offset) const {
+        /**
+         * Gives access to a specific sequence of the list.
+         * @return The requested sequence.
+         */
+        inline Buffer& operator[] (uint16_t offset) const
+        {
             return this->ref[offset];
         }
 

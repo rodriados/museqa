@@ -4,12 +4,18 @@
  * @copyright 2018 Rodrigo Siqueira
  */
 #include <iostream>
+#include <mpi.h>
 
 #include "msa.hpp"
-#include "gpu.hpp"
+#include "input.hpp"
+#include "device.cuh"
 
-bool verbose = 0;
-node::Data mpi_data;
+/*
+ * Declaring global variables.
+ */
+Input cmdinput;
+NodeInfo nodeinfo;
+bool verbose = false;
 
 /**
  * Starts, manages and finishes the software's execution.
@@ -20,13 +26,14 @@ node::Data mpi_data;
 int main(int argc, char **argv)
 {
     MPI_Init(&argc, &argv);
-    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_data.rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &mpi_data.size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &nodeinfo.rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &nodeinfo.size);
 
-    if(!gpu::check())
-        finalize(NOGPU);
+    if(__isslave() && !Device::check())
+        finalize(ErrorCode::NoGPU);
 
-    cli::parse(argc, argv);
+    cmdinput.parse(argc, argv);
+    verbose = cmdinput.has(InputCommand::Verbose);
     MPI_Barrier(MPI_COMM_WORLD);
     
     /*fasta_t *fasta = new fasta_t;
@@ -47,7 +54,6 @@ int main(int argc, char **argv)
     MPI_Barrier(MPI_COMM_WORLD);*/
 
     MPI_Finalize();
-
     return 0;
 }
 
@@ -55,12 +61,12 @@ int main(int argc, char **argv)
  * Lists the error messages to be shown when finishing.
  */
 static const char *error_str[] = {
-    ""                              // SUCCESS
-,   "no input file."                // NOFILE
-,   "input file is invalid."        // INVALIDFILE
-,   "invalid argument."             // INVALIDARG
-,   "no GPU device detected."       // NOGPU
-,   "GPU runtime error."            // CUDAERROR
+    ""                              // Success
+,   "no input file."                // NoFile
+,   "input file is invalid."        // InvalidFile
+,   "invalid argument."             // InvalidArg
+,   "no GPU device detected."       // NoGPU
+,   "GPU runtime error."            // CudaError
 };
 
 /**
@@ -69,10 +75,14 @@ static const char *error_str[] = {
  */
 void finalize(ErrorCode code)
 {
-    if(code) {
-        std::cerr << MSA ": fatal error: " << error_str[code] << std::endl;
+    __onlymaster {
+        if(code != ErrorCode::Success)
+            std::cerr
+                << __bold MSA __reset ": "
+                << __bold __redfg "fatal error" __reset ": "
+                << error_str[code] << std::endl;
     }
 
-    MPI_Abort(MPI_COMM_WORLD, MPI_SUCCESS);
+    MPI_Finalize();
     exit(0);
 }

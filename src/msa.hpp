@@ -36,7 +36,8 @@
 #include <cstdint>
 #include <cstdio>
 
-#include "node.h"
+#include "node.hpp"
+#include "colors.h"
 
 /**
  * Enumerates errors so their message can be easily printed.
@@ -44,12 +45,13 @@
  */
 enum class ErrorCode : uint8_t
 {
-    SUCCESS = 0
-,   NOFILE
-,   INVALIDFILE
-,   INVALIDARG
-,   NOGPU
-,   CUDAERROR
+    Success = 0
+,   NoFile
+,   InvalidFile
+,   InvalidArg
+,   NoGPU
+,   CudaError
+,   __num
 };
 
 /*
@@ -63,11 +65,11 @@ extern void finalize(ErrorCode);
  * print out debugging information.
  */ 
 #ifdef DEBUG
-#  define __debugh(msg, ...) printf("[  msa:host] " msg "\n", ##__VA_ARGS__)
-#  define __debugd(msg, ...) printf("[msa:device] " msg "\n", ##__VA_ARGS__)
+#  define __debugh(msg, ...) printf(__bold "[  msa:host] " __reset msg "\n", ##__VA_ARGS__)
+#  define __debugd(msg, ...) printf(__bold "[msa:device] " __reset msg "\n", ##__VA_ARGS__)
 #else
-#  define __debugh(msg, ...) if(verbose) {printf("[  msa:host] " msg "\n", ##__VA_ARGS__);}
-#  define __debugd(msg, ...) if(verbose) {printf("[msa:device] " msg "\n", ##__VA_ARGS__);}
+#  define __debugh(msg, ...) if(verbose) { printf(__bold "[  msa:host] " __reset msg "\n", ##__VA_ARGS__); }
+#  define __debugd(msg, ...) if(verbose) { printf(__bold "[msa:device] " __reset msg "\n", ##__VA_ARGS__); }
 #endif
 
 #endif
