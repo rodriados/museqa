@@ -28,7 +28,7 @@ const std::vector<Input::Command> Input::commands = {
  * @param argc The number of command line arguments.
  * @param argv The command line arguments.
  */
-void Input::parse(int argc, const char **argv)
+void Input::parse(int argc, char **argv)
 {
     this->appname = argv[0];
     Argument *argument = nullptr;

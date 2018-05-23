@@ -8,6 +8,7 @@
 
 #include "msa.hpp"
 #include "input.hpp"
+#include "fasta.hpp"
 #include "device.cuh"
 
 /*

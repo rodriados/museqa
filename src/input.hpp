@@ -236,7 +236,7 @@ class Input
             return this->get(id)[offset];
         }
 
-        void parse(int, const char **);
+        void parse(int, char **);
 
     private:
         const Command& find(const std::string&) const;
