@@ -7,7 +7,7 @@
 #include <cctype>
 #include <cstdlib>
 
-#include "msa.h"
+#include "msa.hpp"
 #include "fasta.hpp"
 
 static const unsigned char map[26] = {

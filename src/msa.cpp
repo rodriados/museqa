@@ -33,7 +33,7 @@ int main(int argc, char **argv)
         finalize(ErrorCode::NoGPU);
 
     cmdinput.parse(argc, argv);
-    verbose = cmdinput.has(InputCommand::Verbose);
+    verbose = cmdinput.has(ParamCode::Verbose);
     MPI_Barrier(MPI_COMM_WORLD);
     
     /*fasta_t *fasta = new fasta_t;
@@ -62,9 +62,7 @@ int main(int argc, char **argv)
  */
 static const char *error_str[] = {
     ""                              // Success
-,   "no input file."                // NoFile
 ,   "input file is invalid."        // InvalidFile
-,   "invalid argument."             // InvalidArg
 ,   "no GPU device detected."       // NoGPU
 ,   "GPU runtime error."            // CudaError
 };
@@ -73,14 +71,14 @@ static const char *error_str[] = {
  * Aborts the execution and kills all processes.
  * @param code Code of detected error.
  */
-void finalize(ErrorCode code)
+[[noreturn]] void finalize(ErrorCode code)
 {
     __onlymaster {
         if(code != ErrorCode::Success)
             std::cerr
                 << __bold MSA __reset ": "
                 << __bold __redfg "fatal error" __reset ": "
-                << error_str[code] << std::endl;
+                << error_str[static_cast<int>(code)] << std::endl;
     }
 
     MPI_Finalize();

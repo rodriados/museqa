@@ -13,24 +13,20 @@
 
 /**
  * Instantiates a new immutable sequence.
- * @param buffer The buffer of which data will be copied from.
- */
-Sequence::Sequence(const Buffer& buffer)
-{
-    this->length = buffer.getLength();
-    this->buffer = new char [this->length];
-    memcpy(this->buffer, &buffer, sizeof(char) * this->length);
-}
-
-/**
- * Instantiates a new immutable sequence.
  * @param string The string containing this sequence's data.
  */
 Sequence::Sequence(const std::string& string)
 {
-    this->length = string.size();
-    this->buffer = new char [this->length];
-    memcpy(this->buffer, string.c_str(), sizeof(char) * this->length);
+    this->copy(string.c_str(), string.size());
+}
+
+/**
+ * Instantiates a new immutable sequence.
+ * @param buffer The buffer of which data will be copied from.
+ */
+Sequence::Sequence(const Buffer<char>& buffer)
+{
+    this->copy(buffer.getBuffer(), buffer.getLength());
 }
 
 /**
@@ -40,15 +36,13 @@ Sequence::Sequence(const std::string& string)
  */
 Sequence::Sequence(const char *buffer, uint32_t size)
 {
-    this->length = size;
-    this->buffer = new char [this->length];
-    memcpy(this->buffer, buffer, sizeof(char) * this->length);
+    this->copy(buffer, size);
 }
 
 /**
  * Destroys a sequence instance.
  */
-Sequence::~Sequence() noexcept
+virtual Sequence::~Sequence() noexcept
 {
     delete[] this->buffer;
 }
@@ -57,15 +51,20 @@ Sequence::~Sequence() noexcept
  * Copy assignment operator.
  * @param buffer The buffer of which data will be copied from.
  */
-Sequence& Sequence::operator= (const Buffer& buffer)
+const Sequence& Sequence::operator=(const Buffer<char>& buffer)
 {
     delete[] this->buffer;
 
-    this->length = buffer.length;
-    this->buffer = new char [buffer.length];
-    memcpy(this->buffer, buffer.buffer, sizeof(char) * this->length);
-
+    this->copy(buffer.getBuffer(), buffer.getLength());
     return *this;
+}
+
+void Sequence::copy(const char *buffer, uint32_t size)
+{
+    this->length = size;
+    this->buffer = new char [size];
+
+    memcpy(this->buffer, buffer, sizeof(char) * size);
 }
 
 /**

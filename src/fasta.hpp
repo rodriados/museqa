@@ -1,32 +1,36 @@
-/** @file fasta.hpp
- * @brief Parallel Multiple Sequence Alignment fasta header file.
+/**
+ * Multiple Sequence Alignment fasta header file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018 Rodrigo Siqueira
  */
-#ifndef _FASTA_HPP
-#define _FASTA_HPP
+#ifndef _FASTA_HPP_
+#define _FASTA_HPP_
 
-#include "msa.h"
+#include <fstream>
 
-/** @class fasta_t
- * @brief Holds all data extracted from a fasta file.
- * @var nseq The number of extracted sequences.
- * @var seq The list of extracted sequences.
+#include "msa.hpp"
+#include "sequence.hpp"
+
+/**
+ * Holds all data extracted from a fasta file.
+ * @since 0.1.alpha
  */
-class fasta_t
+class Fasta final : protected SequenceList
 {
-public:
-    unsigned short nseq;
-    sequence_t *seq;
+    public:
+        Fasta() = default;
 
-public:
-    fasta_t();
-    ~fasta_t();
-    int read(const char *);
+        using SequenceList::getCount;
+        using SequenceList::operator[];
 
-private:
-    int tobuffer(FILE *, char **);
-    int loadsequence(FILE *);
-};
+        uint16_t read(const char *);
+        
+        using SequenceList::compact;
+        using SequenceList::select;
+
+    private:
+        bool extract(std::fstream&);
+        uint16_t bufferize(std::fstream&, char **);
+}
 
 #endif

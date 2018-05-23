@@ -46,19 +46,16 @@
 enum class ErrorCode : uint8_t
 {
     Success = 0
-,   NoFile
 ,   InvalidFile
-,   InvalidArg
 ,   NoGPU
 ,   CudaError
-,   __num
 };
 
 /*
  * Declaring global variables and functions.
  */
 extern bool verbose;
-extern void finalize(ErrorCode);
+[[noreturn]] extern void finalize(ErrorCode);
 
 /*
  * Defines some debug macro functions. These functions should be used to
