@@ -4,7 +4,6 @@
  * @copyright 2018 Rodrigo Siqueira
  */
 #include <iostream>
-#include <sstream>
 #include <vector>
 #include <string>
 
