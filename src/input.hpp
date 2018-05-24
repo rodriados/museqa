@@ -7,6 +7,7 @@
 #define _INPUT_HPP_
 
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <vector>
 #include <map>
@@ -43,14 +44,22 @@ class Input
         class Command
         {
             public:
-                ParamCode id;               /// The parameter's identifier.
-                std::string sname;          /// The parameter's short name option.
-                std::string lname;          /// The parameter's long name option.
-                std::string description;    /// The parameter's description.
-                bool required;              /// Is the parameter required?
+                ParamCode id;               /// The command's identifier.
+                std::string sname;          /// The command's short name option.
+                std::string lname;          /// The command's long name option.
+                std::string description;    /// The command's description.
+                const bool required;        /// Is the command required?
+                const bool variadic;        /// Does the command receive any parameter?
 
             public:
-                explicit Command(ParamCode, const std::string&, const std::string&, const std::string&, bool = false);
+                explicit Command
+                    (   ParamCode
+                    ,   const std::string&
+                    ,   const std::string&
+                    ,   const std::string&
+                    ,   bool = false
+                    ,   bool = false
+                    );
                 virtual ~Command() = default;
 
                 /**
@@ -97,7 +106,7 @@ class Input
         {
             public:
                 const Command *command;             /// Pointer to the command being represented.
-                std::vector<std::string> params;    /// The parameters given to the argument.
+                std::string value;                  /// The parameter given to the argument.
 
             public:
                 Argument() = default;
@@ -114,22 +123,12 @@ class Input
                 }
 
                 /**
-                 * Informs the number of parameters given to the named argument.
-                 * @return The number of parameters of this argument.
+                 * Retrieves the value associated to the command.
+                 * @return The argument's value.
                  */
-                inline int getCount() const
+                inline const std::string& get() const
                 {
-                    return this->params.size();
-                }
-
-                /**
-                 * Retrieves a parameter given to the named argument.
-                 * @param offset The index of requested parameter.
-                 * @return The parameter value.
-                 */
-                inline const std::string& operator[](int offset) const
-                {
-                    return this->params[offset];
+                    return this->value;
                 }
 
                 /**
@@ -156,12 +155,12 @@ class Input
                 }
 
                 /**
-                 * Pushes a new parameter to the argument.
-                 * @param param The parameter to be pushed.
+                 * Sets a new value to the argument.
+                 * @param value The parameter sent as parameter to this argument.
                  */
-                inline void push(const char *param)
+                inline void set(const char *value)
                 {
-                    this->params.push_back(param);
+                    this->value = std::string(value);
                 }
 
             friend class Input;
@@ -214,29 +213,22 @@ class Input
         /**
          * Retrieves a named argument.
          * @param id The identifier of requested argument.
+         * @param def The value to be returned if not found.
          * @return The requested argument instance.
          */
-        inline const Argument& get(ParamCode id) const
+        inline const std::string& get(ParamCode id) const
         {
             for(const auto& argument : this->arguments)
                 if(argument.second.is(id))
-                    return argument.second;
+                    return argument.second.get();
 
-            return Argument::unknown();
+            static const std::string null;
+            
+            return null;
         }
 
-        /**
-         * Retrieves an parameter from a named argument.
-         * @param id The identifier of requested argument.
-         * @param offset The parameter offset being requested.
-         * @return The requested parameter.
-         */
-        inline const std::string& get(ParamCode id, int offset) const
-        {
-            return this->get(id)[offset];
-        }
-
-        void parse(int, char **);
+        void parse(int, const char **);
+        void checkhelp() const;
 
     private:
         const Command& find(const std::string&) const;
@@ -247,6 +239,6 @@ class Input
         [[noreturn]] void usage() const;
 };
 
-extern Input cmdinput;
+extern Input clidata;
 
 #endif

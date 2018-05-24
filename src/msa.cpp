@@ -4,6 +4,7 @@
  * @copyright 2018 Rodrigo Siqueira
  */
 #include <iostream>
+#include <string>
 #include <mpi.h>
 
 #include "msa.hpp"
@@ -14,9 +15,8 @@
 /*
  * Declaring global variables.
  */
-Input cmdinput;
+Input clidata;
 NodeInfo nodeinfo;
-bool verbose = false;
 
 /**
  * Starts, manages and finishes the software's execution.
@@ -30,22 +30,21 @@ int main(int argc, char **argv)
     MPI_Comm_rank(MPI_COMM_WORLD, &nodeinfo.rank);
     MPI_Comm_size(MPI_COMM_WORLD, &nodeinfo.size);
 
-    if(__isslave() && !Device::check())
-        finalize(ErrorCode::NoGPU);
+    if(__isslave && Device::check())
+        finalize(ErrorCode::NoGPU)
 
-    cmdinput.parse(argc, argv);
-    verbose = cmdinput.has(ParamCode::Verbose);
+    clidata.parse(argc, const_cast<char **>(argv));  
+    clidata.checkhelp();
     MPI_Barrier(MPI_COMM_WORLD);
+
+    Fasta fasta;
+    // Pairwise pairwise
+
+    __onlymaster fasta.read(clidata.get(ParamCode::File));
+    //             pairwise.load(fasta);
+    //__onlyslaves pairwise.process();
     
-    /*fasta_t *fasta = new fasta_t;
-    pairwise_t *pairwise = new pairwise_t;
-
-    __onlymaster fasta->read(cli_data.fname);    
-                 pairwise->load(fasta);
-    __onlymaster pairwise->daemon();
-    __onlyslaves pairwise->pairwise();
-
-    MPI_Barrier(MPI_COMM_WORLD);
+    /*MPI_Barrier(MPI_COMM_WORLD);
 
     delete fasta;
 
@@ -72,7 +71,8 @@ static const char *error_str[] = {
  * Aborts the execution and kills all processes.
  * @param code Code of detected error.
  */
-[[noreturn]] void finalize(ErrorCode code)
+[[noreturn]]
+void finalize(ErrorCode code)
 {
     __onlymaster {
         if(code != ErrorCode::Success)

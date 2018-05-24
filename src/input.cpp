@@ -12,6 +12,11 @@
 #include "input.hpp"
 
 /*
+ * Declaring global verbose variable.
+ */
+bool verbose = false;
+
+/*
  * Defining the list of commands available from the command line.
  */
 const std::vector<Input::Command> Input::commands = {
@@ -19,8 +24,8 @@ const std::vector<Input::Command> Input::commands = {
 ,   Command(ParamCode::Version,  "v", "version",  "Displays the version information.")
 ,   Command(ParamCode::Verbose,  "b", "verbose",  "Activates the verbose mode.")
 ,   Command(ParamCode::MultiGPU, "m", "multigpu", "Use multiple GPU devices if possible.")
-,   Command(ParamCode::File,     "f", "file",     "File to be loaded into application.", true)
-,   Command(ParamCode::Matrix,   "x", "matrix",   "Inform the scoring matrix to use.")
+,   Command(ParamCode::File,     "f", "file",     "File to be loaded into application.", true, true)
+,   Command(ParamCode::Matrix,   "x", "matrix",   "Inform the scoring matrix to use.", true)
 };
 
 /**
@@ -28,36 +33,52 @@ const std::vector<Input::Command> Input::commands = {
  * @param argc The number of command line arguments.
  * @param argv The command line arguments.
  */
-void Input::parse(int argc, char **argv)
-{
-    this->appname = argv[0];
+void Input::parse(int argc, const char **argv)
+{    
+    this->appname = std::string(argv[0]);
+
     Argument *argument = nullptr;
 
     for(int i = 1; i < argc; ++i) {
-        bool isarg = argv[i][0] == '-';
-        const Command& command = isarg ? this->find(argv[i]) : Command::unknown();
+        const Command& command = (argv[i][0] == 0x2D)
+            ? this->find(argv[i])
+            : Command::unknown();
 
-        if(!command.is(ParamCode::Unknown))
+        if(!command.is(ParamCode::Unknown)) {
             argument = this->arguments.find(command.id) == this->arguments.end()
                 ? &(this->arguments[command.id] = command)
                 : &(this->arguments[command.id]);
-        else if(isarg)
-            this->unknown(argv[i]);
-        else if(argument != nullptr)
-            argument->push(argv[i]);
-        else
-            this->ordered.push_back(argv[i]);
-    }
+            continue;
+        }
 
-    if(this->arguments.find(ParamCode::Help) != this->arguments.end())
+        if(argument != nullptr && argument->command->variadic) {
+            argument->set(argv[i]);
+            argument = nullptr;
+            continue;
+        }
+
+        argv[i][0] == 0x2D
+            ? this->unknown(argv[i])
+            : this->ordered.push_back(argv[i]);
+    }
+}
+
+/**
+ * Checks whether a help command has been invoked and honors them.
+ */
+void Input::checkhelp() const
+{
+    if(this->has(ParamCode::Help))
         this->usage();
 
-    if(this->arguments.find(ParamCode::Version) != this->arguments.end())
+    if(this->has(ParamCode::Version))
         this->version();
 
     for(const Command& command : Input::commands)
-        if(command.required && this->arguments.find(command.id) == this->arguments.end())
+        if(command.required && !this->has(command.id))
             this->missing(command);
+
+    verbose = this->has(ParamCode::Verbose);
 }
 
 /**
@@ -81,6 +102,7 @@ const Input::Command& Input::find(const std::string& name) const
 Input::Command::Command(ParamCode id)
 :   id(id)
 ,   required(false)
+,   variadic(false)
 {}
 
 /**
@@ -92,17 +114,19 @@ Input::Command::Command(ParamCode id)
  * @param required Is the command required?
  */
 Input::Command::Command
-(   ParamCode id
-,   const std::string& sname
-,   const std::string& lname
-,   const std::string& description
-,   bool required
-)
+    (   ParamCode id
+    ,   const std::string& sname
+    ,   const std::string& lname
+    ,   const std::string& description
+    ,   bool required
+    ,   bool variadic
+    )
 :   id(id)
 ,   sname(sname.size() > 0 ?  "-" + sname : "")
 ,   lname(lname.size() > 0 ? "--" + lname : "")
 ,   description(description)
 ,   required(required)
+,   variadic(variadic)
 {}
 
 /**
@@ -111,14 +135,14 @@ Input::Command::Command
  */
 Input::Argument::Argument(const Command& command)
 :   command(&command)
-,   params({})
 {}
 
 /**
  * Prints out a message for missing command arguments.
  * @param command The required command that is missing.
  */
-[[noreturn]] void Input::missing(const Command& command) const
+[[noreturn]]
+void Input::missing(const Command& command) const
 {
     __onlymaster {
         std::cerr
@@ -134,7 +158,8 @@ Input::Argument::Argument(const Command& command)
  * Prints out a message for an unknown command.
  * @param command The unknown command name.
  */
-[[noreturn]] void Input::unknown(const char *command) const
+[[noreturn]]
+void Input::unknown(const char *command) const
 {
     __onlymaster {
         std::cerr
@@ -148,7 +173,8 @@ Input::Argument::Argument(const Command& command)
 /**
  * Prints out the software's current version.
  */
-[[noreturn]] void Input::version() const
+[[noreturn]]
+void Input::version() const
 {
     __onlymaster {
         std::cerr
@@ -162,7 +188,8 @@ Input::Argument::Argument(const Command& command)
 /**
  * Prints out usage guidelines and helps the user to learn the software's commands.
  */
-[[noreturn]] void Input::usage() const
+[[noreturn]]
+void Input::usage() const
 {
     __onlymaster {
         std::cerr

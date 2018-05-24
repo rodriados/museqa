@@ -26,10 +26,10 @@ extern NodeInfo nodeinfo;
  * it is needed to check whether the current process is master or not.
  */
 #define __master        (0)
-#define __ismaster()    (nodeinfo.rank == __master)
-#define __isslave()     (nodeinfo.rank != __master)
-#define __onlymaster    if(__ismaster())
-#define __onlyslaves    if(__isslave())
-#define __onlyslave(i)  if(__isslave() && nodeinfo.rank == (i))
+#define __ismaster    	(nodeinfo.rank == __master)
+#define __isslave		(nodeinfo.rank != __master)
+#define __onlymaster    if(__ismaster)
+#define __onlyslaves    if(__isslave)
+#define __onlyslave(i)  if(__isslave && nodeinfo.rank == (i))
 
 #endif
