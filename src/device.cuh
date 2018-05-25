@@ -6,9 +6,19 @@
 #ifndef _DEVICE_CUH_
 #define _DEVICE_CUH_
 
+#include "msa.hpp"
+
+/*
+ * Checks whether a compatible device is available. If not, compilation
+ * fails and informs the error.
+ */
+#if defined(__CUDACC__)
+
 #include <cuda.h>
 
-#include "msa.hpp"
+#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ < 200)
+#  error A device of compute capability 2.0 or higher is required.
+#endif
 
 /**
  * Aliases the device error enumerator to a more meaningful name.
@@ -17,20 +27,10 @@
 typedef cudaError_t DeviceError;
 
 /**
- * Aliases the device property struct to a more meaningful name.
+ * Exposes some CUDA devices's properties.
  * @since 0.1.alpha
  */
-typedef cudaDeviceProp DeviceProperty;
-
-/*
- * Checks whether a compatible device is available. If not, compilation
- * fails and informs the error.
- */
-#if defined(__CUDACC__)
-
-#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ < 200)
-#  error A device of compute capability 2.0 or higher is required.
-#endif
+typedef cudaDeviceProp DeviceProperties;
 
 /*
  * CUDA error handling macros. At least one of these macros should be used whenever
@@ -54,19 +54,16 @@ typedef cudaDeviceProp DeviceProperty;
 #endif
 
 /**
- * Offers a set of tools to gather easily information about the device connected.
+ * Offers a set of tools to easily gather information about the device(s) connected.
  * @since 0.1.alpha
  */
 namespace Device
 {
     extern int count();
     extern bool check();
-
-    extern int get();
-    extern bool set(int);
-
-    extern bool reset(int = ~0);
-    extern DeviceProperty properties(int = ~0);
+#ifdef __CUDACC__
+    extern const DeviceProperties& properties();
+#endif
 };
 
 #endif

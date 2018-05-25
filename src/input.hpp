@@ -48,8 +48,8 @@ class Input
                 std::string sname;          /// The command's short name option.
                 std::string lname;          /// The command's long name option.
                 std::string description;    /// The command's description.
-                const bool required;        /// Is the command required?
                 const bool variadic;        /// Does the command receive any parameter?
+                const bool required;        /// Is the command required?
 
             public:
                 explicit Command
@@ -227,7 +227,7 @@ class Input
             return null;
         }
 
-        void parse(int, const char **);
+        void parse(int, char **);
         void checkhelp() const;
 
     private:

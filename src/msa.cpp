@@ -30,10 +30,10 @@ int main(int argc, char **argv)
     MPI_Comm_rank(MPI_COMM_WORLD, &nodeinfo.rank);
     MPI_Comm_size(MPI_COMM_WORLD, &nodeinfo.size);
 
-    if(__isslave && Device::check())
-        finalize(ErrorCode::NoGPU)
+    if(__isslave && !Device::check())
+        finalize(ErrorCode::NoGPU);
 
-    clidata.parse(argc, const_cast<char **>(argv));  
+    clidata.parse(argc, argv);  
     clidata.checkhelp();
     MPI_Barrier(MPI_COMM_WORLD);
 

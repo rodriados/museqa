@@ -32,7 +32,7 @@ const std::vector<Input::Command> Input::commands = {
  * @param argc The number of command line arguments.
  * @param argv The command line arguments.
  */
-void Input::parse(int argc, const char **argv)
+void Input::parse(int argc, char **argv)
 {    
     this->appname = std::string(argv[0]);
 
@@ -100,8 +100,8 @@ const Input::Command& Input::find(const std::string& name) const
  */
 Input::Command::Command(ParamCode id)
 :   id(id)
-,   required(false)
 ,   variadic(false)
+,   required(false)
 {}
 
 /**
@@ -117,15 +117,15 @@ Input::Command::Command
     ,   const std::string& sname
     ,   const std::string& lname
     ,   const std::string& description
-    ,   bool required
     ,   bool variadic
+    ,   bool required
     )
 :   id(id)
 ,   sname(sname.size() > 0 ?  "-" + sname : "")
 ,   lname(lname.size() > 0 ? "--" + lname : "")
 ,   description(description)
-,   required(required)
 ,   variadic(variadic)
+,   required(required)
 {}
 
 /**
