@@ -2,11 +2,12 @@ NAME = msa
 
 SDIR = src
 ODIR = obj
-MPILKDIR = /usr/lib/openmpi/lib
 
 NVCC = nvcc
 MPCC = mpicc
 MPPP = mpic++
+
+MPILKDIR = /usr/lib/openmpi/lib
 
 MPFLAGS = -Wall -std=c++17 -I./$(SDIR)
 MCFLAGS = -Wall -std=c99 -lm -I./$(SDIR)
@@ -16,26 +17,31 @@ NVLINKFLAGS = -L$(MPILKDIR) -lmpi_cxx -lmpi
 NVFILES := $(shell find $(SDIR) -name '*.cu')
 MPFILES := $(shell find $(SDIR) -name '*.cpp')
 MCFILES := $(shell find $(SDIR) -name '*.c')
+
 DEPS = $(NVFILES:src/%.cu=obj/%.o) $(MPFILES:src/%.cpp=obj/%.o) $(MCFILES:src/%.c=obj/%.o)
+HDEPS = $(DEPS:obj/%.o=obj/%.d)
 
 .phony: all clean install
 
 all: $(NAME)
 
 $(NAME): $(DEPS)
-	$(NVCC) $^ -o $@ $(NVFLAGS) $(NVLINKFLAGS)
+	$(NVCC) $(NVFLAGS) $(NVLINKFLAGS) $^ -o $@
 
-$(ODIR)/%.o: src/%.cu $(NVFILES)
-	$(NVCC) -c $< -o $@ $(NVFLAGS)
+-include $(HDEPS)
 
-$(ODIR)/%.o: src/%.c $(MCFILES)
-	$(MPCC) -c $< -o $@ $(MCFLAGS)
+$(ODIR)/%.o: src/%.cu
+	@$(NVCC) $(NVFLAGS) -M $< -odir obj > $(@:%.o=%.d)
+	$(NVCC) $(NVFLAGS) -c $< -o $@
 
-$(ODIR)/%.o: src/%.cpp $(MPFILES)
-	$(MPPP) -c $< -o $@ $(MPFLAGS)
+$(ODIR)/%.o: src/%.c
+	$(MPCC) $(MCFLAGS) -MMD -c $< -o $@
+
+$(ODIR)/%.o: src/%.cpp
+	$(MPPP) $(MPFLAGS) -MMD -c $< -o $@
 
 install:
 	@mkdir -p obj/pairwise
 
 clean:
-	@rm -rf $(ODIR)/*.o $(SDIR)/*~ *~ $(NAME) $(ODIR)/pairwise/*.o
+	@rm -rf $(DEPS) $(HDEPS) $(NAME) $(SDIR)/*~ *~
