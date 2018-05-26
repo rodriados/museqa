@@ -37,7 +37,7 @@ class Buffer
          * Gives access to a specific location in buffer's data.
          * @return Buffer's position pointer.
          */
-        inline virtual T& operator[](uint32_t offset) const
+        inline T& operator[](uint32_t offset) const
         {
             return this->buffer[offset];
         }
@@ -55,7 +55,7 @@ class Buffer
          * Informs the length of data stored in buffer.
          * @return Buffer's length.
          */
-        inline virtual uint32_t getLength() const
+        inline uint32_t getLength() const
         {
             return this->length;
         }

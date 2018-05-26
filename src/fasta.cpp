@@ -4,7 +4,9 @@
  * @copyright 2018 Rodrigo Siqueira
  */
 #include <fstream>
+#include <cstring>
 #include <string>
+#include <mpi.h>
 
 #include "msa.hpp"
 #include "fasta.hpp"
@@ -51,25 +53,32 @@ Fasta::~Fasta()
 
 /**
  * Reads a file and allocates memory to all sequences contained in it.
- * @param fname The name of the file to be read.
- * @return The number of sequences read from file.
+ * @param fname The name of the file to be loaded.
+ * @return The number of sequences loaded from file.
  */
-uint16_t Fasta::read(const std::string& fname)
+uint16_t Fasta::load(const std::string& fname)
 {
-    std::fstream fastafile(fname, std::fstream::in);
+    __onlymaster {
+        std::fstream fastafile(fname, std::fstream::in);
 
-    if(fastafile.fail()) {
-        finalize(ErrorCode::InvalidFile);
+        if(fastafile.fail()) {
+            finalize(ErrorCode::InvalidFile);
+        }
+
+        __debugh("loading from %s", fname.c_str());
+
+        while(!fastafile.eof() && !fastafile.fail())
+            this->extract(fastafile);
+
+        fastafile.close();        
     }
 
-    __debugh("loading from %s", fname.c_str());
+    this->broadcast();
 
-    while(!fastafile.eof() && !fastafile.fail())
-        this->extract(fastafile);
+    __onlymaster {
+        __debugh("loaded %u sequences", this->getCount());
+    }
 
-    fastafile.close();
-
-    __debugh("loaded %u sequences", this->getCount());
     return this->getCount();
 }
 
@@ -133,213 +142,44 @@ void Fasta::push(const std::string& description, const char *buffer, uint32_t si
     this->list.push_back(new FastaSequence(description, buffer, size));
 }
 
+/**
+ * Sends the sequences loaded by the master node to all other nodes.
+ * This method will send all sequences to all nodes.
+ */
+void Fasta::broadcast()
+{
+    uint16_t count = this->getCount();
 
-//static const unsigned char map[26] = {
-  /* A     B     C     D     E     F     G     H     I     J     K     L     M */
-  //  0x00, 0x14, 0x01, 0x06, 0x08, 0x0E, 0x03, 0x09, 0x0A, 0x15, 0x0C, 0x0B, 0x0D,
-  /* N     O     P     Q     R     S     T     U     V     W     X     Y     Z */
-  //  0x05, 0x17, 0x0F, 0x07, 0x04, 0x10, 0x02, 0x17, 0x13, 0x11, 0x17, 0x12, 0x16,
-//};
+    MPI_Bcast(&count, 1, MPI_SHORT, __master, MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD);
 
-/**
- * Instantiates a new sequence list.
- * @param slist An array of sequences of which data will be copied from.
- * @param count The number of sequences in given array.
- */
-//SequenceList::SequenceList(const Buffer *slist, uint16_t count)
-//{
-//    for(uint16_t i = 0; i < count; ++i)
-        //this->list.push_back(new Sequence(slist[i]));
-//}
+    uint32_t *sizes = new uint32_t [count];
+    uint32_t szsum = 0;
 
-/**
- * Instantiates a new sequence list.
- * @param slist A vector of sequences of which data will be copied from.
- */
-//SequenceList::SequenceList(const std::vector<Buffer>& slist)
-//{
-//    for(const Buffer& target : slist)
-        //this->list.push_back(new Sequence(target));
-//}
+    __onlymaster {
+        for(int i = 0; i < count; ++i)
+            szsum += sizes[i] = this->list[i]->getLength();
+    }
 
-/**
- * Instantiates a new sequence list based on a subset of a list.
- * @param slist An array of sequences of which data will be copied from.
- * @param selected The selected sequences from the list.
- */
-//SequenceList::SequenceList(const SequenceList& slist, const std::vector<uint16_t>& selected)
-//{
-//    for(uint16_t index : selected)
-        //this->list.push_back(new Sequence(slist[index]));
-//}
+    MPI_Bcast(sizes, count, MPI_INT, __master, MPI_COMM_WORLD);
+    MPI_Bcast(&szsum,    1, MPI_INT, __master, MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD);
 
-/**
- * Instantiates a new sequence list based on a subset of a list.
- * @param slist An array of sequences of which data will be copied from.
- * @param selected The selected sequences from the list.
- * @param count The number of sequences in the given list.
- */
-//SequenceList::SequenceList(const SequenceList& slist, const uint16_t *selected, uint16_t count)
-//{
-//    for(uint16_t i = 0; i < count; ++i)
-        //this->list.push_back(new Sequence(slist[selected[i]]));
-//}
+    char *data = new char [szsum];
 
-/**
- * Destroys a sequence list instance.
- */
-//SequenceList::~SequenceList() noexcept
-//{
-//    for(Sequence *sequence : this->list)
-        //delete sequence;
-//}
+    __onlymaster {
+        for(uint32_t i = 0, offset = 0; i < count; ++i, offset += sizes[i])
+            memcpy(data + offset, this->list[i]->getBuffer(), sizes[i]);
+    }
 
-/**
- * Pushes a new sequence into the list.
- * @param buffer The buffer from which a sequence will be copied from.
- */
-//void SequenceList::push(const Buffer& buffer)
-//{
-//    this->list.push_back(new Sequence(buffer));
-//}
-//
-/**
- * Pushes a new sequence into the list.
- * @param string A string that will originate a new sequence into the list.
- */
-//void SequenceList::push(const std::string& string)
-//{
-//    this->list.push_back(new Sequence(string));
-//}
-//
-/**
- * Pushes a new sequence into the list.
- * @param buffer The buffer from which a sequence will be copied from.
- * @param size The size of the given buffer.
- */
-//void SequenceList::push(const char *buffer, uint16_t size)
-//{
-//    this->list.push_back(new Sequence(buffer, size));
-//}
-//
-/**
- * Creates a new sequence list based on a selection of sequences.
- * @param selected The sequences' indices to be sent a new list.
- * @return The new list of selected sequences.
- */
-//SequenceList SequenceList::select(const std::vector<uint16_t>& selected) const
-//{
-//    //return SequenceList(*this, selected);
-////}
-////
-//
-/**
- * Creates a new sequence list based on a selection of sequences.
- * @param selected The sequences' indices to be sent a new list.
- * @param count The number of selected sequences.
- * @return The new list of selected sequences.
- */
-//SequenceList SequenceList::select(const uint16_t *selected, uint16_t count) const
-//{
-//    //return SequenceList(*this, selected, count);
-////}
-////
-//
-/**
- * Consolidates and compactates the sequence list.
- * @return The new consolidated sequence list.
- */
-//CompactSequenceList SequenceList::compact() const
-//{
-//    //return CompactSequenceList(*this);
-////}
-////
-//
-/**
- * Instantiates a new consolidated sequence list.
- * @param slist A list of sequences of which data will be copied from.
- */
-//CompactSequenceList::CompactSequenceList(const SequenceList& slist)
-////:   Sequence(CompactSequenceList::merge(slist))
-////,   ref(new Buffer [slist.getCount()])
-////,   count(slist.getCount())
-////{
-    //for(uint32_t i = 0, off = 0; i < this->count; ++i) {
-        //this->ref[i].buffer = this->buffer + off;
-        //off += this->ref[i].length = slist[i].getLength();
-    //}
-//}
+    MPI_Bcast(data, szsum, MPI_CHAR, __master, MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD);
 
-/**
- * Instantiates a new consolidated sequence list.
- * @param slist An array of sequences of which data will be copied from.
- * @param count The number of sequences in array.
- */
-//CompactSequenceList::CompactSequenceList(const Buffer *slist, uint16_t count)
-////:   Sequence(CompactSequenceList::merge(slist, count))
-////,   ref(new Buffer [count])
-////,   count(count)
-////{
-    //this->init(slist);
-//}
+    __onlyslaves {
+        for(uint32_t i = 0, offset = 0; i < count; ++i, offset += sizes[i])
+            this->push("__slave", data + offset, sizes[i]);
+    }
 
-/**
- * Instantiates a new consolidated sequence list.
- * @param slist A vector of sequences of which data will be copied from.
- */
-//CompactSequenceList::CompactSequenceList(const std::vector<Buffer>& slist)
-////:   Sequence(CompactSequenceList::merge(slist.data(), slist.size()))
-////,   ref(new Buffer [slist.size()])
-////,   count(slist.size())
-////{
-    //this->init(slist.data());
-//}
-
-/**
- * Destroys a consolidated sequence list.
- */
-//CompactSequenceList::~CompactSequenceList()
-//{
-//    delete[] this->ref;
-//}
-//
-/**
- * Sets up the buffers responsible for keeping track of internal sequences.
- * @param slist The list of original sequences being consolidated.
- */
-//void CompactSequenceList::init(const Buffer *slist)
-//{
-//    for(uint32_t i = 0, off = 0; i < this->count; ++i) {
-        //this->ref[i].buffer = this->buffer + off;
-        //off += this->ref[i].length = slist[i].getLength();
-   // }
-//}
-
-/**
- * Merges all sequences from the list into a single sequnces.
- * @param slist The list of original sequences to be merged.
- */
-//std::string CompactSequenceList::merge(const SequenceList& slist)
-//{
-//    std::string merged;
-    //uint16_t count = slist.getCount();
-//
-    //for(uint16_t i = 0; i < count; ++i)
-    //    merged.append(slist[i].getBuffer(), slist[i].getLength());
-
-  //  return merged;
-//}
-
-/**
- * Merges all sequences from the list into a single sequnces.
- * @param slist The list of original sequences to be merged.
- */
-//std::string CompactSequenceList::merge(const Buffer *slist, uint16_t count)
-//{
-//    std::string merged;
-//
-    //for(uint16_t i = 0; i < count; ++i)
-    //    merged.append(slist[i].getBuffer(), slist[i].getLength());
-
-  //  return merged;
-//}
+    delete[] sizes;
+    delete[] data;
+}

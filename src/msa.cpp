@@ -12,6 +12,8 @@
 #include "fasta.hpp"
 #include "device.cuh"
 
+#include "pairwise.cuh"
+
 /*
  * Declaring global variables.
  */
@@ -38,11 +40,10 @@ int main(int argc, char **argv)
     MPI_Barrier(MPI_COMM_WORLD);
 
     Fasta fasta;
-    // Pairwise pairwise
+    Pairwise pairwise;
 
-    __onlymaster fasta.read(clidata.get(ParamCode::File));
-    //             pairwise.load(fasta);
-    //__onlyslaves pairwise.process();
+    fasta.load(clidata.get(ParamCode::File));    
+    //pairwise.process(fasta);
     
     /*MPI_Barrier(MPI_COMM_WORLD);
 
