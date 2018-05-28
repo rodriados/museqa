@@ -9,10 +9,10 @@ MPPP = mpic++
 
 MPILKDIR = /usr/lib/openmpi/lib
 
-MPFLAGS = -Wall -std=c++17 -I./$(SDIR)
-MCFLAGS = -Wall -std=c99 -lm -I./$(SDIR)
-NVFLAGS = -std=c++11 -arch sm_20 -lmpi -lcuda -lcudart -w -I./$(SDIR)
-NVLINKFLAGS = -L$(MPILKDIR) -lmpi_cxx -lmpi
+MPFLAGS = -Wall -std=c++17 -I./$(SDIR) -g
+MCFLAGS = -Wall -std=c99 -lm -I./$(SDIR) -g
+NVFLAGS = -std=c++11 -arch sm_20 -lmpi -lcuda -lcudart -w -I./$(SDIR) -g
+NVLINKFLAGS = -L$(MPILKDIR) -lmpi_cxx -lmpi -g
 
 NVFILES := $(shell find $(SDIR) -name '*.cu')
 MPFILES := $(shell find $(SDIR) -name '*.cpp')

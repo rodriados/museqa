@@ -37,6 +37,6 @@
 #define __blinkslow	"\033[5m"
 #define __blinkfast	"\033[6m"
 #define __italic   	"\033[3m"
-#define __negative 	"\033[7m"
+#define __inverted 	"\033[7m"
 
 #endif
