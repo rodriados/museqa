@@ -105,7 +105,7 @@ bool Fasta::extract(std::fstream& fastafile)
     std::getline(fastafile, description);
     description.erase(0, 1);
 
-    while(std::getline(fastafile, buffer) && buffer.size() > 0)
+    while(fastafile.peek() != 0x3E && std::getline(fastafile, buffer) && buffer.size() > 0)
         sequence.append(buffer);
 
     this->push(description, sequence);
