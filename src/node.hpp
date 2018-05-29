@@ -12,8 +12,8 @@
  */
 struct NodeInfo final
 {
-    int rank;         /// The current MPI process rank.
-    int size;         /// The total number of MPI processes.
+    int rank = 0;       /// The current MPI process rank.
+    int size = 0;       /// The total number of MPI processes.
 };
 
 /*

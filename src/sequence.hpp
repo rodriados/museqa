@@ -19,7 +19,7 @@
 template<typename T>
 class Buffer
 {
-    protected:
+    public:
         T *buffer = nullptr;    /// The buffer being encapsulated.
         uint32_t length = 0;    /// The buffer's current length.
 
@@ -69,6 +69,10 @@ class Buffer
  */
 class Sequence : public Buffer<char>
 {
+    protected:
+        using Buffer<char>::buffer;
+        using Buffer<char>::length;
+
     public:
         Sequence(const std::string&);
         Sequence(const Buffer<char>&);

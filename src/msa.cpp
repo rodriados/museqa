@@ -40,7 +40,8 @@ int main(int argc, char **argv)
     MPI_Barrier(MPI_COMM_WORLD);
 
     Fasta fasta;
-    fasta.load(clidata.get(ParamCode::File));    
+    fasta.load(clidata.get(ParamCode::File));
+    MPI_Barrier(MPI_COMM_WORLD);
     
     Pairwise pairwise(fasta);
     pairwise.process();

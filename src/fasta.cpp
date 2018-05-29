@@ -73,7 +73,9 @@ uint16_t Fasta::load(const std::string& fname)
         fastafile.close();        
     }
 
-    this->broadcast();
+    if(nodeinfo.size > 1) {
+        this->broadcast();
+    }
 
     __onlymaster {
         __debugh("loaded %u sequences", this->getCount());
@@ -168,16 +170,20 @@ void Fasta::broadcast()
     char *data = new char [szsum];
 
     __onlymaster {
-        for(uint32_t i = 0, offset = 0; i < count; ++i, offset += sizes[i])
-            memcpy(data + offset, this->list[i]->getBuffer(), sizes[i]);
+        for(uint32_t i = 0, offset = 0; i < count; ++i) {
+            memcpy(data + offset, this->list[i]->getBuffer(), sizeof(char) * sizes[i]);
+            offset += sizes[i];
+        }
     }
 
     MPI_Bcast(data, szsum, MPI_CHAR, __master, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
 
     __onlyslaves {
-        for(uint32_t i = 0, offset = 0; i < count; ++i, offset += sizes[i])
+        for(uint32_t i = 0, offset = 0; i < count; ++i) {
             this->push("__slave", data + offset, sizes[i]);
+            offset += sizes[i];
+        }
     }
 
     delete[] sizes;
