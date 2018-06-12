@@ -59,7 +59,6 @@ class Buffer
         {
             return this->length;
         }
-
 };
 
 /**

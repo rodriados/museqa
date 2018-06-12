@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "fasta.hpp"
+#include "device.cuh"
 #include "sequence.hpp"
 #include "pairwise/sequence.cuh"
 
@@ -278,7 +279,7 @@ pw::CompressedSequenceList pw::SequenceList::compress() const
  */
 pw::CompressedSequenceList::CompressedSequenceList(const pw::SequenceList& list)
 :   pw::Sequence(pw::CompressedSequenceList::merge(list, list.getCount()))
-,   internal(new Buffer<uint32_t> [list.getCount()])
+,   internal(new pw::BlockBuffer [list.getCount()])
 ,   count(list.getCount())
 {
     this->init(list, list.getCount());
@@ -291,7 +292,7 @@ pw::CompressedSequenceList::CompressedSequenceList(const pw::SequenceList& list)
  */
 pw::CompressedSequenceList::CompressedSequenceList(const pw::Sequence *list, uint16_t count)
 :   pw::Sequence(pw::CompressedSequenceList::merge(list, count))
-,   internal(new Buffer<uint32_t> [count])
+,   internal(new pw::BlockBuffer [count])
 ,   count(count)
 {
     this->init(list, count);
@@ -303,7 +304,7 @@ pw::CompressedSequenceList::CompressedSequenceList(const pw::Sequence *list, uin
  */
 pw::CompressedSequenceList::CompressedSequenceList(const std::vector<pw::Sequence>& list)
 :   pw::Sequence(pw::CompressedSequenceList::merge(list.data(), list.size()))
-,   internal(new Buffer<uint32_t> [list.size()])
+,   internal(new pw::BlockBuffer [list.size()])
 ,   count(list.size())
 {
     this->init(list.data(), list.size());
@@ -315,6 +316,39 @@ pw::CompressedSequenceList::CompressedSequenceList(const std::vector<pw::Sequenc
 pw::CompressedSequenceList::~CompressedSequenceList() noexcept
 {
     delete[] this->internal;
+}
+
+/**
+ * Sends the compressed sequence list to the device.
+ * @return The object representing the sequence in the device.
+ */
+pw::DeviceSequenceList pw::CompressedSequenceList::toDevice() const
+{
+    return pw::DeviceSequenceList(*this);
+}
+
+/**
+ * Creates a compressed sequence list into the device global memory.
+ * @param list The list to be sent to device.
+ */
+pw::DeviceSequenceList::DeviceSequenceList(const pw::CompressedSequenceList& list)
+{
+    this->count = list.getCount();
+    this->length = list.getLength();
+
+    __cudacall(cudaMalloc(&this->buffer, sizeof(uint32_t) * this->length));
+    __cudacall(cudaMalloc(&this->internal, sizeof(pw::BlockBuffer) * this->count));
+    __cudacall(cudaMemcpy(this->buffer, list.getBuffer(), sizeof(uint32_t) * this->length, cudaMemcpyHostToDevice));
+    __cudacall(cudaMemcpy(this->internal, list.internal, sizeof(pw::BlockBuffer) * this->count, cudaMemcpyHostToDevice));
+}
+
+/**
+ * Destroys the compressed sequence list in the device.
+ */
+pw::DeviceSequenceList::~DeviceSequenceList() noexcept
+{
+    __cudacall(cudaFree(this->buffer));
+    __cudacall(cudaFree(this->internal));
 }
 
 /**
@@ -352,7 +386,7 @@ __host__ __device__ uint8_t operator%(const pw::Sequence& sequence, uint32_t off
  * @param offset The requested offset.
  * @return The value stored in given offset.
  */
-__host__ __device__ uint8_t operator%(const Buffer<uint32_t>& buffer, uint32_t offset)
+__host__ __device__ uint8_t operator%(const pw::BlockBuffer& buffer, uint32_t offset)
 {
     uint32_t block = offset / 6;
     uint8_t bindex = offset % 6;

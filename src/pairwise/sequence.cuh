@@ -18,11 +18,74 @@
 namespace pairwise
 {
     /**
+     * Represents a buffer of blocks to be used as base for sequences
+     * available for usage in the device.
+     * @since 0.1.alpha
+     */
+    class BlockBuffer : public Buffer<uint32_t>
+    {
+        public:
+            /**
+             * Constructs a new buffer instance.
+             * @param buffer The buffer's pointer.
+             * @param length The buffer's length.
+             */
+            BlockBuffer(uint32_t *buffer, uint32_t length)
+            {
+                this->buffer = buffer;
+                this->length = length;
+            }
+
+            BlockBuffer() = default;
+
+            /**
+             * Gives access to buffer's data.
+             * @return Buffer's pointer.
+             */
+            __host__ __device__
+            inline uint32_t *operator&() const
+            {
+                return this->buffer;
+            }
+
+            /**
+             * Gives access to a block in the buffer.
+             * @param offset The requested block offset.
+             * @return The requested block.
+             */
+            __host__ __device__
+            inline uint32_t& operator[](uint32_t offset) const
+            {
+                return this->buffer[offset];
+            }
+
+            /**
+             * Gives access to buffer's data.
+             * @return Buffer's pointer.
+             */
+            __host__ __device__
+            inline uint32_t *getBuffer() const
+            {
+                return this->buffer;
+            }
+
+            /**
+             * Informs the length of data stored in buffer.
+             * @return Buffer's length.
+             */
+            __host__ __device__
+            inline uint32_t getLength() const
+            {
+                return this->length;
+            }            
+    };
+
+    /**
      * Represents a compressed sequence. The characters are encoded in
      * such a way that it saves one third of the space it would require.
      * @since 0.1.alpha
      */
-    class Sequence : public Buffer<uint32_t>
+    class Sequence : public BlockBuffer
     {
         protected:
             using Buffer<uint32_t>::buffer;
@@ -38,28 +101,17 @@ namespace pairwise
             const Sequence& operator=(const Buffer<char>&);
             const Sequence& operator=(const Sequence&);
 
-            /**
-             * Gives access to a block in the sequence.
-             * @param offset The requested block offset.
-             * @return The sequence's block.
-             */
-            __host__ __device__
-            inline uint32_t operator[](uint32_t offset) const
-            {
-                return this->buffer[offset];
-            }
-
             std::string uncompress() const;
             
-        private:
-            void compress(const char *, uint32_t);
-
         protected:
             Sequence() = default;
             Sequence(const std::vector<uint32_t>&);
             Sequence(const uint32_t *, uint32_t);
 
             void copy(const uint32_t *, uint32_t);
+
+        private:
+            void compress(const char *, uint32_t);
 
         friend class CompressedSequenceList;
     };
@@ -118,7 +170,7 @@ namespace pairwise
     class CompressedSequenceList : public Sequence
     {
         protected:
-            Buffer<uint32_t> *internal = nullptr;
+            BlockBuffer *internal = nullptr;
             uint16_t count = 0;
 
         public:
@@ -133,6 +185,7 @@ namespace pairwise
              * Informs the number of sequences in the list.
              * @return The list's number of sequences.
              */
+            __host__ __device__
             inline uint16_t getCount() const
             {
                 return this->count;
@@ -143,12 +196,17 @@ namespace pairwise
              * @return The requested sequence buffer.
              */
             __host__ __device__
-            inline const Buffer<uint32_t>& operator[](uint16_t offset) const
+            inline const BlockBuffer operator[](uint16_t offset) const
             {
-                return this->internal[offset];
+                return BlockBuffer {
+                    this->buffer + (intptr_t)this->internal[offset].buffer
+                ,   this->internal[offset].length
+                };
             }
 
-        private:
+            class DeviceSequenceList toDevice() const;
+
+        protected:
             /**
              * Sets up the buffers responsible for keeping track of internal sequences.
              * @param list The list of original sequences being consolidated.
@@ -158,7 +216,7 @@ namespace pairwise
             void init(const T& list, uint16_t count)
             {
                 for(uint32_t i = 0, off = 0; i < count; ++i) {
-                    this->internal[i].buffer = this->buffer + off;
+                    this->internal[i].buffer = (uint32_t *)off;
                     off += this->internal[i].length = list[i].getLength();
                 }
             }
@@ -172,16 +230,29 @@ namespace pairwise
             template<typename T>
             static std::vector<uint32_t> merge(const T& list, uint16_t count)
             {
-                uint32_t *ref;
                 std::vector<uint32_t> merged;
 
                 for(uint16_t i = 0; i < count; ++i) {
-                    ref = list[i].getBuffer();
+                    uint32_t *ref = list[i].getBuffer();
                     merged.insert(merged.end(), ref, ref + list[i].getLength());
                 }
 
                 return merged;
             }
+
+        friend class DeviceSequenceList;
+    };
+
+    /**
+     * Sends a list of sequences to the device. This list of sequences are immutable
+     * and can only be read from the device.
+     * @since 0.1.alpha
+     */
+    class DeviceSequenceList : public CompressedSequenceList
+    {
+        public:
+            DeviceSequenceList(const CompressedSequenceList&);
+            ~DeviceSequenceList() noexcept;
     };
 };
 
@@ -190,6 +261,6 @@ namespace pairwise
  */
 extern std::ostream& operator<<(std::ostream&, const pairwise::Sequence&);
 extern __host__ __device__ uint8_t operator%(const pairwise::Sequence&, uint32_t);
-extern __host__ __device__ uint8_t operator%(const Buffer<uint32_t>&, uint32_t);
+extern __host__ __device__ uint8_t operator%(const pairwise::BlockBuffer&, uint32_t);
 
 #endif
