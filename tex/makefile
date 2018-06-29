@@ -1,15 +1,17 @@
-FILES := $(shell find . -name '*.main.tex' | awk -F. '{$NF=""; print $0}' | tr ' ' '.' | rev | cut -c 2- | rev)
+DEPS := $(shell find . -name '*.main.tex')
+FILE := $(DEPS:./%.tex=%)
 
 .phony: all clean generate
 
 all: generate
 
 clean:
-	@rm *.aux *.bbl *.blg *.log *.pdf
+	@rm -f *.aux *.bbl *.blg *.log *.pdf
 
-generate: $(FILES)
+generate: $(FILE)
+
+$(FILE): $(DEPS)
 	pdflatex $<
-	bibtex   $<
 	pdflatex $<
 	pdflatex $<
 	pdflatex $<
