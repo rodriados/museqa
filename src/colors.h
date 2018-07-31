@@ -6,9 +6,9 @@
 #ifndef _COLORS_H_
 #define _COLORS_H_
 
-#define __fg(color) __##color##fg
-#define __bg(color) __##color##bg
-
+/*
+ * Defining foreground colors.
+ */
 #define __blackfg  	"\033[30m"
 #define __redfg    	"\033[31m"
 #define __greenfg  	"\033[32m"
@@ -19,6 +19,9 @@
 #define __whitefg  	"\033[37m"
 #define __normalfg 	"\033[39m"
 
+/*
+ * Defining background colors.
+ */
 #define __blackbg  	"\033[40m"
 #define __redbg    	"\033[41m"
 #define __greenbg  	"\033[42m"
@@ -29,6 +32,9 @@
 #define __whitebg  	"\033[47m"
 #define __normalbg 	"\033[49m"
 
+/*
+ * Defining text styles.
+ */
 #define __bold     	"\033[1m"
 #define __dim      	"\033[2m"
 #define __normal   	"\033[22m"
@@ -38,5 +44,9 @@
 #define __blinkfast	"\033[6m"
 #define __italic   	"\033[3m"
 #define __inverted 	"\033[7m"
+
+#define fg(color, msg)     __##color##fg msg __reset
+#define bg(color, msg)     __##color##bg msg __reset
+#define style(style, msg)  __##style     msg __reset
 
 #endif

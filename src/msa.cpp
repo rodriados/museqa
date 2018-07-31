@@ -5,20 +5,20 @@
  */
 #include <iostream>
 #include <string>
-#include <mpi.h>
 
 #include "msa.hpp"
 #include "input.hpp"
 #include "fasta.hpp"
 #include "device.cuh"
+#include "cluster.hpp"
 
 #include "pairwise.cuh"
 
 /*
  * Declaring global variables.
  */
-Input clidata;
-NodeInfo nodeinfo;
+int node::rank = 0;
+int node::size = 0;
 
 /**
  * Starts, manages and finishes the software's execution.
@@ -28,20 +28,18 @@ NodeInfo nodeinfo;
  */
 int main(int argc, char **argv)
 {
-    MPI_Init(&argc, &argv);
-    MPI_Comm_rank(MPI_COMM_WORLD, &nodeinfo.rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &nodeinfo.size);
+    cluster::init(&argc, &argv);
 
-    if(__isslave && !Device::check())
+    if(node::isslave() && !device::check())
         finalize(ErrorCode::NoGPU);
 
     clidata.parse(argc, argv);  
     clidata.checkhelp();
-    MPI_Barrier(MPI_COMM_WORLD);
+    cluster::synchronize();
 
     Fasta fasta;
     fasta.load(clidata.get(ParamCode::File));
-    MPI_Barrier(MPI_COMM_WORLD);
+    cluster::synchronize();
     
     Pairwise pairwise(fasta);
     pairwise.process();
@@ -55,7 +53,7 @@ int main(int argc, char **argv)
 
     MPI_Barrier(MPI_COMM_WORLD);*/
 
-    MPI_Finalize();
+    cluster::finalize();
     return 0;
 }
 
@@ -76,14 +74,14 @@ static const char *error_str[] = {
 [[noreturn]]
 void finalize(ErrorCode code)
 {
-    __onlymaster {
+    onlymaster {
         if(code != ErrorCode::Success)
             std::cerr
-                << __bold MSA __reset ": "
-                << __bold __redfg "fatal error" __reset ": "
+                << style(bold, __msa__) ": "
+                << style(bold, fg(red, "fatal error")) ": "
                 << error_str[static_cast<int>(code)] << std::endl;
     }
 
-    MPI_Finalize();
+    cluster::finalize();
     exit(0);
 }

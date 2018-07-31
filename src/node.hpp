@@ -6,30 +6,45 @@
 #ifndef _NODE_HPP_
 #define _NODE_HPP_
 
-/**
- *  This struct holds relevant data about the current MPI processes.
- *  @since 0.1.alpha
- */
-struct NodeInfo final
-{
-    int rank = 0;       /// The current MPI process rank.
-    int size = 0;       /// The total number of MPI processes.
-};
-
 /*
- * Declaring global variables.
+ * Defining macro indicating the node rank to be used as the master node. It
+ * is recommended not to change it, as no other rank is garanteed to exist.
  */
-extern NodeInfo nodeinfo;
+#define __msa_master_node_id__ 0
+
+namespace node
+{
+    /*
+     * Declaring global variables
+     */
+    extern int rank;
+    extern int size;
+
+    /**
+     * Informs whether the current node is the master node.
+     * @return Is this node the master?
+     */
+    inline bool ismaster()
+    {
+        return rank == __msa_master_node_id__;
+    }
+
+    /**
+     * Informs whether the current node is a slave node.
+     * @return Is this node a slave?
+     */
+    inline bool isslave()
+    {
+        return rank != __msa_master_node_id__;
+    }
+};
 
 /*
  * Defines some process control macros. These macros are to be used when
  * it is needed to check whether the current process is master or not.
  */
-#define __master        (0)
-#define __ismaster    	(nodeinfo.rank == __master)
-#define __isslave		(nodeinfo.rank != __master)
-#define __onlymaster    if(__ismaster)
-#define __onlyslaves    if(__isslave)
-#define __onlyslave(i)  if(__isslave && nodeinfo.rank == (i))
+#define onlymaster    if(node::ismaster())
+#define onlyslaves    if(node::isslave())
+#define onlyslave(i)  if(node::isslave() && node::rank == (i))
 
 #endif

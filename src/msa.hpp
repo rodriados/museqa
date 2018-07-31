@@ -10,14 +10,16 @@
  * Leave uncommented if compiling in debug mode. This may affect many aspects
  * of the software, such as error reporting.
  */
-#define DEBUG
+#define __msa_debug__
 
 /*
- * The software's name and version. This information can be printed from
- * command line as an argument.
+ * The software's information. Any of the provided information piece can be printed
+ * from the command line as an argument.
  */
-#define MSA     "msa"
-#define VERSION "0.1.alpha"
+#define __msa__         "msa"
+#define __msa_version__ "0.1.alpha"
+#define __msa_author__  "Rodrigo Albuquerque de Oliveira Siqueira"
+#define __msa_email__   "rodriados@gmail.com"
 
 /* 
  * Checks whether the system we are compiling in is POSIX compatible. If it
@@ -36,8 +38,8 @@
 #include <cstdint>
 #include <cstdio>
 
-#include "node.hpp"
 #include "colors.h"
+#include "node.hpp"
 
 /**
  * Enumerates errors so their message can be easily printed.
@@ -61,12 +63,12 @@ extern bool verbose;
  * Defines some debug macro functions. These functions should be used to
  * print out debugging information.
  */ 
-#ifdef DEBUG
-#  define __debugh(msg, ...) printf(__bold "[  msa:host] " __reset msg "\n", ##__VA_ARGS__)
-#  define __debugd(msg, ...) printf(__bold "[msa:device] " __reset msg "\n", ##__VA_ARGS__)
+#ifdef __msa_debug__
+#  define __debugh(msg, ...) printf(__st(bold, "[  msa:host] ") msg "\n", ##__VA_ARGS__)
+#  define __debugd(msg, ...) printf(__st(bold, "[msa:device] ") msg "\n", ##__VA_ARGS__)
 #else
-#  define __debugh(msg, ...) if(verbose) { printf(__bold "[  msa:host] " __reset msg "\n", ##__VA_ARGS__); }
-#  define __debugd(msg, ...) if(verbose) { printf(__bold "[msa:device] " __reset msg "\n", ##__VA_ARGS__); }
+#  define __debugh(msg, ...) if(verbose) { printf(__st(bold, "[  msa:host] ") msg "\n", ##__VA_ARGS__); }
+#  define __debugd(msg, ...) if(verbose) { printf(__st(bold, "[msa:device] ") msg "\n", ##__VA_ARGS__); }
 #endif
 
 #endif
