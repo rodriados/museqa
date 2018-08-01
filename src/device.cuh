@@ -65,7 +65,7 @@ typedef cudaDeviceProp DeviceProperties;
  * Offers a set of tools to easily gather information about the device(s) connected.
  * @since 0.1.alpha
  */
-namespace Device
+namespace device
 {
     extern int count();
     extern bool check();

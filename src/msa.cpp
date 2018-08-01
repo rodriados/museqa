@@ -37,19 +37,19 @@ int main(int argc, char **argv)
     clidata.checkhelp();
     cluster::synchronize();
 
-    Fasta fasta;
-    fasta.load(clidata.get(ParamCode::File));
+    Fasta ffile;
+    ffile.load(clidata.get(ParamCode::File));
     cluster::synchronize();
     
-    Pairwise pairwise(fasta);
-    pairwise.process();
+    Pairwise pwise(ffile);
+    pwise.process();
     
     /*MPI_Barrier(MPI_COMM_WORLD);
 
-    delete fasta;
+    delete ffile;
 
-    //__onlymaster pairwise->gather();
-    delete pairwise;
+    //__onlymaster pwise->gather();
+    delete pwise;
 
     MPI_Barrier(MPI_COMM_WORLD);*/
 

@@ -6,10 +6,10 @@
 #include <fstream>
 #include <cstring>
 #include <string>
-#include <mpi.h>
 
 #include "msa.hpp"
 #include "fasta.hpp"
+#include "cluster.hpp"
 
 /**
  * Instantiates a new fasta sequence.
@@ -58,7 +58,7 @@ Fasta::~Fasta()
  */
 uint16_t Fasta::load(const std::string& fname)
 {
-    __onlymaster {
+    onlymaster {
         std::fstream fastafile(fname, std::fstream::in);
 
         if(fastafile.fail()) {
@@ -77,7 +77,7 @@ uint16_t Fasta::load(const std::string& fname)
         this->broadcast();
     }
 
-    __onlymaster {
+    onlymaster {
         __debugh("loaded %u sequences", this->getCount());
     }
 
@@ -152,34 +152,34 @@ void Fasta::broadcast()
 {
     uint16_t count = this->getCount();
 
-    MPI_Bcast(&count, 1, MPI_SHORT, __master, MPI_COMM_WORLD);
-    MPI_Barrier(MPI_COMM_WORLD);
+    cluster::broadcast(&count);
+    cluster::synchronize();
 
     uint32_t *sizes = new uint32_t [count];
     uint32_t szsum = 0;
 
-    __onlymaster {
+    onlymaster {
         for(int i = 0; i < count; ++i)
             szsum += sizes[i] = this->list[i]->getLength();
     }
 
-    MPI_Bcast(sizes, count, MPI_INT, __master, MPI_COMM_WORLD);
-    MPI_Bcast(&szsum,    1, MPI_INT, __master, MPI_COMM_WORLD);
-    MPI_Barrier(MPI_COMM_WORLD);
+    cluster::broadcast(sizes, count);
+    cluster::broadcast(&szsum);
+    cluster::synchronize();
 
     char *data = new char [szsum];
 
-    __onlymaster {
+    onlymaster {
         for(uint32_t i = 0, offset = 0; i < count; ++i) {
             memcpy(data + offset, this->list[i]->getBuffer(), sizeof(char) * sizes[i]);
             offset += sizes[i];
         }
     }
 
-    MPI_Bcast(data, szsum, MPI_CHAR, __master, MPI_COMM_WORLD);
-    MPI_Barrier(MPI_COMM_WORLD);
+    cluster::broadcast(data, szsum);
+    cluster::synchronize();
 
-    __onlyslaves {
+    onlyslaves {
         for(uint32_t i = 0, offset = 0; i < count; ++i) {
             this->push("__slave", data + offset, sizes[i]);
             offset += sizes[i];

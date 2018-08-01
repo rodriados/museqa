@@ -11,8 +11,9 @@
 #include "input.hpp"
 
 /*
- * Declaring global verbose variable.
+ * Declaring global variables.
  */
+Input clidata;
 bool verbose = false;
 
 /*

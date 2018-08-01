@@ -18,7 +18,7 @@ static DeviceProperties devprops;
  * Informs the number of devices available.
  * @return The number of compute-capable devices.
  */
-int Device::count()
+int device::count()
 {
     return devices || cudaGetDeviceCount(&devices) == cudaSuccess
         ? devices
@@ -29,16 +29,16 @@ int Device::count()
  * Checks whether at least one device is available.
  * @return Is there at least one compute-capable device available?
  */
-bool Device::check()
+bool device::check()
 {
-    return !!Device::count();
+    return !!device::count();
 }
 
 /**
  * Gathers information about chosen device.
  * @return All information available about chosen device.
  */
-const DeviceProperties& Device::properties()
+const DeviceProperties& device::properties()
 {
     int id;
 

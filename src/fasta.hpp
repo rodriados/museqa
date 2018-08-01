@@ -72,11 +72,12 @@ class Fasta final
         uint16_t load(const std::string&);
 
     private:
-        void broadcast();
         bool extract(std::fstream&);
         void push(const std::string&, const std::string&);
         void push(const std::string&, const Buffer<char>&);
         void push(const std::string&, const char *, uint32_t);
+        
+        void broadcast();
 };
 
 #endif
