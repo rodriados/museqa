@@ -64,11 +64,11 @@ extern bool verbose;
  * print out debugging information.
  */ 
 #ifdef __msa_debug__
-#  define __debugh(msg, ...) printf(__st(bold, "[  msa:host] ") msg "\n", ##__VA_ARGS__)
-#  define __debugd(msg, ...) printf(__st(bold, "[msa:device] ") msg "\n", ##__VA_ARGS__)
+#  define __debugh(msg, ...) printf(style(bold, "[  msa:host] ") msg "\n", ##__VA_ARGS__)
+#  define __debugd(msg, ...) printf(style(bold, "[msa:device] ") msg "\n", ##__VA_ARGS__)
 #else
-#  define __debugh(msg, ...) if(verbose) { printf(__st(bold, "[  msa:host] ") msg "\n", ##__VA_ARGS__); }
-#  define __debugd(msg, ...) if(verbose) { printf(__st(bold, "[msa:device] ") msg "\n", ##__VA_ARGS__); }
+#  define __debugh(msg, ...) if(verbose) { printf(style(bold, "[  msa:host] ") msg "\n", ##__VA_ARGS__); }
+#  define __debugd(msg, ...) if(verbose) { printf(style(bold, "[msa:device] ") msg "\n", ##__VA_ARGS__); }
 #endif
 
 #endif

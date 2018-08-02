@@ -15,17 +15,19 @@ namespace cluster
     /*
      * Declaring global variables.
      */
-    extern const int master = __msa_master_node_id__;
+    static const int master = __msa_master_node_id__;
 
     /**
      * Static template struct responsible for informing the datatype of data
      * to be sent via MPI. It can only be used with the types defined below.
      * @since 0.1.alpha
      */
-    template<typename T, typename U = void> struct type;
+    template<typename T, typename U = void>
+    struct type;
 
     #define type_entry(kvl, ...)                            \
-        template<> struct type<__VA_ARGS__>                 \
+        template<>                                          \
+        struct type<__VA_ARGS__>                            \
         {                                                   \
             inline static const MPI_Datatype get()          \
             {                                               \
@@ -33,6 +35,7 @@ namespace cluster
             }                                               \
         };
 
+    type_entry(MPI_CHAR, char);
     type_entry(MPI_CHAR, int8_t);
     type_entry(MPI_BYTE, uint8_t);
     type_entry(MPI_SHORT, int16_t);

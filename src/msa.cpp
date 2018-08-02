@@ -37,8 +37,7 @@ int main(int argc, char **argv)
     clidata.checkhelp();
     cluster::synchronize();
 
-    Fasta ffile;
-    ffile.load(clidata.get(ParamCode::File));
+    Fasta ffile(clidata.get(ParamCode::File));
     cluster::synchronize();
     
     Pairwise pwise(ffile);

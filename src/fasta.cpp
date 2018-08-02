@@ -26,7 +26,7 @@ FastaSequence::FastaSequence(const std::string& description, const std::string& 
  * @param description The sequence description.
  * @param buffer The buffer containing this sequence's data.
  */
-FastaSequence::FastaSequence(const std::string& description, const Buffer<char>& buffer)
+FastaSequence::FastaSequence(const std::string& description, const BufferPtr<char>& buffer)
 :   Sequence(buffer)
 ,   description(description)
 {}
@@ -43,6 +43,20 @@ FastaSequence::FastaSequence(const std::string& description, const char *buffer,
 {}
 
 /**
+ * Instantiates a new fasta file sequence list.
+ * @param fname The name of file to be opened and extracted.
+ */
+Fasta::Fasta(const std::string& fname)
+{
+    onlymaster {
+        this->load(fname);
+        __debugh("loaded %u sequences from %s", this->getCount(), fname.c_str());
+    }
+
+    this->broadcast();
+}
+
+/**
  * Destroys all sequences read from fasta file.
  */
 Fasta::~Fasta()
@@ -54,34 +68,18 @@ Fasta::~Fasta()
 /**
  * Reads a file and allocates memory to all sequences contained in it.
  * @param fname The name of the file to be loaded.
- * @return The number of sequences loaded from file.
  */
-uint16_t Fasta::load(const std::string& fname)
+void Fasta::load(const std::string& fname)
 {
-    onlymaster {
-        std::fstream fastafile(fname, std::fstream::in);
+    std::fstream ffile(fname, std::fstream::in);
 
-        if(fastafile.fail()) {
-            finalize(ErrorCode::InvalidFile);
-        }
+    if(ffile.fail())
+        finalize(ErrorCode::InvalidFile);
 
-        __debugh("loading from %s", fname.c_str());
+    while(!ffile.eof() && !ffile.fail())
+        this->extract(ffile);
 
-        while(!fastafile.eof() && !fastafile.fail())
-            this->extract(fastafile);
-
-        fastafile.close();        
-    }
-
-    if(nodeinfo.size > 1) {
-        this->broadcast();
-    }
-
-    onlymaster {
-        __debugh("loaded %u sequences", this->getCount());
-    }
-
-    return this->getCount();
+    ffile.close();
 }
 
 /**
@@ -90,22 +88,22 @@ uint16_t Fasta::load(const std::string& fname)
  * @param dest The destination address for the sequence.
  * @return Could a sequence be extracted?
  */
-bool Fasta::extract(std::fstream& fastafile)
+bool Fasta::extract(std::fstream& ffile)
 {
     std::string buffer, description, sequence;
 
-    while(!fastafile.eof() && fastafile.peek() != 0x3E)
+    while(!ffile.eof() && ffile.peek() != 0x3E)
         // Ignore all characters until a '>' is reached.
         // Our sequence will always have a description.
-        fastafile.get();
+        ffile.get();
 
-    if(fastafile.eof())
+    if(ffile.eof())
         return false;
 
-    std::getline(fastafile, description);
+    std::getline(ffile, description);
     description.erase(0, 1);
 
-    while(fastafile.peek() != 0x3E && std::getline(fastafile, buffer) && buffer.size() > 0)
+    while(ffile.peek() != 0x3E && std::getline(ffile, buffer) && buffer.size() > 0)
         sequence.append(buffer);
 
     this->push(description, sequence);
@@ -121,16 +119,6 @@ bool Fasta::extract(std::fstream& fastafile)
 void Fasta::push(const std::string& description, const std::string& sequence)
 {
     this->list.push_back(new FastaSequence(description, sequence));
-}
-
-/**
- * Pushes a new sequence into the list.
- * @param description The new sequence description.
- * @param buffer The buffer that will originate a new sequence into the list.
- */
-void Fasta::push(const std::string& description, const Buffer<char>& buffer)
-{
-    this->list.push_back(new FastaSequence(description, buffer));
 }
 
 /**
@@ -155,7 +143,7 @@ void Fasta::broadcast()
     cluster::broadcast(&count);
     cluster::synchronize();
 
-    uint32_t *sizes = new uint32_t [count];
+    uint32_t *sizes = new uint32_t[count];
     uint32_t szsum = 0;
 
     onlymaster {
@@ -167,11 +155,11 @@ void Fasta::broadcast()
     cluster::broadcast(&szsum);
     cluster::synchronize();
 
-    char *data = new char [szsum];
+    char *data = new char[szsum];
 
     onlymaster {
         for(uint32_t i = 0, offset = 0; i < count; ++i) {
-            memcpy(data + offset, this->list[i]->getBuffer(), sizeof(char) * sizes[i]);
+            memcpy(&data[offset], this->list[i]->getBuffer(), sizeof(char) * sizes[i]);
             offset += sizes[i];
         }
     }
@@ -181,7 +169,7 @@ void Fasta::broadcast()
 
     onlyslaves {
         for(uint32_t i = 0, offset = 0; i < count; ++i) {
-            this->push("__slave", data + offset, sizes[i]);
+            this->push("__slave", &data[offset], sizes[i]);
             offset += sizes[i];
         }
     }

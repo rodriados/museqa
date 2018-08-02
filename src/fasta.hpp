@@ -22,8 +22,9 @@ class FastaSequence : public Sequence
 
     public:
         FastaSequence(const std::string&, const std::string&);
-        FastaSequence(const std::string&, const Buffer<char>&);
+        FastaSequence(const std::string&, const BufferPtr<char>&);
         FastaSequence(const std::string&, const char *, uint32_t);
+
         virtual ~FastaSequence() noexcept = default;
 
         /**
@@ -34,6 +35,8 @@ class FastaSequence : public Sequence
         {
             return this->description;
         }
+
+    friend class Fasta;
 };
 
 /**
@@ -49,6 +52,8 @@ class Fasta final
 
     public:
         Fasta() = default;
+        Fasta(const std::string&);
+
         ~Fasta() noexcept;
 
         /**
@@ -69,15 +74,14 @@ class Fasta final
             return this->list.size();
         }
 
-        uint16_t load(const std::string&);
-
     private:
+        void broadcast();
         bool extract(std::fstream&);
+        void load(const std::string&);
+
         void push(const std::string&, const std::string&);
-        void push(const std::string&, const Buffer<char>&);
         void push(const std::string&, const char *, uint32_t);
         
-        void broadcast();
 };
 
 #endif
