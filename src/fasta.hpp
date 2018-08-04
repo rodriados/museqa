@@ -9,7 +9,7 @@
 #include <fstream>
 #include <string>
 
-#include "sequence.hpp"
+#include "sequence.cuh"
 
 /**
  * Represents a sequence read from a fasta file.
@@ -35,8 +35,6 @@ class FastaSequence : public Sequence
         {
             return this->description;
         }
-
-    friend class Fasta;
 };
 
 /**

@@ -3,14 +3,16 @@
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018 Rodrigo Siqueira
  */
-#ifndef _SEQUENCE_HPP_
-#define _SEQUENCE_HPP_
+#ifndef _SEQUENCE_CUH_
+#define _SEQUENCE_CUH_
 
 #include <cstdint>
 #include <cstring>
 #include <ostream>
 #include <string>
 #include <vector>
+
+#include "device.cuh"
 
 /**
  * Representation of a buffer pointer.
@@ -28,6 +30,7 @@ class BufferPtr
          * Gives access to buffer's data.
          * @return The buffer's internal pointer.
          */
+        __host__ __device__
         inline const T *operator&() const
         {
             return this->buffer;
@@ -37,6 +40,7 @@ class BufferPtr
          * Gives access to a specific location in buffer's data.
          * @return The buffer's position pointer.
          */
+        __host__ __device__
         inline const T& operator[](uint32_t offset) const
         {
             return this->buffer[offset];
@@ -46,6 +50,7 @@ class BufferPtr
          * Gives access to buffer's data.
          * @return The buffer's internal pointer.
          */
+        __host__ __device__
         inline const T *getBuffer() const
         {
             return this->buffer;
@@ -55,6 +60,7 @@ class BufferPtr
          * Informs the length of data stored in buffer.
          * @return The buffer's length.
          */
+        __host__ __device__
         inline uint32_t getLength() const
         {
             return this->length;
@@ -165,6 +171,7 @@ class BufferSlice : public BufferPtr<T>
          * Informs the offset of data pointed by the slice.
          * @return The buffer's slice offset.
          */
+        __host__ __device__
         inline uint32_t getOffset() const
         {
             return this->offset;
@@ -177,50 +184,46 @@ class BufferSlice : public BufferPtr<T>
  * changed after its instantiation.
  * @since 0.1.alpha
  */
-class Sequence
+class Sequence : public Buffer<char>
 {
-    protected:
-        Buffer<char> buffer;
-
     public:
-        Sequence(const std::string&);
-        Sequence(const BufferPtr<char>&);
-        Sequence(const char *, uint32_t);
-
-        virtual const Sequence& operator=(const Sequence&);
-        virtual const Sequence& operator=(const BufferPtr<char>&);
+        /**
+         * Instantiates a new immutable sequence.
+         * @param string The string containing this sequence's data.
+         */
+        inline Sequence(const std::string& string)
+        :   Buffer<char>(string.c_str(), string.size())
+        {}
 
         /**
-         * Gives access to a specific location in buffer's data.
-         * @return The buffer's position pointer.
+         * Instantiates a new immutable sequence.
+         * @param buffer The buffer of which data will be copied from.
          */
-        inline const char& operator[](uint32_t offset) const
-        {
-            return this->buffer[offset];
-        }
+        inline Sequence(const BufferPtr<char>& buffer)
+        :   Buffer<char>(buffer)
+        {}
 
         /**
-         * Informs the length of sequence.
-         * @return The sequence's length.
+         * Instantiates a new immutable sequence.
+         * @param buffer The buffer of which data will be copied from.
+         * @param size The size of the buffer.
          */
-        inline uint32_t getLength() const
-        {
-            return this->buffer.getLength();
-        }
+        inline Sequence(const char *buffer, uint32_t size)
+        :   Buffer<char>(buffer, size)
+        {}
 
-    protected:
-        Sequence() = default;
+    /**
+     * This function allows buffers to be directly printed into a ostream instance.
+     * @param os The output stream object.
+     * @param sequence The sequence to print.
+     */
+    friend inline std::ostream& operator<<(std::ostream& os, const Sequence& sequence)
+    {
+        for(uint32_t i = 0; i < sequence.getLength(); ++i)
+            os << sequence[i];
 
-        /**
-         * Gives access to the sequence's internal buffer's data.
-         * @return The buffer's internal pointer.
-         */
-        inline const char *getBuffer() const
-        {
-            return this->buffer.getBuffer();
-        }
-
-    friend std::ostream& operator<<(std::ostream&, const Sequence&);
+        return os;
+    }
 };
 
 #endif
