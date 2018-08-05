@@ -144,7 +144,7 @@ Input::Argument::Argument(const Command& command)
 [[noreturn]]
 void Input::missing(const Command& command) const
 {
-    __onlymaster {
+    onlymaster {
         std::cerr
             << "Fatal error. The required parameter " __bold
             << command.lname << __reset " was not found." << std::endl
@@ -161,7 +161,7 @@ void Input::missing(const Command& command) const
 [[noreturn]]
 void Input::unknown(const char *command) const
 {
-    __onlymaster {
+    onlymaster {
         std::cerr
             << "Unknown option: " __bold __redfg << command << __reset << std::endl
             << "Try `" __bold << this->appname << __reset " -h' for more information." << std::endl;
@@ -176,7 +176,7 @@ void Input::unknown(const char *command) const
 [[noreturn]]
 void Input::version() const
 {
-    __onlymaster {
+    onlymaster {
         std::cerr
             << __bold MSA __greenfg " v" VERSION __reset
             << std::endl;
@@ -191,7 +191,7 @@ void Input::version() const
 [[noreturn]]
 void Input::usage() const
 {
-    __onlymaster {
+    onlymaster {
         std::cerr
             << "Usage: mpirun " __bold << this->appname << __reset " [options]" << std::endl
             << "Options:" << std::endl;

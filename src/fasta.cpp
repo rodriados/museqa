@@ -53,13 +53,13 @@ Fasta::Fasta(const std::string& fname)
         __debugh("loaded %u sequences from %s", this->getCount(), fname.c_str());
     }
 
-    this->broadcast();
+    Fasta::broadcast(this);
 }
 
 /**
  * Destroys all sequences read from fasta file.
  */
-Fasta::~Fasta()
+Fasta::~Fasta() noexcept
 {
     for(FastaSequence *sequence : this->list)
         delete sequence;
@@ -135,11 +135,11 @@ void Fasta::push(const std::string& description, const char *buffer, uint32_t si
 /**
  * Sends the sequences loaded by the master node to all other nodes.
  * This method will send all sequences to all nodes.
+ * @param fasta The target instance for broadcast.
  */
-void Fasta::broadcast()
+void Fasta::broadcast(Fasta *fasta)
 {
-    uint16_t count = this->getCount();
-
+    uint16_t count = fasta->getCount();
     cluster::broadcast(&count);
     cluster::synchronize();
 
@@ -148,7 +148,7 @@ void Fasta::broadcast()
 
     onlymaster {
         for(int i = 0; i < count; ++i)
-            szsum += sizes[i] = this->list[i]->getLength();
+            szsum += sizes[i] = fasta->list[i]->getLength();
     }
 
     cluster::broadcast(sizes, count);
@@ -159,7 +159,7 @@ void Fasta::broadcast()
 
     onlymaster {
         for(uint32_t i = 0, offset = 0; i < count; ++i) {
-            memcpy(&data[offset], this->list[i]->getBuffer(), sizeof(char) * sizes[i]);
+            memcpy(&data[offset], fasta->list[i]->getBuffer(), sizeof(char) * sizes[i]);
             offset += sizes[i];
         }
     }
@@ -169,7 +169,7 @@ void Fasta::broadcast()
 
     onlyslaves {
         for(uint32_t i = 0, offset = 0; i < count; ++i) {
-            this->push("__slave", &data[offset], sizes[i]);
+            fasta->push("__slave", &data[offset], sizes[i]);
             offset += sizes[i];
         }
     }

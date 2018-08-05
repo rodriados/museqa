@@ -23,7 +23,7 @@ class BufferPtr
 {
     protected:
         T *buffer = nullptr;    /// The buffer being encapsulated.
-        uint32_t length = 0;    /// The buffer's current length.
+        uint32_t length = 0;     /// The buffer's current number of data blocks.
 
     public:
         /**
@@ -57,8 +57,8 @@ class BufferPtr
         }
 
         /**
-         * Informs the length of data stored in buffer.
-         * @return The buffer's length.
+         * Informs the number of data blocks stored in buffer.
+         * @return The buffer's number of blocks.
          */
         __host__ __device__
         inline uint32_t getLength() const
@@ -83,7 +83,7 @@ class Buffer : public BufferPtr<T>
         /**
          * Constructs a new buffer from an already existing one.
          * @param buffer The buffer to be copied.
-         * @param length The length of buffer being copied.
+         * @param length The number of buffer blocks being copied.
          */
         inline Buffer(const T *buffer, uint32_t length)
         {
@@ -113,14 +113,15 @@ class Buffer : public BufferPtr<T>
          */
         inline ~Buffer() noexcept
         {
-            delete[] this->buffer;
+            if(this->buffer != nullptr)
+                delete[] this->buffer;
         }
 
     private:
         /**
          * Copies an existing buffer's data.
          * @param buffer The buffer to be copied.
-         * @param length The buffer's length.
+         * @param length The buffer's data blocks number.
          */
         inline void copy(const T *buffer, uint32_t length)
         {
@@ -137,6 +138,8 @@ class Buffer : public BufferPtr<T>
 template<typename T>
 class BufferSlice : public BufferPtr<T>
 {
+    using BufferPtr<T>::BufferPtr;
+
     protected:
         uint32_t offset = 0;    /// The slice offset in relation to the buffer.
 
@@ -147,13 +150,13 @@ class BufferSlice : public BufferPtr<T>
          * Constructs a new buffer slice.
          * @param target The target buffer to which the slice is related to.
          * @param offset The offset of the slice.
-         * @param length The length of the slice.
+         * @param length The number of blocks of the slice.
          */
         inline BufferSlice(const BufferPtr<T>& target, uint32_t offset = 0, uint32_t length = 0)
         {
-            this->offset = offset;
-            this->length = length;
             this->buffer = &target[offset];
+            this->length = length;
+            this->offset = offset;
         }
 
         /**
@@ -162,9 +165,9 @@ class BufferSlice : public BufferPtr<T>
          */
         inline BufferSlice(const BufferSlice<T>& slice)
         {
-            this->offset = slice.getOffset();
-            this->length = slice.getLength();
             this->buffer = slice.getBuffer();
+            this->length = slice.getLength();
+            this->offset = slice.getOffset();
         }
 
         /**
@@ -172,7 +175,7 @@ class BufferSlice : public BufferPtr<T>
          * @return The buffer's slice offset.
          */
         __host__ __device__
-        inline uint32_t getOffset() const
+        inline int getOffset() const
         {
             return this->offset;
         }
@@ -180,50 +183,37 @@ class BufferSlice : public BufferPtr<T>
 };
 
 /**
- * Creates an immutable sequence. This sequence is a buffer that should not be
- * changed after its instantiation.
+ * Creates an sequence. This sequence is a buffer an any modification to
+ * it shall be implemented by inherited methods.
  * @since 0.1.alpha
  */
 class Sequence : public Buffer<char>
 {
+    using Buffer::Buffer;
+
     public:
         /**
-         * Instantiates a new immutable sequence.
+         * Instantiates a new sequence.
          * @param string The string containing this sequence's data.
          */
         inline Sequence(const std::string& string)
         :   Buffer<char>(string.c_str(), string.size())
         {}
 
-        /**
-         * Instantiates a new immutable sequence.
-         * @param buffer The buffer of which data will be copied from.
-         */
-        inline Sequence(const BufferPtr<char>& buffer)
-        :   Buffer<char>(buffer)
-        {}
-
-        /**
-         * Instantiates a new immutable sequence.
-         * @param buffer The buffer of which data will be copied from.
-         * @param size The size of the buffer.
-         */
-        inline Sequence(const char *buffer, uint32_t size)
-        :   Buffer<char>(buffer, size)
-        {}
-
-    /**
-     * This function allows buffers to be directly printed into a ostream instance.
-     * @param os The output stream object.
-     * @param sequence The sequence to print.
-     */
-    friend inline std::ostream& operator<<(std::ostream& os, const Sequence& sequence)
-    {
-        for(uint32_t i = 0; i < sequence.getLength(); ++i)
-            os << sequence[i];
-
-        return os;
-    }
+    friend std::ostream& operator<<(std::ostream&, const BufferPtr<char>&);
 };
+
+/**
+ * This function allows buffers to be directly printed into a ostream instance.
+ * @param os The output stream object.
+ * @param sequence The sequence to print.
+ */
+inline std::ostream& operator<<(std::ostream& os, const BufferPtr<char>& sequence)
+{
+    for(uint32_t i = 0; i < sequence.getLength(); ++i)
+        os << sequence[i];
+
+    return os;
+}
 
 #endif

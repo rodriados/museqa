@@ -46,7 +46,7 @@ class FastaSequence : public Sequence
 class Fasta final
 {
     protected:
-        std::vector<FastaSequence *> list;  /// The list of sequences read from file.
+        std::vector<FastaSequence*> list;       /// The list of sequences read from file.
 
     public:
         Fasta() = default;
@@ -73,13 +73,13 @@ class Fasta final
         }
 
     private:
-        void broadcast();
         bool extract(std::fstream&);
         void load(const std::string&);
 
         void push(const std::string&, const std::string&);
         void push(const std::string&, const char *, uint32_t);
-        
+
+        static void broadcast(Fasta *);
 };
 
 #endif

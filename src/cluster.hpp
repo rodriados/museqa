@@ -23,34 +23,34 @@ namespace cluster
      * @since 0.1.alpha
      */
     template<typename T, typename U = void>
-    struct type;
+    struct TypeMapping;
 
-    #define type_entry(kvl, ...)                            \
-        template<>                                          \
-        struct type<__VA_ARGS__>                            \
-        {                                                   \
-            inline static const MPI_Datatype get()          \
-            {                                               \
-                return (kvl);                               \
-            }                                               \
+    #define __maptype(kvl, ...)                                                         \
+        template<>                                                                      \
+        struct TypeMapping<__VA_ARGS__>                                                 \
+        {                                                                               \
+            inline static const MPI_Datatype get()                                      \
+            {                                                                           \
+                return (kvl);                                                           \
+            }                                                                           \
         };
 
-    type_entry(MPI_CHAR, char);
-    type_entry(MPI_CHAR, int8_t);
-    type_entry(MPI_BYTE, uint8_t);
-    type_entry(MPI_SHORT, int16_t);
-    type_entry(MPI_UNSIGNED_SHORT, uint16_t);
-    type_entry(MPI_INT, int32_t);
-    type_entry(MPI_UNSIGNED, uint32_t);
-    type_entry(MPI_LONG, int64_t);
-    type_entry(MPI_UNSIGNED_LONG, uint64_t);
+    __maptype(MPI_CHAR, char);
+    __maptype(MPI_CHAR, int8_t);
+    __maptype(MPI_BYTE, uint8_t);
+    __maptype(MPI_SHORT, int16_t);
+    __maptype(MPI_UNSIGNED_SHORT, uint16_t);
+    __maptype(MPI_INT, int32_t);
+    __maptype(MPI_UNSIGNED, uint32_t);
+    __maptype(MPI_LONG, int64_t);
+    __maptype(MPI_UNSIGNED_LONG, uint64_t);
 
-    type_entry(MPI_FLOAT, float);
-    type_entry(MPI_DOUBLE, double);
+    __maptype(MPI_FLOAT, float);
+    __maptype(MPI_DOUBLE, double);
 
-    type_entry(MPI_2INT, int32_t, int32_t);
-    type_entry(MPI_FLOAT_INT, float, int32_t);
-    type_entry(MPI_DOUBLE_INT, double, int32_t);
+    __maptype(MPI_2INT, int32_t, int32_t);
+    __maptype(MPI_FLOAT_INT, float, int32_t);
+    __maptype(MPI_DOUBLE_INT, double, int32_t);
 
     /**
      * Initializes the node's communication and identifies it in the cluster.
@@ -73,13 +73,13 @@ namespace cluster
     template<typename T, typename U>
     inline int broadcast(void *buffer, int count = 1, int root = master)
     {
-        return MPI_Bcast(buffer, count, type<T,U>::get(), root, MPI_COMM_WORLD);
+        return MPI_Bcast(buffer, count, TypeMapping<T,U>::get(), root, MPI_COMM_WORLD);
     }
 
     template<typename T>
     inline int broadcast(T *buffer, int count = 1, int root = master)
     {
-        return MPI_Bcast(buffer, count, type<T>::get(), root, MPI_COMM_WORLD);
+        return MPI_Bcast(buffer, count, TypeMapping<T>::get(), root, MPI_COMM_WORLD);
     }
 
     /**
@@ -92,13 +92,13 @@ namespace cluster
     template<typename T, typename U>
     inline int send(const void *buffer, int count = 1, int dest = master, int tag = MPI_TAG_UB)
     {
-        return MPI_Send(buffer, count, type<T,U>::get(), dest, tag, MPI_COMM_WORLD);
+        return MPI_Send(buffer, count, TypeMapping<T,U>::get(), dest, tag, MPI_COMM_WORLD);
     }
 
     template<typename T>
     inline int send(const T *buffer, int count = 1, int dest = master, int tag = MPI_TAG_UB)
     {
-        return MPI_Send(buffer, count, type<T>::get(), dest, tag, MPI_COMM_WORLD);
+        return MPI_Send(buffer, count, TypeMapping<T>::get(), dest, tag, MPI_COMM_WORLD);
     }
 
     /**
@@ -117,7 +117,7 @@ namespace cluster
     ,   int tag = MPI_TAG_UB
     ,   MPI_Status *status = MPI_STATUS_IGNORE
     ) {
-        return MPI_Recv(buffer, count, type<T,U>::get(), source, tag, MPI_COMM_WORLD, status);
+        return MPI_Recv(buffer, count, TypeMapping<T,U>::get(), source, tag, MPI_COMM_WORLD, status);
     }
 
     template<typename T>
@@ -128,7 +128,7 @@ namespace cluster
     ,   int tag = MPI_TAG_UB
     ,   MPI_Status *status = MPI_STATUS_IGNORE
     ) {
-        return MPI_Recv(buffer, count, type<T>::get(), source, tag, MPI_COMM_WORLD, status);
+        return MPI_Recv(buffer, count, TypeMapping<T>::get(), source, tag, MPI_COMM_WORLD, status);
     }
 
     /**
