@@ -78,7 +78,7 @@ template<typename T>
 class Buffer : public BufferPtr<T>
 {
     public:
-        Buffer() = delete;
+        Buffer() = default;
 
         /**
          * Constructs a new buffer from an already existing one.
@@ -144,7 +144,7 @@ class BufferSlice : public BufferPtr<T>
         uint32_t offset = 0;    /// The slice offset in relation to the buffer.
 
     public:
-        BufferSlice() = delete;
+        BufferSlice() = default;
 
         /**
          * Constructs a new buffer slice.

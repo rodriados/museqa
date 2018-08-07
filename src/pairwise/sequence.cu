@@ -87,7 +87,7 @@ pairwise::Sequence::Sequence(const uint32_t *buffer, uint32_t size)
  * Gives access to a specific location in buffer's data.
  * @return The buffer's position pointer.
  */
-__host__ __device__ const uint8_t pairwise::Sequence::operator[](uint32_t offset) const
+__host__ __device__ uint8_t pairwise::Sequence::operator[](uint32_t offset) const
 {
     register uint32_t block = offset / 6;
     register uint8_t bindex = offset % 6;
@@ -119,22 +119,21 @@ std::string pairwise::Sequence::uncompress() const
  * @param buffer The buffer to be compressed.
  * @param size The buffer's size.
  */
-static std::vector<uint32_t> pairwise::Sequence::compress(const char *buffer, uint32_t size)
+std::vector<uint32_t> pairwise::Sequence::compress(const char *buffer, uint32_t size)
 {
-    uint32_t length = (size / 6) + bool(size % 6);
     std::vector<uint32_t> vblocks;
 
-    for(uint32_t n = 0; n < size; ++i) {
+    for(uint32_t i = 0, n = 0; n < size; ++i) {
         uint32_t actual = 0;
 
-        for(uint8_t i = 0; i < 6; ++i, ++n)
+        for(uint8_t j = 0; j < 6; ++j, ++n)
             actual |= (n < size && 'A' <= buffer[n] && buffer[n] <= 'Z')
-                ? translate[buffer[n] - 'A'] << hshift[i]
-                : 0x18 << hshift[i];
+                ? translate[buffer[n] - 'A'] << hshift[j]
+                : 0x18 << hshift[j];
 
         actual |= (i != 0)
             ? (n >= size) ? 0x2 : 0x3
-            : 0x1
+            : 0x1;
 
         vblocks.push_back(actual);
     }
@@ -154,10 +153,10 @@ pairwise::SequenceList::SequenceList(const Fasta& fasta)
 
 /**
  * Initializes a new sequence list.
- * @param list The list of character buffers to be pushed.
+ * @param list The vector of character buffers to be pushed.
  * @param count The number of elements in the list.
  */
-pairwise::SequenceList::SequenceList(const Buffer<char> *list, uint16_t count)
+pairwise::SequenceList::SequenceList(const BufferPtr<char> *list, uint16_t count)
 {
     for(uint16_t i = 0; i < count; ++i)
         this->list.push_back(new pairwise::Sequence(list[i]));
@@ -165,12 +164,13 @@ pairwise::SequenceList::SequenceList(const Buffer<char> *list, uint16_t count)
 
 /**
  * Initializes a new sequence list.
- * @param list The vector of character buffers to be pushed.
+ * @param list The list of character buffers to be pushed.
+ * @param count The number of elements in the list.
  */
-pairwise::SequenceList::SequenceList(const std::vector<Buffer<char>>& list)
+pairwise::SequenceList::SequenceList(const BufferPtr<uint32_t> *list, uint16_t count)
 {
-    for(const Buffer<char>& buffer : list)
-        this->list.push_back(new pairwise::Sequence(buffer));
+    for(uint16_t i = 0; i < count; ++i)
+        this->list.push_back(new pairwise::Sequence(list[i]));
 }
 
 /**
@@ -241,7 +241,7 @@ pairwise::CompressedSequenceList pairwise::SequenceList::compress() const
  */
 pairwise::CompressedSequenceList::CompressedSequenceList(const pairwise::SequenceList& list)
 :   pairwise::Sequence(merge(list, list.getCount()))
-,   offset(new BufferOffset<uint32_t>[list.getCount()])
+,   slice(new SequenceSlice[list.getCount()])
 ,   count(list.getCount())
 {
     this->init(list, list.getCount());
@@ -254,7 +254,7 @@ pairwise::CompressedSequenceList::CompressedSequenceList(const pairwise::Sequenc
  */
 pairwise::CompressedSequenceList::CompressedSequenceList(const pairwise::Sequence *list, uint16_t count)
 :   pairwise::Sequence(merge(list, count))
-,   offset(new BufferOffset<uint32_t>[count])
+,   slice(new SequenceSlice[count])
 ,   count(count)
 {
     this->init(list, count);
@@ -266,7 +266,7 @@ pairwise::CompressedSequenceList::CompressedSequenceList(const pairwise::Sequenc
  */
 pairwise::CompressedSequenceList::CompressedSequenceList(const std::vector<pairwise::Sequence>& list)
 :   pairwise::Sequence(merge(list.data(), list.size()))
-,   offset(new BufferOffset<uint32_t>[list.size()])
+,   slice(new SequenceSlice[list.size()])
 ,   count(list.size())
 {
     this->init(list.data(), list.size());
@@ -277,7 +277,7 @@ pairwise::CompressedSequenceList::CompressedSequenceList(const std::vector<pairw
  */
 pairwise::CompressedSequenceList::~CompressedSequenceList() noexcept
 {
-    delete[] this->offset;
+    delete[] this->slice;
 }
 
 /**
@@ -299,9 +299,9 @@ pairwise::DeviceSequenceList::DeviceSequenceList(const pairwise::CompressedSeque
     this->length = list.getLength();
 
     __cudacall(cudaMalloc(&this->buffer, sizeof(uint32_t) * this->length));
-    __cudacall(cudaMalloc(&this->internal, sizeof(pairwise::BlockBuffer) * this->count));
+    __cudacall(cudaMalloc(&this->slice, sizeof(SequenceSlice) * this->count));
     __cudacall(cudaMemcpy(this->buffer, list.getBuffer(), sizeof(uint32_t) * this->length, cudaMemcpyHostToDevice));
-    __cudacall(cudaMemcpy(this->internal, list.internal, sizeof(pairwise::BlockBuffer) * this->count, cudaMemcpyHostToDevice));
+    __cudacall(cudaMemcpy(this->slice, list.slice, sizeof(SequenceSlice) * this->count, cudaMemcpyHostToDevice));
 }
 
 /**
@@ -310,7 +310,7 @@ pairwise::DeviceSequenceList::DeviceSequenceList(const pairwise::CompressedSeque
 pairwise::DeviceSequenceList::~DeviceSequenceList() noexcept
 {
     __cudacall(cudaFree(this->buffer));
-    __cudacall(cudaFree(this->internal));
+    __cudacall(cudaFree(this->slice));
 }
 
 /**

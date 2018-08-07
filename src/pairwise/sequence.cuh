@@ -29,7 +29,7 @@ namespace pairwise
             Sequence(const BufferPtr<char>&);
             Sequence(const char *, uint32_t);
 
-            __host__ __device__ const uint8_t operator[](uint32_t) const;
+            __host__ __device__ uint8_t operator[](uint32_t) const;
 
             std::string uncompress() const;
 
@@ -42,6 +42,7 @@ namespace pairwise
         private:
             static std::vector<uint32_t> compress(const char *, uint32_t);
 
+        friend class SequenceList;
     };
 
     /**
@@ -58,8 +59,8 @@ namespace pairwise
         public:
             SequenceList() = default;
             SequenceList(const Fasta&);
-            SequenceList(const Sequence *, uint16_t);
             SequenceList(const BufferPtr<char> *, uint16_t);
+            SequenceList(const BufferPtr<uint32_t> *, uint16_t);
 
             SequenceList(const SequenceList&, const uint16_t *, uint16_t);
             SequenceList(const SequenceList&, const std::vector<uint16_t>&);
@@ -93,7 +94,7 @@ namespace pairwise
     {
         using BufferSlice::BufferSlice;
         friend class CompressedSequenceList;
-    }
+    };
 
     /**
      * Creates a compressed sequence list. This immutable sequence list keeps
@@ -122,7 +123,7 @@ namespace pairwise
             __host__ __device__
             inline const BufferPtr<uint32_t>& operator[](uint16_t offset) const
             {
-                return this->offset[offset];
+                return this->slice[offset];
             }
 
             /**
@@ -165,7 +166,7 @@ namespace pairwise
                 std::vector<uint32_t> merged;
 
                 for(uint16_t i = 0; i < count; ++i) {
-                    uint32_t *ref = list[i].getBuffer();
+                    const uint32_t *ref = list[i].getBuffer();
                     merged.insert(merged.end(), ref, ref + list[i].getLength());
                 }
 
