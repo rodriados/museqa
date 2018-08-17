@@ -22,35 +22,24 @@ namespace cluster
      * to be sent via MPI. It can only be used with the types defined below.
      * @since 0.1.alpha
      */
-    template<typename T, typename U = void>
-    struct TypeMapping;
+    template<typename T, typename U = void> struct Datatype;
+    #define __typeget(dtype) static constexpr MPI_Datatype id = dtype;
 
-    #define __maptype(kvl, ...)                                                         \
-        template<>                                                                      \
-        struct TypeMapping<__VA_ARGS__>                                                 \
-        {                                                                               \
-            inline static const MPI_Datatype get()                                      \
-            {                                                                           \
-                return (kvl);                                                           \
-            }                                                                           \
-        };
+    template<> struct Datatype<char>     { __typeget(MPI_CHAR) };
+    template<> struct Datatype<int8_t>   { __typeget(MPI_CHAR) };
+    template<> struct Datatype<uint8_t>  { __typeget(MPI_BYTE) };
+    template<> struct Datatype<int16_t>  { __typeget(MPI_SHORT) };
+    template<> struct Datatype<uint16_t> { __typeget(MPI_UNSIGNED_SHORT) };
+    template<> struct Datatype<int32_t>  { __typeget(MPI_INT) };
+    template<> struct Datatype<uint32_t> { __typeget(MPI_UNSIGNED) };
+    template<> struct Datatype<int64_t>  { __typeget(MPI_LONG) };
+    template<> struct Datatype<uint64_t> { __typeget(MPI_UNSIGNED_LONG) };
+    template<> struct Datatype<float>    { __typeget(MPI_FLOAT) };
+    template<> struct Datatype<double>   { __typeget(MPI_DOUBLE) };
 
-    __maptype(MPI_CHAR, char);
-    __maptype(MPI_CHAR, int8_t);
-    __maptype(MPI_BYTE, uint8_t);
-    __maptype(MPI_SHORT, int16_t);
-    __maptype(MPI_UNSIGNED_SHORT, uint16_t);
-    __maptype(MPI_INT, int32_t);
-    __maptype(MPI_UNSIGNED, uint32_t);
-    __maptype(MPI_LONG, int64_t);
-    __maptype(MPI_UNSIGNED_LONG, uint64_t);
-
-    __maptype(MPI_FLOAT, float);
-    __maptype(MPI_DOUBLE, double);
-
-    __maptype(MPI_2INT, int32_t, int32_t);
-    __maptype(MPI_FLOAT_INT, float, int32_t);
-    __maptype(MPI_DOUBLE_INT, double, int32_t);
+    template<> struct Datatype<int32_t, int32_t> { __typeget(MPI_2INT) };
+    template<> struct Datatype<float, int32_t>   { __typeget(MPI_FLOAT_INT) };
+    template<> struct Datatype<double, int32_t>  { __typeget(MPI_DOUBLE_INT) };
 
     /**
      * Initializes the node's communication and identifies it in the cluster.
@@ -73,13 +62,19 @@ namespace cluster
     template<typename T, typename U>
     inline int broadcast(void *buffer, int count = 1, int root = master)
     {
-        return MPI_Bcast(buffer, count, TypeMapping<T,U>::get(), root, MPI_COMM_WORLD);
+        return MPI_Bcast(buffer, count, Datatype<T,U>::id, root, MPI_COMM_WORLD);
     }
 
+    /**
+     * Broadcasts data to all nodes connected in the cluster.
+     * @param buffer The buffer to broadcast.
+     * @param count The number of buffer's elements to broadcast.
+     * @param root The operation's root node.
+     */
     template<typename T>
     inline int broadcast(T *buffer, int count = 1, int root = master)
     {
-        return MPI_Bcast(buffer, count, TypeMapping<T>::get(), root, MPI_COMM_WORLD);
+        return MPI_Bcast(buffer, count, Datatype<T>::id, root, MPI_COMM_WORLD);
     }
 
     /**
@@ -92,13 +87,20 @@ namespace cluster
     template<typename T, typename U>
     inline int send(const void *buffer, int count = 1, int dest = master, int tag = MPI_TAG_UB)
     {
-        return MPI_Send(buffer, count, TypeMapping<T,U>::get(), dest, tag, MPI_COMM_WORLD);
+        return MPI_Send(buffer, count, Datatype<T,U>::id, dest, tag, MPI_COMM_WORLD);
     }
 
+    /**
+     * Sends data to a node connected to the cluster.
+     * @param buffer The buffer to send.
+     * @param count The number of buffer's elements to send.
+     * @param dest The destination node.
+     * @param tag The identifying tag.
+     */
     template<typename T>
     inline int send(const T *buffer, int count = 1, int dest = master, int tag = MPI_TAG_UB)
     {
-        return MPI_Send(buffer, count, TypeMapping<T>::get(), dest, tag, MPI_COMM_WORLD);
+        return MPI_Send(buffer, count, Datatype<T>::id, dest, tag, MPI_COMM_WORLD);
     }
 
     /**
@@ -117,9 +119,17 @@ namespace cluster
     ,   int tag = MPI_TAG_UB
     ,   MPI_Status *status = MPI_STATUS_IGNORE
     ) {
-        return MPI_Recv(buffer, count, TypeMapping<T,U>::get(), source, tag, MPI_COMM_WORLD, status);
+        return MPI_Recv(buffer, count, Datatype<T,U>::id, source, tag, MPI_COMM_WORLD, status);
     }
 
+    /**
+     * Receives data from a node connected to the cluster.
+     * @param buffer The buffer to receive data into.
+     * @param count The number of buffer's elements to receive.
+     * @param source The source node.
+     * @param tag The identifying tag.
+     * @param status The transmission status.
+     */
     template<typename T>
     inline int receive
     (   T *buffer
@@ -128,7 +138,7 @@ namespace cluster
     ,   int tag = MPI_TAG_UB
     ,   MPI_Status *status = MPI_STATUS_IGNORE
     ) {
-        return MPI_Recv(buffer, count, TypeMapping<T>::get(), source, tag, MPI_COMM_WORLD, status);
+        return MPI_Recv(buffer, count, Datatype<T>::id, source, tag, MPI_COMM_WORLD, status);
     }
 
     /**

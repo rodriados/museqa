@@ -6,10 +6,10 @@
 #ifndef _FASTA_HPP_
 #define _FASTA_HPP_
 
-#include <fstream>
 #include <string>
+#include <fstream>
 
-#include "sequence.cuh"
+#include "sequence.hpp"
 
 /**
  * Represents a sequence read from a fasta file.
@@ -22,7 +22,7 @@ class FastaSequence : public Sequence
 
     public:
         FastaSequence(const std::string&, const std::string&);
-        FastaSequence(const std::string&, const BufferPtr<char>&);
+        FastaSequence(const std::string&, const BaseBuffer<char>&);
         FastaSequence(const std::string&, const char *, uint32_t);
 
         virtual ~FastaSequence() noexcept = default;

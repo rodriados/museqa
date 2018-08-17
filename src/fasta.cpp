@@ -18,18 +18,16 @@
  */
 FastaSequence::FastaSequence(const std::string& description, const std::string& string)
 :   Sequence(string)
-,   description(description)
-{}
+,   description(description) {}
 
 /**
  * Instantiates a new fasta sequence.
  * @param description The sequence description.
  * @param buffer The buffer containing this sequence's data.
  */
-FastaSequence::FastaSequence(const std::string& description, const BufferPtr<char>& buffer)
+FastaSequence::FastaSequence(const std::string& description, const BaseBuffer<char>& buffer)
 :   Sequence(buffer)
-,   description(description)
-{}
+,   description(description) {}
 
 /**
  * Instantiates a new fasta sequence.
@@ -39,8 +37,7 @@ FastaSequence::FastaSequence(const std::string& description, const BufferPtr<cha
  */
 FastaSequence::FastaSequence(const std::string& description, const char *buffer, uint32_t size)
 :   Sequence(buffer, size)
-,   description(description)
-{}
+,   description(description) {}
 
 /**
  * Instantiates a new fasta file sequence list.
@@ -159,7 +156,7 @@ void Fasta::broadcast(Fasta *fasta)
 
     onlymaster {
         for(uint32_t i = 0, offset = 0; i < count; ++i) {
-            memcpy(&data[offset], fasta->list[i]->getBuffer(), sizeof(char) * sizes[i]);
+            std::memcpy(&data[offset], fasta->list[i]->getBuffer(), sizeof(char) * sizes[i]);
             offset += sizes[i];
         }
     }

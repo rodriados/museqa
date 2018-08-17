@@ -53,14 +53,6 @@ typedef cudaDeviceProp DeviceProperties;
 
 #endif
 
-/*
- * Macros that allows seamless declaration of device functions within host code.
- */
-#ifndef __CUDACC__
-#  define __host__
-#  define __device__
-#endif
-
 /**
  * Offers a set of tools to easily gather information about the device(s) connected.
  * @since 0.1.alpha
