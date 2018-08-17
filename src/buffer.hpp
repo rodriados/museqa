@@ -10,6 +10,8 @@
 #include <cstring>
 #include <vector>
 
+#include "device.cuh"
+
 /**
  * The base of a buffer class.
  * @since 0.1.alpha
@@ -44,7 +46,7 @@ class BaseBuffer
          * @param offset The requested buffer offset.
          * @return The buffer's position pointer.
          */
-        inline const T& operator[](uint32_t offset) const
+        __cudadecl__ inline const T& operator[](uint32_t offset) const
         {
             return this->buffer[offset];
         }
@@ -53,7 +55,7 @@ class BaseBuffer
          * Gives access to buffer's data.
          * @return The buffer's internal pointer.
          */
-        inline T *getBuffer() const
+        __cudadecl__ inline T *getBuffer() const
         {
             return this->buffer;
         }
@@ -62,7 +64,7 @@ class BaseBuffer
          * Informs the buffer's number of blocks.
          * @return The number of buffer blocks.
          */
-        inline uint32_t getSize() const
+        __cudadecl__ inline uint32_t getSize() const
         {
             return this->size;
         }
@@ -189,7 +191,7 @@ class BufferSlice : public BaseBuffer<T>
          * Informs the displacement of data pointed by the slice.
          * @return The buffer's slice displacement.
          */
-        inline uint32_t getDispl() const
+        __cudadecl__ inline uint32_t getDispl() const
         {
             return this->displ;
         }

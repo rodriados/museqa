@@ -17,32 +17,105 @@
 
 namespace pairwise
 {
+    /*
+     * Declaring namespace helper functions.
+     */
+    __cudadecl__ uint8_t blockDecode(uint32_t, uint8_t);
+
     /**
      * Represents a compressed sequence. The characters are encoded in
      * such a way that it saves one third of the space it would require.
      * @since 0.1.alpha
      */
-    class Sequence : public Buffer<uint32_t>
+    class dSequence : public Buffer<uint32_t>
     {
         public:
-            Sequence(const std::string&);
-            Sequence(const BufferPtr<char>&);
-            Sequence(const char *, uint32_t);
+            dSequence(const std::string&);
+            dSequence(const BaseBuffer<char>&);
+            dSequence(const char *, uint32_t);
 
-            __host__ __device__ uint8_t operator[](uint32_t) const;
+            /**
+             * Decodes the character at the given offset.
+             * @param offset The requested offset.
+             * @return The character in the specified offset.
+             */
+            __cudadecl__ inline uint8_t operator[](uint32_t offset) const
+            {
+                return blockDecode(this->buffer[offset / 6], offset % 6);
+            }
 
-            std::string uncompress() const;
+            /**
+             * Gives access to a encoded character block of the sequence.
+             * @param id The index of the requested block.
+             * @return The requested block.
+             */
+            __cudadecl__ inline uint32_t getBlock(uint32_t id) const
+            {
+                return this->buffer[id];
+            }
+
+            /**
+             * Informs the length of the sequence.
+             * @return The sequence's length.
+             */
+            __cudadecl__ inline uint32_t getLength() const
+            {
+                return this->getSize() * 6;
+            }
+
+            std::string toString() const;
 
         protected:
-            Sequence() = default;
-            Sequence(const BufferPtr<uint32_t>&);
-            Sequence(const std::vector<uint32_t>&);
-            Sequence(const uint32_t *, uint32_t);
+            dSequence() = default;
+            dSequence(const BaseBuffer<uint32_t>&);
+            dSequence(const std::vector<uint32_t>&);
+            dSequence(const uint32_t *, uint32_t);
 
         private:
             static std::vector<uint32_t> compress(const char *, uint32_t);
 
         friend class SequenceList;
+    };
+
+    /**
+     * Represents a slice of a sequence.
+     * @since 0.1.alpha
+     */
+    class dSequenceSlice : public BufferSlice<uint32_t>
+    {
+        using BufferSlice<uint32_t>::BufferSlice;
+
+        public:
+            /**
+             * Decodes the character at the given offset.
+             * @param offset The requested offset.
+             * @return The character in the specified offset.
+             */
+            __cudadecl__ inline uint8_t operator[](uint32_t offset) const
+            {
+                return blockDecode(this->buffer[offset / 6], offset % 6);
+            }
+
+            /**
+             * Gives access to a encoded character block of the sequence.
+             * @param id The index of the requested block.
+             * @return The requested block.
+             */
+            __cudadecl__ inline uint32_t getBlock(uint32_t id) const
+            {
+                return this->buffer[id];
+            }
+
+            /**
+             * Informs the length of the sequence.
+             * @return The sequence's length.
+             */
+            __cudadecl__ inline uint32_t getLength() const
+            {
+                return this->getSize() * 6;
+            }
+
+        friend class dSequenceList;
     };
 
     /**
@@ -54,18 +127,28 @@ namespace pairwise
     class SequenceList
     {
         private:
-            std::vector<Sequence*> list;
+            std::vector<dSequence*> list;
 
         public:
-            SequenceList() = default;
+            SequenceList() = delete;
             SequenceList(const Fasta&);
-            SequenceList(const BufferPtr<char> *, uint16_t);
-            SequenceList(const BufferPtr<uint32_t> *, uint16_t);
+            SequenceList(const BaseBuffer<char> *, uint16_t);
+            SequenceList(const BaseBuffer<uint32_t> *, uint16_t);
 
             SequenceList(const SequenceList&, const uint16_t *, uint16_t);
             SequenceList(const SequenceList&, const std::vector<uint16_t>&);
 
             ~SequenceList() noexcept;
+
+            /**
+             * Gives access to a specific sequence of the list.
+             * @param offset The offset of requested sequence.
+             * @return The requested sequence.
+             */
+            inline const dSequence& operator[](uint16_t offset) const
+            {
+                return *(this->list.at(offset));
+            }
 
             /**
              * Informs the number of sequences in the list.
@@ -76,24 +159,9 @@ namespace pairwise
                 return this->list.size();
             }
 
-            /**
-             * Gives access to a specific sequence of the list.
-             * @return The requested sequence.
-             */
-            inline const Sequence& operator[](uint16_t offset) const
-            {
-                return *(this->list.at(offset));
-            }
-
             SequenceList select(const uint16_t *, uint16_t) const;
             SequenceList select(const std::vector<uint16_t>&) const;
-            class CompressedSequenceList compress() const;
-    };
-
-    class SequenceSlice : public BufferSlice<uint32_t>
-    {
-        using BufferSlice::BufferSlice;
-        friend class CompressedSequenceList;
+            class dSequenceList compress() const;
     };
 
     /**
@@ -102,26 +170,26 @@ namespace pairwise
      * moving these sequences separately.
      * @since 0.1.alpha
      */
-    class CompressedSequenceList : public Sequence
+    class dSequenceList : public dSequence
     {
         protected:
-            SequenceSlice *slice = nullptr;
+            dSequenceSlice *slice = nullptr;
             uint16_t count = 0;
 
         public:
-            CompressedSequenceList() = default;
-            CompressedSequenceList(const SequenceList&);
-            CompressedSequenceList(const Sequence *, uint16_t);
-            CompressedSequenceList(const std::vector<Sequence>&);
+            dSequenceList() = default;
+            dSequenceList(const SequenceList&);
+            dSequenceList(const dSequence *, uint16_t);
+            dSequenceList(const std::vector<dSequence>&);
 
-            ~CompressedSequenceList() noexcept;
+            ~dSequenceList() noexcept;
 
             /**
              * Gives access to a specific sequence buffer offset of the list.
+             * @param offset The requested sequence offset.
              * @return The requested sequence buffer.
              */
-            __host__ __device__
-            inline const BufferPtr<uint32_t>& operator[](uint16_t offset) const
+            __cudadecl__ inline const dSequenceSlice& operator[](uint16_t offset) const
             {
                 return this->slice[offset];
             }
@@ -130,13 +198,12 @@ namespace pairwise
              * Informs the number of sequences in the list.
              * @return The list's number of sequences.
              */
-            __host__ __device__
-            inline uint16_t getCount() const
+            __cudadecl__ inline uint16_t getCount() const
             {
                 return this->count;
             }
 
-            class DeviceSequenceList toDevice() const;
+            class hSequenceList toDevice() const;
 
         protected:
             /**
@@ -148,9 +215,9 @@ namespace pairwise
             void init(const T& list, uint16_t count)
             {
                 for(uint32_t i = 0, off = 0; i < count; ++i) {
-                    this->slice[i].offset = off;
+                    this->slice[i].displ = off;
                     this->slice[i].buffer = &this->buffer[off];
-                    off += this->slice[i].length = list[i].getLength();
+                    off += this->slice[i].size = list[i].getSize();
                 }
             }
 
@@ -167,13 +234,13 @@ namespace pairwise
 
                 for(uint16_t i = 0; i < count; ++i) {
                     const uint32_t *ref = list[i].getBuffer();
-                    merged.insert(merged.end(), ref, ref + list[i].getLength());
+                    merged.insert(merged.end(), ref, ref + list[i].getSize());
                 }
 
                 return merged;
             }
 
-        friend class DeviceSequenceList;
+        friend class hSequenceList;
     };
 
     /**
@@ -181,17 +248,23 @@ namespace pairwise
      * and can only be read from the device.
      * @since 0.1.alpha
      */
-    class DeviceSequenceList : public CompressedSequenceList
+    class hSequenceList : public dSequenceList
     {
         public:
-            DeviceSequenceList(const CompressedSequenceList&);
-            ~DeviceSequenceList() noexcept;
+            hSequenceList(const dSequenceList&);
+            ~hSequenceList() noexcept;
     };
 };
 
-/*
- * Declaring global functions, related to compressed sequences.
+/**
+ * This function allows sequences to be directly printed into a ostream instance.
+ * @param os The output stream object.
+ * @param sequence The sequence to be printed.
  */
-extern std::ostream& operator<<(std::ostream&, const pairwise::Sequence&);
+inline std::ostream& operator<<(std::ostream& os, const pairwise::dSequence& sequence)
+{
+    os << sequence.toString();
+    return os;
+}
 
 #endif

@@ -12,13 +12,13 @@
  * Checks whether a compatible device is available. If not, compilation
  * fails and informs the error.
  */
-#if defined(__CUDACC__)
+#ifdef __CUDACC__
 
-#include <cuda.h>
+#  include <cuda.h>
 
-#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ < 200)
-#  error A device of compute capability 2.0 or higher is required.
-#endif
+#  if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ < 200)
+#    error A device of compute capability 2.0 or higher is required.
+#  endif
 
 /**
  * Aliases the device error enumerator to a more meaningful name.
@@ -37,20 +37,30 @@ typedef cudaDeviceProp DeviceProperties;
  * a CUDA function is called. This verifies for any errors and tries to inform what
  * was the error.
  */
-#define __cudacall(call)                                                        \
+#  define __cudacall(call)                                                        \
     if((call) != cudaSuccess) {                                                 \
         DeviceError err = cudaGetLastError();                                   \
         __debugd("%s:%d '%s'\n", __FILE__, __LINE__, cudaGetErrorString(err));  \
         finalize(ErrorCode::CudaError);                                         \
     }
 
-#define __cudacheck()                                                           \
+#  define __cudacheck()                                                           \
     DeviceError err = cudaGetLastError();                                       \
     if(err != cudaSuccess) {                                                    \
         __debugd("%s:%d '%s'\n", __FILE__, __LINE__, cudaGetErrorString(err));  \
         finalize(ErrorCode::CudaError);                                         \
     }
 
+#endif
+
+/*
+ * Creation of conditional macros that allow CUDA declarations to be used seamlessly
+ * throughout the code without any problems.
+ */
+#ifdef __CUDACC__
+#  define __cudadecl__ __host__ __device__
+#else
+#  define __cudadecl__
 #endif
 
 /**

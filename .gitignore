@@ -1,3 +1,4 @@
 msa
 obj/
 .idea/
+*.o
