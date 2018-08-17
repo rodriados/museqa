@@ -1,5 +1,6 @@
 NAME = msa
 
+IDIR = inc
 SDIR = src
 ODIR = obj
 
@@ -9,9 +10,9 @@ MPPP = mpic++
 
 MPILKDIR = /usr/lib/openmpi/lib
 
-MPFLAGS = -Wall -std=c++17 -I./$(SDIR) -g
-MCFLAGS = -Wall -std=c99 -lm -I./$(SDIR) -g
-NVFLAGS = -std=c++11 -arch sm_20 -lmpi -lcuda -lcudart -w -I./$(SDIR) -g
+MPFLAGS = -Wall -std=c++17 -I$(IDIR) -g
+MCFLAGS = -Wall -std=c99 -lm -I$(IDIR) -g
+NVFLAGS = -std=c++11 -arch sm_20 -lmpi -lcuda -lcudart -w -I$(IDIR) -g
 NVLINKFLAGS = -L$(MPILKDIR) -lmpi_cxx -lmpi -g
 
 NVFILES := $(shell find $(SDIR) -name '*.cu')
