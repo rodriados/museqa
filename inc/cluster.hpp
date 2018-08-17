@@ -23,7 +23,7 @@ namespace cluster
      * @since 0.1.alpha
      */
     template<typename T, typename U = void> struct Datatype;
-    #define __typeget(dtype) static constexpr MPI_Datatype id = dtype;
+    #  define __typeget(dtype) static constexpr MPI_Datatype id = dtype;
 
     template<> struct Datatype<char>     { __typeget(MPI_CHAR) };
     template<> struct Datatype<int8_t>   { __typeget(MPI_CHAR) };

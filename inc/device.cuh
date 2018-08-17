@@ -61,6 +61,8 @@ typedef cudaDeviceProp DeviceProperties;
 #  define __cudadecl__ __host__ __device__
 #else
 #  define __cudadecl__
+#  define __device__
+#  define __host__
 #endif
 
 /**

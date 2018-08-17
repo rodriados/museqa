@@ -102,8 +102,7 @@ const Input::Command& Input::find(const std::string& name) const
 Input::Command::Command(ParamCode id)
 :   id(id)
 ,   variadic(false)
-,   required(false)
-{}
+,   required(false) {}
 
 /**
  * Builds a command from its names and description.
@@ -126,16 +125,14 @@ Input::Command::Command
 ,   lname(lname.size() > 0 ? "--" + lname : "")
 ,   description(description)
 ,   variadic(variadic)
-,   required(required)
-{}
+,   required(required) {}
 
 /**
  * Builds an argument from a given command.
  * @param command The command to be represented by this argument.
  */
 Input::Argument::Argument(const Command& command)
-:   command(&command)
-{}
+:   command(&command) {}
 
 /**
  * Prints out a message for missing command arguments.
@@ -144,7 +141,7 @@ Input::Argument::Argument(const Command& command)
 [[noreturn]]
 void Input::missing(const Command& command) const
 {
-    onlymaster {
+    __onlymaster {
         std::cerr
             << "Fatal error. The required parameter " __bold
             << command.lname << __reset " was not found." << std::endl
@@ -161,7 +158,7 @@ void Input::missing(const Command& command) const
 [[noreturn]]
 void Input::unknown(const char *command) const
 {
-    onlymaster {
+    __onlymaster {
         std::cerr
             << "Unknown option: " __bold __redfg << command << __reset << std::endl
             << "Try `" __bold << this->appname << __reset " -h' for more information." << std::endl;
@@ -176,7 +173,7 @@ void Input::unknown(const char *command) const
 [[noreturn]]
 void Input::version() const
 {
-    onlymaster {
+    __onlymaster {
         std::cerr
             << __bold MSA __greenfg " v" VERSION __reset
             << std::endl;
@@ -191,7 +188,7 @@ void Input::version() const
 [[noreturn]]
 void Input::usage() const
 {
-    onlymaster {
+    __onlymaster {
         std::cerr
             << "Usage: mpirun " __bold << this->appname << __reset " [options]" << std::endl
             << "Options:" << std::endl;

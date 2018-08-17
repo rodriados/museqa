@@ -43,8 +43,8 @@ namespace node
  * Defines some process control macros. These macros are to be used when
  * it is needed to check whether the current process is master or not.
  */
-#define onlymaster    if(node::ismaster())
-#define onlyslaves    if(node::isslave())
-#define onlyslave(i)  if(node::isslave() && node::rank == (i))
+#define __onlymaster    if(node::ismaster())
+#define __onlyslaves    if(node::isslave())
+#define __onlyslave(i)  if(node::isslave() && node::rank == (i))
 
 #endif
