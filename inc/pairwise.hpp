@@ -3,10 +3,10 @@
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018 Rodrigo Siqueira
  */
-#ifndef _PAIRWISE_CUH_
-#define _PAIRWISE_CUH_
+#ifndef _PAIRWISE_HPP_
+#define _PAIRWISE_HPP_
 
-#include "pairwise/pairwise.cuh"
+#include "pairwise/pairwise.hpp"
 
 /*
  * Defining some configuration macros. These can be changed if needed.

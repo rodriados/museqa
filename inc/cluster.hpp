@@ -12,34 +12,29 @@
 
 namespace cluster
 {
-    /*
-     * Declaring global variables.
-     */
-    static const int master = __msa_master_node_id__;
-
     /**
      * Static template struct responsible for informing the datatype of data
      * to be sent via MPI. It can only be used with the types defined below.
      * @since 0.1.alpha
      */
-    template<typename T, typename U = void> struct Datatype;
-    #  define __typeget(dtype) static constexpr MPI_Datatype id = dtype;
+    template <typename T, typename U = void> struct Datatype;
+    #  define __typeid(dtype) static constexpr MPI_Datatype id = dtype
 
-    template<> struct Datatype<char>     { __typeget(MPI_CHAR) };
-    template<> struct Datatype<int8_t>   { __typeget(MPI_CHAR) };
-    template<> struct Datatype<uint8_t>  { __typeget(MPI_BYTE) };
-    template<> struct Datatype<int16_t>  { __typeget(MPI_SHORT) };
-    template<> struct Datatype<uint16_t> { __typeget(MPI_UNSIGNED_SHORT) };
-    template<> struct Datatype<int32_t>  { __typeget(MPI_INT) };
-    template<> struct Datatype<uint32_t> { __typeget(MPI_UNSIGNED) };
-    template<> struct Datatype<int64_t>  { __typeget(MPI_LONG) };
-    template<> struct Datatype<uint64_t> { __typeget(MPI_UNSIGNED_LONG) };
-    template<> struct Datatype<float>    { __typeget(MPI_FLOAT) };
-    template<> struct Datatype<double>   { __typeget(MPI_DOUBLE) };
+    template <> struct Datatype<char>     { __typeid(MPI_CHAR); };
+    template <> struct Datatype<int8_t>   { __typeid(MPI_CHAR); };
+    template <> struct Datatype<uint8_t>  { __typeid(MPI_BYTE); };
+    template <> struct Datatype<int16_t>  { __typeid(MPI_SHORT); };
+    template <> struct Datatype<uint16_t> { __typeid(MPI_UNSIGNED_SHORT); };
+    template <> struct Datatype<int32_t>  { __typeid(MPI_INT); };
+    template <> struct Datatype<uint32_t> { __typeid(MPI_UNSIGNED); };
+    template <> struct Datatype<int64_t>  { __typeid(MPI_LONG); };
+    template <> struct Datatype<uint64_t> { __typeid(MPI_UNSIGNED_LONG); };
+    template <> struct Datatype<float>    { __typeid(MPI_FLOAT); };
+    template <> struct Datatype<double>   { __typeid(MPI_DOUBLE); };
 
-    template<> struct Datatype<int32_t, int32_t> { __typeget(MPI_2INT) };
-    template<> struct Datatype<float, int32_t>   { __typeget(MPI_FLOAT_INT) };
-    template<> struct Datatype<double, int32_t>  { __typeget(MPI_DOUBLE_INT) };
+    template <> struct Datatype<int32_t, int32_t> { __typeid(MPI_2INT); };
+    template <> struct Datatype<float, int32_t>   { __typeid(MPI_FLOAT_INT); };
+    template <> struct Datatype<double, int32_t>  { __typeid(MPI_DOUBLE_INT); };
 
     /**
      * Initializes the node's communication and identifies it in the cluster.
@@ -50,7 +45,7 @@ namespace cluster
     {
         MPI_Init(&argc, &argv);
         MPI_Comm_rank(MPI_COMM_WORLD, &node::rank);
-        MPI_Comm_size(MPI_COMM_WORLD, &node::size);
+        MPI_Comm_size(MPI_COMM_WORLD, &cluster::size);
     }
     
     /**
@@ -59,8 +54,12 @@ namespace cluster
      * @param count The number of buffer's elements to broadcast.
      * @param root The operation's root node.
      */
-    template<typename T, typename U>
-    inline int broadcast(void *buffer, int count = 1, int root = master)
+    template <typename T, typename U>
+    inline int broadcast
+        (   void *buffer
+        ,   int count = 1
+        ,   int root = master
+        )
     {
         return MPI_Bcast(buffer, count, Datatype<T,U>::id, root, MPI_COMM_WORLD);
     }
@@ -71,8 +70,12 @@ namespace cluster
      * @param count The number of buffer's elements to broadcast.
      * @param root The operation's root node.
      */
-    template<typename T>
-    inline int broadcast(T *buffer, int count = 1, int root = master)
+    template <typename T>
+    inline int broadcast
+        (   T *buffer
+        ,   int count = 1
+        ,   int root = master
+        )
     {
         return MPI_Bcast(buffer, count, Datatype<T>::id, root, MPI_COMM_WORLD);
     }
@@ -84,8 +87,13 @@ namespace cluster
      * @param dest The destination node.
      * @param tag The identifying tag.
      */
-    template<typename T, typename U>
-    inline int send(const void *buffer, int count = 1, int dest = master, int tag = MPI_TAG_UB)
+    template <typename T, typename U>
+    inline int send
+        (   const void *buffer
+        ,   int count = 1
+        ,   int dest = master
+        ,   int tag = MPI_TAG_UB
+        )
     {
         return MPI_Send(buffer, count, Datatype<T,U>::id, dest, tag, MPI_COMM_WORLD);
     }
@@ -97,8 +105,13 @@ namespace cluster
      * @param dest The destination node.
      * @param tag The identifying tag.
      */
-    template<typename T>
-    inline int send(const T *buffer, int count = 1, int dest = master, int tag = MPI_TAG_UB)
+    template <typename T>
+    inline int send
+        (   const T *buffer
+        ,   int count = 1
+        ,   int dest = master
+        ,   int tag = MPI_TAG_UB
+        )
     {
         return MPI_Send(buffer, count, Datatype<T>::id, dest, tag, MPI_COMM_WORLD);
     }
@@ -111,14 +124,15 @@ namespace cluster
      * @param tag The identifying tag.
      * @param status The transmission status.
      */
-    template<typename T, typename U>
+    template <typename T, typename U>
     inline int receive
-    (   void *buffer
-    ,   int count = 1
-    ,   int source = master
-    ,   int tag = MPI_TAG_UB
-    ,   MPI_Status *status = MPI_STATUS_IGNORE
-    ) {
+        (   void *buffer
+        ,   int count = 1
+        ,   int source = master
+        ,   int tag = MPI_TAG_UB
+        ,   MPI_Status *status = MPI_STATUS_IGNORE
+        )
+    {
         return MPI_Recv(buffer, count, Datatype<T,U>::id, source, tag, MPI_COMM_WORLD, status);
     }
 
@@ -130,21 +144,22 @@ namespace cluster
      * @param tag The identifying tag.
      * @param status The transmission status.
      */
-    template<typename T>
+    template <typename T>
     inline int receive
-    (   T *buffer
-    ,   int count = 1
-    ,   int source = master
-    ,   int tag = MPI_TAG_UB
-    ,   MPI_Status *status = MPI_STATUS_IGNORE
-    ) {
+        (   T *buffer
+        ,   int count = 1
+        ,   int source = master
+        ,   int tag = MPI_TAG_UB
+        ,   MPI_Status *status = MPI_STATUS_IGNORE
+        )
+    {
         return MPI_Recv(buffer, count, Datatype<T>::id, source, tag, MPI_COMM_WORLD, status);
     }
 
     /**
      * Synchronizes all of the cluster's nodes.
      */
-    inline int synchronize()
+    inline int sync()
     {
         return MPI_Barrier(MPI_COMM_WORLD);
     }

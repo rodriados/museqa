@@ -13,7 +13,7 @@
  * Declaring global variables.
  */
 int node::rank = 0;
-int node::size = 0;
+int cluster::size = 0;
 
 //extern void call(const pairwise::DeviceSequenceList&);
 

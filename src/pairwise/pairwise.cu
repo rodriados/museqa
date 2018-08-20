@@ -7,40 +7,60 @@
 
 #include "msa.hpp"
 #include "fasta.hpp"
-#include "pairwise/pairwise.cuh"
-
-namespace pw = pairwise;
+#include "pairwise/pairwise.hpp"
+#include "pairwise/needleman.cuh"
 
 /**
  * Sets up the module and makes it ready to process.
  * @param fasta The fasta file to be processed.
  */
-pw::Pairwise::Pairwise(const Fasta& fasta)
+pairwise::Pairwise::Pairwise(const Fasta& fasta)
 :   list(fasta)
 {
-    uint16_t size = this->list.getCount();
-    this->score = new Score [size * size];
+    uint16_t listCount = this->getCount();
+    this->count = (listCount + 1) * listCount / 2; 
+
+    __onlyslaves {
+        uint32_t div = this->count / cluster::size;
+        uint32_t mod = this->count % cluster::size;
+
+        this->count = div + (mod > node::rank);
+    }
+
+    this->score = new pairwise::Score[this->count];
 }
 
 /**
  * Erases all data collected from processing.
  */
-pw::Pairwise::~Pairwise() noexcept
+pairwise::Pairwise::~Pairwise() noexcept
 {
-    delete[] this->score;
+    if(this->score != nullptr)
+        delete[] this->score;
 }
 
 /**
  * Manages the module processing, and produces the pairwise
  * module's results.
+ * @param fasta The fasta file to be processed.
  */
-void pw::Pairwise::process()
+pairwise::Pairwise pairwise::Pairwise::run(const Fasta& fasta)
 {
-    /*__onlyslaves {
-        this->distribute();
-        this->loadblosum();
-        this->run();
+    pairwise::Pairwise pwise(fasta);
+    pairwise::Needleman needleman(pwise);
+
+    __onlymaster {
+        needleman.generate();
     }
 
-    this->gather();*/
+    needleman.scatter();
+
+    __onlyslaves {
+        needleman.loadblosum();
+        needleman.run();
+    }
+
+    needleman.gather();
+
+    return pwise;
 }

@@ -45,7 +45,7 @@ FastaSequence::FastaSequence(const std::string& description, const char *buffer,
  */
 Fasta::Fasta(const std::string& fname)
 {
-    onlymaster {
+    __onlymaster {
         this->load(fname);
         __debugh("loaded %u sequences from %s", this->getCount(), fname.c_str());
     }
@@ -138,23 +138,23 @@ void Fasta::broadcast(Fasta *fasta)
 {
     uint16_t count = fasta->getCount();
     cluster::broadcast(&count);
-    cluster::synchronize();
+    cluster::sync();
 
     uint32_t *sizes = new uint32_t[count];
     uint32_t szsum = 0;
 
-    onlymaster {
+    __onlymaster {
         for(int i = 0; i < count; ++i)
             szsum += sizes[i] = fasta->list[i]->getLength();
     }
 
     cluster::broadcast(sizes, count);
     cluster::broadcast(&szsum);
-    cluster::synchronize();
+    cluster::sync();
 
     char *data = new char[szsum];
 
-    onlymaster {
+    __onlymaster {
         for(uint32_t i = 0, offset = 0; i < count; ++i) {
             std::memcpy(&data[offset], fasta->list[i]->getBuffer(), sizeof(char) * sizes[i]);
             offset += sizes[i];
@@ -162,9 +162,9 @@ void Fasta::broadcast(Fasta *fasta)
     }
 
     cluster::broadcast(data, szsum);
-    cluster::synchronize();
+    cluster::sync();
 
-    onlyslaves {
+    __onlyslaves {
         for(uint32_t i = 0, offset = 0; i < count; ++i) {
             fasta->push("__slave", &data[offset], sizes[i]);
             offset += sizes[i];

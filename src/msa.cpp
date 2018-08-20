@@ -12,13 +12,13 @@
 #include "device.cuh"
 #include "cluster.hpp"
 
-#include "pairwise.cuh"
+#include "pairwise.hpp"
 
 /*
  * Declaring global variables.
  */
 int node::rank = 0;
-int node::size = 0;
+int cluster::size = 0;
 
 /**
  * Starts, manages and finishes the software's execution.
@@ -28,29 +28,20 @@ int node::size = 0;
  */
 int main(int argc, char **argv)
 {
-    cluster::init(&argc, &argv);
+    cluster::init(argc, argv);
 
     if(node::isslave() && !device::check())
         finalize(ErrorCode::NoGPU);
 
-    clidata.parse(argc, argv);  
-    clidata.checkhelp();
-    cluster::synchronize();
+    cmd.parse(argc, argv);
+    cmd.checkhelp();
+    cluster::sync();
 
-    Fasta ffile(clidata.get(ParamCode::File));
-    cluster::synchronize();
+    Fasta fasta(cmd.get(ParamCode::File));
+    cluster::sync();
     
-    Pairwise pwise(ffile);
-    pwise.process();
-    
-    /*MPI_Barrier(MPI_COMM_WORLD);
-
-    delete ffile;
-
-    //__onlymaster pwise->gather();
-    delete pwise;
-
-    MPI_Barrier(MPI_COMM_WORLD);*/
+    Pairwise pwise = Pairwise::run(fasta);
+    //NJoining nj = njoining::run(pwise);
 
     cluster::finalize();
     return 0;
@@ -73,7 +64,7 @@ static const char *error_str[] = {
 [[noreturn]]
 void finalize(ErrorCode code)
 {
-    onlymaster {
+    __onlymaster {
         if(code != ErrorCode::Success)
             std::cerr
                 << style(bold, __msa__) ": "

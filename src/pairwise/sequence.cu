@@ -10,8 +10,8 @@
 #include <vector>
 
 #include "fasta.hpp"
+#include "buffer.hpp"
 #include "device.cuh"
-#include "sequence.cuh"
 #include "pairwise/sequence.cuh"
 
 /*
@@ -208,16 +208,16 @@ pairwise::SequenceList pairwise::SequenceList::select(const std::vector<uint16_t
  * Consolidates and compresses the sequence list.
  * @return The new compressed sequence list.
  */
-pairwise::dSequenceList pairwise::SequenceList::compress() const
+pairwise::CompressedList pairwise::SequenceList::compress() const
 {
-    return pairwise::dSequenceList(*this);
+    return pairwise::CompressedList(*this);
 }
 
 /**
  * Instantiates a new compressed sequence list.
  * @param list A list of sequences of which data will be copied from.
  */
-pairwise::dSequenceList::dSequenceList(const pairwise::SequenceList& list)
+pairwise::CompressedList::CompressedList(const pairwise::SequenceList& list)
 :   pairwise::dSequence(merge(list, list.getCount()))
 ,   slice(new dSequenceSlice[list.getCount()])
 ,   count(list.getCount())
@@ -230,7 +230,7 @@ pairwise::dSequenceList::dSequenceList(const pairwise::SequenceList& list)
  * @param list A list of sequences of which data will be copied from.
  * @param count The number of sequences in the list.
  */
-pairwise::dSequenceList::dSequenceList(const pairwise::dSequence *list, uint16_t count)
+pairwise::CompressedList::CompressedList(const pairwise::dSequence *list, uint16_t count)
 :   pairwise::dSequence(merge(list, count))
 ,   slice(new dSequenceSlice[count])
 ,   count(count)
@@ -242,7 +242,7 @@ pairwise::dSequenceList::dSequenceList(const pairwise::dSequence *list, uint16_t
  * Instantiates a new compressed sequence list.
  * @param list An array of sequences of which data will be copied from.
  */
-pairwise::dSequenceList::dSequenceList(const std::vector<pairwise::dSequence>& list)
+pairwise::CompressedList::CompressedList(const std::vector<pairwise::dSequence>& list)
 :   pairwise::dSequence(merge(list.data(), list.size()))
 ,   slice(new dSequenceSlice[list.size()])
 ,   count(list.size())
@@ -253,7 +253,7 @@ pairwise::dSequenceList::dSequenceList(const std::vector<pairwise::dSequence>& l
 /**
  * Destroys the compressed sequence list.
  */
-pairwise::dSequenceList::~dSequenceList() noexcept
+pairwise::CompressedList::~CompressedList() noexcept
 {
     delete[] this->slice;
 }
@@ -262,30 +262,36 @@ pairwise::dSequenceList::~dSequenceList() noexcept
  * Sends the compressed sequence list to the device.
  * @return The object representing the sequence in the device.
  */
-pairwise::hSequenceList pairwise::dSequenceList::toDevice() const
+pairwise::dSequenceList pairwise::CompressedList::toDevice() const
 {
-    return pairwise::hSequenceList(*this);
+    return pairwise::dSequenceList(*this);
 }
 
 /**
  * Creates a compressed sequence list into the device global memory.
  * @param list The list to be sent to device.
  */
-pairwise::hSequenceList::hSequenceList(const pairwise::dSequenceList& list)
+pairwise::dSequenceList::dSequenceList(const pairwise::CompressedList& list)
 {
     this->size = list.getSize();
     this->count = list.getCount();
 
+    std::vector<dSequenceSlice> adapted;
+
     __cudacall(cudaMalloc(&this->buffer, sizeof(uint32_t) * this->size));
     __cudacall(cudaMalloc(&this->slice, sizeof(dSequenceSlice) * this->count));
+
+    for(uint16_t i = 0; i < this->count; ++i)
+        adapted.push_back(dSequenceSlice(*this, list.slice[i]));
+
     __cudacall(cudaMemcpy(this->buffer, list.getBuffer(), sizeof(uint32_t) * this->size, cudaMemcpyHostToDevice));
-    __cudacall(cudaMemcpy(this->slice, list.slice, sizeof(dSequenceSlice) * this->count, cudaMemcpyHostToDevice));
+    __cudacall(cudaMemcpy(this->slice, adapted.data(), sizeof(dSequenceSlice) * this->count, cudaMemcpyHostToDevice));
 }
 
 /**
  * Destroys the compressed sequence list in the device.
  */
-pairwise::hSequenceList::~hSequenceList() noexcept
+pairwise::dSequenceList::~dSequenceList() noexcept
 {
     __cudacall(cudaFree(this->buffer));
     __cudacall(cudaFree(this->slice));

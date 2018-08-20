@@ -239,6 +239,6 @@ class Input
         [[noreturn]] void usage() const;
 };
 
-extern Input clidata;
+extern Input cmd;
 
 #endif

@@ -13,7 +13,7 @@
 /*
  * Declaring global variables.
  */
-Input clidata;
+Input cmd;
 bool verbose = false;
 
 /*
@@ -175,7 +175,7 @@ void Input::version() const
 {
     __onlymaster {
         std::cerr
-            << __bold MSA __greenfg " v" VERSION __reset
+            << __bold __msa__ __greenfg " v" __msa_version__ __reset
             << std::endl;
     }
 

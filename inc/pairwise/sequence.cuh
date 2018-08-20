@@ -115,7 +115,7 @@ namespace pairwise
                 return this->getSize() * 6;
             }
 
-        friend class dSequenceList;
+        friend class CompressedList;
     };
 
     /**
@@ -161,7 +161,7 @@ namespace pairwise
 
             SequenceList select(const uint16_t *, uint16_t) const;
             SequenceList select(const std::vector<uint16_t>&) const;
-            class dSequenceList compress() const;
+            class CompressedList compress() const;
     };
 
     /**
@@ -170,19 +170,19 @@ namespace pairwise
      * moving these sequences separately.
      * @since 0.1.alpha
      */
-    class dSequenceList : public dSequence
+    class CompressedList : public dSequence
     {
         protected:
             dSequenceSlice *slice = nullptr;
             uint16_t count = 0;
 
         public:
-            dSequenceList() = default;
-            dSequenceList(const SequenceList&);
-            dSequenceList(const dSequence *, uint16_t);
-            dSequenceList(const std::vector<dSequence>&);
+            CompressedList() = default;
+            CompressedList(const SequenceList&);
+            CompressedList(const dSequence *, uint16_t);
+            CompressedList(const std::vector<dSequence>&);
 
-            ~dSequenceList() noexcept;
+            ~CompressedList() noexcept;
 
             /**
              * Gives access to a specific sequence buffer offset of the list.
@@ -203,7 +203,7 @@ namespace pairwise
                 return this->count;
             }
 
-            class hSequenceList toDevice() const;
+            class dSequenceList toDevice() const;
 
         protected:
             /**
@@ -240,7 +240,7 @@ namespace pairwise
                 return merged;
             }
 
-        friend class hSequenceList;
+        friend class dSequenceList;
     };
 
     /**
@@ -248,11 +248,11 @@ namespace pairwise
      * and can only be read from the device.
      * @since 0.1.alpha
      */
-    class hSequenceList : public dSequenceList
+    class dSequenceList : public CompressedList
     {
         public:
-            hSequenceList(const dSequenceList&);
-            ~hSequenceList() noexcept;
+            dSequenceList(const CompressedList&);
+            ~dSequenceList() noexcept;
     };
 };
 

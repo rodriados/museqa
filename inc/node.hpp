@@ -12,13 +12,21 @@
  */
 #define __msa_master_node_id__ 0
 
+namespace cluster
+{
+    /*
+     * Declaring global variables
+     */
+    extern int size;
+    static const int master = __msa_master_node_id__;
+};
+
 namespace node
 {
     /*
      * Declaring global variables
      */
     extern int rank;
-    extern int size;
 
     /**
      * Informs whether the current node is the master node.
@@ -26,7 +34,7 @@ namespace node
      */
     inline bool ismaster()
     {
-        return rank == __msa_master_node_id__;
+        return rank == cluster::master;
     }
 
     /**
@@ -35,7 +43,7 @@ namespace node
      */
     inline bool isslave()
     {
-        return rank != __msa_master_node_id__;
+        return rank != cluster::master;
     }
 };
 

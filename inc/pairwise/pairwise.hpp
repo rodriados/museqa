@@ -3,8 +3,8 @@
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018 Rodrigo Siqueira
  */
-#ifndef _PW_PAIRWISE_CUH_
-#define _PW_PAIRWISE_CUH_
+#ifndef _PW_PAIRWISE_HPP_
+#define _PW_PAIRWISE_HPP_
 
 #include <cstdint>
 
@@ -42,20 +42,39 @@ namespace pairwise
     class Pairwise
     {
         private:
-            Score *score;
             SequenceList list;
+            Score *score = nullptr;
+            uint32_t count = 0;
 
         public:
             Pairwise(const Fasta&);
             ~Pairwise() noexcept;
 
             /**
-             * Informs the number of sequences processed.
-             * @return The number of seqeunces processed.
+             * Informs the number of pairs processed or to process.
+             * @return The number of pairs this instance shall process.
              */
-            inline uint16_t getCount() const
+            inline uint32_t getCount() const
             {
-                return this->list.getCount();
+                return this->count;
+            }
+
+            /**
+             * Gives access to the list of sequences to process.
+             * @return The sequence list to process.
+             */
+            inline const SequenceList& getList() const
+            {
+                return this->list;
+            }
+
+            /**
+             * Accesses a score according to its offset.
+             * @return The requested pair score instance.
+             */
+            inline const Score& getScore(uint32_t offset) const
+            {
+                return this->score[offset];
             }
 
             /**
@@ -64,10 +83,15 @@ namespace pairwise
              */
             inline const Score& getScore(uint16_t x, uint16_t y) const
             {
-                return this->score[x * this->getCount() + y];
+                uint16_t min = x > y ? y : x;
+                uint16_t max = x > y ? x : y;
+
+                return this->score[(max + 1) * max / 2 + min];
             }
 
-            void process();
+            static Pairwise run(const Fasta&);
+
+        friend class Needleman;
     };
 };
 
