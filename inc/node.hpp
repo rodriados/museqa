@@ -3,14 +3,16 @@
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018 Rodrigo Siqueira
  */
-#ifndef _NODE_HPP_
-#define _NODE_HPP_
+#ifndef NODE_HPP_INCLUDED
+#define NODE_HPP_INCLUDED
+
+#pragma once
 
 /*
  * Defining macro indicating the node rank to be used as the master node. It
  * is recommended not to change it, as no other rank is garanteed to exist.
  */
-#define __msa_master_node_id__ 0
+#define master_node_id 0
 
 namespace cluster
 {
@@ -18,32 +20,28 @@ namespace cluster
      * Declaring global variables
      */
     extern int size;
-    static const int master = __msa_master_node_id__;
+    extern int rank;
+    static constexpr const int master = master_node_id;
 };
 
 namespace node
 {
-    /*
-     * Declaring global variables
-     */
-    extern int rank;
-
     /**
      * Informs whether the current node is the master node.
      * @return Is this node the master?
      */
-    inline bool ismaster()
+    inline bool isMaster()
     {
-        return rank == cluster::master;
+        return cluster::rank == cluster::master;
     }
 
     /**
      * Informs whether the current node is a slave node.
      * @return Is this node a slave?
      */
-    inline bool isslave()
+    inline bool isSlave()
     {
-        return rank != cluster::master;
+        return cluster::rank != cluster::master;
     }
 };
 
@@ -51,8 +49,10 @@ namespace node
  * Defines some process control macros. These macros are to be used when
  * it is needed to check whether the current process is master or not.
  */
-#define __onlymaster    if(node::ismaster())
-#define __onlyslaves    if(node::isslave())
-#define __onlyslave(i)  if(node::isslave() && node::rank == (i))
+#define onlymaster    if(node::isMaster())
+#define onlyslaves    if(node::isSlave())
+#define onlyslave(i)  if(node::isSlave() && node::rank == (i))
+
+#undef master_node_id
 
 #endif
