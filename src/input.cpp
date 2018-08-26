@@ -13,7 +13,7 @@
 /*
  * Declaring global variables and functions.
  */
-input::Parser cmd;
+Parser cmd;
 bool verbose = false;
 
 /**
@@ -21,8 +21,8 @@ bool verbose = false;
  * @param options The list of available options for this parser.
  * @param arguments The list of positional (and required) arguments.
  */
-void input::Parser::init
-    (   const std::vector<input::Option>& options
+void Parser::init
+    (   const std::vector<Option>& options
     ,   const std::vector<std::string>& arguments   )
 {
     this->options = options;
@@ -34,15 +34,15 @@ void input::Parser::init
  * @param argc The number of command line arguments.
  * @param argv The command line arguments.
  */
-void input::Parser::parse(int argc, char **argv)
+void Parser::parse(int argc, char **argv)
 {
     unsigned int position = 0;
     this->appname = argv[0];
 
     for(int i = 1; i < argc; ++i) {
-        const input::Option& option = (argv[i][0] == '-')
+        const Option& option = (argv[i][0] == '-')
             ? this->find(argv[i])
-            : input::Option {};
+            : Option {};
 
         if(option.isUnknown() && this->arguments.size() > position) {
             this->values[this->arguments[position++]] = argv[i];
@@ -76,11 +76,11 @@ void input::Parser::parse(int argc, char **argv)
  * @param needle The option being searched for.
  * @return The found option or an unknown option.
  */
-const input::Option& input::Parser::find(const std::string& needle) const
+const Option& Parser::find(const std::string& needle) const
 {
-    static input::Option unknown {};
+    static Option unknown {};
 
-    for(const input::Option& option : this->options)
+    for(const Option& option : this->options)
         if("--" + option.getLname() == needle || "-" + option.getSname() == needle)
             return option;
 
@@ -92,14 +92,14 @@ const input::Option& input::Parser::find(const std::string& needle) const
  * @param command The unknown command name.
  */
 [[noreturn]]
-void input::Parser::usage() const
+void Parser::usage() const
 {
     onlymaster {
         std::cerr
             << "Usage: " s_bold << this->appname << s_reset " [options]" << std::endl
             << "Options:" << std::endl;
 
-        for(const input::Option& option : this->options)
+        for(const Option& option : this->options)
             std::cerr
                 << s_bold "  -" << option.getSname() << ", --" << option.getLname() << s_reset " "
                 << (!option.getArgument().empty() ? option.getArgument() : "") << std::endl
@@ -113,7 +113,7 @@ void input::Parser::usage() const
  * Prints out the software's current version.
  */
 [[noreturn]]
-void input::Parser::version() const
+void Parser::version() const
 {
     onlymaster {
         std::cerr
