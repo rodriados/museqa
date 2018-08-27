@@ -147,11 +147,14 @@ class Parser
         /**
          * Retrieves the value received by a named argument.
          * @param argname The name of the requested argument.
+         * @param fallback The value to be returned if none is found.
          * @return The value of requested argument.
          */
-        inline const std::string& get(const std::string& argname) const
+        inline const std::string& get(const std::string& argname, const std::string& fallback = "") const
         {
-            return this->values.find(argname)->second;
+            return this->has(argname)
+                ? this->values.find(argname)->second
+                : fallback;
         }
 
         /**
