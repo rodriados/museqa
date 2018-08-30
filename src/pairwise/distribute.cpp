@@ -15,7 +15,7 @@ void pairwise::Needleman::scatter()
     std::vector<uint32_t> sendCount(cluster::size, 0);
     std::vector<uint32_t> sendDispl(cluster::size, 0);
 
-    __onlymaster {
+    onlymaster {
         uint32_t each = this->pwise.getCount() / (cluster::size - 1);
         uint32_t more = this->pwise.getCount() % (cluster::size - 1);
 
@@ -29,8 +29,8 @@ void pairwise::Needleman::scatter()
     cluster::broadcast(sendDispl.data(), cluster::size);
     cluster::sync();
 
-    __onlyslaves {
-        this->pairs.resize(sendCount[node::rank]);
+    onlyslaves {
+        this->pairs.resize(sendCount[cluster::rank]);
     }
 
     //cluster::scatterv<uint32_t>(this->pairs.data(), sendCount, sendDispl, this->pairs.data(), sendCount[cluster::size]);

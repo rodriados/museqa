@@ -3,8 +3,10 @@
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018 Rodrigo Siqueira
  */
-#ifndef _PW_NEEDLEMAN_CUH_
-#define _PW_NEEDLEMAN_CUH_
+#ifndef PW_NEEDLEMAN_CUH_INCLUDED
+#define PW_NEEDLEMAN_CUH_INCLUDED
+
+#pragma once
 
 #include <cstdint>
 #include <vector>

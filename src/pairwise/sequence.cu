@@ -52,21 +52,21 @@ pairwise::dSequence::dSequence(const BaseBuffer<char>& buffer)
  * @param buffer The buffer to create the sequence from.
  * @param size The buffer's size.
  */
-pairwise::dSequence::dSequence(const char *buffer, uint32_t size)
+pairwise::dSequence::dSequence(const char *buffer, size_t size)
 :   Buffer(compress(buffer, size)) {}
 
 /**
  * Initializes a new compressed sequence. An internal constructor option.
  * @param buffer Creates the sequence from a buffer of blocks.
  */
-pairwise::dSequence::dSequence(const BaseBuffer<uint32_t>& buffer)
+pairwise::dSequence::dSequence(const BaseBuffer<block_t>& buffer)
 :   Buffer(buffer.getBuffer(), buffer.getSize()) {}
 
 /**
  * Initializes a new compressed sequence. An internal constructor option.
  * @param list Creates the sequence from a list of blocks.
  */
-pairwise::dSequence::dSequence(const std::vector<uint32_t>& list)
+pairwise::dSequence::dSequence(const std::vector<block_t>& list)
 :   Buffer(list) {}
 
 /**
@@ -74,7 +74,7 @@ pairwise::dSequence::dSequence(const std::vector<uint32_t>& list)
  * @param buffer Creates the sequence from a buffer of blocks.
  * @param size The buffer's size.
  */
-pairwise::dSequence::dSequence(const uint32_t *buffer, uint32_t size)
+pairwise::dSequence::dSequence(const block_t *buffer, size_t size)
 :   Buffer(buffer, size) {}
 
 /**
@@ -85,7 +85,7 @@ std::string pairwise::dSequence::toString() const
 {
     std::string result;
 
-    for(uint32_t i = 0, n = this->getSize(); i < n; ++i)
+    for(size_t i = 0, n = this->getSize(); i < n; ++i)
         for(uint8_t j = 0; j < 6; ++j)
             result += toChar[(this->buffer[i] >> hShift[j]) & 0x1F];
 
@@ -97,12 +97,12 @@ std::string pairwise::dSequence::toString() const
  * @param buffer The buffer to be compressed.
  * @param size The buffer's size.
  */
-std::vector<uint32_t> pairwise::dSequence::compress(const char *buffer, uint32_t size)
+std::vector<block_t> pairwise::dSequence::compress(const char *buffer, size_t size)
 {
-    std::vector<uint32_t> blocks;
+    std::vector<block_t> blocks;
 
-    for(uint32_t i = 0, n = 0; n < size; ++i) {
-        uint32_t actual = 0;
+    for(size_t i = 0, n = 0; n < size; ++i) {
+        block_t actual = 0;
 
         for(uint8_t j = 0; j < 6; ++j, ++n)
             actual |= (n < size && 'A' <= buffer[n] && buffer[n] <= 'Z')
@@ -145,7 +145,7 @@ pairwise::SequenceList::SequenceList(const BaseBuffer<char> *list, uint16_t coun
  * @param list The list of character buffers to be pushed.
  * @param count The number of elements in the list.
  */
-pairwise::SequenceList::SequenceList(const BaseBuffer<uint32_t> *list, uint16_t count)
+pairwise::SequenceList::SequenceList(const BaseBuffer<block_t> *list, uint16_t count)
 {
     for(uint16_t i = 0; i < count; ++i)
         this->list.push_back(new pairwise::dSequence(list[i]));
@@ -278,14 +278,14 @@ pairwise::dSequenceList::dSequenceList(const pairwise::CompressedList& list)
 
     std::vector<dSequenceSlice> adapted;
 
-    __cudacall(cudaMalloc(&this->buffer, sizeof(uint32_t) * this->size));
-    __cudacall(cudaMalloc(&this->slice, sizeof(dSequenceSlice) * this->count));
+    cudacall(cudaMalloc(&this->buffer, sizeof(block_t) * this->size));
+    cudacall(cudaMalloc(&this->slice, sizeof(dSequenceSlice) * this->count));
 
     for(uint16_t i = 0; i < this->count; ++i)
         adapted.push_back(dSequenceSlice(*this, list.slice[i]));
 
-    __cudacall(cudaMemcpy(this->buffer, list.getBuffer(), sizeof(uint32_t) * this->size, cudaMemcpyHostToDevice));
-    __cudacall(cudaMemcpy(this->slice, adapted.data(), sizeof(dSequenceSlice) * this->count, cudaMemcpyHostToDevice));
+    cudacall(cudaMemcpy(this->buffer, list.getBuffer(), sizeof(block_t) * this->size, cudaMemcpyHostToDevice));
+    cudacall(cudaMemcpy(this->slice, adapted.data(), sizeof(dSequenceSlice) * this->count, cudaMemcpyHostToDevice));
 }
 
 /**
@@ -293,8 +293,8 @@ pairwise::dSequenceList::dSequenceList(const pairwise::CompressedList& list)
  */
 pairwise::dSequenceList::~dSequenceList() noexcept
 {
-    __cudacall(cudaFree(this->buffer));
-    __cudacall(cudaFree(this->slice));
+    cudacall(cudaFree(this->buffer));
+    cudacall(cudaFree(this->slice));
 }
 
 /**
@@ -303,7 +303,7 @@ pairwise::dSequenceList::~dSequenceList() noexcept
  * @param offset The requested offset.
  * @return The buffer's position pointer.
  */
-__cudadecl__ uint8_t pairwise::blockDecode(uint32_t block, uint8_t offset)
+cudadecl uint8_t pairwise::blockDecode(block_t block, uint8_t offset)
 {
 #ifdef __CUDA_ARCH__
     return (block >> dShift[offset]) & 0x1F;

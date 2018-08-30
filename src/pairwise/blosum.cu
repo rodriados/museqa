@@ -18,7 +18,7 @@ enum TableList
 ,   blosum80
 ,   blosum90
 ,   pam250
-,   __count
+,   table_count
 };
 
 static const char *tableNames[] = {
@@ -208,11 +208,11 @@ void pairwise::Needleman::loadblosum()
 {
     int table = 0;
 
-    if(cmd.has(ParamCode::Matrix)) {
-        std::string matrix = cmd.get(ParamCode::Matrix);
+    if(cmd.has("matrix")) {
+        std::string matrix = cmd.get("matrix");
 
         #pragma unroll
-        for(int i = 0; i < __count; ++i)
+        for(int i = 0; i < table_count; ++i)
             if(matrix == tableNames[i])
                 table = i;
     }
@@ -220,7 +220,5 @@ void pairwise::Needleman::loadblosum()
     //__cudacall(cudaMalloc(&this->table, sizeof(int8_t) * 625));
     //__cudacall(cudaMemcpy(this->table, tableData[table], sizeof(int8_t) * 625, cudaMemcpyHostToDevice));
 
-    __onlymaster {
-        __debugh("using scoring table %s", tableNames[table]);
-    }
+    onlymaster pdebug("using scoring table %s", tableNames[table]);
 }
