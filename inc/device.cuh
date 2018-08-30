@@ -3,10 +3,23 @@
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018 Rodrigo Siqueira
  */
-#ifndef _DEVICE_CUH_
-#define _DEVICE_CUH_
+#ifndef DEVICE_CUH_INCLUDED
+#define DEVICE_CUH_INCLUDED
+
+#pragma once
 
 #include "msa.hpp"
+
+/**
+ * Allows the creation of error instances related to device execution.
+ * @since 0.1.alpha
+ */
+struct DeviceError : public Error
+{
+    using Error::Error;
+    static const DeviceError noGPU();
+    static const DeviceError execution(const char *);
+};
 
 /*
  * Checks whether a compatible device is available. If not, compilation
@@ -24,7 +37,7 @@
  * Aliases the device error enumerator to a more meaningful name.
  * @since 0.1.alpha
  */
-typedef cudaError_t DeviceError;
+typedef cudaError_t DeviceStatus;
 
 /**
  * Exposes some CUDA devices's properties.
@@ -37,18 +50,18 @@ typedef cudaDeviceProp DeviceProperties;
  * a CUDA function is called. This verifies for any errors and tries to inform what
  * was the error.
  */
-#  define __cudacall(call)                                                        \
+#  define cudacall(call)                                                        \
     if((call) != cudaSuccess) {                                                 \
-        DeviceError err = cudaGetLastError();                                   \
-        __debugd("%s:%d '%s'\n", __FILE__, __LINE__, cudaGetErrorString(err));  \
-        finalize(ErrorCode::CudaError);                                         \
+        DeviceStatus err = cudaGetLastError();                                  \
+        pdebug("%s:%d '%s'\n", __FILE__, __LINE__, cudaGetErrorString(err));    \
+        finalize(DeviceError::execution(cudaGetErrorString(err)));              \
     }
 
-#  define __cudacheck()                                                           \
-    DeviceError err = cudaGetLastError();                                       \
+#  define cudacheck()                                                           \
+    DeviceStatus err = cudaGetLastError();                                      \
     if(err != cudaSuccess) {                                                    \
-        __debugd("%s:%d '%s'\n", __FILE__, __LINE__, cudaGetErrorString(err));  \
-        finalize(ErrorCode::CudaError);                                         \
+        pdebug("%s:%d '%s'\n", __FILE__, __LINE__, cudaGetErrorString(err));    \
+        finalize(DeviceError::execution(cudaGetErrorString(err)));              \
     }
 
 #endif
@@ -58,9 +71,9 @@ typedef cudaDeviceProp DeviceProperties;
  * throughout the code without any problems.
  */
 #ifdef __CUDACC__
-#  define __cudadecl__ __host__ __device__
+#  define cudadecl __host__ __device__
 #else
-#  define __cudadecl__
+#  define cudadecl
 #  define __device__
 #  define __host__
 #endif
@@ -72,7 +85,8 @@ typedef cudaDeviceProp DeviceProperties;
 namespace device
 {
     extern int count();
-    extern bool check();
+    extern bool exists();
+    extern void select(int = -1);
 #ifdef __CUDACC__
     extern const DeviceProperties& properties();
 #endif

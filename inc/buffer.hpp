@@ -3,8 +3,10 @@
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018 Rodrigo Siqueira
  */
-#ifndef _BUFFER_HPP_
-#define _BUFFER_HPP_
+#ifndef BUFFER_HPP_INCLUDED
+#define BUFFER_HPP_INCLUDED
+
+#pragma once
 
 #include <cstdint>
 #include <cstring>
@@ -21,7 +23,7 @@ class BaseBuffer
 {
     protected:
         T *buffer = nullptr;    /// The buffer being encapsulated.
-        uint32_t size = 0;      /// The number of buffer blocks.
+        size_t size = 0;        /// The number of buffer blocks.
 
     public:
         /**
@@ -29,7 +31,7 @@ class BaseBuffer
          * @param buffer The buffer pointer to encapsulate.
          * @param size The size of buffer to encapsulate.
          */
-        inline explicit BaseBuffer(T *buffer, uint32_t size)
+        inline explicit BaseBuffer(T *buffer, size_t size)
         :   buffer(buffer)
         ,   size(size) {}
 
@@ -46,7 +48,7 @@ class BaseBuffer
          * @param offset The requested buffer offset.
          * @return The buffer's position pointer.
          */
-        __cudadecl__ inline const T& operator[](uint32_t offset) const
+        cudadecl inline const T& operator[](size_t offset) const
         {
             return this->buffer[offset];
         }
@@ -55,7 +57,7 @@ class BaseBuffer
          * Gives access to buffer's data.
          * @return The buffer's internal pointer.
          */
-        __cudadecl__ inline T *getBuffer() const
+        cudadecl inline T *getBuffer() const
         {
             return this->buffer;
         }
@@ -64,7 +66,7 @@ class BaseBuffer
          * Informs the buffer's number of blocks.
          * @return The number of buffer blocks.
          */
-        __cudadecl__ inline uint32_t getSize() const
+        cudadecl inline size_t getSize() const
         {
             return this->size;
         }
@@ -89,8 +91,8 @@ class Buffer : public BaseBuffer<T>
          * @param buffer The buffer to be copied.
          * @param size The number of buffer blocks being copied.
          */
-        inline Buffer(const T *buffer, uint32_t size)
-        :   BaseBuffer<T>()
+        inline Buffer(const T *buffer, size_t size)
+        :   BaseBuffer<T>{}
         {
             this->copy(buffer, size);
         }
@@ -100,7 +102,7 @@ class Buffer : public BaseBuffer<T>
          * @param buffer The instance from which data will be copied.
          */
         inline Buffer(const Buffer<T>& buffer)
-        :   BaseBuffer<T>()
+        :   BaseBuffer<T>{}
         {
             this->copy(buffer.getBuffer(), buffer.getSize());
         }
@@ -110,7 +112,7 @@ class Buffer : public BaseBuffer<T>
          * @param vector The vector from which the buffer will be created.
          */
         inline Buffer(const std::vector<T>& vector)
-        :   BaseBuffer<T>()
+        :   BaseBuffer<T>{}
         {
             this->copy(vector.data(), vector.size());
         }
@@ -132,7 +134,7 @@ class Buffer : public BaseBuffer<T>
          * @param buffer The buffer to be copied.
          * @param size The buffer's data blocks number.
          */
-        inline void copy(const T *buffer, uint32_t size)
+        inline void copy(const T *buffer, size_t size)
         {
             this->size = size;
             this->buffer = new T[size];
@@ -148,7 +150,7 @@ template<typename T>
 class BufferSlice : public BaseBuffer<T>
 {
     protected:
-        uint32_t displ = 0;    /// The slice displacement in relation to the buffer.
+        size_t displ = 0;    /// The slice displacement in relation to the buffer.
 
     public:
         /**
@@ -157,7 +159,7 @@ class BufferSlice : public BaseBuffer<T>
          * @param displ The displacement of the slice.
          * @param size The number of blocks of the slice.
          */
-        inline BufferSlice(const BaseBuffer<T>& target, uint32_t displ = 0, uint32_t size = 0)
+        inline BufferSlice(const BaseBuffer<T>& target, size_t displ = 0, size_t size = 0)
         :   displ(displ)
         {
             this->buffer = target.getBuffer() + this->displ;
@@ -191,7 +193,7 @@ class BufferSlice : public BaseBuffer<T>
          * Informs the displacement of data pointed by the slice.
          * @return The buffer's slice displacement.
          */
-        __cudadecl__ inline uint32_t getDispl() const
+        cudadecl inline size_t getDispl() const
         {
             return this->displ;
         }
