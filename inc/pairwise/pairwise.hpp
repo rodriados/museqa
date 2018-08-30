@@ -3,8 +3,10 @@
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018 Rodrigo Siqueira
  */
-#ifndef _PW_PAIRWISE_HPP_
-#define _PW_PAIRWISE_HPP_
+#ifndef PW_PAIRWISE_HPP_INCLUDED
+#define PW_PAIRWISE_HPP_INCLUDED
+
+#pragma once
 
 #include <cstdint>
 
@@ -72,7 +74,7 @@ namespace pairwise
              * Accesses a score according to its offset.
              * @return The requested pair score instance.
              */
-            inline const Score& getScore(uint32_t offset) const
+            inline const Score& getScore(size_t offset) const
             {
                 return this->score[offset];
             }

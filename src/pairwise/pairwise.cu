@@ -18,13 +18,13 @@ pairwise::Pairwise::Pairwise(const Fasta& fasta)
 :   list(fasta)
 {
     uint16_t listCount = this->getCount();
-    this->count = (listCount + 1) * listCount / 2; 
+    this->count = (listCount - 1) * listCount / 2; 
 
-    __onlyslaves {
+    onlyslaves {
         uint32_t div = this->count / cluster::size;
         uint32_t mod = this->count % cluster::size;
 
-        this->count = div + (mod > node::rank);
+        this->count = div + (mod > cluster::rank);
     }
 
     this->score = new pairwise::Score[this->count];
@@ -49,13 +49,13 @@ pairwise::Pairwise pairwise::Pairwise::run(const Fasta& fasta)
     pairwise::Pairwise pwise(fasta);
     pairwise::Needleman needleman(pwise);
 
-    __onlymaster {
+    onlymaster {
         needleman.generate();
     }
 
     needleman.scatter();
 
-    __onlyslaves {
+    onlyslaves {
         needleman.loadblosum();
         needleman.run();
     }

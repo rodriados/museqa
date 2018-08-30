@@ -3,8 +3,10 @@
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018 Rodrigo Siqueira
  */
-#ifndef _PW_SEQUENCE_CUH_
-#define _PW_SEQUENCE_CUH_
+#ifndef PW_SEQUENCE_CUH_INCLUDED
+#define PW_SEQUENCE_CUH_INCLUDED
+
+#pragma once
 
 #include <ostream>
 #include <cstdint>
@@ -15,31 +17,37 @@
 #include "device.cuh"
 #include "sequence.cuh"
 
+/**
+ * Type alias to represent a sequence block.
+ * @since 0.1.alpha
+ */
+typedef uint32_t block_t;
+
 namespace pairwise
 {
     /*
      * Declaring namespace helper functions.
      */
-    __cudadecl__ uint8_t blockDecode(uint32_t, uint8_t);
+    cudadecl uint8_t blockDecode(block_t, uint8_t);
 
     /**
      * Represents a compressed sequence. The characters are encoded in
      * such a way that it saves one third of the space it would require.
      * @since 0.1.alpha
      */
-    class dSequence : public Buffer<uint32_t>
+    class dSequence : public Buffer<block_t>
     {
         public:
             dSequence(const std::string&);
             dSequence(const BaseBuffer<char>&);
-            dSequence(const char *, uint32_t);
+            dSequence(const char *, size_t);
 
             /**
              * Decodes the character at the given offset.
              * @param offset The requested offset.
              * @return The character in the specified offset.
              */
-            __cudadecl__ inline uint8_t operator[](uint32_t offset) const
+            cudadecl inline uint8_t operator[](size_t offset) const
             {
                 return blockDecode(this->buffer[offset / 6], offset % 6);
             }
@@ -49,7 +57,7 @@ namespace pairwise
              * @param id The index of the requested block.
              * @return The requested block.
              */
-            __cudadecl__ inline uint32_t getBlock(uint32_t id) const
+            cudadecl inline block_t getBlock(size_t id) const
             {
                 return this->buffer[id];
             }
@@ -58,7 +66,7 @@ namespace pairwise
              * Informs the length of the sequence.
              * @return The sequence's length.
              */
-            __cudadecl__ inline uint32_t getLength() const
+            cudadecl inline size_t getLength() const
             {
                 return this->getSize() * 6;
             }
@@ -67,12 +75,12 @@ namespace pairwise
 
         protected:
             dSequence() = default;
-            dSequence(const BaseBuffer<uint32_t>&);
-            dSequence(const std::vector<uint32_t>&);
-            dSequence(const uint32_t *, uint32_t);
+            dSequence(const BaseBuffer<block_t>&);
+            dSequence(const std::vector<block_t>&);
+            dSequence(const block_t *, size_t);
 
         private:
-            static std::vector<uint32_t> compress(const char *, uint32_t);
+            static std::vector<block_t> compress(const char *, size_t);
 
         friend class SequenceList;
     };
@@ -81,9 +89,9 @@ namespace pairwise
      * Represents a slice of a sequence.
      * @since 0.1.alpha
      */
-    class dSequenceSlice : public BufferSlice<uint32_t>
+    class dSequenceSlice : public BufferSlice<block_t>
     {
-        using BufferSlice<uint32_t>::BufferSlice;
+        using BufferSlice<block_t>::BufferSlice;
 
         public:
             /**
@@ -91,7 +99,7 @@ namespace pairwise
              * @param offset The requested offset.
              * @return The character in the specified offset.
              */
-            __cudadecl__ inline uint8_t operator[](uint32_t offset) const
+            cudadecl inline uint8_t operator[](size_t offset) const
             {
                 return blockDecode(this->buffer[offset / 6], offset % 6);
             }
@@ -101,7 +109,7 @@ namespace pairwise
              * @param id The index of the requested block.
              * @return The requested block.
              */
-            __cudadecl__ inline uint32_t getBlock(uint32_t id) const
+            cudadecl inline block_t getBlock(size_t id) const
             {
                 return this->buffer[id];
             }
@@ -110,7 +118,7 @@ namespace pairwise
              * Informs the length of the sequence.
              * @return The sequence's length.
              */
-            __cudadecl__ inline uint32_t getLength() const
+            cudadecl inline size_t getLength() const
             {
                 return this->getSize() * 6;
             }
@@ -133,7 +141,7 @@ namespace pairwise
             SequenceList() = delete;
             SequenceList(const Fasta&);
             SequenceList(const BaseBuffer<char> *, uint16_t);
-            SequenceList(const BaseBuffer<uint32_t> *, uint16_t);
+            SequenceList(const BaseBuffer<block_t> *, uint16_t);
 
             SequenceList(const SequenceList&, const uint16_t *, uint16_t);
             SequenceList(const SequenceList&, const std::vector<uint16_t>&);
@@ -189,7 +197,7 @@ namespace pairwise
              * @param offset The requested sequence offset.
              * @return The requested sequence buffer.
              */
-            __cudadecl__ inline const dSequenceSlice& operator[](uint16_t offset) const
+            cudadecl inline const dSequenceSlice& operator[](uint16_t offset) const
             {
                 return this->slice[offset];
             }
@@ -198,7 +206,7 @@ namespace pairwise
              * Informs the number of sequences in the list.
              * @return The list's number of sequences.
              */
-            __cudadecl__ inline uint16_t getCount() const
+            cudadecl inline uint16_t getCount() const
             {
                 return this->count;
             }
@@ -214,7 +222,7 @@ namespace pairwise
             template<typename T>
             void init(const T& list, uint16_t count)
             {
-                for(uint32_t i = 0, off = 0; i < count; ++i) {
+                for(size_t i = 0, off = 0; i < count; ++i) {
                     this->slice[i].displ = off;
                     this->slice[i].buffer = &this->buffer[off];
                     off += this->slice[i].size = list[i].getSize();
@@ -228,12 +236,12 @@ namespace pairwise
              * @return The merged sequences.
              */
             template<typename T>
-            static std::vector<uint32_t> merge(const T& list, uint16_t count)
+            static std::vector<block_t> merge(const T& list, uint16_t count)
             {
-                std::vector<uint32_t> merged;
+                std::vector<block_t> merged;
 
                 for(uint16_t i = 0; i < count; ++i) {
-                    const uint32_t *ref = list[i].getBuffer();
+                    const block_t *ref = list[i].getBuffer();
                     merged.insert(merged.end(), ref, ref + list[i].getSize());
                 }
 

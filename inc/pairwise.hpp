@@ -3,16 +3,18 @@
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018 Rodrigo Siqueira
  */
-#ifndef _PAIRWISE_HPP_
-#define _PAIRWISE_HPP_
+#ifndef PAIRWISE_HPP_INCLUDED
+#define PAIRWISE_HPP_INCLUDED
+
+#pragma once
 
 #include "pairwise/pairwise.hpp"
 
 /*
  * Defining some configuration macros. These can be changed if needed.
  */
-#define __pw_threads_per_block__ 32
-#define __pw_prefer_shared_mem__ 0
+#define pw_threads_per_block 32
+#define pw_prefer_shared_mem 0
 
 /*
  * Exposes pairwise classes to the global namespace.

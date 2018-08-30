@@ -11,144 +11,80 @@
 #include "input.hpp"
 
 /*
- * Declaring global variables.
+ * Declaring global variables and functions.
  */
-Input cmd;
+Parser cmd;
 bool verbose = false;
 
-/*
- * Defining the list of commands available from the command line.
+/**
+ * Initializes the parser with the options it should parse.
+ * @param options The list of available options for this parser.
+ * @param arguments The list of positional (and required) arguments.
  */
-const std::vector<Input::Command> Input::commands = {
-    Command(ParamCode::Help,     "h", "help",     "Displays this help menu.")
-,   Command(ParamCode::Version,  "v", "version",  "Displays the version information.")
-,   Command(ParamCode::Verbose,  "b", "verbose",  "Activates the verbose mode.")
-,   Command(ParamCode::MultiGPU, "m", "multigpu", "Use multiple GPU devices if possible.")
-,   Command(ParamCode::File,     "f", "file",     "File to be loaded into application.", true, true)
-,   Command(ParamCode::Matrix,   "x", "matrix",   "Inform the scoring matrix to use.", true)
-};
+void Parser::init
+    (   const std::vector<Option>& options
+    ,   const std::vector<std::string>& arguments   )
+{
+    this->options = options;
+    this->arguments = arguments;
+}
 
 /**
- * Parses the command line parameters and organize them for later.
+ * Parses the command line arguments through its options.
  * @param argc The number of command line arguments.
  * @param argv The command line arguments.
  */
-void Input::parse(int argc, char **argv)
-{    
-    this->appname = std::string(argv[0]);
-
-    Argument *argument = nullptr;
+void Parser::parse(int argc, char **argv)
+{
+    unsigned int position = 0;
+    this->appname = argv[0];
 
     for(int i = 1; i < argc; ++i) {
-        const Command& command = (argv[i][0] == 0x2D)
+        const Option& option = (argv[i][0] == '-')
             ? this->find(argv[i])
-            : Command::unknown();
+            : Option {};
 
-        if(!command.is(ParamCode::Unknown)) {
-            argument = this->arguments.find(command.id) == this->arguments.end()
-                ? &(this->arguments[command.id] = command)
-                : &(this->arguments[command.id]);
+        if(option.isUnknown() && this->arguments.size() > position) {
+            this->values[this->arguments[position++]] = argv[i];
             continue;
         }
 
-        if(argument != nullptr && argument->command->variadic) {
-            argument->set(argv[i]);
-            argument = nullptr;
+        if(!option.isUnknown() && option.isVariadic()) {
+            if(i + 1 >= argc) finalize(InputError::unknown(option.getLname()));
+            this->values[option.getArgument()] = argv[++i];
             continue;
         }
 
-        argv[i][0] == 0x2D
-            ? this->unknown(argv[i])
-            : this->ordered.push_back(argv[i]);
-    }
-}
+        if(!option.isUnknown()) {
+            this->values[option.getLname()] = option.getLname();
+            continue;
+        }
 
-/**
- * Checks whether a help command has been invoked and honors them.
- */
-void Input::checkhelp() const
-{
-    if(this->has(ParamCode::Help))
-        this->usage();
-
-    if(this->has(ParamCode::Version))
-        this->version();
-
-    for(const Command& command : Input::commands)
-        if(command.required && !this->has(command.id))
-            this->missing(command);
-
-    verbose = this->has(ParamCode::Verbose);
-}
-
-/**
- * Searches for a command by one of its names.
- * @param name The name being searched for.
- * @return The corresponding command for the given name.
- */
-const Input::Command& Input::find(const std::string& name) const
-{
-    for(const Command& command : Input::commands)
-        if(command.is(name))
-            return command;
-
-    return Command::unknown();
-}
-
-/**
- * Builds a unnamed command.
- * @param id The command identifier.
- */
-Input::Command::Command(ParamCode id)
-:   id(id)
-,   variadic(false)
-,   required(false) {}
-
-/**
- * Builds a command from its names and description.
- * @param id The command's identifier.
- * @param sname The command's short name.
- * @param lname The command's long name.
- * @param description The command's description.
- * @param required Is the command required?
- */
-Input::Command::Command
-    (   ParamCode id
-    ,   const std::string& sname
-    ,   const std::string& lname
-    ,   const std::string& description
-    ,   bool variadic
-    ,   bool required
-    )
-:   id(id)
-,   sname(sname.size() > 0 ?  "-" + sname : "")
-,   lname(lname.size() > 0 ? "--" + lname : "")
-,   description(description)
-,   variadic(variadic)
-,   required(required) {}
-
-/**
- * Builds an argument from a given command.
- * @param command The command to be represented by this argument.
- */
-Input::Argument::Argument(const Command& command)
-:   command(&command) {}
-
-/**
- * Prints out a message for missing command arguments.
- * @param command The required command that is missing.
- */
-[[noreturn]]
-void Input::missing(const Command& command) const
-{
-    __onlymaster {
-        std::cerr
-            << "Fatal error. The required parameter " __bold
-            << command.lname << __reset " was not found." << std::endl
-            << "Try `" __bold << this->appname << __reset " -h' for more information." << std::endl;
+        finalize(InputError::unknown(argv[i]));
     }
 
-    finalize(ErrorCode::Success);
+    if(this->has("help")) this->usage();
+    if(this->has("version")) this->version();
+
+    for(const std::string& required : this->arguments)
+        if(!this->has(required))
+            finalize(InputError::missing(required));
+}
+
+/**
+ * Searches for an option via one of its names.
+ * @param needle The option being searched for.
+ * @return The found option or an unknown option.
+ */
+const Option& Parser::find(const std::string& needle) const
+{
+    static Option unknown {};
+
+    for(const Option& option : this->options)
+        if("--" + option.getLname() == needle || "-" + option.getSname() == needle)
+            return option;
+
+    return unknown;
 }
 
 /**
@@ -156,49 +92,54 @@ void Input::missing(const Command& command) const
  * @param command The unknown command name.
  */
 [[noreturn]]
-void Input::unknown(const char *command) const
+void Parser::usage() const
 {
-    __onlymaster {
+    onlymaster {
         std::cerr
-            << "Unknown option: " __bold __redfg << command << __reset << std::endl
-            << "Try `" __bold << this->appname << __reset " -h' for more information." << std::endl;
+            << "Usage: " s_bold << this->appname << s_reset " [options]" << std::endl
+            << "Options:" << std::endl;
+
+        for(const Option& option : this->options)
+            std::cerr
+                << s_bold "  -" << option.getSname() << ", --" << option.getLname() << s_reset " "
+                << (!option.getArgument().empty() ? option.getArgument() : "") << std::endl
+                << "    " << option.getDescription() << std::endl << std::endl;
     }
 
-    finalize(ErrorCode::Success);
+    finalize(Error::success());
 }
 
 /**
  * Prints out the software's current version.
  */
 [[noreturn]]
-void Input::version() const
+void Parser::version() const
 {
-    __onlymaster {
+    onlymaster {
         std::cerr
-            << __bold __msa__ __greenfg " v" __msa_version__ __reset
+            << s_bold MSA c_green_fg " v" MSA_VERSION s_reset
             << std::endl;
     }
 
-    finalize(ErrorCode::Success);
+    finalize(Error::success());
 }
 
 /**
- * Prints out usage guidelines and helps the user to learn the software's commands.
+ * Creates an error instance for unknown option.
+ * @param option The unknown option.
+ * @return The error instance.
  */
-[[noreturn]]
-void Input::usage() const
+const InputError InputError::unknown(const std::string& option)
 {
-    __onlymaster {
-        std::cerr
-            << "Usage: mpirun " __bold << this->appname << __reset " [options]" << std::endl
-            << "Options:" << std::endl;
+    return InputError("unknown option: " s_bold c_red_fg + option + s_reset);
+}
 
-        for(const Command& command : Input::commands)
-            std::cerr
-                << "  " __bold << command.sname << ", " << command.lname << __reset
-                << (command.required ? " (required)" : "") << std::endl
-                << "    " << command.description << std::endl << std::endl;
-    }
-
-    finalize(ErrorCode::Success);
+/**
+ * Creates an error instance for missing option.
+ * @param option The missing option.
+ * @return The error instance.
+ */
+const InputError InputError::missing(const std::string& option)
+{
+    return InputError("required option: " s_bold c_green_fg + option + s_reset);
 }

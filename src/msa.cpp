@@ -14,12 +14,6 @@
 
 #include "pairwise.hpp"
 
-/*
- * Declaring global variables.
- */
-int node::rank = 0;
-int cluster::size = 0;
-
 /**
  * Starts, manages and finishes the software's execution.
  * @param argc Number of arguments sent by command line.
@@ -28,48 +22,47 @@ int cluster::size = 0;
  */
 int main(int argc, char **argv)
 {
+    cmd.init({
+        {"h", "help",     "Displays this help menu." }
+    ,   {"v", "version",  "Displays the software version." }
+    ,   {"b", "verbose",  "Activates verbose mode." }
+    ,   {"m", "multigpu", "Try to use multiple devices in a single host."}
+    ,   {"f", "file",     "File to be processed.", "filename"}
+    ,   {"x", "matrix",   "Choose the scoring matrix to use.", "matrix"}
+    }, {"filename"});
+
     cluster::init(argc, argv);
 
-    if(node::isslave() && !device::check())
-        finalize(ErrorCode::NoGPU);
+    if(node::isSlave() && !device::exists())
+        finalize(DeviceError::noGPU());
 
     cmd.parse(argc, argv);
-    cmd.checkhelp();
     cluster::sync();
 
-    Fasta fasta(cmd.get(ParamCode::File));
+    Fasta fasta(cmd.get("filename"));
     cluster::sync();
-    
+
     Pairwise pwise = Pairwise::run(fasta);
-    //NJoining nj = njoining::run(pwise);
+    cluster::sync();
+
+    /*NJoining nj = NJoining::run(pwise);
+    cluster::sync();*/
 
     cluster::finalize();
     return 0;
 }
 
-/*
- * Lists the error messages to be shown when finishing.
- */
-static const char *error_str[] = {
-    ""                              // Success
-,   "input file is invalid."        // InvalidFile
-,   "no GPU device detected."       // NoGPU
-,   "GPU runtime error."            // CudaError
-};
-
 /**
  * Aborts the execution and kills all processes.
- * @param code Code of detected error.
+ * @param error Error detected during execution.
  */
 [[noreturn]]
-void finalize(ErrorCode code)
+void finalize(Error error)
 {
-    __onlymaster {
-        if(code != ErrorCode::Success)
-            std::cerr
-                << style(bold, __msa__) ": "
-                << style(bold, fg(red, "fatal error")) ": "
-                << error_str[static_cast<int>(code)] << std::endl;
+    if(node::isMaster() && !error.msg.empty()) {
+        std::cerr
+            << style(bold, MSA) ": " s_bold c_red_fg "fatal error: " s_reset << error.msg << std::endl
+            << "execution has terminated." << std::endl;
     }
 
     cluster::finalize();

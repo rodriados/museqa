@@ -35,7 +35,7 @@ FastaSequence::FastaSequence(const std::string& description, const BaseBuffer<ch
  * @param buffer The buffer containing this sequence's data.
  * @param size The buffer's size.
  */
-FastaSequence::FastaSequence(const std::string& description, const char *buffer, uint32_t size)
+FastaSequence::FastaSequence(const std::string& description, const char *buffer, size_t size)
 :   Sequence(buffer, size)
 ,   description(description) {}
 
@@ -45,9 +45,9 @@ FastaSequence::FastaSequence(const std::string& description, const char *buffer,
  */
 Fasta::Fasta(const std::string& fname)
 {
-    __onlymaster {
+    onlymaster {
         this->load(fname);
-        __debugh("loaded %u sequences from %s", this->getCount(), fname.c_str());
+        pdebug("loaded %u sequences from %s", this->getCount(), fname.c_str());
     }
 
     Fasta::broadcast(this);
@@ -71,7 +71,7 @@ void Fasta::load(const std::string& fname)
     std::fstream ffile(fname, std::fstream::in);
 
     if(ffile.fail())
-        finalize(ErrorCode::InvalidFile);
+        finalize(Error("input file is invalid or does not exist."));
 
     while(!ffile.eof() && !ffile.fail())
         this->extract(ffile);
@@ -124,7 +124,7 @@ void Fasta::push(const std::string& description, const std::string& sequence)
  * @param buffer The buffer that will originate a new sequence into the list.
  * @param size The buffer's size.
  */
-void Fasta::push(const std::string& description, const char *buffer, uint32_t size)
+void Fasta::push(const std::string& description, const char *buffer, size_t size)
 {
     this->list.push_back(new FastaSequence(description, buffer, size));
 }
@@ -140,10 +140,10 @@ void Fasta::broadcast(Fasta *fasta)
     cluster::broadcast(&count);
     cluster::sync();
 
-    uint32_t *sizes = new uint32_t[count];
-    uint32_t szsum = 0;
+    size_t *sizes = new size_t[count];
+    size_t szsum = 0;
 
-    __onlymaster {
+    onlymaster {
         for(int i = 0; i < count; ++i)
             szsum += sizes[i] = fasta->list[i]->getLength();
     }
@@ -154,8 +154,8 @@ void Fasta::broadcast(Fasta *fasta)
 
     char *data = new char[szsum];
 
-    __onlymaster {
-        for(uint32_t i = 0, offset = 0; i < count; ++i) {
+    onlymaster {
+        for(size_t i = 0, offset = 0; i < count; ++i) {
             std::memcpy(&data[offset], fasta->list[i]->getBuffer(), sizeof(char) * sizes[i]);
             offset += sizes[i];
         }
@@ -164,8 +164,8 @@ void Fasta::broadcast(Fasta *fasta)
     cluster::broadcast(data, szsum);
     cluster::sync();
 
-    __onlyslaves {
-        for(uint32_t i = 0, offset = 0; i < count; ++i) {
+    onlyslaves {
+        for(size_t i = 0, offset = 0; i < count; ++i) {
             fasta->push("__slave", &data[offset], sizes[i]);
             offset += sizes[i];
         }

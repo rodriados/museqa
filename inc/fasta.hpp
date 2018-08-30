@@ -3,8 +3,10 @@
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018 Rodrigo Siqueira
  */
-#ifndef _FASTA_HPP_
-#define _FASTA_HPP_
+#ifndef FASTA_HPP_INCLUDED
+#define FASTA_HPP_INCLUDED
+
+#pragma once
 
 #include <string>
 #include <fstream>
@@ -23,7 +25,7 @@ class FastaSequence : public Sequence
     public:
         FastaSequence(const std::string&, const std::string&);
         FastaSequence(const std::string&, const BaseBuffer<char>&);
-        FastaSequence(const std::string&, const char *, uint32_t);
+        FastaSequence(const std::string&, const char *, size_t);
 
         virtual ~FastaSequence() noexcept = default;
 
@@ -77,7 +79,7 @@ class Fasta final
         void load(const std::string&);
 
         void push(const std::string&, const std::string&);
-        void push(const std::string&, const char *, uint32_t);
+        void push(const std::string&, const char *, size_t);
 
         static void broadcast(Fasta *);
 };

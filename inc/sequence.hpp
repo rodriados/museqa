@@ -3,8 +3,10 @@
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018 Rodrigo Siqueira
  */
-#ifndef _SEQUENCE_HPP_
-#define _SEQUENCE_HPP_
+#ifndef SEQUENCE_HPP_INCLUDED
+#define SEQUENCE_HPP_INCLUDED
+
+#pragma once
 
 #include <ostream>
 #include <string>
@@ -39,7 +41,7 @@ class Sequence : public Buffer<char>
          * Informs the length of the sequence.
          * @return The sequence's length.
          */
-        inline uint32_t getLength() const
+        inline size_t getLength() const
         {
             return this->getSize();
         }
@@ -52,7 +54,7 @@ class Sequence : public Buffer<char>
  */
 inline std::ostream& operator<<(std::ostream& os, const BaseBuffer<char>& sequence)
 {
-    for(uint32_t i = 0; i < sequence.getSize(); ++i)
+    for(size_t i = 0; i < sequence.getSize(); ++i)
         os << sequence[i];
 
     return os;

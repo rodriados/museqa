@@ -3,29 +3,130 @@
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018 Rodrigo Siqueira
  */
-#ifndef _INPUT_HPP_
-#define _INPUT_HPP_
+#ifndef INPUT_HPP_INCLUDED
+#define INPUT_HPP_INCLUDED
 
-#include <iostream>
-#include <sstream>
+#pragma once
+
 #include <string>
 #include <vector>
 #include <map>
 
-/** 
- * Lists all possible parameter codes from the terminal. These codes are used
- * as an interface when requiring the arguments's values.
+#include "msa.hpp"
+
+/**
+ * Allows the creation of error instances related to the Input module.
  * @since 0.1.alpha
  */
-enum class ParamCode : uint8_t
+struct InputError : public Error
 {
-    Unknown = 0
-,   Help
-,   Version
-,   Verbose
-,   File
-,   MultiGPU
-,   Matrix
+    using Error::Error;
+    static const InputError missing(const std::string&);
+    static const InputError unknown(const std::string&);
+};
+
+/**
+ * Stores all information about a given option available from the command
+ * line. There should be an instance for each option available.
+ * @since 0.1.alpha
+ */
+class Option
+{
+    protected:
+        std::string sname;            /// The option's short name.
+        std::string lname;            /// The option's long name.
+        std::string description;      /// The option's description.
+        std::string argument;         /// The option's argument name if any
+
+    public:
+        Option() noexcept = default;
+
+        /**
+         * Builds an option from its names and description.
+         * @param sname The option's short name.
+         * @param lname The option's long name.
+         * @param description The option's description.
+         * @param argument The option's argument name if any.
+         */
+        inline Option
+            (   const std::string& sname
+            ,   const std::string& lname
+            ,   const std::string& description
+            ,   const std::string& argument = ""    )
+        :   sname(sname)
+        ,   lname(lname)
+        ,   description(description)
+        ,   argument(argument) {}
+
+        /**
+         * The copy operator. This operator is needed so we can initialize our options
+         * outside the class constructors.
+         * @param other The option instance to be copied.
+         * @return This instance for method chaining.
+         */
+        inline Option& operator=(const Option& other)
+        {
+            this->sname = other.sname;
+            this->lname = other.lname;
+            this->description = other.description;
+            this->argument = other.argument;
+            return *this;
+        }
+
+        /**
+         * Gets the option's short name.
+         * @return The retrieved option short name.
+         */
+        inline const std::string& getSname() const
+        {
+            return this->sname;
+        }
+
+        /**
+         * Gets the option's long name.
+         * @return The retrieved option long name.
+         */
+        inline const std::string& getLname() const
+        {
+            return this->lname;
+        }
+
+        /**
+         * Gets the option's description.
+         * @return The retrieved option description.
+         */
+        inline const std::string& getDescription() const
+        {
+            return this->description;
+        }
+
+        /**
+         * Gets the option's argument name.
+         * @return The retrieved option argument name.
+         */
+        inline const std::string& getArgument() const
+        {
+            return this->argument;
+        }
+
+        /**
+         * Checks whether the option is empty or unknown.
+         * @return Is the option unknown?
+         */
+        inline bool isUnknown() const
+        {
+            return this->sname.empty()
+                && this->lname.empty();
+        }
+
+        /**
+         * Checks whether the option requires an argument value or not.
+         * @return Does the option require an argument?
+         */
+        inline bool isVariadic() const
+        {
+            return !this->argument.empty();
+        }
 };
 
 /**
@@ -33,212 +134,62 @@ enum class ParamCode : uint8_t
  * be easily retrieved when needed.
  * @since 0.1.alpha
  */
-class Input
+class Parser
 {
-    private:
-        /**
-         * Stores all information about a given command available from the command
-         * line. There should be an instance for each command.
-         * @since 0.1.alpha
-         */
-        class Command
-        {
-            public:
-                ParamCode id;               /// The command's identifier.
-                std::string sname;          /// The command's short name option.
-                std::string lname;          /// The command's long name option.
-                std::string description;    /// The command's description.
-                const bool variadic;        /// Does the command receive any parameter?
-                const bool required;        /// Is the command required?
-
-            public:
-                explicit Command
-                    (   ParamCode
-                    ,   const std::string&
-                    ,   const std::string&
-                    ,   const std::string&
-                    ,   bool = false
-                    ,   bool = false
-                    );
-                virtual ~Command() = default;
-
-                /**
-                 * Checks whether the command is the one being requested.
-                 * @param id The identifier of the requested command.
-                 * @return Is this command the requested one?
-                 */
-                inline bool is(ParamCode id) const
-                {
-                    return id == this->id;
-                }
-
-                /**
-                 * Checks whether the command is the one being requested from names.
-                 * @param given The name of the requested command.
-                 * @return Is this command the requested one?
-                 */
-                inline bool is(const std::string& given) const
-                {
-                    return given == this->lname || given == this->sname;
-                }
-
-                /**
-                 * Provides a static command instance for an unknown command.
-                 * @return The unknown command instance.
-                 */
-                inline static const Command& unknown()
-                {
-                    static Command unknown(ParamCode::Unknown);
-                    return unknown;
-                }
-
-            private:
-                explicit Command(ParamCode);
-        };
-
-        /**
-         * Represents an argument given by the command line. An argument can hold
-         * multiple parameters. That means that positional arguments must be given
-         * before any named parameter.
-         * @since 0.1.alpha
-         */        
-        class Argument
-        {
-            public:
-                const Command *command;             /// Pointer to the command being represented.
-                std::string value;                  /// The parameter given to the argument.
-
-            public:
-                Argument() = default;
-                explicit Argument(const Command&);
-
-                /**
-                 * Checks whether the argument is the one being requested.
-                 * @param id The identifier of the requested argument.
-                 * @return Is this argument the requested one?
-                 */
-                inline bool is(ParamCode id) const
-                {
-                    return this->command->id == id;
-                }
-
-                /**
-                 * Retrieves the value associated to the command.
-                 * @return The argument's value.
-                 */
-                inline const std::string& get() const
-                {
-                    return this->value;
-                }
-
-                /**
-                 * Provides a static argument instance for an unknown argument.
-                 * @return The unknown argument instance.
-                 */
-                inline static const Argument& unknown()
-                {
-                    static Argument unknown(Command::unknown());
-                    return unknown;
-                }
-
-            private:
-                /**
-                 * Allows the command represented by this argument to change.
-                 * This is only needed by the parent class when parsing.
-                 * @param command The new command being represented.
-                 * @return This argument instance.
-                 */
-                inline Argument& operator=(const Command& command)
-                {
-                    this->command = &command;
-                    return *this;
-                }
-
-                /**
-                 * Sets a new value to the argument.
-                 * @param value The parameter sent as parameter to this argument.
-                 */
-                inline void set(const char *value)
-                {
-                    this->value = std::string(value);
-                }
-
-            friend class Input;
-        };
-
-    private:
+    protected:
         std::string appname;                        /// The name used by the application.
-        std::vector<std::string> ordered;           /// The unnamed arguments.
-        std::map<ParamCode, Argument> arguments;    /// The map of named arguments.
-
-        static const std::vector<Command> commands; /// The list of commands available.
+        std::vector<Option> options;                /// The list of options available.
+        std::vector<std::string> arguments;         /// The list of required (and positional) arguments.
+        std::map<std::string, std::string> values;  /// The list of parsed values.
 
     public:
-        Input() = default;
+        Parser() noexcept = default;
 
         /**
-         * Checks whether an ordered argument exists.
-         * @param offset The requested argument.
+         * Checks whether an argument exists.
+         * @param argname The name of the requested argument.
          * @return Does the argument exist?
          */
-        inline bool has(unsigned int offset) const
+        inline bool has(const std::string& argname) const
         {
-            return this->ordered.size() > offset;
+            return this->values.find(argname) != this->values.end();
         }
 
         /**
-         * Checks whether an named argument exists.
-         * @param id The identifier of requested argument.
-         * @return Does the argument exist?
+         * Retrieves the value received by a named argument.
+         * @param argname The name of the requested argument.
+         * @param fallback The value to be returned if none is found.
+         * @return The value of requested argument.
          */
-        inline bool has(ParamCode id) const
+        inline const std::string& get(const std::string& argname, const std::string& fallback = "") const
         {
-            for(const auto& argument : this->arguments)
-                if(argument.second.is(id))
-                    return true;
-
-            return false;
+            return this->has(argname)
+                ? this->values.find(argname)->second
+                : fallback;
         }
 
         /**
-         * Retrieves an ordered argument.
-         * @param offset The offset being requested.
-         * @return The value of requested parameter.
+         * Informs the name used to start the application.
+         * @return The application name used.
          */
-        inline const std::string& get(int offset) const
+        inline const std::string& getAppname() const
         {
-            return this->ordered.at(offset);
+            return this->appname;
         }
 
-        /**
-         * Retrieves a named argument.
-         * @param id The identifier of requested argument.
-         * @param def The value to be returned if not found.
-         * @return The requested argument instance.
-         */
-        inline const std::string& get(ParamCode id) const
-        {
-            for(const auto& argument : this->arguments)
-                if(argument.second.is(id))
-                    return argument.second.get();
-
-            static const std::string null;
-            
-            return null;
-        }
-
+        void init(const std::vector<Option>&, const std::vector<std::string>&);
         void parse(int, char **);
-        void checkhelp() const;
 
     private:
-        const Command& find(const std::string&) const;
-
-        [[noreturn]] void missing(const Command&) const;
-        [[noreturn]] void unknown(const char *) const;
-        [[noreturn]] void version() const;
         [[noreturn]] void usage() const;
+        [[noreturn]] void version() const;
+        
+        const Option& find(const std::string&) const;
 };
 
-extern Input cmd;
+/*
+ * Declaring global variables and functions.
+ */
+extern Parser cmd;
 
 #endif

@@ -11,13 +11,13 @@
 
 void pairwise::Needleman::generate()
 {
-    for(uint16_t i = 0, n = this->pwise.getCount(); i < n; ++i)
+    uint16_t t = 0;
+
+    for(uint16_t i = 0, n = this->pwise.getList().getCount(); i < n; ++i)
         for(uint16_t j = i + 1; j < n; ++j)
             this->pairs.push_back({i, j});
 
-    __onlymaster {
-        __debugh("generated %d sequence pairs", this->pairs.size());
-    }
+    onlymaster pdebug("generated %d sequence pairs", this->pairs.size());
 }
 
 void pairwise::Needleman::run()
@@ -31,6 +31,6 @@ void pairwise::Needleman::run()
  * @param out The output data produced by the algorithm.
  */
 __global__ void
-__launch_bounds__(__pw_threads_per_block__)
+__launch_bounds__(pw_threads_per_block)
 pairwise::needleman(pairwise::dNeedleman in, pairwise::Score *out)
 {}
