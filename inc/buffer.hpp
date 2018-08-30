@@ -92,7 +92,7 @@ class Buffer : public BaseBuffer<T>
          * @param size The number of buffer blocks being copied.
          */
         inline Buffer(const T *buffer, size_t size)
-        :   BaseBuffer<T>{}
+        :   BaseBuffer<T>()
         {
             this->copy(buffer, size);
         }
@@ -102,7 +102,7 @@ class Buffer : public BaseBuffer<T>
          * @param buffer The instance from which data will be copied.
          */
         inline Buffer(const Buffer<T>& buffer)
-        :   BaseBuffer<T>{}
+        :   BaseBuffer<T>()
         {
             this->copy(buffer.getBuffer(), buffer.getSize());
         }
@@ -112,7 +112,7 @@ class Buffer : public BaseBuffer<T>
          * @param vector The vector from which the buffer will be created.
          */
         inline Buffer(const std::vector<T>& vector)
-        :   BaseBuffer<T>{}
+        :   BaseBuffer<T>()
         {
             this->copy(vector.data(), vector.size());
         }

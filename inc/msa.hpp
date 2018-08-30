@@ -50,13 +50,13 @@
  */ 
 #ifdef MSA_DEBUG
 #  ifndef __CUDA_ARCH__
-#    define pdebug(msg, ...) printf(style(bold, "[  msa:host]") msg "\n", ##__VA_ARGS__)
+#    define pdebug(msg, ...) printf(style(bold, "[  msa:host] ") msg "\n", ##__VA_ARGS__)
 #  else
-#    define pdebug(msg, ...) printf(style(bold, "[msa:device]") msg "\n", ##__VA_ARGS__)
+#    define pdebug(msg, ...) printf(style(bold, "[msa:device] ") msg "\n", ##__VA_ARGS__)
 #  endif
 #else
 #  ifndef __CUDA_ARCH__
-#    define pdebug(msg, ...) if(verbose) { printf(style(bold, "[  msa:host]") msg "\n", ##__VA_ARGS__); }
+#    define pdebug(msg, ...) if(verbose) { printf(style(bold, "[  msa:host] ") msg "\n", ##__VA_ARGS__); }
 #  else
 #    define pdebug(msg, ...) // do not print anything from device, please.
 #  endif

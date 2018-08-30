@@ -71,7 +71,7 @@ void Fasta::load(const std::string& fname)
     std::fstream ffile(fname, std::fstream::in);
 
     if(ffile.fail())
-        finalize(ErrorCode::InvalidFile);
+        finalize(Error("input file is invalid or does not exist."));
 
     while(!ffile.eof() && !ffile.fail())
         this->extract(ffile);

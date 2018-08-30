@@ -64,3 +64,23 @@ const DeviceProperties& device::properties()
     cudacall(cudaGetDeviceProperties(&d_props, device_id));
     return d_props;
 }
+
+/**
+ * Creates an error instance for no device.
+ * @return The error instance.
+ */
+const DeviceError DeviceError::noGPU()
+{
+    return DeviceError("No compatible GPU has been found.");
+}
+
+/**
+ * Creates an error instance for execution error.
+ * @param msg The acquired error message.
+ * @return The error instance.
+ */
+ const DeviceError DeviceError::execution(const char *msg)
+ {
+    return DeviceError(msg);
+ }
+ 
