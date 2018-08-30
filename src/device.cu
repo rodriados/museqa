@@ -42,14 +42,18 @@ bool device::exists()
 /**
  * Selects the compute-capable device to be used.
  * @param device_id The device with priority to be chosen.
+ * @return The selected device identification.
  */
-void device::select(int device_id)
+int device::select(int device_id)
 {
     cudacall(cudaSetDevice(
         (device_id < 0 || device_id > device::count())
             ? (cluster::rank - 1) % device::count()
             : device_id
     ));
+
+    cudacall(cudaGetDevice(&device_id));
+    return device_id;
 }
 
 /**

@@ -2,3 +2,4 @@ msa
 obj/
 .idea/
 *.o
+*.d

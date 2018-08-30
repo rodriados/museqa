@@ -1,48 +1,64 @@
 NAME = msa
 
-IDIR = inc
-SDIR = src
-ODIR = obj
+INCDIR = inc
+SRCDIR = src
+OBJDIR = obj
 
-NVCC = nvcc
 MPCC = mpicc
 MPPP = mpic++
+NVCC = nvcc
 
-MPILKDIR = /usr/lib/openmpi/lib
+# Target architecture for CUDA compilation. This indicates the minimum
+# support required for the codebase.
+NVARCH = sm_20
 
-MPFLAGS = -Wall -std=c++17 -I$(IDIR) -g
-MCFLAGS = -Wall -std=c99 -lm -I$(IDIR) -g
-NVFLAGS = -std=c++11 -arch sm_20 -lmpi -lcuda -lcudart -w -I$(IDIR) -g
-NVLINKFLAGS = -L$(MPILKDIR) -lmpi_cxx -lmpi -g
+MPILIBDIR = /usr/lib/openmpi/lib
 
-NVFILES := $(shell find $(SDIR) -name '*.cu')
-MPFILES := $(shell find $(SDIR) -name '*.cpp')
-MCFILES := $(shell find $(SDIR) -name '*.c')
+MPCCFLAGS = -std=c99   -I$(INCDIR) -g -Wall -lm
+MPPPFLAGS = -std=c++14 -I$(INCDIR) -g -Wall
+NVCCFLAGS = -std=c++11 -I$(INCDIR) -g -arch $(NVARCH) -lmpi -lcuda -lcudart -w
+LINKFLAGS = -L$(MPILIBDIR) -lmpi_cxx -lmpi -g
 
-DEPS = $(NVFILES:src/%.cu=obj/%.o) $(MPFILES:src/%.cpp=obj/%.o) $(MCFILES:src/%.c=obj/%.o)
-HDEPS = $(DEPS:obj/%.o=obj/%.d)
+# Lists all files to be compiled and separates them according to their
+# corresponding compilers.
+MPCCFILES := $(shell find $(SRCDIR) -name '*.c')
+MPPPFILES := $(shell find $(SRCDIR) -name '*.cpp')
+NVCCFILES := $(shell find $(SRCDIR) -name '*.cu')
+
+SRCINTERNAL = $(sort $(dir $(wildcard $(SRCDIR)/*/.)))
+OBJINTERNAL = $(SRCINTERNAL:$(SRCDIR)/%=$(OBJDIR)/%)
+
+ODEPS = $(MPCCFILES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)						\
+		$(MPPPFILES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)						\
+		$(NVCCFILES:$(SRCDIR)/%.cu=$(OBJDIR)/%.o)
+HDEPS = $(ODEPS:$(OBJDIR)/%.o=$(OBJDIR)/%.d)
 
 .phony: all clean install
 
-all: $(NAME)
+all: install $(NAME)
 
-$(NAME): $(DEPS)
-	$(NVCC) $(NVFLAGS) $(NVLINKFLAGS) $^ -o $@
+$(NAME): $(ODEPS)
+	$(NVCC) $(NVCCFLAGS) $(LINKFLAGS) $^ -o $@
 
+# Creates dependency on header files. This is valuable so that whenever
+# a header file is changed, all objects depending on it will be recompiled.
 -include $(HDEPS)
 
-$(ODIR)/%.o: src/%.cu
-	@$(NVCC) $(NVFLAGS) -M $< -odir obj > $(@:%.o=%.d)
-	$(NVCC) $(NVFLAGS) -c $< -o $@
+# Compiling C files.
+$(OBJDIR)/%.o: $(SRCDIR)/%.c
+	$(MPCC) $(MPCCFLAGS) -MMD -c $< -o $@
 
-$(ODIR)/%.o: src/%.c
-	$(MPCC) $(MCFLAGS) -MMD -c $< -o $@
+# Compiling C++ files.
+$(OBJDIR)/%.o: $(SRCDIR)/%.cpp
+	$(MPPP) $(MPPPFLAGS) -MMD -c $< -o $@
 
-$(ODIR)/%.o: src/%.cpp
-	$(MPPP) $(MPFLAGS) -MMD -c $< -o $@
+# Compiling CUDA files.
+$(OBJDIR)/%.o: $(SRCDIR)/%.cu
+	@$(NVCC) $(NVCCFLAGS) -M $< -odir $(OBJDIR) > $(@:%.o=%.d)
+	$(NVCC) $(NVCCFLAGS) -c $< -o $@
 
 install:
-	@mkdir -p obj/pairwise
+	mkdir -p $(OBJINTERNAL)
 
 clean:
-	@rm -rf $(DEPS) $(HDEPS) $(NAME) $(SDIR)/*~ *~
+	@rm -rf $(NAME) $(OBJDIR) $(SRCDIR)/*~ *~
