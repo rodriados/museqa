@@ -15,6 +15,17 @@
 #include "msa.hpp"
 
 /**
+ * Allows the creation of error instances related to the Input module.
+ * @since 0.1.alpha
+ */
+struct InputError : public Error
+{
+    using Error::Error;
+    static const InputError missing(const std::string&);
+    static const InputError unknown(const std::string&);
+};
+
+/**
  * Stores all information about a given option available from the command
  * line. There should be an instance for each option available.
  * @since 0.1.alpha
@@ -174,17 +185,6 @@ class Parser
         [[noreturn]] void version() const;
         
         const Option& find(const std::string&) const;
-};
-
-/**
- * Allows the creation of error instances related to the Input module.
- * @since 0.1.alpha
- */
-struct InputError : public Error
-{
-    using Error::Error;
-    static const InputError missing(const std::string&);
-    static const InputError unknown(const std::string&);
 };
 
 /*

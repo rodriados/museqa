@@ -3,6 +3,8 @@
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018 Alexandr Poltavsky, Antony Polukhin, Rodrigo Siqueira
  */
+#ifndef REFLECTION_HPP_INCLUDED
+#define REFLECTION_HPP_INCLUDED
 
 /*
  * The Great Type Loophole (C++14)
@@ -19,9 +21,6 @@
  * Note: CWG agreed that such techniques should be ill-formed, although the mechanism for prohibiting them
  * is as yet undetermined.
  */
-#ifndef REFLECTION_HPP_INCLUDED
-#define REFLECTION_HPP_INCLUDED
-
 #pragma once
 
 #include <utility>
@@ -323,14 +322,22 @@ template <typename T>
 class Reflection
 {
     private:
-        using type = reflection::internal::clean<T>;
+        /**
+         * Cleaning the type to be reflected.
+         * @since 0.1.alpha
+         */
+        using Type = reflection::internal::clean<T>;
 
     public:
-        using tuple = reflection::LoopholeTuple<type>;
+        /**
+         * The tuple aligned to reflected type.
+         * @since 0.1.alpha
+         */
+        using Tuple = reflection::LoopholeTuple<Type>;
 
-        static_assert(!std::is_union<T>::value, "Is is forbidden to reflect unions!");
-        static_assert(sizeof(type) == sizeof(tuple), "Member sequence is not compatible!");
-        static_assert(alignof(type) == alignof(tuple), "Member sequence is not compatible!");
+        static_assert(!std::is_union<T>::value, "It is forbidden to reflect unions!");
+        static_assert(sizeof(Type) == sizeof(Tuple), "Member sequence is not compatible!");
+        static_assert(alignof(Type) == alignof(Tuple), "Member sequence is not compatible!");
 
         /**
          * Retrieves the offset of a member in the data structure by its index.
@@ -341,7 +348,7 @@ class Reflection
         static constexpr ptrdiff_t getOffset() noexcept
         {
             namespace r = reflection;            
-            constexpr r::AlignedTuple<tuple> l {};            
+            constexpr r::AlignedTuple<Tuple> l {};            
             return &r::internal::t_get<N>(l).storage[0] - &r::internal::t_get<0>(l).storage[0];
         }
 
@@ -351,7 +358,19 @@ class Reflection
          */
         static constexpr size_t getSize() noexcept
         {
-            return reflection::internal::count<type>(0);
+            return reflection::internal::count<Type>(0);
+        }
+
+        /**
+         * Creates a new tuple instance based on the reflected type.
+         * @tparam U The list of types to create the new instance.
+         * @param values The list of values.
+         * @return The new tuple instance.
+         */
+        template <typename ...U>
+        static constexpr Tuple newInstance(U... values)
+        {
+            return Tuple(values...);
         }
 };
 
