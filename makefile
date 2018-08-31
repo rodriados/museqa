@@ -10,7 +10,7 @@ NVCC = nvcc
 
 # Target architecture for CUDA compilation. This indicates the minimum
 # support required for the codebase.
-NVARCH = sm_20
+NVARCH = sm_30
 
 MPILIBDIR = /usr/lib/openmpi/lib
 
@@ -28,9 +28,9 @@ NVCCFILES := $(shell find $(SRCDIR) -name '*.cu')
 SRCINTERNAL = $(sort $(dir $(wildcard $(SRCDIR)/*/.)))
 OBJINTERNAL = $(SRCINTERNAL:$(SRCDIR)/%=$(OBJDIR)/%)
 
-ODEPS = $(MPCCFILES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)						\
-		$(MPPPFILES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)						\
-		$(NVCCFILES:$(SRCDIR)/%.cu=$(OBJDIR)/%.o)
+ODEPS = $(MPCCFILES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)                        \
+        $(MPPPFILES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)                      \
+        $(NVCCFILES:$(SRCDIR)/%.cu=$(OBJDIR)/%.o)
 HDEPS = $(ODEPS:$(OBJDIR)/%.o=$(OBJDIR)/%.d)
 
 .phony: all clean install
@@ -58,7 +58,7 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.cu
 	$(NVCC) $(NVCCFLAGS) -c $< -o $@
 
 install:
-	mkdir -p $(OBJINTERNAL)
+	@mkdir -p $(OBJINTERNAL)
 
 clean:
 	@rm -rf $(NAME) $(OBJDIR) $(SRCDIR)/*~ *~

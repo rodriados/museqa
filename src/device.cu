@@ -10,23 +10,15 @@
 #include "input.hpp"
 #include "device.cuh"
 
-/*
- * Declaring global variables.
- */
-static int devices = 0;
-static DeviceProperties d_props;
-
 /**
  * Informs the number of devices available.
  * @return The number of compute-capable devices.
  */
 int device::count()
 {
-    if(!devices && cudaGetDeviceCount(&devices) == cudaSuccess)
-        devices = !cmd.has("multigpu")
-            ? (devices > 0)
-            : devices;
+    int devices;
 
+    cudacall(cudaGetDeviceCount(&devices));
     return devices;
 }
 
@@ -41,19 +33,17 @@ bool device::exists()
 
 /**
  * Selects the compute-capable device to be used.
- * @param device_id The device with priority to be chosen.
  * @return The selected device identification.
  */
-int device::select(int device_id)
+int device::select()
 {
-    cudacall(cudaSetDevice(
-        (device_id < 0 || device_id > device::count())
-            ? (cluster::rank - 1) % device::count()
-            : device_id
-    ));
+    const int devices = cmd.has("multigpu")
+        ? device::count()
+        : device::exists();
+    int id = (cluster::rank - 1) % devices;
 
-    cudacall(cudaGetDevice(&device_id));
-    return device_id;
+    cudacall(cudaSetDevice(id));
+    return id;
 }
 
 /**
@@ -62,11 +52,11 @@ int device::select(int device_id)
  */
 const DeviceProperties& device::properties()
 {
-    int device_id;
+    static DeviceProperties props;
+    int id = device::select();
 
-    cudacall(cudaGetDevice(&device_id));
-    cudacall(cudaGetDeviceProperties(&d_props, device_id));
-    return d_props;
+    cudacall(cudaGetDeviceProperties(&props, id));
+    return props;
 }
 
 /**

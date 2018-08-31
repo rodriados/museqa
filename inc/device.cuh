@@ -86,7 +86,7 @@ namespace device
 {
     extern int count();
     extern bool exists();
-    extern int select(int = -1);
+    extern int select();
 #ifdef __CUDACC__
     extern const DeviceProperties& properties();
 #endif
