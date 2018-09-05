@@ -5,12 +5,14 @@
  */
 #include <iostream>
 #include <string>
+#include <vector>
 
 #include "msa.hpp"
 #include "input.hpp"
 #include "fasta.hpp"
 #include "device.cuh"
 #include "cluster.hpp"
+#include "benchmark.hpp"
 
 #include "pairwise.hpp"
 
@@ -39,16 +41,29 @@ int main(int argc, char **argv)
     cmd.parse(argc, argv);
     cluster::sync();
 
+    Benchmark bm;
+
     Fasta fasta(cmd.get("filename"));
-    cluster::sync();
+    cluster::sync(); bm.step();
 
     Pairwise pwise = Pairwise::run(fasta);
-    cluster::sync();
+    cluster::sync(); bm.step();
 
     /*NJoining nj = NJoining::run(pwise);
-    cluster::sync();*/
+    cluster::sync(); bm.step(); */
 
     cluster::finalize();
+
+    onlymaster {
+        const std::vector<std::string> steps = {"distribution", "pairwise"};
+
+        for(int i = 0, n = bm.getCount(); i < n; ++i)
+            std::cerr << style(bold, "[msa:report] ") << steps[i] << " step evaluated in "
+                << bm.getStep(i) << " seconds." << std::endl;
+
+        std::cerr << style(bold, "[msa:report] ") "total elapsed time: " << bm.elapsed() << " seconds." << std::endl;
+    }
+
     return 0;
 }
 
