@@ -65,6 +65,7 @@ void Parser::parse(int argc, char **argv)
 
     if(this->has("help")) this->usage();
     if(this->has("version")) this->version();
+    if(this->has("verbose")) verbose = true;
 
     for(const std::string& required : this->arguments)
         if(!this->has(required))
@@ -117,7 +118,7 @@ void Parser::version() const
 {
     onlymaster {
         std::cerr
-            << s_bold MSA c_green_fg " v" MSA_VERSION s_reset
+            << style(bold, "[    msa   ] " c_green_fg "version " MSA_VERSION)
             << std::endl;
     }
 
@@ -131,7 +132,7 @@ void Parser::version() const
  */
 const InputError InputError::unknown(const std::string& option)
 {
-    return InputError("unknown option: " s_bold c_red_fg + option + s_reset);
+    return InputError("unknown option " s_bold c_red_bg + option + s_reset);
 }
 
 /**
@@ -141,5 +142,5 @@ const InputError InputError::unknown(const std::string& option)
  */
 const InputError InputError::missing(const std::string& option)
 {
-    return InputError("required option: " s_bold c_green_fg + option + s_reset);
+    return InputError("required option " s_bold c_green_bg + option + s_reset);
 }

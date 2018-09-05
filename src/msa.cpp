@@ -17,6 +17,11 @@
 #include "pairwise.hpp"
 
 /**
+ * Forward declaration of global function.
+ */
+void report(const std::string&, Benchmark&);
+
+/**
  * Starts, manages and finishes the software's execution.
  * @param argc Number of arguments sent by command line.
  * @param argv The arguments sent by command line.
@@ -44,27 +49,34 @@ int main(int argc, char **argv)
     Benchmark bm;
 
     Fasta fasta(cmd.get("filename"));
-    cluster::sync(); bm.step();
+    cluster::sync(); report("distribution", bm);
 
     Pairwise pwise = Pairwise::run(fasta);
-    cluster::sync(); bm.step();
+    cluster::sync(); report("pairwise", bm);
 
     /*NJoining nj = NJoining::run(pwise);
-    cluster::sync(); bm.step(); */
+    cluster::sync(); report("nj", bm); */
 
     cluster::finalize();
 
-    onlymaster {
-        const std::vector<std::string> steps = {"distribution", "pairwise"};
-
-        for(int i = 0, n = bm.getCount(); i < n; ++i)
-            std::cerr << style(bold, "[msa:report] ") << steps[i] << " step evaluated in "
-                << bm.getStep(i) << " seconds." << std::endl;
-
-        std::cerr << style(bold, "[msa:report] ") "total elapsed time: " << bm.elapsed() << " seconds." << std::endl;
-    }
-
     return 0;
+}
+
+/**
+ * Reports the execution success of a step.
+ * @param name The name of executed step.
+ * @param bm The benchmark instance.
+ */
+void report(const std::string& name, Benchmark& bm)
+{
+    static int count = 0;
+    bm.step();
+
+    if(node::isMaster()) {
+        std::cerr
+            << s_bold "[msa:report] " c_green_fg << name << s_reset " in "
+            << bm.getStep(count++) << " seconds" << std::endl;
+    }
 }
 
 /**
@@ -76,7 +88,7 @@ void finalize(Error error)
 {
     if(node::isMaster() && !error.msg.empty()) {
         std::cerr
-            << style(bold, MSA) ": " s_bold c_red_fg "fatal error: " s_reset << error.msg << std::endl
+            << style(bold, "[ msa:error] " c_red_fg "fatal ") << error.msg << std::endl
             << "execution has terminated." << std::endl;
     }
 
