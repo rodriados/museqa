@@ -51,7 +51,7 @@ namespace node
  */
 #define onlymaster    if(node::isMaster())
 #define onlyslaves    if(node::isSlave())
-#define onlyslave(i)  if(node::isSlave() && node::rank == (i))
+#define onlyslave(i)  if(node::isSlave() && cluster::rank == (i))
 
 #undef master_node_id
 

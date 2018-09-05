@@ -1,5 +1,5 @@
 /** 
- * Multiple Sequence Alignment sequence header file.
+ * Multiple Sequence Alignment buffer header file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018 Rodrigo Siqueira
  */

@@ -10,13 +10,19 @@ NVCC = nvcc
 
 # Target architecture for CUDA compilation. This indicates the minimum
 # support required for the codebase.
-NVARCH = sm_30
+NVARCH ?= sm_30
+
+# Defining language standards to be used. These can be overriden by
+# environment variables.
+STDC   ?= c99
+STDCPP ?= c++14
+STDCU  ?= c++11
 
 MPILIBDIR = /usr/lib/openmpi/lib
 
-MPCCFLAGS = -std=c99   -I$(INCDIR) -g -Wall -lm
-MPPPFLAGS = -std=c++14 -I$(INCDIR) -g -Wall
-NVCCFLAGS = -std=c++11 -I$(INCDIR) -g -arch $(NVARCH) -lmpi -lcuda -lcudart -w
+MPCCFLAGS = -std=$(STDC) -I$(INCDIR) -g -Wall -lm
+MPPPFLAGS = -std=$(STDCPP) -I$(INCDIR) -g -Wall
+NVCCFLAGS = -std=$(STDCU) -I$(INCDIR) -g -arch $(NVARCH) -lmpi -lcuda -lcudart -w
 LINKFLAGS = -L$(MPILIBDIR) -lmpi_cxx -lmpi -g
 
 # Lists all files to be compiled and separates them according to their
@@ -38,7 +44,7 @@ HDEPS = $(ODEPS:$(OBJDIR)/%.o=$(OBJDIR)/%.d)
 all: install $(NAME)
 
 $(NAME): $(ODEPS)
-	$(NVCC) $(NVCCFLAGS) $(LINKFLAGS) $^ -o $@
+	$(NVCC) $(LINKFLAGS) $^ -o $@
 
 # Creates dependency on header files. This is valuable so that whenever
 # a header file is changed, all objects depending on it will be recompiled.
