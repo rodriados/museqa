@@ -73,7 +73,7 @@ void report(const std::string& name, Benchmark& bm)
     bm.step();
 
     if(node::isMaster()) {
-        std::cerr
+        std::cout
             << s_bold "[msa:report] " c_green_fg << name << s_reset " in "
             << bm.getStep(count++) << " seconds" << std::endl;
     }
