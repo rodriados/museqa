@@ -20,7 +20,7 @@ namespace cluster
     /*
      * Declaring global variable.
      */
-    extern std::vector<MPI_Datatype> createdTypes;
+    extern std::vector<MPI_Datatype> custom;
 
     /*
      * Forward declaration of Datatype, so that datatypes that already exist can
@@ -132,7 +132,7 @@ namespace cluster
                 MPI_Type_create_struct(size, blockl, offset, type, &this->dtypeid);
                 MPI_Type_commit(&this->dtypeid);
 
-                createdTypes.push_back(this->dtypeid);
+                custom.push_back(this->dtypeid);
             }
 
             /**
@@ -269,7 +269,7 @@ namespace cluster
      */
     inline int finalize()
     {
-        for(MPI_Datatype& dtype : createdTypes)
+        for(MPI_Datatype& dtype : custom)
             MPI_Type_free(&dtype);
 
         return MPI_Finalize();

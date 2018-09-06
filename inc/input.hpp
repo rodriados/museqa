@@ -177,13 +177,20 @@ class Parser
             return this->appname;
         }
 
+        /**
+         * Gives access to the options given to the input module.
+         * @return The application options.
+         */
+        inline const std::vector<Option>& getOptions() const
+        {
+            return this->options;
+        }
+
         void init(const std::vector<Option>&, const std::vector<std::string>&);
         void parse(int, char **);
+        void check() const;
 
     private:
-        [[noreturn]] void usage() const;
-        [[noreturn]] void version() const;
-        
         const Option& find(const std::string&) const;
 };
 

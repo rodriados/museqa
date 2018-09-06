@@ -15,7 +15,6 @@ namespace cluster
      */
     int rank = 0;
     int size = 0;
-
-    std::vector<MPI_Datatype> createdTypes;
+    std::vector<MPI_Datatype> custom;
 };
 

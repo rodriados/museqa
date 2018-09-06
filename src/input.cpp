@@ -14,7 +14,6 @@
  * Declaring global variables and functions.
  */
 Parser cmd;
-bool verbose = false;
 
 /**
  * Initializes the parser with the options it should parse.
@@ -62,11 +61,13 @@ void Parser::parse(int argc, char **argv)
 
         finalize(InputError::unknown(argv[i]));
     }
+}
 
-    if(this->has("help")) this->usage();
-    if(this->has("version")) this->version();
-    if(this->has("verbose")) verbose = true;
-
+/**
+ * Checks whether all required arguments have been sent.
+ */
+void Parser::check() const
+{
     for(const std::string& required : this->arguments)
         if(!this->has(required))
             finalize(InputError::missing(required));
@@ -86,43 +87,6 @@ const Option& Parser::find(const std::string& needle) const
             return option;
 
     return unknown;
-}
-
-/**
- * Prints out a message for an unknown command.
- * @param command The unknown command name.
- */
-[[noreturn]]
-void Parser::usage() const
-{
-    onlymaster {
-        std::cerr
-            << "Usage: " s_bold << this->appname << s_reset " [options]" << std::endl
-            << "Options:" << std::endl;
-
-        for(const Option& option : this->options)
-            std::cerr
-                << s_bold "  -" << option.getSname() << ", --" << option.getLname() << s_reset " "
-                << (!option.getArgument().empty() ? option.getArgument() : "") << std::endl
-                << "    " << option.getDescription() << std::endl << std::endl;
-    }
-
-    finalize(Error::success());
-}
-
-/**
- * Prints out the software's current version.
- */
-[[noreturn]]
-void Parser::version() const
-{
-    onlymaster {
-        std::cerr
-            << style(bold, "[    msa   ] " c_green_fg "version " MSA_VERSION)
-            << std::endl;
-    }
-
-    finalize(Error::success());
 }
 
 /**
