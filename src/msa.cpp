@@ -23,6 +23,12 @@ bool verbose = false;
 auto& out = std::cout;
 auto& err = std::cerr;
 
+/*
+ * Declaring global no-return functions.
+ */
+[[noreturn]] void usage();
+[[noreturn]] void version();
+
 /**
  * The application class. This class is responsible for running the application's
  * specific functions.
@@ -84,19 +90,40 @@ class App final
 };
 
 /**
- * Aborts the execution and kills all processes.
- * @param error Error detected during execution.
+ * Starts, manages and finishes the software's execution.
+ * @param argc Number of arguments sent by command line.
+ * @param argv The arguments sent by command line.
+ * @return The error code for the operating system.
  */
-[[noreturn]] void finalize(Error error)
+int main(int argc, char **argv)
 {
-    onlymaster if(!error.msg.empty()) {
-        err << MSA << s_bold " [fatal error]: " s_reset
-            << error.msg << std::endl
-            << "execution has terminated." << std::endl;
-    }
+    cluster::init(argc, argv);
+
+    onlyslaves if(!device::exists())
+        finalize(DeviceError::noGPU());
+
+    cmd.init({
+        {"h", "help",     "Displays this help menu." }
+    ,   {"v", "version",  "Displays the software version." }
+    ,   {"b", "verbose",  "Activates verbose mode." }
+    ,   {"m", "multigpu", "Try to use multiple devices in a single host."}
+    ,   {"f", "file",     "File to be processed.", "filename"}
+    ,   {"x", "matrix",   "Choose the scoring matrix to use.", "matrix"}
+    }, {"filename"});
+
+    cmd.parse(argc, argv);
+    if(cmd.has("help"))     usage();
+    if(cmd.has("version"))  version();
+    cmd.check();
+
+    verbose = cmd.has("verbose");
+    cluster::sync();
+
+    App msa;
+    msa.run();
 
     cluster::finalize();
-    exit(0);
+    return 0;
 }
 
 /**
@@ -136,38 +163,17 @@ class App final
 }
 
 /**
- * Starts, manages and finishes the software's execution.
- * @param argc Number of arguments sent by command line.
- * @param argv The arguments sent by command line.
- * @return The error code for the operating system.
+ * Aborts the execution and kills all processes.
+ * @param error Error detected during execution.
  */
-int main(int argc, char **argv)
+[[noreturn]] void finalize(Error error)
 {
-    cluster::init(argc, argv);
-
-    onlyslaves if(!device::exists())
-        finalize(DeviceError::noGPU());
-
-    cmd.init({
-        {"h", "help",     "Displays this help menu." }
-    ,   {"v", "version",  "Displays the software version." }
-    ,   {"b", "verbose",  "Activates verbose mode." }
-    ,   {"m", "multigpu", "Try to use multiple devices in a single host."}
-    ,   {"f", "file",     "File to be processed.", "filename"}
-    ,   {"x", "matrix",   "Choose the scoring matrix to use.", "matrix"}
-    }, {"filename"});
-
-    cmd.parse(argc, argv);
-    if(cmd.has("help"))     usage();
-    if(cmd.has("version"))  version();
-    cmd.check();
-
-    verbose = cmd.has("verbose");
-    cluster::sync();
-
-    App msa;
-    msa.run();
+    onlymaster if(!error.msg.empty()) {
+        err << MSA << s_bold " [fatal error]: " s_reset
+            << error.msg << std::endl
+            << "execution has terminated." << std::endl;
+    }
 
     cluster::finalize();
-    return 0;
+    exit(0);
 }
