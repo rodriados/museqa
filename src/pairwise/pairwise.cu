@@ -35,8 +35,7 @@ pairwise::Pairwise::Pairwise(const Fasta& fasta)
  */
 pairwise::Pairwise::~Pairwise() noexcept
 {
-    if(this->score != nullptr)
-        delete[] this->score;
+    delete[] this->score;
 }
 
 /**

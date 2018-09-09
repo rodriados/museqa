@@ -138,15 +138,20 @@ namespace pairwise
             std::vector<dSequence*> list;
 
         public:
-            SequenceList() = delete;
+            SequenceList() = default;
             SequenceList(const Fasta&);
             SequenceList(const BaseBuffer<char> *, uint16_t);
             SequenceList(const BaseBuffer<block_t> *, uint16_t);
-
             SequenceList(const SequenceList&, const uint16_t *, uint16_t);
             SequenceList(const SequenceList&, const std::vector<uint16_t>&);
 
+            SequenceList(const SequenceList&) = delete;
+            SequenceList(SequenceList&&) = default;
+
             ~SequenceList() noexcept;
+
+            SequenceList& operator=(const SequenceList&) = delete;
+            SequenceList& operator=(SequenceList&&) = default;
 
             /**
              * Gives access to a specific sequence of the list.

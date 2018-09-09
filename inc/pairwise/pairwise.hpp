@@ -49,8 +49,26 @@ namespace pairwise
             uint32_t count = 0;
 
         public:
+            Pairwise() = default;
             Pairwise(const Fasta&);
+            Pairwise(const Pairwise&) = delete;
+            Pairwise(Pairwise&&) = default;
+
             ~Pairwise() noexcept;
+
+            /**
+             * Move assignment operator.
+             * @param other The instance to be moved.
+             * @return This instance with moved data.
+             */
+            Pairwise& operator=(Pairwise&& other)
+            {
+                this->list = std::move(other.list);
+                this->score = std::move(other.score);
+                this->count = other.count;
+                other.score = nullptr;
+                return *this;
+            }
 
             /**
              * Informs the number of pairs processed or to process.

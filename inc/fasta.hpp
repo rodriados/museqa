@@ -52,9 +52,14 @@ class Fasta final
 
     public:
         Fasta() = default;
+        Fasta(Fasta&&) = default;
+        Fasta(const Fasta&) = delete;
         Fasta(const std::string&);
 
         ~Fasta() noexcept;
+
+        Fasta& operator=(Fasta&&) = default;
+        Fasta& operator=(const Fasta&) = delete;
 
         /**
          * Gives access to a specific sequence of the list.
@@ -64,6 +69,7 @@ class Fasta final
         {
             return *(this->list.at(offset));
         }
+        
 
         /**
          * Informs the number of sequences in the list.
@@ -77,10 +83,8 @@ class Fasta final
     private:
         bool extract(std::fstream&);
         void load(const std::string&);
-
         void push(const std::string&, const std::string&);
         void push(const std::string&, const char *, size_t);
-
         static void broadcast(Fasta *);
 };
 
