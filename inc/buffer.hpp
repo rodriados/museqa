@@ -10,6 +10,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <memory>
 #include <vector>
 
 #include "device.cuh"
@@ -22,10 +23,14 @@ template<typename T>
 class BaseBuffer
 {
     protected:
-        T *buffer = nullptr;    /// The buffer being encapsulated.
-        size_t size = 0;        /// The number of buffer blocks.
+        size_t size = 0;            /// The number of buffer blocks.
+        std::shared_ptr<T> buffer;  /// The buffer being encapsulated.
 
     public:
+        BaseBuffer() = default;
+        BaseBuffer(const BaseBuffer<T>&) = default;
+        BaseBuffer(BaseBuffer<T>&&) = default;
+
         /**
          * Encapsulates a buffer pointer.
          * @param buffer The buffer pointer to encapsulate.
@@ -35,22 +40,17 @@ class BaseBuffer
         :   buffer(buffer)
         ,   size(size) {}
 
-        /**
-         * Copies a buffer into a new instance.
-         * @param buff The buffer to be copied.
-         */
-        inline explicit BaseBuffer(const BaseBuffer<T>& buffer)
-        :   buffer(buffer.getBuffer())
-        ,   size(buffer.getSize()) {}
+        BaseBuffer<T>& operator=(const BaseBuffer<T>&) = default;
+        BaseBuffer<T>& operator=(BaseBuffer<T>&&) = default;
 
         /**
          * Gives access to a specific location in buffer's data.
          * @param offset The requested buffer offset.
          * @return The buffer's position pointer.
          */
-        cudadecl inline const T& operator[](size_t offset) const
+        cudadecl inline const T& operator[](ptrdiff_t offset) const
         {
-            return this->buffer[offset];
+            return this->buffer.get()[offset];
         }
 
         /**
@@ -58,6 +58,15 @@ class BaseBuffer
          * @return The buffer's internal pointer.
          */
         cudadecl inline T *getBuffer() const
+        {
+            return this->buffer.get();
+        }
+
+        /**
+         * Gives access to buffer's pointer.
+         * @return The buffer's smart pointer.
+         */
+        cudadecl inline std::shared_ptr<T>& getPointer() const
         {
             return this->buffer;
         }
@@ -70,9 +79,6 @@ class BaseBuffer
         {
             return this->size;
         }
-
-    protected:
-        BaseBuffer() = default;
 };
 
 /**
@@ -86,6 +92,10 @@ template<typename T>
 class Buffer : public BaseBuffer<T>
 {
     public:
+        Buffer() = default;
+        Buffer(const Buffer<T>&) = default;
+        Buffer(Buffer<T>&&) = default;
+
         /**
          * Constructs a new buffer from an already existing one.
          * @param buffer The buffer to be copied.
@@ -98,10 +108,10 @@ class Buffer : public BaseBuffer<T>
         }
 
         /**
-         * Constructs a new buffer from an already existing instance.
-         * @param buffer The instance from which data will be copied.
+         * Constructs a new buffer from an already existing base buffer.
+         * @param buffer The buffer to be copied.
          */
-        inline Buffer(const Buffer<T>& buffer)
+        inline Buffer(const BaseBuffer<T>& buffer)
         :   BaseBuffer<T>()
         {
             this->copy(buffer.getBuffer(), buffer.getSize());
@@ -117,18 +127,10 @@ class Buffer : public BaseBuffer<T>
             this->copy(vector.data(), vector.size());
         }
 
-        /**
-         * Destroys the buffer created by this instance.
-         */
-        inline ~Buffer() noexcept
-        {
-            if(this->buffer != nullptr)
-                delete[] this->buffer;
-        }
+        Buffer<T>& operator=(const Buffer<T>&) = default;
+        Buffer<T>& operator=(Buffer<T>&&) = default;
 
     protected:
-        Buffer() = default;
-
         /**
          * Copies an existing buffer's data.
          * @param buffer The buffer to be copied.
@@ -137,8 +139,8 @@ class Buffer : public BaseBuffer<T>
         inline void copy(const T *buffer, size_t size)
         {
             this->size = size;
-            this->buffer = new T[size];
-            std::memcpy(this->buffer, buffer, sizeof(T) * size);
+            this->buffer = std::shared_ptr<T>(new T[size], std::default_delete<T[]>());
+            memcpy(this->buffer.get(), buffer, sizeof(T) * size);
         }
 };
 
@@ -150,20 +152,26 @@ template<typename T>
 class BufferSlice : public BaseBuffer<T>
 {
     protected:
-        size_t displ = 0;    /// The slice displacement in relation to the buffer.
+        ptrdiff_t displ = 0;    /// The slice displacement in relation to the buffer.
 
     public:
+        BufferSlice() = default;
+        BufferSlice(const BufferSlice<T>&) = default;
+        BufferSlice(BufferSlice<T>&&) = default;
+
         /**
          * Constructs a new buffer slice.
          * @param target The target buffer to which the slice is related to.
          * @param displ The displacement of the slice.
          * @param size The number of blocks of the slice.
          */
-        inline BufferSlice(const BaseBuffer<T>& target, size_t displ = 0, size_t size = 0)
-        :   displ(displ)
+        inline BufferSlice(const BaseBuffer<T>& target, ptrdiff_t displ = 0, size_t size = 0)
+        :   BaseBuffer<T>(target)
+        ,   displ(displ)
         {
-            this->buffer = target.getBuffer() + this->displ;
-            this->size = size;
+            this->size = this->size < this->displ + size
+                ? this->size - this->displ
+                : size;
         }
 
         /**
@@ -172,34 +180,44 @@ class BufferSlice : public BaseBuffer<T>
          * @param slice The slice data to be put into the new target.
          */
         inline BufferSlice(const BaseBuffer<T>& target, const BufferSlice<T>& slice)
-        :   displ(slice.getDispl())
+        :   BaseBuffer<T>(target)
+        ,   displ(slice.getDispl())
         {
-            this->buffer = target.getBuffer() + this->displ;
-            this->size = slice.getSize();
+            this->size = this->size < this->displ + slice.getSize()
+                ? this->size - this->displ
+                : slice.getSize();
+        }
+
+        BufferSlice<T>& operator=(const BufferSlice<T>&) = default;
+        BufferSlice<T>& operator=(BufferSlice<T>&&) = default;
+
+        /**
+         * Gives access to a specific location in buffer's data.
+         * @param offset The requested buffer offset.
+         * @return The buffer's position pointer.
+         */
+        cudadecl inline const T& operator[](ptrdiff_t offset) const
+        {
+            return this->buffer.get()[this->displ + offset];
         }
 
         /**
-         * Constructs a slice from an already existing instance.
-         * @param slice The slice to be copied.
+         * Gives access to buffer's data.
+         * @return The buffer's internal pointer.
          */
-        inline BufferSlice(const BufferSlice<T>& slice)
-        :   displ(slice.getDispl())
+        cudadecl inline T *getBuffer() const
         {
-            this->buffer = slice.getBuffer();
-            this->size = slice.getSize();
+            return this->buffer.get() + this->displ;
         }
 
         /**
          * Informs the displacement of data pointed by the slice.
          * @return The buffer's slice displacement.
          */
-        cudadecl inline size_t getDispl() const
+        cudadecl inline ptrdiff_t getDispl() const
         {
             return this->displ;
         }
-
-    protected:
-        BufferSlice() = default;
 };
 
 #endif

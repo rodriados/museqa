@@ -20,22 +20,15 @@
  */
 class Sequence : public Buffer<char>
 {
-    using Buffer<char>::Buffer;
-
     public:
+        using Buffer<char>::Buffer;
+
         /**
          * Instantiates a new sequence.
          * @param string The string containing this sequence's data.
          */
         inline Sequence(const std::string& string)
         :   Buffer<char>(string.c_str(), string.size()) {}
-
-        /**
-         * Constructs a new sequence from an already existing instance.
-         * @param buffer The instance from which data will be copied.
-         */
-        inline Sequence(const BaseBuffer<char>& buffer)
-        :   Buffer<char>(buffer.getBuffer(), buffer.getSize()) {}
 
         /**
          * Informs the length of the sequence.

@@ -17,7 +17,7 @@ void pairwise::Needleman::generate()
         for(uint16_t j = i + 1; j < n; ++j)
             this->pairs.push_back({i, j});
 
-    onlymaster pdebug("generated %d sequence pairs", this->pairs.size());
+    onlymaster debug("generated %d sequence pairs", this->pairs.size());
 }
 
 void pairwise::Needleman::run()

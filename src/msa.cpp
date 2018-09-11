@@ -37,11 +37,11 @@ auto& err = std::cerr;
 class App final
 {
     private:
-        Timer<> timer;      /// The timer to use when measuring execution times.
+        Timer<> timer;          /// The timer to use when measuring execution times.
 
     private:
-        Fasta fasta;        /// The Fasta file to be aligned.
-        Pairwise pwise;     /// The pairwise step instance.
+        Fasta fasta;            /// The Fasta file to be aligned.
+        Pairwise pwise;         /// The pairwise step instance.
 
     public:
         App() = default;
@@ -61,7 +61,7 @@ class App final
          */
         void loadfasta()
         {
-            this->fasta = std::move(Fasta(cmd.get("filename")));
+            this->fasta = Fasta(cmd.get("filename"));
             cluster::sync();
         }
 

@@ -220,5 +220,5 @@ void pairwise::Needleman::loadblosum()
     //__cudacall(cudaMalloc(&this->table, sizeof(int8_t) * 625));
     //__cudacall(cudaMemcpy(this->table, tableData[table], sizeof(int8_t) * 625, cudaMemcpyHostToDevice));
 
-    onlymaster pdebug("using scoring table %s", tableNames[table]);
+    onlymaster debug("using scoring table %s", tableNames[table]);
 }

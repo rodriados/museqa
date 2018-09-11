@@ -9,6 +9,7 @@
 #pragma once
 
 #include <string>
+#include <memory>
 #include <fstream>
 
 #include "sequence.hpp"
@@ -20,14 +21,45 @@
 class FastaSequence : public Sequence
 {
     private:
-        const std::string description;      /// The sequence description.
+        const std::string description;  /// The sequence description.
 
     public:
-        FastaSequence(const std::string&, const std::string&);
-        FastaSequence(const std::string&, const BaseBuffer<char>&);
-        FastaSequence(const std::string&, const char *, size_t);
+        FastaSequence() = default;
+        FastaSequence(const FastaSequence&) = default;
+        FastaSequence(FastaSequence&&) = default;
+
+        /**
+         * Instantiates a new fasta sequence.
+         * @param description The sequence description.
+         * @param string The string containing this sequence's data.
+         */
+        inline FastaSequence(const std::string& description, const std::string& string)
+        :   Sequence(string)
+        ,   description(description) {}
+
+        /**
+         * Instantiates a new fasta sequence.
+         * @param description The sequence description.
+         * @param buffer The buffer containing this sequence's data.
+         */
+        inline FastaSequence(const std::string& description, const Sequence& buffer)
+        :   Sequence(buffer)
+        ,   description(description) {}
+
+        /**
+         * Instantiates a new fasta sequence.
+         * @param description The sequence description.
+         * @param buffer The buffer containing this sequence's data.
+         * @param size The buffer's size.
+         */
+        inline FastaSequence(const std::string& description, const char *buffer, size_t size)
+        :   Sequence(buffer, size)
+        ,   description(description) {}
 
         virtual ~FastaSequence() noexcept = default;
+
+        FastaSequence& operator=(const FastaSequence&) = default;
+        FastaSequence& operator=(FastaSequence&&) = default;
 
         /**
          * Retrieves the description linked to the sequence.
@@ -48,44 +80,44 @@ class FastaSequence : public Sequence
 class Fasta final
 {
     protected:
-        std::vector<FastaSequence*> list;       /// The list of sequences read from file.
+        std::vector<FastaSequence> list;    /// The list of sequences read from file.
 
     public:
         Fasta() = default;
+        Fasta(const Fasta&) = default;
         Fasta(Fasta&&) = default;
-        Fasta(const Fasta&) = delete;
+
         Fasta(const std::string&);
 
-        ~Fasta() noexcept;
-
+        Fasta& operator=(const Fasta&) = default;
         Fasta& operator=(Fasta&&) = default;
-        Fasta& operator=(const Fasta&) = delete;
 
         /**
          * Gives access to a specific sequence of the list.
          * @return The requested sequence.
          */
-        inline const FastaSequence& operator[](uint16_t offset) const
+        inline const FastaSequence& operator[](ptrdiff_t offset) const
         {
-            return *(this->list.at(offset));
+            return this->list.at(offset);
         }
         
-
         /**
          * Informs the number of sequences in the list.
          * @return The list's number of sequences.
          */
-        inline uint16_t getCount() const
+        inline size_t getCount() const
         {
             return this->list.size();
         }
 
+        void load(const std::string&);
+
     private:
         bool extract(std::fstream&);
-        void load(const std::string&);
         void push(const std::string&, const std::string&);
         void push(const std::string&, const char *, size_t);
-        static void broadcast(Fasta *);
+
+    friend void broadcast(Fasta&);
 };
 
 #endif

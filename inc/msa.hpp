@@ -49,12 +49,12 @@
  * print out debugging information.
  */ 
 #ifdef MSA_DEBUG
-#  define pdebug(msg, ...) fprintf(stderr, MSA style(bold, " [debug]: ") msg "\n", ##__VA_ARGS__)
+#  define debug(msg, ...) fprintf(stderr, MSA style(bold, " [debug]: ") msg "\n", ##__VA_ARGS__)
 #else
 #  ifndef __CUDA_ARCH__
-#    define pdebug(msg, ...) if(verbose) { fprintf(stderr, MSA style(bold, " [debug]: ") msg "\n", ##__VA_ARGS__); }
+#    define debug(msg, ...) if(verbose) { fprintf(stderr, MSA style(bold, " [debug]: ") msg "\n", ##__VA_ARGS__); }
 #  else
-#    define pdebug(msg, ...) // do not print anything from device, please.
+#    define debug(msg, ...) // do not print anything from device, please.
 #  endif
 #endif
 

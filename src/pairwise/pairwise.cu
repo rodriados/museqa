@@ -21,10 +21,10 @@ pairwise::Pairwise::Pairwise(const Fasta& fasta)
     this->count = (listCount - 1) * listCount / 2; 
 
     onlyslaves {
-        uint32_t div = this->count / cluster::size;
-        uint32_t mod = this->count % cluster::size;
+        uint32_t div = this->count / (cluster::size - 1);
+        uint32_t mod = this->count % (cluster::size - 1);
 
-        this->count = div + (mod > cluster::rank);
+        this->count = div + (mod > cluster::rank - 1);
     }
 
     this->score = new pairwise::Score[this->count];
@@ -45,13 +45,12 @@ pairwise::Pairwise::~Pairwise() noexcept
  */
 pairwise::Pairwise pairwise::Pairwise::run(const Fasta& fasta)
 {
-    pairwise::Pairwise pwise(fasta);
-    pairwise::Needleman needleman(pwise);
+    pairwise::Needleman needleman(fasta);
 
     onlymaster {
         needleman.generate();
     }
-
+        
     needleman.scatter();
 
     onlyslaves {
@@ -61,5 +60,5 @@ pairwise::Pairwise pairwise::Pairwise::run(const Fasta& fasta)
 
     needleman.gather();
 
-    return pwise;
+    return pairwise::Pairwise();//Pairwise::Pairwise(needleman);
 }

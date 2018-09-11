@@ -12,34 +12,6 @@
 #include "cluster.hpp"
 
 /**
- * Instantiates a new fasta sequence.
- * @param description The sequence description.
- * @param string The string containing this sequence's data.
- */
-FastaSequence::FastaSequence(const std::string& description, const std::string& string)
-:   Sequence(string)
-,   description(description) {}
-
-/**
- * Instantiates a new fasta sequence.
- * @param description The sequence description.
- * @param buffer The buffer containing this sequence's data.
- */
-FastaSequence::FastaSequence(const std::string& description, const BaseBuffer<char>& buffer)
-:   Sequence(buffer)
-,   description(description) {}
-
-/**
- * Instantiates a new fasta sequence.
- * @param description The sequence description.
- * @param buffer The buffer containing this sequence's data.
- * @param size The buffer's size.
- */
-FastaSequence::FastaSequence(const std::string& description, const char *buffer, size_t size)
-:   Sequence(buffer, size)
-,   description(description) {}
-
-/**
  * Instantiates a new fasta file sequence list.
  * @param fname The name of file to be opened and extracted.
  */
@@ -47,19 +19,10 @@ Fasta::Fasta(const std::string& fname)
 {
     onlymaster {
         this->load(fname);
-        pdebug("loaded %u sequences from %s", this->getCount(), fname.c_str());
+        debug("loaded %lu sequences from %s", this->getCount(), fname.c_str());
     }
 
-    Fasta::broadcast(this);
-}
-
-/**
- * Destroys all sequences read from fasta file.
- */
-Fasta::~Fasta() noexcept
-{
-    for(FastaSequence *sequence : this->list)
-        delete sequence;
+    broadcast(*this);
 }
 
 /**
@@ -115,7 +78,7 @@ bool Fasta::extract(std::fstream& ffile)
  */
 void Fasta::push(const std::string& description, const std::string& sequence)
 {
-    this->list.push_back(new FastaSequence(description, sequence));
+    this->list.push_back(FastaSequence(description, sequence));
 }
 
 /**
@@ -126,7 +89,7 @@ void Fasta::push(const std::string& description, const std::string& sequence)
  */
 void Fasta::push(const std::string& description, const char *buffer, size_t size)
 {
-    this->list.push_back(new FastaSequence(description, buffer, size));
+    this->list.push_back(FastaSequence(description, buffer, size));
 }
 
 /**
@@ -134,9 +97,9 @@ void Fasta::push(const std::string& description, const char *buffer, size_t size
  * This method will send all sequences to all nodes.
  * @param fasta The target instance for broadcast.
  */
-void Fasta::broadcast(Fasta *fasta)
+void broadcast(Fasta& fasta)
 {
-    uint16_t count = fasta->getCount();
+    uint16_t count = fasta.getCount();
     cluster::broadcast(&count);
     cluster::sync();
 
@@ -145,7 +108,7 @@ void Fasta::broadcast(Fasta *fasta)
 
     onlymaster {
         for(int i = 0; i < count; ++i)
-            szsum += sizes[i] = fasta->list[i]->getLength();
+            szsum += sizes[i] = fasta[i].getLength();
     }
 
     cluster::broadcast(sizes, count);
@@ -156,7 +119,7 @@ void Fasta::broadcast(Fasta *fasta)
 
     onlymaster {
         for(size_t i = 0, offset = 0; i < count; ++i) {
-            std::memcpy(&data[offset], fasta->list[i]->getBuffer(), sizeof(char) * sizes[i]);
+            memcpy(&data[offset], fasta[i].getBuffer(), sizeof(char) * sizes[i]);
             offset += sizes[i];
         }
     }
@@ -166,7 +129,7 @@ void Fasta::broadcast(Fasta *fasta)
 
     onlyslaves {
         for(size_t i = 0, offset = 0; i < count; ++i) {
-            fasta->push("__slave", &data[offset], sizes[i]);
+            fasta.push("__slave", &data[offset], sizes[i]);
             offset += sizes[i];
         }
     }

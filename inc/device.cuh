@@ -53,14 +53,14 @@ typedef cudaDeviceProp DeviceProperties;
 #  define cudacall(call)                                                        \
     if((call) != cudaSuccess) {                                                 \
         DeviceStatus err = cudaGetLastError();                                  \
-        pdebug("%s:%d '%s'\n", __FILE__, __LINE__, cudaGetErrorString(err));    \
+        debug("%s:%d '%s'\n", __FILE__, __LINE__, cudaGetErrorString(err));     \
         finalize(DeviceError::execution(cudaGetErrorString(err)));              \
     }
 
 #  define cudacheck()                                                           \
     DeviceStatus err = cudaGetLastError();                                      \
     if(err != cudaSuccess) {                                                    \
-        pdebug("%s:%d '%s'\n", __FILE__, __LINE__, cudaGetErrorString(err));    \
+        debug("%s:%d '%s'\n", __FILE__, __LINE__, cudaGetErrorString(err));     \
         finalize(DeviceError::execution(cudaGetErrorString(err)));              \
     }
 
