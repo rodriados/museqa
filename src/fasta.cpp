@@ -99,7 +99,7 @@ void Fasta::push(const std::string& description, const char *buffer, size_t size
  */
 void broadcast(Fasta& fasta)
 {
-    uint16_t count = fasta.getCount();
+    size_t count = fasta.getCount();
     cluster::broadcast(&count);
     cluster::sync();
 
@@ -107,7 +107,7 @@ void broadcast(Fasta& fasta)
     size_t szsum = 0;
 
     onlymaster {
-        for(int i = 0; i < count; ++i)
+        for(size_t i = 0; i < count; ++i)
             szsum += sizes[i] = fasta[i].getLength();
     }
 
@@ -129,7 +129,7 @@ void broadcast(Fasta& fasta)
 
     onlyslaves {
         for(size_t i = 0, offset = 0; i < count; ++i) {
-            fasta.push("__slave", &data[offset], sizes[i]);
+            fasta.push("__slave", data + offset, sizes[i]);
             offset += sizes[i];
         }
     }

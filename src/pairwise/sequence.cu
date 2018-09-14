@@ -12,6 +12,7 @@
 #include "fasta.hpp"
 #include "buffer.hpp"
 #include "device.cuh"
+#include "pointer.hpp"
 #include "pairwise/sequence.cuh"
 
 /*
@@ -34,55 +35,13 @@ __constant__ uint8_t dShift[6] = {2, 7, 12, 17, 22, 27};
 static const uint8_t hShift[6] = {2, 7, 12, 17, 22, 27};
 
 /**
- * Uncompresses the sequence into a printable string.
- * @return The uncompressed and readable sequence.
- */
-std::string pairwise::dSequence::toString() const
-{
-    std::string result;
-
-    for(size_t i = 0, n = this->getSize(); i < n; ++i)
-        for(uint8_t j = 0; j < 6; ++j)
-            result += toChar[((*this)[i] >> hShift[j]) & 0x1F];
-
-    return result;
-}
-
-/**
- * Compresses the buffer into the sequence.
- * @param buffer The buffer to be compressed.
- * @param size The buffer's size.
- */
-std::vector<block_t> pairwise::dSequence::compress(const char *buffer, size_t size)
-{
-    std::vector<block_t> blocks;
-
-    for(size_t i = 0, n = 0; n < size; ++i) {
-        block_t actual = 0;
-
-        for(uint8_t j = 0; j < 6; ++j, ++n)
-            actual |= (n < size && 'A' <= buffer[n] && buffer[n] <= 'Z')
-                ? toCompressed[buffer[n] - 'A'] << hShift[j]
-                : 0x18 << hShift[j];
-
-        actual |= (i != 0)
-            ? (n >= size) ? 0x2 : 0x3
-            : 0x1;
-
-        blocks.push_back(actual);
-    }
-
-    return blocks;
-}
-
-/**
  * Initializes a sequence list from a fasta file.
  * @param fasta The fasta file containing the sequences to be pushed.
  */
 pairwise::SequenceList::SequenceList(const Fasta& fasta)
 {
     for(size_t i = 0, n = fasta.getCount(); i < n; ++i)
-        this->list.push_back(pairwise::dSequence(fasta[i]));
+        this->list.push_back(fasta[i]);
 }
 
 /**
@@ -93,7 +52,7 @@ pairwise::SequenceList::SequenceList(const Fasta& fasta)
 pairwise::SequenceList::SequenceList(const BaseBuffer<char> *list, size_t count)
 {
     for(size_t i = 0; i < count; ++i)
-        this->list.push_back(pairwise::dSequence(list[i]));
+        this->list.push_back(list[i]);
 }
 
 /**
@@ -104,7 +63,7 @@ pairwise::SequenceList::SequenceList(const BaseBuffer<char> *list, size_t count)
 pairwise::SequenceList::SequenceList(const BaseBuffer<block_t> *list, size_t count)
 {
     for(size_t i = 0; i < count; ++i)
-        this->list.push_back(pairwise::dSequence(list[i]));
+        this->list.push_back(list[i]);
 }
 
 /**
@@ -116,7 +75,7 @@ pairwise::SequenceList::SequenceList(const BaseBuffer<block_t> *list, size_t cou
 pairwise::SequenceList::SequenceList(const pairwise::SequenceList& list, const ptrdiff_t *selected, size_t count)
 {
     for(size_t i = 0; i < count; ++i)
-        this->list.push_back(pairwise::dSequence(list[selected[i]]));
+        this->list.push_back(list[selected[i]]);
 }
 
 /**
@@ -127,7 +86,7 @@ pairwise::SequenceList::SequenceList(const pairwise::SequenceList& list, const p
 pairwise::SequenceList::SequenceList(const pairwise::SequenceList& list, const std::vector<ptrdiff_t>& selected)
 {
     for(ptrdiff_t index : selected)
-        this->list.push_back(pairwise::dSequence(list[index]));
+        this->list.push_back(list[index]);
 }
 
 /**
@@ -165,11 +124,11 @@ pairwise::CompressedList pairwise::SequenceList::compress() const
  * @param list A list of sequences of which data will be copied from.
  */
 pairwise::CompressedList::CompressedList(const pairwise::SequenceList& list)
-:   pairwise::dSequence(merge(list, list.getCount()))
-,   slice(new dSequenceSlice[list.getCount()], std::default_delete<dSequenceSlice[]>())
+:   pairwise::dSequence(merge(list.getRaw(), list.getCount()))
+,   slice(new dSequenceSlice[list.getCount()])
 ,   count(list.getCount())
 {
-    this->init(list, list.getCount());
+    this->init(list.getRaw(), list.getCount());
 }
 
 /**
@@ -179,7 +138,7 @@ pairwise::CompressedList::CompressedList(const pairwise::SequenceList& list)
  */
 pairwise::CompressedList::CompressedList(const pairwise::dSequence *list, size_t count)
 :   pairwise::dSequence(merge(list, count))
-,   slice(new dSequenceSlice[count], std::default_delete<dSequenceSlice[]>())
+,   slice(new dSequenceSlice[count])
 ,   count(count)
 {
     this->init(list, count);
@@ -191,7 +150,7 @@ pairwise::CompressedList::CompressedList(const pairwise::dSequence *list, size_t
  */
 pairwise::CompressedList::CompressedList(const std::vector<pairwise::dSequence>& list)
 :   pairwise::dSequence(merge(list.data(), list.size()))
-,   slice(new dSequenceSlice[list.size()], std::default_delete<dSequenceSlice[]>())
+,   slice(new dSequenceSlice[list.size()])
 ,   count(list.size())
 {
     this->init(list.data(), list.size());
@@ -207,27 +166,107 @@ pairwise::dSequenceList pairwise::CompressedList::toDevice() const
 }
 
 /**
+ * Sets up the buffers responsible for keeping track of internal sequences.
+ * @param list The list of original sequences being consolidated.
+ * @param count The number of sequences to be compressed.
+ */
+void pairwise::CompressedList::init(const pairwise::dSequence *list, size_t count)
+{
+    for(size_t i = 0, off = 0; i < count; ++i) {
+        this->slice[i] = {*this, off, list[i].getSize()};
+        off += list[i].getSize();
+    }
+}
+
+/**
+ * Merges all sequences from the list into a single sequnces.
+ * @param list The list of original sequences to be merged.
+ * @param count The number of sequences to be merged.
+ * @return The merged sequences.
+ */
+std::vector<block_t> pairwise::CompressedList::merge(const pairwise::dSequence *list, size_t count)
+{
+    std::vector<block_t> merged;
+
+    for(size_t i = 0; i < count; ++i) {
+        const block_t *ref = list[i].getBuffer();
+        merged.insert(merged.end(), ref, ref + list[i].getSize());
+    }
+
+    return merged;
+}
+
+/**
  * Creates a compressed sequence list into the device global memory.
  * @param list The list to be sent to device.
  */
 pairwise::dSequenceList::dSequenceList(const pairwise::CompressedList& list)
-:   pairwise::CompressedList(list)
+:   pairwise::CompressedList()
 {
     block_t *buffer;
-    dSequenceSlice *slice;
-    std::vector<dSequenceSlice> adapted;
+    dSequenceSlice *slices;
+    std::vector<dSequenceSlice> adapt;
+
+    this->size = list.getSize();
+    this->count = list.getCount();
 
     cudacall(cudaMalloc(&buffer, sizeof(block_t) * this->size));
-    cudacall(cudaMalloc(&slice, sizeof(dSequenceSlice) * this->count));
+    cudacall(cudaMalloc(&slices, sizeof(dSequenceSlice) * this->count));
+
+    this->buffer = SharedPointer<block_t[]>(buffer, pairwise::dSequenceList::deleteBuffer);
+    this->slice = SharedPointer<dSequenceSlice[]>(slices, pairwise::dSequenceList::deleteSlices);
 
     for(size_t i = 0; i < this->count; ++i)
-        adapted.push_back(dSequenceSlice(*this, list[i]));
+        adapt.push_back({*this, list[i]});
 
     cudacall(cudaMemcpy(buffer, list.getBuffer(), sizeof(block_t) * this->size, cudaMemcpyHostToDevice));
-    cudacall(cudaMemcpy(slice, adapted.data(), sizeof(dSequenceSlice) * this->count, cudaMemcpyHostToDevice));
+    cudacall(cudaMemcpy(slices, adapt.data(), sizeof(dSequenceSlice) * this->count, cudaMemcpyHostToDevice));
+}
 
-    this->buffer = std::shared_ptr<block_t>(buffer, [](block_t *ptr){cudacall(cudaFree(ptr));});
-    this->slice = std::shared_ptr<dSequenceSlice>(slice, [](dSequenceSlice *ptr){cudacall(cudaFree(ptr));});
+/**
+ * Frees device memory from buffer data.
+ * @param ptr The pointer to be freed.
+ */
+void pairwise::dSequenceList::deleteBuffer(block_t *ptr)
+{
+    cudacall(cudaFree(ptr));
+}
+
+/**
+ * Frees device memory from sequence slices data.
+ * @param ptr The pointer to be freed.
+ */
+void pairwise::dSequenceList::deleteSlices(dSequenceSlice *ptr)
+{
+    cudacall(cudaFree(ptr));
+}
+
+/**
+ * Compresses the buffer into the sequence.
+ * @param buffer The buffer to be compressed.
+ * @param size The buffer's size.
+ * @return The list of blocks of encoded sequence.
+ */
+std::vector<block_t> pairwise::encode(const char *buffer, size_t size)
+{
+    std::vector<block_t> blocks;
+
+    for(size_t i = 0, n = 0; n < size; ++i) {
+        block_t actual = 0;
+
+        for(uint8_t j = 0; j < 6; ++j, ++n)
+            actual |= (n < size && 'A' <= buffer[n] && buffer[n] <= 'Z')
+                ? toCompressed[buffer[n] - 'A'] << hShift[j]
+                : 0x18 << hShift[j];
+
+        actual |= (i != 0)
+            ? (n >= size) ? 0x2 : 0x3
+            : 0x1;
+
+        blocks.push_back(actual);
+    }
+
+    return blocks;
 }
 
 /**
@@ -236,11 +275,27 @@ pairwise::dSequenceList::dSequenceList(const pairwise::CompressedList& list)
  * @param offset The requested offset.
  * @return The buffer's position pointer.
  */
-cudadecl uint8_t pairwise::blockDecode(block_t block, uint8_t offset)
+cudadecl uint8_t pairwise::decode(block_t block, uint8_t offset)
 {
 #ifdef __CUDA_ARCH__
     return (block >> dShift[offset]) & 0x1F;
 #else
     return (block >> hShift[offset]) & 0x1F;
 #endif
+}
+
+/**
+ * This function allows sequences to be directly printed into a ostream instance.
+ * @param os The output stream object.
+ * @param sequence The sequence to be printed.
+ * @return The ostream instance for chaining.
+ */
+std::ostream& operator<<(std::ostream& os, const pairwise::dSequence& sequence)
+{
+    for(size_t i = 0, n = sequence.getSize(); i < n; ++i)
+        #pragma unroll
+        for(uint8_t j = 0; j < 6; ++j)
+            os << toChar[pairwise::decode(sequence.getBlock(i), j)];
+
+    return os;
 }

@@ -10,10 +10,10 @@
 
 #include <cstdint>
 #include <cstring>
-#include <memory>
 #include <vector>
 
 #include "device.cuh"
+#include "pointer.hpp"
 
 /**
  * The base of a buffer class.
@@ -23,8 +23,8 @@ template<typename T>
 class BaseBuffer
 {
     protected:
-        size_t size = 0;            /// The number of buffer blocks.
-        std::shared_ptr<T> buffer;  /// The buffer being encapsulated.
+        size_t size = 0;           /// The number of buffer blocks.
+        SharedPointer<T[]> buffer;  /// The buffer being encapsulated.
 
     public:
         BaseBuffer() = default;
@@ -36,8 +36,8 @@ class BaseBuffer
          * @param buffer The buffer pointer to encapsulate.
          * @param size The size of buffer to encapsulate.
          */
-        inline explicit BaseBuffer(T *buffer, size_t size)
-        :   buffer(buffer)
+        inline explicit BaseBuffer(T *buffer, size_t size, const Deleter<T>& dfunc = nullptr)
+        :   buffer(buffer, dfunc)
         ,   size(size) {}
 
         BaseBuffer<T>& operator=(const BaseBuffer<T>&) = default;
@@ -50,7 +50,7 @@ class BaseBuffer
          */
         cudadecl inline const T& operator[](ptrdiff_t offset) const
         {
-            return this->buffer.get()[offset];
+            return this->buffer.getOffset(offset);
         }
 
         /**
@@ -59,14 +59,14 @@ class BaseBuffer
          */
         cudadecl inline T *getBuffer() const
         {
-            return this->buffer.get();
+            return this->buffer.getRaw();
         }
 
         /**
          * Gives access to buffer's pointer.
          * @return The buffer's smart pointer.
          */
-        cudadecl inline std::shared_ptr<T>& getPointer() const
+        cudadecl inline const SharedPointer<T[]>& getPointer() const
         {
             return this->buffer;
         }
@@ -79,6 +79,16 @@ class BaseBuffer
         {
             return this->size;
         }
+
+    protected:
+        /**
+         * Instantiates a new buffer from an already existing pointer.
+         * @param ptr The buffer pointer.
+         * @param size The size of buffer.
+         */
+        inline explicit BaseBuffer(const SharedPointer<T[]>& ptr, size_t size)
+        :   buffer(ptr)
+        ,   size(size) {}
 };
 
 /**
@@ -97,6 +107,16 @@ class Buffer : public BaseBuffer<T>
         Buffer(Buffer<T>&&) = default;
 
         /**
+         * Constructs a new buffer from an already existing base buffer.
+         * @param buffer The buffer to be copied.
+         */
+        inline Buffer(const BaseBuffer<T>& buffer)
+        :   BaseBuffer<T>()
+        {
+            this->copy(buffer.getBuffer(), buffer.getSize());
+        }
+
+        /**
          * Constructs a new buffer from an already existing one.
          * @param buffer The buffer to be copied.
          * @param size The number of buffer blocks being copied.
@@ -105,16 +125,6 @@ class Buffer : public BaseBuffer<T>
         :   BaseBuffer<T>()
         {
             this->copy(buffer, size);
-        }
-
-        /**
-         * Constructs a new buffer from an already existing base buffer.
-         * @param buffer The buffer to be copied.
-         */
-        inline Buffer(const BaseBuffer<T>& buffer)
-        :   BaseBuffer<T>()
-        {
-            this->copy(buffer.getBuffer(), buffer.getSize());
         }
 
         /**
@@ -139,8 +149,8 @@ class Buffer : public BaseBuffer<T>
         inline void copy(const T *buffer, size_t size)
         {
             this->size = size;
-            this->buffer = std::shared_ptr<T>(new T[size], std::default_delete<T[]>());
-            memcpy(this->buffer.get(), buffer, sizeof(T) * size);
+            this->buffer = new T[size];
+            memcpy(this->buffer.getRaw(), buffer, sizeof(T) * size);
         }
 };
 
@@ -152,7 +162,7 @@ template<typename T>
 class BufferSlice : public BaseBuffer<T>
 {
     protected:
-        ptrdiff_t displ = 0;    /// The slice displacement in relation to the buffer.
+        ptrdiff_t displ = 0;    /// The displacement in relation to buffer start.
 
     public:
         BufferSlice() = default;
@@ -166,13 +176,8 @@ class BufferSlice : public BaseBuffer<T>
          * @param size The number of blocks of the slice.
          */
         inline BufferSlice(const BaseBuffer<T>& target, ptrdiff_t displ = 0, size_t size = 0)
-        :   BaseBuffer<T>(target)
-        ,   displ(displ)
-        {
-            this->size = this->size < this->displ + size
-                ? this->size - this->displ
-                : size;
-        }
+        :   BaseBuffer<T>(target.getPointer() + displ, size)
+        ,   displ(displ) {}
 
         /**
          * Constructs a slice from an already existing instance into another buffer.
@@ -180,35 +185,11 @@ class BufferSlice : public BaseBuffer<T>
          * @param slice The slice data to be put into the new target.
          */
         inline BufferSlice(const BaseBuffer<T>& target, const BufferSlice<T>& slice)
-        :   BaseBuffer<T>(target)
-        ,   displ(slice.getDispl())
-        {
-            this->size = this->size < this->displ + slice.getSize()
-                ? this->size - this->displ
-                : slice.getSize();
-        }
+        :   BaseBuffer<T>(target.getPointer() + slice.getDispl(), slice.getSize())
+        ,   displ(slice.getDispl()) {}
 
         BufferSlice<T>& operator=(const BufferSlice<T>&) = default;
         BufferSlice<T>& operator=(BufferSlice<T>&&) = default;
-
-        /**
-         * Gives access to a specific location in buffer's data.
-         * @param offset The requested buffer offset.
-         * @return The buffer's position pointer.
-         */
-        cudadecl inline const T& operator[](ptrdiff_t offset) const
-        {
-            return this->buffer.get()[this->displ + offset];
-        }
-
-        /**
-         * Gives access to buffer's data.
-         * @return The buffer's internal pointer.
-         */
-        cudadecl inline T *getBuffer() const
-        {
-            return this->buffer.get() + this->displ;
-        }
 
         /**
          * Informs the displacement of data pointed by the slice.

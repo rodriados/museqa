@@ -8,10 +8,12 @@
 
 #pragma once
 
+#include <cstdint>
 #include <ostream>
 #include <string>
 
 #include "buffer.hpp"
+#include "pointer.hpp"
 
 /**
  * Creates an sequence. This sequence is a buffer an any modification to
@@ -21,6 +23,10 @@
 class Sequence : public Buffer<char>
 {
     public:
+        Sequence() = default;
+        Sequence(const Sequence&) = default;
+        Sequence(Sequence&&) = default;
+        
         using Buffer<char>::Buffer;
 
         /**
@@ -29,6 +35,9 @@ class Sequence : public Buffer<char>
          */
         inline Sequence(const std::string& string)
         :   Buffer<char>(string.c_str(), string.size()) {}
+
+        Sequence& operator=(const Sequence&) = default;
+        Sequence& operator=(Sequence&&) = default;
 
         /**
          * Informs the length of the sequence.

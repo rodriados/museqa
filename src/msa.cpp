@@ -20,8 +20,8 @@
  * Declaring global variables.
  */
 bool verbose = false;
-auto& out = std::cout;
-auto& err = std::cerr;
+constexpr auto& out = std::cout;
+constexpr auto& err = std::cerr;
 
 /*
  * Declaring global no-return functions.
@@ -70,7 +70,7 @@ class App final
          */
         void pairwise()
         {
-            this->pwise = std::move(Pairwise::run(this->fasta));
+            this->pwise = Pairwise::run(this->fasta);
             cluster::sync();
         }
 
