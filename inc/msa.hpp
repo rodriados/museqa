@@ -40,6 +40,7 @@
 #include <cstdio>
 #include <string>
 #include <cstdint>
+#include <cstddef>
 
 #include "colors.h"
 #include "node.hpp"
