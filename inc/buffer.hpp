@@ -19,7 +19,7 @@
  * The base of a buffer class.
  * @since 0.1.alpha
  */
-template<typename T>
+template <typename T>
 class BaseBuffer
 {
     protected:
@@ -98,7 +98,7 @@ class BaseBuffer
  * @see std::vector
  * @since 0.1.alpha
  */
-template<typename T>
+template <typename T>
 class Buffer : public BaseBuffer<T>
 {
     public:
@@ -158,7 +158,7 @@ class Buffer : public BaseBuffer<T>
  * Represents a slice of a buffer.
  * @since 0.1.alpha
  */
-template<typename T>
+template <typename T>
 class BufferSlice : public BaseBuffer<T>
 {
     protected:
