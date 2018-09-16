@@ -8,59 +8,51 @@
 
 #pragma once
 
-#include <cstdint>
-#include <vector>
-
-#include "device.cuh"
+#include "buffer.hpp"
+#include "pointer.hpp"
 #include "pairwise/sequence.cuh"
 #include "pairwise/pairwise.hpp"
 
 namespace pairwise
 {
     /**
-     * Composes with a pairwise::Pairwise instance to control the algorithm's execution.
+     * Implements the needleman algorithm for pairwise step.
      * @since 0.1.alpha
      */
-    class Needleman
+    class Needleman : public Algorithm
     {
-        private:
-            const Pairwise& pwise;          /// The pairwise instance for composition.
-            std::vector<Workpair> pairs;    /// The sequence pairs to be processed.
-
         public:
             /**
-             * Creates a new instance as a composition of Pairwise.
-             * @param pwise The Pairwise instance to compose.
+             * Creates a new algorithm instance.
+             * @param list The sequence list to process.
+             * @param score The score array reference to store results.
              */
-            explicit Needleman(const Pairwise& pwise)
-            :   pwise(pwise) {}
+            explicit Needleman(const SequenceList& list, Buffer<Score>& score)
+            :   Algorithm(list, score) {}
 
-            void generate();
-            void loadblosum();
-            void run();
+            void run() override;
 
-            void scatter();
-            void gather() const;
-    };
-
-    /**
-     * Holds all data to be sent to device for execution.
-     * @since 0.1.alpha
-     */
-    class dNeedleman
-    {
         protected:
-            uint32_t count = 0;
-            Workpair *pairs = nullptr;
-            dSequenceList sequence;
-
-        public:
-            explicit dNeedleman(dSequenceList, const Workpair *, uint32_t);
-            ~dNeedleman() noexcept;
+            void scatter();
+            void gather();
     };
 
 #ifdef __CUDACC__
-    extern __global__ void needleman(dNeedleman, Score *);
+    namespace needleman
+    {
+        /**
+         * Holds all data to be sent to device for execution.
+         * @since 0.1.alpha
+         */
+        struct Input
+        {
+            //Buffer<Workpair> pair;                  // The list of workpairs to process.
+            //dSequenceList sequence;                 // The list of sequences to process.
+            SharedPointer<int8_t[25][25]> table;    // The scoring table to be used.
+        };
+
+        extern __global__ void exec(Input /*, Buffer<Score>*/);
+    };
 #endif
 };
 

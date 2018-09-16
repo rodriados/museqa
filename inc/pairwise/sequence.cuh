@@ -14,30 +14,30 @@
 #include <vector>
 
 #include "fasta.hpp"
+#include "buffer.hpp"
 #include "device.cuh"
 #include "pointer.hpp"
-#include "sequence.cuh"
 
 /**
  * Type alias to represent a sequence block.
  * @since 0.1.alpha
  */
-typedef uint32_t block_t;
+using Block = uint32_t;
 
 namespace pairwise
 {
     /*
      * Declaring namespace helper functions.
      */
-    extern std::vector<block_t> encode(const char *, size_t);
-    extern cudadecl uint8_t decode(block_t, uint8_t);
+    extern std::vector<Block> encode(const char *, size_t);
+    extern cudadecl uint8_t decode(Block, uint8_t);
 
     /**
      * Represents a compressed sequence. The characters are encoded in
      * such a way that it saves one third of the space it would require.
      * @since 0.1.alpha
      */
-    class dSequence : public Buffer<block_t>
+    class dSequence : public Buffer<Block>
     {
         public:
             dSequence() = default;
@@ -48,22 +48,22 @@ namespace pairwise
              * Initializes a new compressed sequence.
              * @param buffer Creates the sequence from a buffer of blocks.
              */
-            inline dSequence(const BaseBuffer<block_t>& buffer)
-            :   Buffer<block_t>(buffer) {}
+            inline dSequence(const BaseBuffer<Block>& buffer)
+            :   Buffer<Block>(buffer) {}
 
             /**
              * Initializes a new compressed sequence.
              * @param buffer The buffer from which the sequence will be created.
              */
             inline dSequence(const BaseBuffer<char>& buffer)
-            :   Buffer<block_t>(encode(buffer.getBuffer(), buffer.getSize())) {}
+            :   Buffer<Block>(encode(buffer.getBuffer(), buffer.getSize())) {}
 
             /**
              * Initializes a new compressed sequence.
              * @param string The string from which the sequence will be created.
              */
             inline dSequence(const std::string& string)
-            :   Buffer<block_t>(encode(string.c_str(), string.size())) {}
+            :   Buffer<Block>(encode(string.c_str(), string.size())) {}
 
             /**
              * Initializes a new compressed sequence.
@@ -71,7 +71,7 @@ namespace pairwise
              * @param size The buffer's size.
              */
             inline explicit dSequence(const char *buffer, size_t size)
-            :   Buffer<block_t>(encode(buffer, size)) {}
+            :   Buffer<Block>(encode(buffer, size)) {}
 
             dSequence& operator=(const dSequence&) = default;
             dSequence& operator=(dSequence&&) = default;
@@ -91,7 +91,7 @@ namespace pairwise
              * @param id The index of the requested block.
              * @return The requested block.
              */
-            cudadecl inline block_t getBlock(ptrdiff_t id) const
+            cudadecl inline Block getBlock(ptrdiff_t id) const
             {
                 return this->buffer.getOffset(id);
             }
@@ -110,16 +110,16 @@ namespace pairwise
              * Initializes a new compressed sequence. An internal constructor option.
              * @param list Creates the sequence from a list of blocks.
              */
-            inline dSequence(const std::vector<block_t>& list)
-            :   Buffer<block_t>(list) {}
+            inline dSequence(const std::vector<Block>& list)
+            :   Buffer<Block>(list) {}
 
             /**
              * Initializes a new compressed sequence. An internal constructor option.
              * @param buffer Creates the sequence from a buffer of blocks.
              * @param size The buffer's size.
              */
-            inline dSequence(const block_t *buffer, size_t size)
-            :   Buffer<block_t>(buffer, size) {}
+            inline dSequence(const Block *buffer, size_t size)
+            :   Buffer<Block>(buffer, size) {}
 
         friend class SequenceList;
     };
@@ -128,14 +128,14 @@ namespace pairwise
      * Represents a slice of a sequence.
      * @since 0.1.alpha
      */
-    class dSequenceSlice : public BufferSlice<block_t>
+    class dSequenceSlice : public BufferSlice<Block>
     {
         public:
             dSequenceSlice() = default;
             dSequenceSlice(const dSequenceSlice&) = default;
             dSequenceSlice(dSequenceSlice&&) = default;
             
-            using BufferSlice<block_t>::BufferSlice;
+            using BufferSlice<Block>::BufferSlice;
 
             dSequenceSlice& operator=(const dSequenceSlice&) = default;
             dSequenceSlice& operator=(dSequenceSlice&&) = default;
@@ -155,7 +155,7 @@ namespace pairwise
              * @param id The index of the requested block.
              * @return The requested block.
              */
-            cudadecl inline block_t getBlock(ptrdiff_t id) const
+            cudadecl inline Block getBlock(ptrdiff_t id) const
             {
                 return this->buffer.getOffset(id);
             }
@@ -188,7 +188,7 @@ namespace pairwise
 
             SequenceList(const Fasta&);
             SequenceList(const BaseBuffer<char> *, size_t);
-            SequenceList(const BaseBuffer<block_t> *, size_t);
+            SequenceList(const BaseBuffer<Block> *, size_t);
 
             SequenceList(const SequenceList&, const ptrdiff_t *, size_t);
             SequenceList(const SequenceList&, const std::vector<ptrdiff_t>&);
@@ -238,7 +238,7 @@ namespace pairwise
     class CompressedList : public dSequence
     {
         protected:
-            size_t count = 0;                      /// The number of slices in list.
+            uint16_t count = 0;                     /// The number of slices in list.
             SharedPointer<dSequenceSlice[]> slice;  /// The list of slices.
 
         public:
@@ -247,7 +247,7 @@ namespace pairwise
             CompressedList(CompressedList&&) = default;
 
             CompressedList(const SequenceList&);
-            CompressedList(const dSequence *, size_t);
+            CompressedList(const dSequence *, uint16_t);
             CompressedList(const std::vector<dSequence>&);
 
             CompressedList& operator=(const CompressedList&) = default;
@@ -267,7 +267,7 @@ namespace pairwise
              * Informs the number of sequences in the list.
              * @return The list's number of sequences.
              */
-            cudadecl inline size_t getCount() const
+            cudadecl inline uint16_t getCount() const
             {
                 return this->count;
             }
@@ -275,8 +275,8 @@ namespace pairwise
             class dSequenceList toDevice() const;
 
         protected:
-            void init(const dSequence *, size_t);
-            static std::vector<block_t> merge(const dSequence *, size_t);
+            void init(const dSequence *, uint16_t);
+            static std::vector<Block> merge(const dSequence *, uint16_t);
 
         friend class dSequenceList;
     };
@@ -290,17 +290,12 @@ namespace pairwise
     {
         public:
             dSequenceList(const CompressedList&);
-
-        protected:
-            static void deleteBuffer(block_t *);
-            static void deleteSlices(dSequenceSlice *);
     };
 };
 
 /*
- * Declaring global functions.
+ * Declaring global function.
  */
 extern std::ostream& operator<<(std::ostream&, const pairwise::dSequence&);
-extern void test(const pairwise::dSequenceList&);
 
 #endif

@@ -31,7 +31,7 @@ MPCCFILES := $(shell find $(SRCDIR) -name '*.c')
 MPPPFILES := $(shell find $(SRCDIR) -name '*.cpp')
 NVCCFILES := $(shell find $(SRCDIR) -name '*.cu')
 
-SRCINTERNAL = $(sort $(dir $(wildcard $(SRCDIR)/*/.)))
+SRCINTERNAL = $(sort $(dir $(wildcard $(SRCDIR)/*/. $(SRCDIR)/*/*/.)))
 OBJINTERNAL = $(SRCINTERNAL:$(SRCDIR)/%=$(OBJDIR)/%)
 
 ODEPS = $(MPCCFILES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)                        \

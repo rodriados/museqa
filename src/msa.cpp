@@ -47,30 +47,35 @@ class App final
         App() = default;
 
         /**
-         * Runs the application.
+         * Runs the application. This method times the execution of all steps for
+         * the multiple sequence alignment.
          */
         void run()
         {
-            report("loading", this->timer.run([this](){ this->loadfasta(); }));
-            report("pairwise", this->timer.run([this](){ this->pairwise(); }));
+            report("total", this->timer.run([this]() {
+                report("loading", this->timer.run([this]() { this->load(); }));
+                report("pairwise", this->timer.run([this]() { this->pairwise(); }));
+            }));
         }
 
     private:
         /**
-         * Loads the Fasta file, the first step.
+         * Loads the Fasta file, the first step. The sequences will be loaded into
+         * the master node and broadcasted to all other nodes.
          */
-        void loadfasta()
+        void load()
         {
             this->fasta = Fasta(cmd.get("filename"));
             cluster::sync();
         }
 
         /**
-         * Runs the pairwise step.
+         * Runs the pairwise step. This step is responsible for calculating all
+         * alignment possibilities between two different sequences.
          */
         void pairwise()
         {
-            this->pwise = Pairwise::run(this->fasta);
+            this->pwise = Pairwise(this->fasta);
             cluster::sync();
         }
 

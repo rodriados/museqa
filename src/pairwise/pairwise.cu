@@ -11,54 +11,28 @@
 #include "pairwise/needleman.cuh"
 
 /**
- * Sets up the module and makes it ready to process.
+ * Manages the module processing, and produces the pairwise
+ * module's results.
  * @param fasta The fasta file to be processed.
  */
 pairwise::Pairwise::Pairwise(const Fasta& fasta)
 :   list(fasta)
 {
-    uint16_t listCount = this->getCount();
-    this->count = (listCount - 1) * listCount / 2; 
+    pairwise::Algorithm *algorithm = new Needleman(this->list, this->score);
 
-    onlyslaves {
-        uint32_t div = this->count / (cluster::size - 1);
-        uint32_t mod = this->count % (cluster::size - 1);
-
-        this->count = div + (mod > cluster::rank - 1);
-    }
-
-    this->score = new pairwise::Score[this->count];
+    algorithm->run();    
+    delete algorithm;
 }
 
 /**
- * Erases all data collected from processing.
+ * Generates all workpairs to be processed. This method runs
+ * only on the master node.
  */
-pairwise::Pairwise::~Pairwise() noexcept
+void pairwise::Algorithm::generate()
 {
-    delete[] this->score;
-}
+    for(uint16_t i = 0, n = this->list.getCount(); i < n; ++i)
+        for(uint16_t j = i + 1; j < n; ++j)
+            this->pair.push_back({i, j});
 
-/**
- * Manages the module processing, and produces the pairwise
- * module's results.
- * @param fasta The fasta file to be processed.
- */
-pairwise::Pairwise pairwise::Pairwise::run(const Fasta& fasta)
-{
-    pairwise::Needleman needleman(fasta);
-
-    onlymaster {
-        needleman.generate();
-    }
-        
-    needleman.scatter();
-
-    onlyslaves {
-        needleman.loadblosum();
-        needleman.run();
-    }
-
-    needleman.gather();
-
-    return pairwise::Pairwise();//Pairwise::Pairwise(needleman);
+    debug("generated %d sequence pairs", this->pair.size());
 }

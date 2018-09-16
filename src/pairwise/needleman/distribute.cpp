@@ -12,7 +12,7 @@
 
 void pairwise::Needleman::scatter()
 {
-    std::vector<uint32_t> sendCount(cluster::size, 0);
+/*    std::vector<uint32_t> sendCount(cluster::size, 0);
     std::vector<uint32_t> sendDispl(cluster::size, 0);
 
     onlymaster {
@@ -34,11 +34,11 @@ void pairwise::Needleman::scatter()
     }
 
     //cluster::scatterv<uint32_t>(this->pairs.data(), sendCount, sendDispl, this->pairs.data(), sendCount[cluster::size]);
-    cluster::sync();
+    cluster::sync();*/
 }
 
 
-void pairwise::Needleman::gather() const
+void pairwise::Needleman::gather()
 {
 
 }

@@ -53,14 +53,14 @@ typedef cudaDeviceProp DeviceProperties;
 #  define cudacall(call)                                                        \
     if((call) != cudaSuccess) {                                                 \
         DeviceStatus err = cudaGetLastError();                                  \
-        debug("%s:%d '%s'\n", __FILE__, __LINE__, cudaGetErrorString(err));     \
+        debug("error in %s:%d", __FILE__, __LINE__);                            \
         finalize(DeviceError::execution(cudaGetErrorString(err)));              \
     }
 
 #  define cudacheck()                                                           \
     DeviceStatus err = cudaGetLastError();                                      \
     if(err != cudaSuccess) {                                                    \
-        debug("%s:%d '%s'\n", __FILE__, __LINE__, cudaGetErrorString(err));     \
+        debug("error in %s:%d", __FILE__, __LINE__);                            \
         finalize(DeviceError::execution(cudaGetErrorString(err)));              \
     }
 
@@ -87,8 +87,22 @@ namespace device
     extern int count();
     extern bool exists();
     extern int select();
+
 #ifdef __CUDACC__
     extern const DeviceProperties& properties();
+#endif
+    
+#ifdef __CUDACC__
+    /**
+     * The function for freeing device pointers.
+     * @tparam T The pointer type.
+     * @param ptr The pointer to be deleted.
+     */
+    template <typename T>
+    inline void deleter(T *ptr)
+    {
+        cudacall(cudaFree(ptr));
+    }
 #endif
 };
 

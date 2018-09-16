@@ -5,32 +5,26 @@
  */
 #include <cstdint>
 #include <cstring>
+#include <map>
 
 #include "input.hpp"
 #include "device.cuh"
-#include "pairwise/needleman.cuh"
+#include "pairwise/pairwise.hpp"
 
-enum TableList
-{
-    blosum62
-,   blosum45
-,   blosum50
-,   blosum80
-,   blosum90
-,   pam250
-,   table_count
-};
+/*
+ * The names of scoring tables. This will be used as available parameters available
+ * when choosing a scoring table.
+ */
+static const std::vector<std::string> tablenames =
+    {"blosum62", "blosum45", "blosum50", "blosum80", "blosum90", "pam250"};
 
-static const char *tableNames[] = {
-    "blosum62"
-,   "blosum45"
-,   "blosum50"
-,   "blosum80"
-,   "blosum90"
-,   "pam250"
-};
-
-static const int8_t tableData[][25][25] = {
+/*
+ * The scoring tables data. One of these tables will be transfered to device memory
+ * so it can be used to score sequence alignments. The first table, index-zero, is
+ * used as the default, when no valid parameter is found to indicate which table
+ * should be used instead.
+ */
+static const int8_t tabledata[][25][25] = {
     {   /* blosum62 */
         /*A  C  T  G  R  N  D  Q  E  H  I  L  K  M  F  P  S  W  Y  V  B  J  Z  X  **/
         { 4, 0, 0, 0,-1,-2,-2,-1,-1,-2,-1,-1,-1,-1,-2,-1, 1,-3,-2, 0,-2,-1,-1,-1,-4}
@@ -201,24 +195,40 @@ static const int8_t tableData[][25][25] = {
     }
 };
 
-/** 
- * Loads a scoring table into the device.
+/*
+ * Maps the table string name to its respective table index. This will be needed
+ * to translate the table name from string to its integer.
  */
-void pairwise::Needleman::loadblosum()
+static std::map<std::string, int> tablemap = {
+    {tablenames[0], 0}
+,   {tablenames[1], 1}
+,   {tablenames[2], 2}
+,   {tablenames[3], 3}
+,   {tablenames[4], 4}
+,   {tablenames[5], 5}
+};
+
+/*
+ * Aliases a table line to a single symbol. This allows an easier memory
+ * allocation and usage for the scoring table.
+ * @since 0.1.alpha
+ */
+using Line = int8_t[25];
+
+/** 
+ * Loads a scoring table into the device. The table will be automatically freed
+ * when algorithm is destructed.
+ */
+void pairwise::Algorithm::loadBlosum()
 {
-    int table = 0;
+    int index = tablemap[cmd.get("matrix")];
 
-    if(cmd.has("matrix")) {
-        std::string matrix = cmd.get("matrix");
-
-        #pragma unroll
-        for(int i = 0; i < table_count; ++i)
-            if(matrix == tableNames[i])
-                table = i;
+    onlyslaves {
+        Line *table;
+        cudacall(cudaMalloc(&table, sizeof(Line) * 25));
+        cudacall(cudaMemcpy(table, &tabledata[index], sizeof(Line) * 25, cudaMemcpyHostToDevice));
+        this->table = {table, device::deleter<Line>};
     }
 
-    //__cudacall(cudaMalloc(&this->table, sizeof(int8_t) * 625));
-    //__cudacall(cudaMemcpy(this->table, tableData[table], sizeof(int8_t) * 625, cudaMemcpyHostToDevice));
-
-    onlymaster debug("using scoring table %s", tableNames[table]);
+    onlymaster debug("using scoring table %s", tablenames[index].c_str());
 }

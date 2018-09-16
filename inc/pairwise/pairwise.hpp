@@ -9,9 +9,19 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 
+#include "msa.hpp"
 #include "fasta.hpp"
+#include "buffer.hpp"
+#include "pointer.hpp"
 #include "pairwise/sequence.cuh"
+
+/*
+ * Defining some configuration macros. These can be changed if needed.
+ */
+#define pw_threads_per_block 32
+#define pw_prefer_shared_mem 0
 
 namespace pairwise
 {
@@ -21,62 +31,86 @@ namespace pairwise
      */
     struct Workpair
     {
-        uint16_t first;     /// Index of the first sequence index to align
-        uint16_t second;    /// Index of the second sequence index to align
+        uint16_t first;
+        uint16_t second;
     };
 
     /**
-     * Stores score information about a sequence pair.
+     * The score of a sequence pair alignment.
      * @since 0.1.alpha
      */
-    struct Score
+    using Score = int32_t;
+
+    /**
+     * Abstract class to represent an algorithm. The concrete algorithm class will
+     * be composed to the Pairwise class.
+     * @since 0.1.alpha
+     */
+    class Algorithm
     {
-        int32_t score = 0;          /// The cached score value for a sequence pair.
-        uint16_t matches = 0;       /// The number of matches in the pair.
-        uint16_t mismatches = 0;    /// The number of mismatches in the pair.
-        uint16_t gaps = 0;          /// The number of gaps in the pair.
+        protected:
+            SequenceList list;                      /// The list of sequences to align.
+            Buffer<Score>& score;                   /// The buffer of score values;
+            std::vector<Workpair> pair;             /// The vector of pairs to compare.
+            SharedPointer<int8_t[25][25]> table;    /// The scoring table to be used.
+
+        public:
+            Algorithm() = default;
+            Algorithm(const Algorithm&) = default;
+            Algorithm(Algorithm&&) = default;
+
+            /**
+             * Creates a new algorithm instance.
+             * @param pwise The pairwise instance.
+             */
+            inline Algorithm(const SequenceList& list, Buffer<Score>& score)
+            :   list(list)
+            ,   score(score)
+            {
+                onlymaster this->generate();
+                this->loadBlosum();
+            }
+
+            virtual ~Algorithm() noexcept = default;
+
+            Algorithm& operator=(const Algorithm&) = default;
+            Algorithm& operator=(Algorithm&&) = default;
+
+            virtual void generate();
+            virtual void run() = 0;
+
+            void loadBlosum();
     };
 
     /**
      * Manages the pairwise module execution.
      * @since 0.1.alpha
      */
-    class Pairwise
+    class Pairwise final
     {
-        private:
-            SequenceList list;
-            Score *score = nullptr;
-            uint32_t count = 0;
+        protected:
+            SequenceList list;      /// The list of sequences to align.
+            Buffer<Score> score;    /// The buffer of score values;
 
         public:
             Pairwise() = default;
-            Pairwise(const Fasta&);
-            Pairwise(const Pairwise&) = delete;
+            Pairwise(const Pairwise&) = default;
             Pairwise(Pairwise&&) = default;
 
-            ~Pairwise() noexcept;
+            Pairwise(const Fasta&);
 
-            /**
-             * Move assignment operator.
-             * @param other The instance to be moved.
-             * @return This instance with moved data.
-             */
-            Pairwise& operator=(Pairwise&& other)
-            {
-                this->list = std::move(other.list);
-                this->score = std::move(other.score);
-                this->count = other.count;
-                other.score = nullptr;
-                return *this;
-            }
+            ~Pairwise() noexcept = default;
+
+            Pairwise& operator=(const Pairwise&) = default;
+            Pairwise& operator=(Pairwise&&) = default;
 
             /**
              * Informs the number of pairs processed or to process.
              * @return The number of pairs this instance shall process.
              */
-            inline uint32_t getCount() const
+            inline size_t getCount() const
             {
-                return this->count;
+                return this->score.getSize();
             }
 
             /**
@@ -89,29 +123,38 @@ namespace pairwise
             }
 
             /**
-             * Accesses a score according to its offset.
-             * @return The requested pair score instance.
+             * Accesses score value of workpair.
+             * @return The requested pair score value.
              */
-            inline const Score& getScore(size_t offset) const
+            inline const Score getScore(const Workpair& pair) const
+            {
+                return this->getScore(pair.first, pair.second);
+            }
+
+            /**
+             * Accesses a score according to its offset.
+             * @return The requested pair score value.
+             */
+            inline const Score getScore(ptrdiff_t offset) const
             {
                 return this->score[offset];
             }
 
             /**
-             * Gives access to a processed pair score instance.
-             * @return The requested pair score instance.
+             * Gives access to a processed pair score value.
+             * @return The requested pair score value.
              */
-            inline const Score& getScore(uint16_t x, uint16_t y) const
+            inline const Score getScore(uint16_t x, uint16_t y) const
             {
-                uint16_t min = x > y ? y : x;
-                uint16_t max = x > y ? x : y;
+                if(x == y)  return 0;
 
-                return this->score[(max + 1) * max / 2 + min];
+                uint16_t min, max;
+
+                if(x > y) { max = x; min = y; }
+                else      { max = y; min = x; }
+
+                return this->score[((max + 1) * max) / 2 + min];
             }
-
-            static Pairwise run(const Fasta&);
-
-        friend class Needleman;
     };
 };
 
