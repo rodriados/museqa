@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+
+# Automatically generates a hostfile for MPI execution. This script only
+# looks for GPU capable machines in local networks. If the user desires to
+# to use external nodes, the file shall be created manually.
+
+# Gets the list of hosts known by the current machine.
+hosts_list=$(getent hosts | cut -d' ' -f1 | tr "\n" " ")
+accepted_hosts=()
+
+# Discovers the name of file to be created. If no valid file name is given,
+# the name is defaulted to "hostfile".
+if [[ ! -z "$1" && (! -e "$1" || -f "$1") ]]; then
+    target_file="$1"
+else
+    target_file="hostfile"
+fi
+
+# Removes the target file, if it exists and shifts the command line arguments.
+# This is needed so we can guarantee we will append to an empty file.
+if [[ -f "$target_file" ]]; then
+    rm $target_file
+fi
+
+# Command to check whether a host is compute capable or not.
+gpucmd="command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi --query-gpu=gpu_bus_id --format=csv"
+
+# Discovers the internal network IP of this machine.
+gateway=$(route -n | awk '$4 == "UG" {print $2}')
+ip_local=$(ip route get ${gateway} | awk '{print $NF; exit}')
+
+# Checks whether a host has a compute capable device.
+# @param $1 The host name to be currently checked.
+# @return The number of lines returned by command.
+sshrun() {
+    local runcmd=$(ssh -o ConnectTimeout=5 -o BatchMode=yes -o StrictHostKeyChecking=no $1 "${gpucmd}" | wc -l)
+    echo "$runcmd"
+}
+
+# Iterating through the list of hosts to try to find hosts capable of running
+# the software. As MPI uses ssh internally to implement communication between
+# nodes, we use ssh as well to look for hosts.
+for host in ${hosts_list[@]}; do
+    # Checking for local hosts only. We do not want to use external nodes when
+    # executing. The user shall create the hosts file manually otherwise.
+    if [[ "$ip_local" != "$host" && ("$host" == 192.168.* || "$host" == 10.*) ]]; then
+        [[ $(sshrun $host) -gt 0 ]] && accepted_hosts+=($host)
+    fi
+done
+
+# From the accepted hosts, we now create the host file. If no host has been found
+# in the network, the file simply specifies the number of nodes to run in the local
+# machine.
+if [[ ${#accepted_hosts[@]} -gt 0 ]]; then
+    # Checking whether the current machine is compute capable as well. If it is,
+    # add a slot so one is a worker and the other is the controller.
+    [[ $(eval "$gpucmd" | wc -l) -gt 0 ]]                           \
+        && echo "localhost slots=2 max-slots=2" >> $target_file     \
+        || echo "localhost slots=1 max-slots=1" >> $target_file
+
+    # Prints all accepted hosts in the file. Each host found will contribute with
+    # a single slot worker, as we cannot (yet) figure out how many devices each
+    # host has.
+    for host in ${accepted_hosts[@]}; do
+        echo "$host slots=1 max-slots=1" >> $target_file
+    done
+
+# If we could not find any compute capable device, then we will check whether this
+# machine is compute capable and check how many devices it currently has.
+else
+    # Counts how many slots we can give the local host.
+    count=$(eval "$gpucmd" | wc -l)
+    [[ "$count" -gt 0 ]] && echo "localhost slots=$count max-slots=$count" >> $target_file
+fi

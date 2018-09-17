@@ -4,3 +4,4 @@ tex/
 .idea/
 *.o
 *.d
+hostfile
