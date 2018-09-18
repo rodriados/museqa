@@ -1,12 +1,27 @@
 #!/usr/bin/env bash
 
+echo "Generating hostfile..."
+
 # Command to check whether a host is compute capable or not.
 gpucmd="lspci | grep 'VGA' | grep 'NVIDIA'"
+
+# Prints a progress bar so the user can know how it will take them to complete
+# the file generation.
+progressbar() {
+    let progress=(${1}*100/${2}*100)/100
+    let done=(${progress}*4)/10
+    let left=40-$done
+    local fill=$(printf "%${done}s")
+    local empty=$(printf "%${left}s")
+    printf "\rProgress: [<${fill// /=}>${empty// / }] ${progress}%%"
+}
 
 # Checks whether a host has a compute capable device. This is done by simply
 # connecting to the host and executing a command to check whether it is compute
 # capable or not.
 sshrun() {
+    # Access remote host in batch mode without tty allocation and runs the
+    # command to find out the number of connected GPUs.
     ssh -o ConnectTimeout=5 -o BatchMode=yes -o StrictHostKeyChecking=no -T $1 << EOF
         ${gpucmd} | wc -l
         exit
@@ -17,10 +32,6 @@ EOF
 # looks for GPU capable machines in local networks. If the user desires to
 # to use external nodes, the file shall be created manually.
 genfile() {
-    # Gets the list of hosts known by the current machine.
-    local hosts_list=$(getent hosts | cut -d' ' -f1 | tr "\n" " ")
-    local accepted_hosts=()
-
     # Discovers the name of file to be created. If no valid file name is given,
     # the name is defaulted to "hostfile".
     if [[ ! -z "$1" && (! -e "$1" || -f "$1") ]]; then
@@ -35,53 +46,49 @@ genfile() {
         rm $target_file
     fi
 
+    # Counts how many slots we can give the local host.
+    local gpu_count=$(eval "$gpucmd" | wc -l)
+
+    # Checks whether this machine is compute capable and check how many devices it
+    # currently has.
+    echo "localhost slots=$((gpu_count + 1)) max-slots=$((gpu_count + 1))" >> $target_file
+
+    # Gets the list of hosts known by the current machine.
+    local hosts_list=$(getent hosts | cut -d' ' -f1 | tr "\n" " ")
+    local hosts_count=$(wc -w <<< "$hosts_list")
+
     # Discovers the internal network IP of this machine.
     local ip_local=$(hostname -I)
 
+    # Prints the progress bar.
+    local loop_count=0
+    progressbar ${loop_count} ${hosts_count}
+
     # Iterating through the list of hosts to try to find hosts capable of running
     # the software. As MPI uses ssh internally to implement communication between
-    # nodes, we use ssh as well to look for hosts.
+    # nodes, we use ssh as well to look for hosts.    
     for host in ${hosts_list[@]}; do
+
         # Checking for local hosts only. We do not want to use external nodes when
         # executing. The user shall create the hosts file manually otherwise.
         if [[ "$ip_local" != *"$host"* && ("$host" == 192.168.* || "$host" == 10.*) ]]; then
-            if [[ $(sshrun $host 2> /dev/null) -gt 0 ]]; then
-                accepted_hosts+=($host)
+
+            # Accessing remote host via ssh and retrieving the number of connected
+            # compute-capable devices.
+            gpu_count=$(sshrun $host 2> /dev/null)
+
+            # If the number of devices found is greater than zero, than we can use
+            # this host to execute our code.
+            if [[ "$gpu_count" -gt 0 ]]; then
+                echo "$host slots=$gpu_count max-slots=$gpu_count" >> $target_file
             fi
         fi
+
+        loop_count=$((loop_count + 1))
+        progressbar ${loop_count} ${hosts_count}
     done
-
-    # From the accepted hosts, we now create the host file. If no host has been found
-    # in the network, the file simply specifies the number of nodes to run in the local
-    # machine.
-    if [[ ${#accepted_hosts[@]} -gt 0 ]]; then
-        # Checking whether the current machine is compute capable as well. If it is,
-        # add a slot so one is a worker and the other is the controller.
-        if [[ $(eval "$gpucmd" | wc -l) -gt 0 ]]; then
-            echo "localhost slots=2 max-slots=2" >> $target_file
-        else
-            echo "localhost slots=1 max-slots=1" >> $target_file
-        fi
-
-        # Prints all accepted hosts in the file. Each host found will contribute with
-        # a single slot worker, as we cannot (yet) figure out how many devices each
-        # host has.
-        for host in ${accepted_hosts[@]}; do
-            echo "$host slots=1 max-slots=1" >> $target_file
-        done
-
-    # If we could not find any compute capable device, then we will check whether this
-    # machine is compute capable and check how many devices it currently has.
-    else
-        # Counts how many slots we can give the local host.
-        count=$(eval "$gpucmd" | wc -l)
-        
-        if [[ "$count" -gt 0 ]]; then
-            echo "localhost slots=$((count + 1)) max-slots=$((count + 1))" >> $target_file
-        fi
-    fi
 }
 
 # Starts the script and tries to create the requested host file.
-echo "Generaring hostfile. This may take a while, please wait."
 genfile
+echo

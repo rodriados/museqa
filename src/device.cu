@@ -50,7 +50,7 @@ int device::select()
     const int devices = cmd.has("multigpu")
         ? device::count()
         : device::exists();
-    int id = (cluster::rank - 1) % devices;
+    int id = cluster::rank % devices;
 
     cudacall(cudaSetDevice(id));
     return id;
