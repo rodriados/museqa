@@ -124,6 +124,8 @@ int main(int argc, char **argv)
     verbose = cmd.has("verbose");
     cluster::sync();
 
+    onlyslaves device::select();
+
     App msa;
     msa.run();
 

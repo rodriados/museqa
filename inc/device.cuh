@@ -84,6 +84,7 @@ typedef cudaDeviceProp DeviceProperties;
  */
 namespace device
 {
+    extern int get();
     extern int count();
     extern bool exists();
     extern int select();

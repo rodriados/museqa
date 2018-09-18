@@ -11,13 +11,23 @@
 #include "device.cuh"
 
 /**
+ * Informs the identifier of currently selected device.
+ * @return The currently selected device identifier.
+ */
+int device::get()
+{
+    int device;
+    cudacall(cudaGetDevice(&device));
+    return device;
+}
+
+/**
  * Informs the number of devices available.
  * @return The number of compute-capable devices.
  */
 int device::count()
 {
     int devices;
-
     cudacall(cudaGetDeviceCount(&devices));
     return devices;
 }

@@ -6,7 +6,6 @@ Multiple Sequence Alignment using hybrid parallel computing. This project is ini
 [@ferlete](https://github.com/ferlete)'s MSA project.
 
 ## Install
-
 At the moment, this project is only being tested on Unix/Linux based systems. To install it, make sure you have both
 `openmpi` and `cuda` installed in your system, download the source files and compile, following the steps below:
 ```
@@ -15,15 +14,12 @@ $ make
 ```
 
 ## Usage
-
-To use the project, you must execute via MPI. This can be achieved like the following:
+To use the project, you must run it via MPI. A tool for finding all compatible hosts in your internal network is provided:
+```bash
+./findhosts
 ```
-$ mpirun -np <nproc> ./msa <file>
+This will generate a file containing a recommended running configuration. To run it, you can simply use:
+```bash
+mpirun --hostfile hostfile ./msa <file>
 ```
-Where `nproc` is the number of processing nodes to use, being one of these the master node; and `file` being
-the file containing the sequences to be aligned.
-
-You can automatically generate a configuration file to use all compute-capable devices in your network by simply using:
-```
-$ ./findhosts
-```
+Where `file` is the containing all sequences to be aligned.
