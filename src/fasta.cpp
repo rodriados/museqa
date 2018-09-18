@@ -106,10 +106,8 @@ void broadcast(Fasta& fasta)
     size_t *sizes = new size_t[count];
     size_t szsum = 0;
 
-    onlymaster {
-        for(size_t i = 0; i < count; ++i)
-            szsum += sizes[i] = fasta[i].getLength();
-    }
+    onlymaster for(size_t i = 0; i < count; ++i)
+        szsum += sizes[i] = fasta[i].getLength();
 
     cluster::broadcast(sizes, count);
     cluster::broadcast(&szsum);
@@ -117,21 +115,17 @@ void broadcast(Fasta& fasta)
 
     char *data = new char[szsum];
 
-    onlymaster {
-        for(size_t i = 0, offset = 0; i < count; ++i) {
-            memcpy(&data[offset], fasta[i].getBuffer(), sizeof(char) * sizes[i]);
-            offset += sizes[i];
-        }
+    onlymaster for(size_t i = 0, offset = 0; i < count; ++i) {
+        memcpy(&data[offset], fasta[i].getBuffer(), sizeof(char) * sizes[i]);
+        offset += sizes[i];
     }
-
+    
     cluster::broadcast(data, szsum);
     cluster::sync();
 
-    onlyslaves {
-        for(size_t i = 0, offset = 0; i < count; ++i) {
-            fasta.push("__slave", data + offset, sizes[i]);
-            offset += sizes[i];
-        }
+    onlyslaves for(size_t i = 0, offset = 0; i < count; ++i) {
+        fasta.push("__slave", data + offset, sizes[i]);
+        offset += sizes[i];
     }
 
     delete[] sizes;
