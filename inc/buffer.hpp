@@ -23,8 +23,8 @@ template <typename T>
 class BaseBuffer
 {
     protected:
-        size_t size = 0;           /// The number of buffer blocks.
         SharedPointer<T[]> buffer;  /// The buffer being encapsulated.
+        size_t size = 0;            /// The number of buffer blocks.
 
     public:
         BaseBuffer() = default;

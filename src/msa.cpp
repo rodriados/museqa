@@ -104,6 +104,9 @@ int main(int argc, char **argv)
 {
     cluster::init(argc, argv);
 
+    if(cluster::size < 2)
+        finalize(Error("at least 2 nodes are needed."));
+
     onlyslaves if(!device::exists())
         finalize(DeviceError::noGPU());
 
@@ -175,7 +178,7 @@ int main(int argc, char **argv)
  */
 [[noreturn]] void finalize(Error error)
 {
-    onlymaster if(!error.msg.empty()) {
+    if(!error.msg.empty()) {
         err << MSA << s_bold " [fatal error]: " s_reset
             << error.msg << std::endl
             << "execution has terminated." << std::endl;

@@ -72,6 +72,15 @@ namespace pointer
 
         public:
             /**
+             * Gives access to pointer deleter.
+             * @return The pointer deleter.
+             */
+            inline const Deleter<T>& getDeleter()
+            {
+                return this->dfunc;
+            }
+
+            /**
              * Gives access to raw pointer.
              * @return The raw pointer.
              */
@@ -263,6 +272,15 @@ class BasePointer
         cudadecl inline PureT *operator->()
         {
             return this->ptr;
+        }
+
+        /**
+         * Gives access to pointer deleter.
+         * @return The pointer deleter.
+         */
+        inline const Deleter<T>& getDeleter()
+        {
+            return this->meta->getDeleter();
         }
 
         /**

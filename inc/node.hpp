@@ -27,21 +27,31 @@ namespace cluster
 namespace node
 {
     /**
+     * Informs whether the current node has given rank.
+     * @param rank The rank to be checked.
+     * @return Does this node has given rank?
+     */        
+    inline bool is(int rank)
+    {
+        return cluster::rank == rank;
+    }
+
+    /**
      * Informs whether the current node is the master node.
      * @return Is this node the master?
      */
-    inline bool isMaster()
+    inline bool ismaster()
     {
-        return cluster::rank == cluster::master;
+        return is(cluster::master);
     }
 
     /**
      * Informs whether the current node is a slave node.
      * @return Is this node a slave?
      */
-    inline bool isSlave()
+    inline bool isslave()
     {
-        return cluster::rank != cluster::master;
+        return !is(cluster::master);
     }
 };
 
@@ -49,9 +59,9 @@ namespace node
  * Defines some process control macros. These macros are to be used when
  * it is needed to check whether the current process is master or not.
  */
-#define onlymaster    if(node::isMaster())
-#define onlyslaves    if(node::isSlave())
-#define onlyslave(i)  if(node::isSlave() && cluster::rank == (i))
+#define onlymaster    if(node::ismaster())
+#define onlyslaves    if(node::isslave())
+#define onlyslave(i)  if(node::isslave() && node::is(i))
 
 #undef master_node_id
 

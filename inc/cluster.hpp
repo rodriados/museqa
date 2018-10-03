@@ -13,6 +13,7 @@
 #include <mpi.h>
 
 #include "node.hpp"
+#include "buffer.hpp"
 #include "reflection.hpp"
 
 namespace cluster
@@ -20,7 +21,7 @@ namespace cluster
     /*
      * Declaring global variable.
      */
-    extern std::vector<MPI_Datatype> custom;
+    extern std::vector<MPI_Datatype> customDTypes;
 
     /*
      * Forward declaration of Datatype, so that datatypes that already exist can
@@ -132,7 +133,7 @@ namespace cluster
                 MPI_Type_create_struct(size, blockl, offset, type, &this->dtypeid);
                 MPI_Type_commit(&this->dtypeid);
 
-                custom.push_back(this->dtypeid);
+                customDTypes.push_back(this->dtypeid);
             }
 
             /**
@@ -186,6 +187,189 @@ namespace cluster
     #undef use_built_in
 
     /**
+     * Represents the base of a communication payload.
+     * @tparam T The payload's data type.
+     * @since 0.1.alpha
+     */
+    template <typename T>
+    class BasePayload
+    {
+        protected:
+            T *buffer = nullptr;    /// The payload's buffer.
+            bool dynamic = false;   /// Is the payload dynamic?
+            size_t size = 0;        /// The payload's buffer's size.
+
+        public:
+            BasePayload() = delete;
+            BasePayload(const BasePayload<T>&) = delete;
+            BasePayload(BasePayload<T>&&) = delete;
+
+            /**
+             * Creates a new payload from buffer.
+             * @param buffer The payload's buffer.
+             */
+            BasePayload(T& buffer)
+            :   buffer(&buffer)
+            ,   size(1) {}
+
+            /**
+             * Creates a new payload from buffer.
+             * @param buffer The payload's buffer.
+             * @param size The buffer's size.
+             */
+            BasePayload(T *buffer, size_t size)
+            :   buffer(buffer)
+            ,   size(size) {}
+
+            BasePayload<T>& operator=(const BasePayload<T>&) = delete;
+            BasePayload<T>& operator=(BasePayload<T>&&) = delete;
+
+            /**
+             * Broadcasts data to all nodes connected in the cluster.
+             * @param root The operation's root node.
+             * @return MPI error code if not successful.
+             */
+            inline int broadcast(int root = master)
+            {
+                if(this->dynamic) {
+                    MPI_Bcast(&this->size, 1, Datatype<size_t>::get(), root, MPI_COMM_WORLD);
+                    if(cluster::rank != root) this->resize(this->size);
+                }
+
+                return MPI_Bcast(this->buffer, this->size, Datatype<T>::get(), root, MPI_COMM_WORLD);
+            }
+
+            /**
+             * Receives data from a node connected to the cluster.
+             * @param source The source node.
+             * @param tag The identifying tag.
+             * @param status The transmission status.
+             * @return MPI error code if not successful.
+             */
+            inline int receive(int source = master, int tag = MPI_TAG_UB, MPI_Status *status = MPI_STATUS_IGNORE)
+            {
+                if(this->dynamic) {
+                    int size;
+                    MPI_Status probed;
+                    MPI_Probe(source, tag, MPI_COMM_WORLD, &probed);
+                    MPI_Get_count(&probed, Datatype<int>::get(), &size);
+                    this->resize(size);
+                }
+
+                return MPI_Recv(this->buffer, this->size, Datatype<T>::get(), source, tag, MPI_COMM_WORLD, status);
+            }
+
+            /**
+             * Sends data to a node connected to the cluster.
+             * @param dest The destination node.
+             * @param tag The identifying tag.
+             * @return MPI error code if not successful.
+             */
+            inline int send(int dest = master, int tag = MPI_TAG_UB)
+            {
+                return MPI_Send(this->buffer, this->size, Datatype<T>::get(), dest, tag, MPI_COMM_WORLD);
+            }
+
+        protected:
+            /**
+             * Creates payload from buffer. Internal constructor.
+             * @param buffer The payload's buffer.
+             * @param size The buffer's size.
+             * @param dynamic Is the payload dynamic?
+             */
+            BasePayload(T *buffer, size_t size, bool dynamic = false)
+            :   buffer(buffer)
+            ,   dynamic(dynamic)
+            ,   size(size) {}
+
+            /**
+             * Resizes the dynamic payload so it can store all received data.
+             * @param size The new payload size.
+             */
+            virtual void resize(size_t size)
+            {
+                this->size = size;
+            }
+    };
+
+    /**
+     * Represents a communication payload.
+     * @tparam T The payload's data type.
+     * @since 0.1.alpha
+     */
+    template <typename T>
+    class Payload : public BasePayload<T>
+    {
+        using BasePayload<T>::BasePayload;
+    };
+
+    /**
+     * Represents a communication payload.
+     * @tparam T The payload's data type.
+     * @since 0.1.alpha
+     */
+    template <typename T>
+    class Payload<std::vector<T>> : public BasePayload<T>
+    {
+        protected:
+            std::vector<T>& target; /// The original target vector.
+
+        public:
+            /**
+             * Creates a new payload from vector.
+             * @param vector The payload's vector.
+             */
+            Payload(std::vector<T>& vector)
+            :   BasePayload<T>(vector.data(), vector.size(), true)
+            ,   target(vector) {}
+
+        protected:
+            /**
+             * Resizes the dynamic payload so it can store all received data.
+             * @param size The new payload size.
+             */
+            virtual void resize(size_t size) override
+            {
+                this->target.resize(size);
+                this->buffer = this->target.data();
+                this->size = size;
+            }
+    };
+
+    /**
+     * Represents a communication payload.
+     * @tparam T The payload's data type.
+     * @since 0.1.alpha
+     */
+    template <typename T>
+    class Payload<BaseBuffer<T>> : public BasePayload<T>
+    {
+        protected:
+            BaseBuffer<T>& target;  /// The original target buffer.
+
+        public:
+            /**
+             * Creates a new payload from buffer.
+             * @param buffer The payload's buffer.
+             */
+            Payload(BaseBuffer<T>& buffer)
+            :   BasePayload<T>(buffer.getBuffer(), buffer.getSize(), true)
+            ,   target(buffer) {}
+
+        protected:
+            /**
+             * Resizes the dynamic payload so it can store all received data.
+             * @param size The new payload size.
+             */
+            virtual void resize(size_t size) override
+            {
+                this->target = {new T[size], size};
+                this->buffer = this->target.getBuffer();
+                this->size = size;
+            }
+    };
+
+    /**
      * Initializes the node's communication and identifies it in the cluster.
      * @param argc The number of arguments sent from terminal.
      * @param argv The arguments sent from terminal.
@@ -197,7 +381,7 @@ namespace cluster
         MPI_Comm_size(MPI_COMM_WORLD, &cluster::size);
     }
 
-    /**
+    /**#@+
      * Broadcasts data to all nodes connected in the cluster.
      * @tparam T Type of buffer data to broadcast.
      * @param buffer The buffer to broadcast.
@@ -207,33 +391,25 @@ namespace cluster
      */
     template <typename T>
     inline int broadcast
+        (   T& buffer
+        ,   int root = master               )
+    {
+        Payload<T> payload {buffer};
+        return payload.broadcast(root);
+    }
+
+    template <typename T>
+    inline int broadcast
         (   T *buffer
         ,   int count = 1
-        ,   int root = master   )
+        ,   int root = master               )
     {
-        return MPI_Bcast(buffer, count, Datatype<T>::get(), root, MPI_COMM_WORLD);
+        Payload<T> payload {buffer, count};
+        return payload.broadcast(root);
     }
+    /**#@-*/
 
-    /**
-     * Sends data to a node connected to the cluster.
-     * @tparam T Type of buffer data to send.
-     * @param buffer The buffer to send.
-     * @param count The number of buffer's elements to send.
-     * @param dest The destination node.
-     * @param tag The identifying tag.
-     * @return MPI error code if not successful.
-     */
-    template <typename T>
-    inline int send
-        (   const T *buffer
-        ,   int count = 1
-        ,   int dest = master
-        ,   int tag = MPI_TAG_UB    )
-    {
-        return MPI_Send(buffer, count, Datatype<T>::get(), dest, tag, MPI_COMM_WORLD);
-    }
-
-    /**
+    /**#@+
      * Receives data from a node connected to the cluster.
      * @tparam T Type of buffer data to receive.
      * @param buffer The buffer to receive data into.
@@ -245,14 +421,58 @@ namespace cluster
      */
     template <typename T>
     inline int receive
+        (   T& buffer
+        ,   int source = master
+        ,   int tag = MPI_TAG_UB
+        ,   MPI_Status *status = MPI_STATUS_IGNORE  )
+    {
+        Payload<T> payload {buffer};
+        return payload.receive(source, tag, status);
+    }
+
+    template <typename T>
+    inline int receive
         (   T *buffer
         ,   int count = 1
         ,   int source = master
         ,   int tag = MPI_TAG_UB
         ,   MPI_Status *status = MPI_STATUS_IGNORE  )
     {
-        return MPI_Recv(buffer, count, Datatype<T>::get(), source, tag, MPI_COMM_WORLD, status);
+        Payload<T> payload {buffer, count};
+        return payload.receive(source, tag, status);
     }
+    /**#@-*/
+
+    /**#@+
+     * Sends data to a node connected to the cluster.
+     * @tparam T Type of buffer data to send.
+     * @param buffer The buffer to send.
+     * @param count The number of buffer's elements to send.
+     * @param dest The destination node.
+     * @param tag The identifying tag.
+     * @return MPI error code if not successful.
+     */
+    template <typename T>
+    inline int send
+        (   T& buffer
+        ,   int dest = master
+        ,   int tag = MPI_TAG_UB            )
+    {
+        Payload<T> payload {buffer};
+        return payload.send(dest, tag);
+    }
+
+    template <typename T>
+    inline int send
+        (   T *buffer
+        ,   int count = 1
+        ,   int dest = master
+        ,   int tag = MPI_TAG_UB            )
+    {
+        Payload<T> payload {buffer, count};
+        return payload.send(dest, tag);
+    }
+    /**#@-*/
 
     /**
      * Synchronizes all of the cluster's nodes.
@@ -269,7 +489,7 @@ namespace cluster
      */
     inline int finalize()
     {
-        for(MPI_Datatype& dtype : custom)
+        for(MPI_Datatype& dtype : customDTypes)
             MPI_Type_free(&dtype);
 
         return MPI_Finalize();
