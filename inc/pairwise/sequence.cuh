@@ -289,7 +289,14 @@ namespace pairwise
     class dSequenceList : public CompressedList
     {
         public:
+            dSequenceList() = default;
+            dSequenceList(const dSequenceList&) = default;
+            dSequenceList(dSequenceList&&) = default;
+
             dSequenceList(const CompressedList&);
+
+            dSequenceList& operator=(const dSequenceList&) = default;
+            dSequenceList& operator=(dSequenceList&&) = default;
     };
 };
 

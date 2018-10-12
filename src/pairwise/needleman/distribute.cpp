@@ -7,38 +7,40 @@
 #include <vector>
 
 #include "msa.hpp"
+#include "buffer.hpp"
 #include "cluster.hpp"
 #include "pairwise/needleman.cuh"
 
+/**
+ * Scatters the workload through the working nodes.
+ */
 void pairwise::Needleman::scatter()
 {
-/*    std::vector<uint32_t> sendCount(cluster::size, 0);
-    std::vector<uint32_t> sendDispl(cluster::size, 0);
+    std::vector<int> sendcount(cluster::size, 0);
+    std::vector<int> senddispl(cluster::size, 0);
 
-    onlymaster {
-        uint32_t each = this->pwise.getCount() / (cluster::size - 1);
-        uint32_t more = this->pwise.getCount() % (cluster::size - 1);
+    int total = this->pair.size();
+    cluster::broadcast(total);
 
-        for(uint16_t i = 1; i < cluster::size; ++i) {
-            sendCount[i] = each + (more >= i);
-            sendDispl[i] = sendDispl[i - 1] + sendCount[i - 1];
-        }
+    int each = total / (cluster::size - 1);
+    int addt = total % (cluster::size - 1);
+
+    for(uint16_t i = 1; i < cluster::size; ++i) {
+        sendcount[i] = each + (addt >= i);
+        senddispl[i] = senddispl[i - 1] + sendcount[i - 1];
     }
 
-    cluster::broadcast(sendCount.data(), cluster::size);
-    cluster::broadcast(sendDispl.data(), cluster::size);
-    cluster::sync();
-
-    onlyslaves {
-        this->pairs.resize(sendCount[cluster::rank]);
-    }
-
-    //cluster::scatterv<uint32_t>(this->pairs.data(), sendCount, sendDispl, this->pairs.data(), sendCount[cluster::size]);
-    cluster::sync();*/
+    std::vector<Workpair> buffer;    
+    cluster::scatter(this->pair, buffer, sendcount, senddispl);
+    
+    onlyslaves this->pair = buffer;
+    this->score = {new Score[this->pair.size()], this->pair.size()};
 }
 
-
+/**
+ * Gathers the resulting data of all working nodes.
+ */
 void pairwise::Needleman::gather()
 {
-
+    cluster::sync();
 }

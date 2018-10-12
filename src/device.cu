@@ -63,7 +63,7 @@ int device::select()
 const DeviceProperties& device::properties()
 {
     static DeviceProperties props;
-    int id = device::select();
+    int id = device::get();
 
     cudacall(cudaGetDeviceProperties(&props, id));
     return props;

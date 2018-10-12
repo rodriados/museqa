@@ -8,6 +8,9 @@
 
 #pragma once
 
+#include <set>
+#include <vector>
+
 #include "buffer.hpp"
 #include "pointer.hpp"
 #include "pairwise/sequence.cuh"
@@ -33,8 +36,12 @@ namespace pairwise
             void run() override;
 
         protected:
-            void scatter();
-            void gather();
+            void scatter() override;
+            void gather() override;
+
+        private:
+            std::set<ptrdiff_t> select(std::vector<Workpair>&) const;
+            //void recover(std::vector<ptrdiff_t>&, Buffer<Score>&);
     };
 
 #ifdef __CUDACC__
@@ -46,12 +53,12 @@ namespace pairwise
          */
         struct Input
         {
-            //Buffer<Workpair> pair;                  // The list of workpairs to process.
-            //dSequenceList sequence;                 // The list of sequences to process.
+            Buffer<Workpair> pair;                  // The list of workpairs to process.
+            dSequenceList sequence;                 // The list of sequences to process.
             SharedPointer<int8_t[25][25]> table;    // The scoring table to be used.
         };
 
-        extern __global__ void exec(Input /*, Buffer<Score>*/);
+        extern __global__ void run(Input, Buffer<Score>);
     };
 #endif
 };

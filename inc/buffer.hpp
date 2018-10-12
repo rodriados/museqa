@@ -36,7 +36,7 @@ class BaseBuffer
          * @param buffer The buffer pointer to encapsulate.
          * @param size The size of buffer to encapsulate.
          */
-        inline explicit BaseBuffer(T *buffer, size_t size, const Deleter<T>& dfunc = nullptr)
+        inline BaseBuffer(T *buffer, size_t size, const Deleter<T>& dfunc = nullptr)
         :   buffer(buffer, dfunc)
         ,   size(size) {}
 
@@ -105,6 +105,8 @@ class Buffer : public BaseBuffer<T>
         Buffer() = default;
         Buffer(const Buffer<T>&) = default;
         Buffer(Buffer<T>&&) = default;
+
+        using BaseBuffer<T>::BaseBuffer;
 
         /**
          * Constructs a new buffer from an already existing base buffer.

@@ -18,9 +18,14 @@
 pairwise::Pairwise::Pairwise(const Fasta& fasta)
 :   list(fasta)
 {
-    pairwise::Algorithm *algorithm = new Needleman(this->list, this->score);
+    pairwise::Algorithm *algorithm;
 
-    algorithm->run();    
+    algorithm = new Needleman(this->list, this->score);
+
+    algorithm->scatter();
+    onlyslaves algorithm->run();  
+    algorithm->gather();
+
     delete algorithm;
 }
 

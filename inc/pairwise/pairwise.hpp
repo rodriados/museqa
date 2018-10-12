@@ -79,6 +79,9 @@ namespace pairwise
             virtual void generate();
             virtual void run() = 0;
 
+            virtual void scatter() = 0;
+            virtual void gather() = 0;
+
             void loadBlosum();
     };
 

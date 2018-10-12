@@ -217,7 +217,7 @@ namespace cluster
              * @param buffer The payload's buffer.
              * @param size The buffer's size.
              */
-            BasePayload(T *buffer, size_t size)
+            BasePayload(T *buffer, size_t size = 1)
             :   buffer(buffer)
             ,   size(size) {}
 
@@ -268,6 +268,26 @@ namespace cluster
             inline int send(int dest = master, int tag = MPI_TAG_UB)
             {
                 return MPI_Send(this->buffer, this->size, Datatype<T>::get(), dest, tag, MPI_COMM_WORLD);
+            }
+
+            /**
+             * Scatters data to nodes according to given distribution.
+             * @param buffer The buffer to be scattered.
+             * @param count The count of elements to send to each node.
+             * @param displ The scatter displacement of each node.
+             * @param root The operation's root node.
+             * @return MPI error code if not successful.
+             */
+            inline int scatter(BasePayload<T>& buffer, int *count, int *displ, int root = master)
+            {
+                if(this->dynamic) {
+                    this->resize(count[rank]);
+                }
+
+                return MPI_Scatterv(
+                    buffer.buffer, count, displ, Datatype<T>::get(),
+                    this->buffer, count[rank], Datatype<T>::get(), root, MPI_COMM_WORLD
+                );
             }
 
         protected:
@@ -328,7 +348,7 @@ namespace cluster
              * Resizes the dynamic payload so it can store all received data.
              * @param size The new payload size.
              */
-            virtual void resize(size_t size) override
+            void resize(size_t size) override
             {
                 this->target.resize(size);
                 this->buffer = this->target.data();
@@ -361,7 +381,7 @@ namespace cluster
              * Resizes the dynamic payload so it can store all received data.
              * @param size The new payload size.
              */
-            virtual void resize(size_t size) override
+            void resize(size_t size) override
             {
                 this->target = {new T[size], size};
                 this->buffer = this->target.getBuffer();
@@ -394,7 +414,7 @@ namespace cluster
         (   T& buffer
         ,   int root = master               )
     {
-        Payload<T> payload {buffer};
+        Payload<T> payload(buffer);
         return payload.broadcast(root);
     }
 
@@ -404,7 +424,7 @@ namespace cluster
         ,   int count = 1
         ,   int root = master               )
     {
-        Payload<T> payload {buffer, count};
+        Payload<T> payload(buffer, count);
         return payload.broadcast(root);
     }
     /**#@-*/
@@ -426,7 +446,7 @@ namespace cluster
         ,   int tag = MPI_TAG_UB
         ,   MPI_Status *status = MPI_STATUS_IGNORE  )
     {
-        Payload<T> payload {buffer};
+        Payload<T> payload(buffer);
         return payload.receive(source, tag, status);
     }
 
@@ -438,7 +458,7 @@ namespace cluster
         ,   int tag = MPI_TAG_UB
         ,   MPI_Status *status = MPI_STATUS_IGNORE  )
     {
-        Payload<T> payload {buffer, count};
+        Payload<T> payload(buffer, count);
         return payload.receive(source, tag, status);
     }
     /**#@-*/
@@ -458,7 +478,7 @@ namespace cluster
         ,   int dest = master
         ,   int tag = MPI_TAG_UB            )
     {
-        Payload<T> payload {buffer};
+        Payload<T> payload(buffer);
         return payload.send(dest, tag);
     }
 
@@ -469,8 +489,43 @@ namespace cluster
         ,   int dest = master
         ,   int tag = MPI_TAG_UB            )
     {
-        Payload<T> payload {buffer, count};
+        Payload<T> payload(buffer, count);
         return payload.send(dest, tag);
+    }
+    /**#@-*/
+
+    /**#@+
+     * Scatters data to nodes according to given distribution.
+     * @tparam T The type of buffer data to scatter.
+     * @param sendbuf The buffer to be scattered.
+     * @param recvbuf The receiving buffer.
+     * @param sendcount The count of elements to send to each node.
+     * @param senddispl The scatter displacement of each node.
+     * @param root The operation's root node.
+     * @return MPI error code if not successful.
+     */
+    template <typename T>
+    inline int scatter
+        (   T& sendbuf
+        ,   T& recvbuf
+        ,   std::vector<int>& sendcount
+        ,   std::vector<int>& senddispl
+        ,   int root = master               )
+    {
+        Payload<T> payload(recvbuf), buffer(sendbuf);
+        return payload.scatter(buffer, sendcount.data(), senddispl.data(), root);
+    }
+
+    template <typename T>
+    inline int scatter
+        (   T *sendbuf
+        ,   T *recvbuf
+        ,   int *sendcount
+        ,   int *senddispl
+        ,   int root = master               )
+    {
+        Payload<T> payload(recvbuf, size), buffer(sendbuf);
+        return payload.scatter(buffer, sendcount, senddispl, root);
     }
     /**#@-*/
 
