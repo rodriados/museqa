@@ -53,9 +53,10 @@ namespace pairwise
          */
         struct Input
         {
-            Buffer<Workpair> pair;                  // The list of workpairs to process.
-            dSequenceList sequence;                 // The list of sequences to process.
             SharedPointer<int8_t[25][25]> table;    // The scoring table to be used.
+            const int8_t penalty;                   // The gap penalty.
+            dSequenceList sequence;                 // The list of sequences to process.
+            Buffer<Workpair> pair;                  // The list of workpairs to process.
         };
 
         extern __global__ void run(Input, Buffer<Score>);

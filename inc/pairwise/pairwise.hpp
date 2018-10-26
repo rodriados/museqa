@@ -20,8 +20,9 @@
 /*
  * Defining some configuration macros. These can be changed if needed.
  */
-#define pw_threads_per_block 32
 #define pw_prefer_shared_mem 0
+#define pw_batches_per_block 15
+#define pw_threads_per_block 32
 
 namespace pairwise
 {

@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <set>
 
 #include "fasta.hpp"
 #include "buffer.hpp"
@@ -26,6 +27,11 @@ using Block = uint32_t;
 
 namespace pairwise
 {
+    /*
+     * The final of sequence indicator.
+     */
+    constexpr const uint8_t endl = 0x18;
+
     /*
      * Declaring namespace helper functions.
      */
@@ -191,6 +197,7 @@ namespace pairwise
             SequenceList(const BaseBuffer<Block> *, size_t);
 
             SequenceList(const SequenceList&, const ptrdiff_t *, size_t);
+            SequenceList(const SequenceList&, const std::set<ptrdiff_t>&);
             SequenceList(const SequenceList&, const std::vector<ptrdiff_t>&);
 
             SequenceList& operator=(const SequenceList&) = default;
@@ -225,6 +232,7 @@ namespace pairwise
             }
 
             SequenceList select(const ptrdiff_t *, size_t) const;
+            SequenceList select(const std::set<ptrdiff_t>&) const;
             SequenceList select(const std::vector<ptrdiff_t>&) const;
             class CompressedList compress() const;
     };

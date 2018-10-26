@@ -83,6 +83,17 @@ pairwise::SequenceList::SequenceList(const pairwise::SequenceList& list, const p
  * @param list A sequence list of which data will be copied from.
  * @param selected The selected sequences from the list.
  */
+pairwise::SequenceList::SequenceList(const pairwise::SequenceList& list, const std::set<ptrdiff_t>& selected)
+{
+    for(ptrdiff_t index : selected)
+        this->list.push_back(list[index]);
+}
+
+/**
+ * Instantiates a new sequence list based on a subset of a list.
+ * @param list A sequence list of which data will be copied from.
+ * @param selected The selected sequences from the list.
+ */
 pairwise::SequenceList::SequenceList(const pairwise::SequenceList& list, const std::vector<ptrdiff_t>& selected)
 {
     for(ptrdiff_t index : selected)
@@ -98,6 +109,16 @@ pairwise::SequenceList::SequenceList(const pairwise::SequenceList& list, const s
 pairwise::SequenceList pairwise::SequenceList::select(const ptrdiff_t *selected, size_t count) const
 {
     return pairwise::SequenceList(*this, selected, count);
+}
+
+/**
+ * Creates a new sequence list based on a selection of sequences.
+ * @param selected The sequences' indices to be sent a new list.
+ * @return The new list of selected sequences.
+ */
+pairwise::SequenceList pairwise::SequenceList::select(const std::set<ptrdiff_t>& selected) const
+{
+    return pairwise::SequenceList(*this, selected);
 }
 
 /**
@@ -239,7 +260,7 @@ std::vector<Block> pairwise::encode(const char *buffer, size_t size)
         for(uint8_t j = 0; j < 6; ++j, ++n)
             actual |= (n < size && 'A' <= buffer[n] && buffer[n] <= 'Z')
                 ? toCompressed[buffer[n] - 'A'] << hShift[j]
-                : 0x18 << hShift[j];
+                : pairwise::endl << hShift[j];
 
         actual |= (i != 0)
             ? (n >= size) ? 0x2 : 0x3
