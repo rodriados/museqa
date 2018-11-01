@@ -316,11 +316,30 @@ namespace cluster
      * Represents a communication payload.
      * @tparam T The payload's data type.
      * @since 0.1.alpha
+     * @see P0136R1
      */
     template <typename T>
     class Payload : public BasePayload<T>
     {
-        using BasePayload<T>::BasePayload;
+        // Due to compilter defect report P0136R1, the base class constructor cannot be
+        // inherited with "using", as it may inject additional constructors in the derived
+        // class. For this reason, the base constructors are explicitly overriden here.
+
+        public:
+            /**
+             * Creates a new payload from buffer.
+             * @param buffer The payload's buffer.
+             */
+            Payload(T& buffer)
+            :   BasePayload<T>(buffer) {}
+
+            /**
+             * Creates a new payload from buffer.
+             * @param buffer The payload's buffer.
+             * @param size The buffer's size.
+             */
+            Payload(T *buffer, size_t size = 1)
+            :   BasePayload<T>(buffer, size) {}
     };
 
     /**
