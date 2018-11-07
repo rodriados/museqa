@@ -20,7 +20,7 @@
 /*
  * Defining some configuration macros. These can be changed if needed.
  */
-#define pw_prefer_shared_mem 0
+#define pw_prefer_shared_mem 1
 #define pw_batches_per_block 15
 #define pw_threads_per_block 32
 
@@ -54,6 +54,7 @@ namespace pairwise
             Buffer<Score>& score;                   /// The buffer of score values;
             std::vector<Workpair> pair;             /// The vector of pairs to compare.
             SharedPointer<int8_t[25][25]> table;    /// The scoring table to be used.
+            int8_t penalty;                         /// The gap penalty.
 
         public:
             Algorithm() = default;

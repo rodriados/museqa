@@ -227,7 +227,9 @@ void pairwise::Algorithm::loadBlosum()
         Line *table;
         cudacall(cudaMalloc(&table, sizeof(Line) * 25));
         cudacall(cudaMemcpy(table, &tabledata[index], sizeof(Line) * 25, cudaMemcpyHostToDevice));
+
         this->table = {table, device::deleter<Line>};
+        this->penalty = tabledata[index][24][0];
     }
 
     onlymaster debug("using scoring table %s", tablenames[index].c_str());

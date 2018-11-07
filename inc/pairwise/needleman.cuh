@@ -53,8 +53,8 @@ namespace pairwise
          */
         struct Input
         {
-            SharedPointer<int8_t[25][25]> table;    // The scoring table to be used.
             const int8_t penalty;                   // The gap penalty.
+            SharedPointer<int8_t[25][25]> table;    // The scoring table to be used.
             dSequenceList sequence;                 // The list of sequences to process.
             Buffer<Workpair> pair;                  // The list of workpairs to process.
         };

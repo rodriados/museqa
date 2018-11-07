@@ -57,12 +57,12 @@ typedef cudaDeviceProp DeviceProperties;
         finalize(DeviceError::execution(cudaGetErrorString(err)));              \
     }
 
-#  define cudacheck()                                                           \
+#  define cudacheck() {                                                         \
     DeviceStatus err = cudaGetLastError();                                      \
     if(err != cudaSuccess) {                                                    \
         debug("error in %s:%d", __FILE__, __LINE__);                            \
         finalize(DeviceError::execution(cudaGetErrorString(err)));              \
-    }
+    }}
 
 #endif
 
