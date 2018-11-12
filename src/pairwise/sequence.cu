@@ -28,12 +28,6 @@ static const uint8_t toCompressed[26] = {
     0x05, 0x17, 0x0F, 0x07, 0x04, 0x10, 0x02, 0x17, 0x13, 0x11, 0x17, 0x12, 0x16,
 };
 
-/*
- * Declaring constant values for compressing and decompressing the sequence.
- */
-__constant__ uint8_t dShift[6] = {2, 7, 12, 17, 22, 27};
-static const uint8_t hShift[6] = {2, 7, 12, 17, 22, 27};
-
 /**
  * Initializes a sequence list from a fasta file.
  * @param fasta The fasta file containing the sequences to be pushed.
@@ -231,17 +225,17 @@ pairwise::dSequenceList::dSequenceList(const pairwise::CompressedList& list)
     this->size = list.getSize();
     this->count = list.getCount();
 
-    cudacall(cudaMalloc(&buffer, sizeof(Block) * this->size));
-    cudacall(cudaMalloc(&slices, sizeof(dSequenceSlice) * this->count));
+    device::malloc(buffer, sizeof(Block) * this->size);
+    device::malloc(slices, sizeof(dSequenceSlice) * this->count);
 
-    this->buffer = {buffer, device::deleter<Block>};
-    this->slice = {slices, device::deleter<dSequenceSlice>};
+    this->buffer = {buffer, device::free<Block>};
+    this->slice = {slices, device::free<dSequenceSlice>};
 
     for(uint16_t i = 0; i < this->count; ++i)
         adapt.push_back({*this, list[i]});
 
-    cudacall(cudaMemcpy(buffer, list.getBuffer(), sizeof(Block) * this->size, cudaMemcpyHostToDevice));
-    cudacall(cudaMemcpy(slices, adapt.data(), sizeof(dSequenceSlice) * this->count, cudaMemcpyHostToDevice));
+    device::memcpy(buffer, list.getBuffer(), sizeof(Block) * this->size);
+    device::memcpy(slices, adapt.data(), sizeof(dSequenceSlice) * this->count);
 }
 
 /**
@@ -253,14 +247,15 @@ pairwise::dSequenceList::dSequenceList(const pairwise::CompressedList& list)
 std::vector<Block> pairwise::encode(const char *buffer, size_t size)
 {
     std::vector<Block> blocks;
+    constexpr const uint8_t shift[6] = {2, 7, 12, 17, 22, 27};
 
     for(size_t i = 0, n = 0; n < size; ++i) {
         Block actual = 0;
 
         for(uint8_t j = 0; j < 6; ++j, ++n)
             actual |= (n < size && 'A' <= buffer[n] && buffer[n] <= 'Z')
-                ? toCompressed[buffer[n] - 'A'] << hShift[j]
-                : pairwise::endl << hShift[j];
+                ? toCompressed[buffer[n] - 'A'] << shift[j]
+                : pairwise::endl << shift[j];
 
         actual |= (i != 0)
             ? (n >= size) ? 0x2 : 0x3
@@ -270,21 +265,6 @@ std::vector<Block> pairwise::encode(const char *buffer, size_t size)
     }
 
     return blocks;
-}
-
-/**
- * Decodes an offset of a block.
- * @param block The target block.
- * @param offset The requested offset.
- * @return The buffer's position pointer.
- */
-cudadecl uint8_t pairwise::decode(Block block, uint8_t offset)
-{
-#ifdef __CUDA_ARCH__
-    return (block >> dShift[offset]) & 0x1F;
-#else
-    return (block >> hShift[offset]) & 0x1F;
-#endif
 }
 
 /**

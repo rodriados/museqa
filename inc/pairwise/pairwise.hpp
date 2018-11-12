@@ -15,13 +15,14 @@
 #include "fasta.hpp"
 #include "buffer.hpp"
 #include "pointer.hpp"
+
 #include "pairwise/sequence.cuh"
 
 /*
  * Defining some configuration macros. These can be changed if needed.
  */
 #define pw_prefer_shared_mem 1
-#define pw_batches_per_block 15
+#define pw_alignment_batches 15
 #define pw_threads_per_block 32
 
 namespace pairwise

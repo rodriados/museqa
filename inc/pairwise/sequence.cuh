@@ -8,11 +8,11 @@
 
 #pragma once
 
-#include <ostream>
-#include <cstdint>
+#include <set>
 #include <string>
 #include <vector>
-#include <set>
+#include <ostream>
+#include <cstdint>
 
 #include "fasta.hpp"
 #include "buffer.hpp"
@@ -36,7 +36,18 @@ namespace pairwise
      * Declaring namespace helper functions.
      */
     extern std::vector<Block> encode(const char *, size_t);
-    extern cudadecl uint8_t decode(Block, uint8_t);
+
+    /**
+     * Decodes an offset of a block.
+     * @param block The target block.
+     * @param offset The requested offset.
+     * @return The buffer's position pointer.
+     */
+    inline cudadecl uint8_t decode(Block block, uint8_t offset)
+    {
+        constexpr const uint8_t shift[6] = {2, 7, 12, 17, 22, 27};
+        return (block >> shift[offset]) & 0x1F;
+    }
 
     /**
      * Represents a compressed sequence. The characters are encoded in

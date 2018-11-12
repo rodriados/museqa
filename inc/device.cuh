@@ -67,15 +67,13 @@ typedef cudaDeviceProp DeviceProperties;
 #endif
 
 /*
- * Creation of conditional macros that allow CUDA declarations to be used seamlessly
- * throughout the code without any problems.
+ * Creation of conditional macros that allow CUDA declarations to be used
+ * seamlessly throughout the code without any problems.
  */
 #ifdef __CUDACC__
 #  define cudadecl __host__ __device__
 #else
 #  define cudadecl
-#  define __device__
-#  define __host__
 #endif
 
 /**
@@ -84,27 +82,92 @@ typedef cudaDeviceProp DeviceProperties;
  */
 namespace device
 {
+#ifdef __CUDACC__
+    /**
+     * Aliases the memory copy kind indicator.
+     * @since 0.1.alpha
+     */
+    typedef cudaMemcpyKind CopyKind;
+
+    /*
+     * Enumerates all kinds of memory copies to and from device.
+     */
+    constexpr const CopyKind HtoD = cudaMemcpyHostToDevice;
+    constexpr const CopyKind DtoH = cudaMemcpyDeviceToHost;
+    constexpr const CopyKind DtoD = cudaMemcpyDeviceToDevice;
+#endif
+
+    /*
+     * Declaring global functions.
+     */
     extern int get();
     extern int count();
     extern bool exists();
     extern int select();
-
 #ifdef __CUDACC__
     extern const DeviceProperties& properties();
 #endif
-    
+
 #ifdef __CUDACC__
+    /**
+     * Allocates a block of memory in device.
+     * @tparam T The pointer type.
+     * @param ptr The pointer to which address will be stored.
+     * @param byter The size of memory block to allocate.
+     */
+    template <typename T>
+    inline void malloc(T *& ptr, size_t bytes)
+    {
+        cudacall(cudaMalloc(&ptr, bytes));
+    }
+
+    /**
+     * Copies a memory block into a different destination.
+     * @param dest The destination to which data will be copied.
+     * @param source The source of data to be copied.
+     * @param bytes The number of bytes to copy.
+     * @param kind The kind of memory transfer.
+     */
+    inline void memcpy(void *dest, const void *source, size_t bytes, CopyKind kind = HtoD)
+    {
+        cudacall(cudaMemcpy(dest, source, bytes, kind));
+    }
+
     /**
      * The function for freeing device pointers.
      * @tparam T The pointer type.
      * @param ptr The pointer to be deleted.
      */
     template <typename T>
-    inline void deleter(T *ptr)
+    inline void free(T *ptr)
     {
         cudacall(cudaFree(ptr));
     }
+
+    /**
+     * Synchronizes the device and host execution. This blocks the
+     * host execution until the device's execution is over.
+     */
+    inline void sync()
+    {
+        cudacall(cudaThreadSynchronize());
+    }
 #endif
 };
+
+/*
+ * Creation of helper macros so the kernel code becomes more readable.
+ */
+#ifdef __CUDACC__
+#  define _calcBlckId_ (blockIdx.y * gridDim.x + blockIdx.x)
+#  define _calcThrdId_ (threadIdx.y * blockDim.x + threadIdx.x)
+
+#  define threaddecl(blk, thd)                                                  \
+    const uint32_t blk = _calcBlckId_, thd = _calcThrdId_;                      \
+    const uint32_t& _intBlkIdRef_ = blk, & _intThdIdRef_ = thd;
+    
+#  define onlyblock(i) if(_intBlkIdRef_ == (i))
+#  define onlythread(i) if(_intThdIdRef_ == (i))
+#endif
 
 #endif

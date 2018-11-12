@@ -10,15 +10,25 @@
 #include "input.hpp"
 #include "device.cuh"
 
+/*
+ * Declaring global variables.
+ */
+int deviceId = -1;
+int deviceCount = -1;
+DeviceProperties deviceProps;
+
 /**
  * Informs the identifier of currently selected device.
  * @return The currently selected device identifier.
  */
 int device::get()
 {
-    int device;
-    cudacall(cudaGetDevice(&device));
-    return device;
+    if(deviceId < 0) {
+        cudacall(cudaGetDevice(&deviceId));
+        cudacall(cudaGetDeviceProperties(&deviceProps, deviceId));
+    }
+
+    return deviceId;
 }
 
 /**
@@ -27,9 +37,11 @@ int device::get()
  */
 int device::count()
 {
-    int devices;
-    cudacall(cudaGetDeviceCount(&devices));
-    return devices;
+    if(deviceCount < 0) {
+        cudacall(cudaGetDeviceCount(&deviceCount));
+    }
+
+    return deviceCount;
 }
 
 /**
@@ -50,10 +62,9 @@ int device::select()
     const int devices = cmd.has("multigpu")
         ? device::count()
         : device::exists();
-    int id = cluster::rank % devices;
 
-    cudacall(cudaSetDevice(id));
-    return id;
+    cudacall(cudaSetDevice(cluster::rank % devices));
+    return device::get();
 }
 
 /**
@@ -62,11 +73,8 @@ int device::select()
  */
 const DeviceProperties& device::properties()
 {
-    static DeviceProperties props;
-    int id = device::get();
-
-    cudacall(cudaGetDeviceProperties(&props, id));
-    return props;
+    device::get();
+    return deviceProps;
 }
 
 /**

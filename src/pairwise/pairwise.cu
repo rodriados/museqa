@@ -7,6 +7,8 @@
 
 #include "msa.hpp"
 #include "fasta.hpp"
+#include "device.cuh"
+
 #include "pairwise/pairwise.hpp"
 #include "pairwise/needleman.cuh"
 

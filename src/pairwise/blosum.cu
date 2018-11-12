@@ -225,11 +225,12 @@ void pairwise::Algorithm::loadBlosum()
 
     onlyslaves {
         Line *table;
-        cudacall(cudaMalloc(&table, sizeof(Line) * 25));
-        cudacall(cudaMemcpy(table, &tabledata[index], sizeof(Line) * 25, cudaMemcpyHostToDevice));
+        
+        device::malloc(table, sizeof(Line) * 25);
+        device::memcpy(table, &tabledata[index], sizeof(Line) * 25);
 
-        this->table = {table, device::deleter<Line>};
-        this->penalty = tabledata[index][24][0];
+        this->table = {table, device::free<Line>};
+        this->penalty = abs(tabledata[index][24][0]);
     }
 
     onlymaster debug("using scoring table %s", tablenames[index].c_str());

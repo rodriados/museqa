@@ -20,11 +20,11 @@ STDCU  ?= c++11
 
 MPILIBDIR = /usr/lib/openmpi/lib
 
-NVCCSPECIAL = --relocatable-device-code=true -D_MWAITXINTRIN_H_INCLUDED
+#NVCCSPECIAL = --relocatable-device-code=true -D_MWAITXINTRIN_H_INCLUDED
 
 MPCCFLAGS = -std=$(STDC) -I$(INCDIR) -g -Wall -lm
 MPPPFLAGS = -std=$(STDCPP) -I$(INCDIR) -g -Wall
-NVCCFLAGS = -std=$(STDCU) -I$(INCDIR) -g -arch $(NVARCH) -lmpi -lcuda -lcudart -w $(NVCCSPECIAL)
+NVCCFLAGS = -std=$(STDCU) -I$(INCDIR) -g -arch $(NVARCH) -lmpi -lcuda -lcudart -w
 LINKFLAGS = -L$(MPILIBDIR) -lmpi_cxx -lmpi -g
 
 # Lists all files to be compiled and separates them according to their

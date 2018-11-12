@@ -13,6 +13,7 @@
 
 #include "buffer.hpp"
 #include "pointer.hpp"
+ 
 #include "pairwise/sequence.cuh"
 #include "pairwise/pairwise.hpp"
 
