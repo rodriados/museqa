@@ -10,8 +10,8 @@
 #include "buffer.hpp"
 #include "device.cuh"
 #include "pointer.hpp"
+
 #include "pairwise/pairwise.hpp"
-#include "pairwise/sequence.cuh"
 #include "pairwise/needleman.cuh"
 
 namespace needleman = pairwise::needleman;
@@ -23,50 +23,58 @@ namespace needleman = pairwise::needleman;
 using ScoringTable = int8_t[25][25];
 
 /*
+ * Declaring constant variables.
+ */
+constexpr const uint16_t blockSize = pw_threads_per_block;
+constexpr const uint16_t batchSize = pw_alignment_batches * blockSize;
+
+/*
  * Dynamically allocated shared memory pointer. This variable has its contents
  * allocated dynamic at kernel call runtime.
  */
-extern __shared__ volatile pairwise::Score line[];
-
-/*
- * Declaring constant variables.
- */
-constexpr const uint8_t batch = pw_batches_per_block;
-constexpr const uint8_t warp = pw_threads_per_block;
-
-/*
- * Declaring global variables.
- */
-__device__ uint32_t blockId;
-__device__ uint8_t threadId;
+extern __shared__ pairwise::Score line[];
 
 /**
- * Aligns a slice of the sequences.
- * @param decoded The decoded target sequence to align.
+ * Aligns a slice of a sequence.
+ * @param decoded The decoded target sequence slice to align.
  * @param table The scoring table to use.
  * @param penalty The gap penalty.
+ * @param done The previous value in line.
+ * @param left The previous value in column.
  * @param letter The letter to update the LCS line.
+ * @return The value calculated in the last column.
  */
-__device__ void slice
+__device__ pairwise::Score sliceAlign
     (   const uint8_t *decoded
     ,   const ScoringTable table
     ,   const int8_t penalty
+    ,   pairwise::Score done
+    ,   pairwise::Score left
     ,   const uint8_t letter        )
 {
-    pairwise::Score prev, actual;
+    threaddecl(blockId, threadId);
 
-    for(uint8_t i = -threadId; i < batch * warp; ++i) {
-        if(i < 0) continue;
+    pairwise::Score actual;
 
-        actual = (i == 0)
-            ? line[i] + penalty
-            : max(prev + table[letter][decoded[i]], max(line[i - 1] + penalty, line[i] + penalty));
+    // To align the slice with a block of the other sequence, we use the whole warp to
+    // calculate part of its line. The threads work in a diagonal fashion upon the line.
+    // The batch size shall be large enough so the waiting times at the start and finish
+    // of the method is worth it.
+    for(int32_t sliceOffset = -threadId; sliceOffset < batchSize; ++sliceOffset)
+        if(sliceOffset >= 0) {
+            actual = max(
+                    done + table[decoded[sliceOffset]][letter]  // Match the characters
+            , max(  left - penalty                              // Gap in first sequence
+            ,       line[sliceOffset] - penalty                 // Gap in second sequence
+            ));
 
-        prev = line[i];
-        line[i] = actual;
-    }
+            done = line[sliceOffset];
+            left = line[sliceOffset] = actual;
+        }
 
     __syncthreads();
+
+    return actual;
 }
 
 /**
@@ -77,49 +85,113 @@ __device__ void slice
  * @param penalty The gap penalty.
  * @return The similarity between sequences.
  */
-__device__ pairwise::Score align
+__device__ pairwise::Score sequenceAlign
     (   const pairwise::dSequenceSlice& one
     ,   const pairwise::dSequenceSlice& two
     ,   const ScoringTable table
-    ,   const int8_t penalty                        )
+    ,   const int8_t penalty                    )
 {
-    __shared__ uint8_t decoded[batch * warp];
+    constexpr const size_t colSize = 2 * batchSize;
 
+    threaddecl(blockId, threadId);
+
+    __shared__ pairwise::Score column[colSize];
+    __shared__ uint8_t decoded[batchSize];
+    
+    pairwise::Score done, left;
+    size_t columnOffset = 0, lineOffset = 0, lineOffsetDiff = 0;
+
+    // The 0-th column and line of the alignment matrix must be initialized by using
+    // successive gap penalties. As the columns will not be recalculated each iteration,
+    // we must then manually calculate its initial state.
     #pragma unroll
-    for(uint16_t i = threadId; i < batch * warp; i += warp) {
-        decoded[i] = one.getLength() > i
-            ? one[i]
-            : pairwise::endl;
-        line[i] = penalty * i;
+    for(size_t i = threadId; i < colSize; i += blockSize)
+        column[i] = - penalty * (i + 1);
+
+    __syncthreads();
+
+    while(columnOffset < one.getLength()) {
+        // Every slice will take into account the values obtained by the previous slice.
+        // This will allow us to simulate parts of the alignment matrix without actually
+        // calculating all of its parts. Thus saving processing time and memory.
+        done = lineOffsetDiff > 0
+            ? column[lineOffsetDiff - 1]
+            : column[0] + penalty;
+
+        // For each slice, we need to set up the first row of the alignment matrix. We
+        // will achieve this by using the value obtained from the line offset of the last
+        // slice. From this value, the penalty gap is applied to complete the row. Also,
+        // here we decode the slice of sequence that will be processed in this iteration.
+        #pragma unroll
+        for(size_t i = threadId; i < batchSize; i += blockSize) {
+            decoded[i] = columnOffset + i < one.getLength()
+                ? one[columnOffset + i]
+                : pairwise::endl;
+            line[i] = done - penalty * (i + 1);
+        }
+
+        __syncthreads();
+
+        // For each line we must first calculate the value of its 0-th column. After the
+        // first iteration, the line might be offset, so we use the last known column
+        // value to calculate the values for unknown lines.
+        #pragma unroll
+        for(size_t i = threadId; i < colSize; i += blockSize) {
+            done = lineOffsetDiff + i - 1 < colSize
+                ? (lineOffsetDiff + i > 0 ? column[lineOffsetDiff + i - 1] : column[0] + penalty)
+                : column[colSize - 1] - penalty * (lineOffsetDiff + i - colSize);
+
+            left = lineOffsetDiff + i < colSize
+                ? column[lineOffsetDiff + i]
+                : column[colSize - 1] - penalty * (lineOffsetDiff + i - colSize + 1);
+
+            uint8_t letter = lineOffset + i < two.getLength()
+                ? two[lineOffset + i]
+                : pairwise::endl;
+
+            column[i] = sliceAlign(decoded, table, penalty, done, left, letter);
+        }
+
+        __syncthreads();
+
+        // Finally, we must recalculate the offsets. The line offset may not vary in a constant
+        // fashion. We try to keep the best alignment values in the middle of the of out window.
+        //lineOffsetDiff = offsetLine();
+        lineOffsetDiff = batchSize / 2;
+        columnOffset += batchSize;
+        lineOffset += lineOffsetDiff;
     }
 
-    __syncthreads();
-
-    for(size_t i = threadId, n = two.getLength(); i < n; i += warp)
-        slice(decoded, table, penalty, two[i]);
-
-    __syncthreads();
-
-    return line[0];
+    // The final result is the result obtained by the last column of the last line in the
+    // alignment matrix. If the shorter sequence has not been thoroughly processed, we add up
+    // gap penalties to its total, according to the number of unprocessed characters.
+    return column[colSize - 1] - penalty * max(0L, two.getLength() - lineOffset - colSize);
 }
 
 /** 
  * Performs the needleman sequence aligment algorithm in parallel.
- * @param input The input data requested by the algorithm.
- * @param output The output data produced by the algorithm.
+ * @param in The input data requested by the algorithm.
+ * @param out The output data produced by the algorithm.
  */
-__launch_bounds__(pw_threads_per_block)
-__global__ void needleman::run(needleman::Input input, Buffer<pairwise::Score> output)
+__launch_bounds__(pw_threads_per_block, 4)
+__global__ void needleman::run(needleman::Input in, Buffer<pairwise::Score> out)
 {
-    blockId = blockIdx.y * gridDim.x + blockIdx.x;
-    threadId = threadIdx.y * blockDim.x + threadIdx.x;
+    threaddecl(blockId, threadId);
 
-    output.getBuffer()[blockId] = align(
-        input.sequence[input.pair[blockId].first ]
-    ,   input.sequence[input.pair[blockId].second]
-    ,   input.table.getRaw()
-    ,   input.penalty
+    const dSequenceSlice& first  = in.sequence[in.pair[blockId].first ];
+    const dSequenceSlice& second = in.sequence[in.pair[blockId].second];
+
+    // We must make sure that, if the sequences have different lenghts, the first
+    // sequence must be longer than the second. This will allow the alignment
+    // heuristic used to be more accurate.
+    pairwise::Score result = sequenceAlign(
+        first.getSize() > second.getSize() ? first  : second
+    ,   first.getSize() > second.getSize() ? second : first
+    ,   in.table.getRaw()
+    ,   in.penalty
     );
+
+    onlythread(0) out.getBuffer()[blockId] = result;
 }
 
 /**
@@ -137,10 +209,10 @@ std::set<ptrdiff_t> pairwise::Needleman::select(std::vector<pairwise::Workpair>&
     std::vector<bool> usedSequence(this->list.getCount(), false);
 
     for(size_t i = 0, n = missing.size(); i < n && selectedPairs.size() < maxpairs; ++i) {
-        pairmem = sizeof(pairwise::Workpair) + sizeof(pairwise::Score) + sizeof(Block) * (
+        pairmem = 2 * sizeof(pairwise::dSequenceSlice) + sizeof(Block) * (
             (usedSequence[missing[i].first ] ? 0 : this->list[missing[i].first ].getSize())
         +   (usedSequence[missing[i].second] ? 0 : this->list[missing[i].second].getSize())
-        );
+        ) + sizeof(pairwise::Workpair) + sizeof(pairwise::Score);
 
         if(pairmem < totalmem) {
             usedSequence[missing[i].first ] = true;
@@ -158,13 +230,13 @@ std::set<ptrdiff_t> pairwise::Needleman::select(std::vector<pairwise::Workpair>&
  * @param list The list of available sequences.
  * @param pair The list of all pairs to process.
  * @param selected The indeces of pairs to process at the moment.
- * @param input The input structure.
+ * @param in The input structure.
  */
-Buffer<pairwise::Score> gpuLoad
+Buffer<pairwise::Score> deviceLoad
     (   const pairwise::SequenceList& list
     ,   const std::vector<pairwise::Workpair>& pair
     ,   const std::set<ptrdiff_t>& selected
-    ,   needleman::Input& input                         )
+    ,   needleman::Input& in                         )
 {
     std::set<ptrdiff_t> usedSequence;
 
@@ -180,14 +252,14 @@ Buffer<pairwise::Score> gpuLoad
     for(ptrdiff_t i : selected)
         pairList.push_back({*usedSequence.find(pair[i].first), *usedSequence.find(pair[i].second)});
 
-    cudacall(cudaMalloc(&gpuScore, sizeof(pairwise::Score) * pairList.size()));
-    cudacall(cudaMalloc(&gpuPairs, sizeof(pairwise::Workpair) * pairList.size()));
-    cudacall(cudaMemcpy(gpuPairs, pairList.data(), sizeof(pairwise::Workpair) * pairList.size(), cudaMemcpyHostToDevice));
+    device::malloc(gpuScore, sizeof(pairwise::Score) * pairList.size());
+    device::malloc(gpuPairs, sizeof(pairwise::Workpair) * pairList.size());
+    device::memcpy(gpuPairs, pairList.data(), sizeof(pairwise::Workpair) * pairList.size());
 
-    input.pair = {gpuPairs, pairList.size(), device::deleter<pairwise::Workpair>};
-    input.sequence = list.select(usedSequence).compress().toDevice();
+    in.pair = {gpuPairs, pairList.size(), device::free<pairwise::Workpair>};
+    in.sequence = list.select(usedSequence).compress().toDevice();
 
-    return {gpuScore, pairList.size(), device::deleter<pairwise::Score>};
+    return {gpuScore, pairList.size(), device::free<pairwise::Score>};
 }
 
 /**
@@ -206,21 +278,21 @@ void pairwise::Needleman::run()
 #endif
 
     while(!missing.empty()) {
-        std::set<ptrdiff_t> current = this->select(missing);
-        needleman::Input input = {this->table, -5};
-        Buffer<pairwise::Score> output = gpuLoad(this->list, this->pair, current, input);
+        std::set<ptrdiff_t> pair = this->select(missing);
 
-        debug("round of %d", input.pair.getSize());
+        needleman::Input in = {this->penalty, this->table};
+        Buffer<pairwise::Score> out = deviceLoad(this->list, this->pair, pair, in);
 
-        // We set out Needleman-Wunsch line to exactly 480 positions, because this is a 
-        // *magic* number, as it ends up being a multiple of both the number of characters
-        // in a block and the number of threads in a warp.
-        needleman::run<<<current.size(), warp, sizeof(pairwise::Score) * batch * warp>>>(input, output);
+        // Here, we call our kernel and allocate the batch size to our Needleman-Wunsch line buffer.
+        // We recommend that the batch size be exactly 480 as this is a *magic* number: it is a
+        // multiple of both the number of characters in a sequence block and the number of threads
+        // in a warp. Block size must not be higher than 32.
+        needleman::run<<<pair.size(), blockSize, sizeof(pairwise::Score) * batchSize>>>(in, out);
 
-        for(auto i = current.rbegin(); i != current.rend(); ++i)
+        for(auto i = pair.rbegin(); i != pair.rend(); ++i)
             missing.erase(missing.begin() + *i);
 
-        cudacall(cudaThreadSynchronize());
-        //this->recover(current, output);
+        device::sync();
+        //this->recover(pair, out);
     }
 }
