@@ -27,6 +27,7 @@ using ScoringTable = int8_t[25][25];
  */
 constexpr const uint16_t blockSize = pw_threads_per_block;
 constexpr const uint16_t batchSize = pw_alignment_batches * blockSize;
+constexpr const uint16_t colSize = 2 * batchSize;
 
 /*
  * Dynamically allocated shared memory pointer. This variable has its contents
@@ -41,20 +42,20 @@ extern __shared__ pairwise::Score line[];
  * @param penalty The gap penalty.
  * @param done The previous value in line.
  * @param left The previous value in column.
- * @param letter The letter to update the LCS line.
+ * @param letter The letter to update the LCS line with.
  * @return The value calculated in the last column.
  */
-__device__ pairwise::Score sliceAlign
+__device__ pairwise::Score sliceAlignment
     (   const uint8_t *decoded
     ,   const ScoringTable table
     ,   const int8_t penalty
     ,   pairwise::Score done
     ,   pairwise::Score left
-    ,   const uint8_t letter        )
+    ,   const uint8_t letter                )
 {
     threaddecl(blockId, threadId);
 
-    pairwise::Score actual;
+    pairwise::Score val;
 
     // To align the slice with a block of the other sequence, we use the whole warp to
     // calculate part of its line. The threads work in a diagonal fashion upon the line.
@@ -62,19 +63,28 @@ __device__ pairwise::Score sliceAlign
     // of the method is worth it.
     for(int32_t sliceOffset = -threadId; sliceOffset < batchSize; ++sliceOffset)
         if(sliceOffset >= 0) {
-            actual = max(
-                    done + table[decoded[sliceOffset]][letter]  // Match the characters
-            , max(  left - penalty                              // Gap in first sequence
-            ,       line[sliceOffset] - penalty                 // Gap in second sequence
+            uint8_t actual = decoded[sliceOffset];
+            bool active = (actual != pairwise::endl) || (letter != pairwise::endl);
+
+            // The new value of the line is obtained from the maximum value between the
+            // previous line or column plus the corresponding penalty or gain.
+            val = max(  active ? done              + table[actual][letter] : done
+            ,     max(  active ? left              - penalty               : left
+            ,           active ? line[sliceOffset] - penalty               : line[sliceOffset]
             ));
 
             done = line[sliceOffset];
-            left = line[sliceOffset] = actual;
+            left = line[sliceOffset] = val;
         }
 
     __syncthreads();
 
-    return actual;
+    return val;
+}
+
+__device__ uint16_t offsetLine(const pairwise::Score column[])
+{
+    return 240;
 }
 
 /**
@@ -85,14 +95,12 @@ __device__ pairwise::Score sliceAlign
  * @param penalty The gap penalty.
  * @return The similarity between sequences.
  */
-__device__ pairwise::Score sequenceAlign
+__device__ pairwise::Score fullAlignment
     (   const pairwise::dSequenceSlice& one
     ,   const pairwise::dSequenceSlice& two
     ,   const ScoringTable table
     ,   const int8_t penalty                    )
 {
-    constexpr const size_t colSize = 2 * batchSize;
-
     threaddecl(blockId, threadId);
 
     __shared__ pairwise::Score column[colSize];
@@ -137,9 +145,11 @@ __device__ pairwise::Score sequenceAlign
         // value to calculate the values for unknown lines.
         #pragma unroll
         for(size_t i = threadId; i < colSize; i += blockSize) {
-            done = lineOffsetDiff + i - 1 < colSize
-                ? (lineOffsetDiff + i > 0 ? column[lineOffsetDiff + i - 1] : column[0] + penalty)
-                : column[colSize - 1] - penalty * (lineOffsetDiff + i - colSize);
+            done = lineOffsetDiff + i <= 0
+                ? column[0] + penalty
+                : lineOffsetDiff + i - 1 < colSize
+                    ? column[lineOffsetDiff + i - 1]
+                    : column[colSize - 1] - penalty * (lineOffsetDiff + i - colSize);
 
             left = lineOffsetDiff + i < colSize
                 ? column[lineOffsetDiff + i]
@@ -149,23 +159,25 @@ __device__ pairwise::Score sequenceAlign
                 ? two[lineOffset + i]
                 : pairwise::endl;
 
-            column[i] = sliceAlign(decoded, table, penalty, done, left, letter);
+            column[i] = sliceAlignment(decoded, table, penalty, done, left, letter);
         }
 
         __syncthreads();
 
         // Finally, we must recalculate the offsets. The line offset may not vary in a constant
         // fashion. We try to keep the best alignment values in the middle of the of out window.
-        //lineOffsetDiff = offsetLine();
-        lineOffsetDiff = batchSize / 2;
+        lineOffsetDiff = offsetLine(column);
         columnOffset += batchSize;
         lineOffset += lineOffsetDiff;
     }
 
+    __syncthreads();
+
     // The final result is the result obtained by the last column of the last line in the
     // alignment matrix. If the shorter sequence has not been thoroughly processed, we add up
     // gap penalties to its total, according to the number of unprocessed characters.
-    return column[colSize - 1] - penalty * max(0L, two.getLength() - lineOffset - colSize);
+    int32_t gaps = two.getLength() - lineOffset - colSize;
+    return column[colSize - 1] - penalty * max(gaps, 0);
 }
 
 /** 
@@ -178,20 +190,22 @@ __global__ void needleman::run(needleman::Input in, Buffer<pairwise::Score> out)
 {
     threaddecl(blockId, threadId);
 
-    const dSequenceSlice& first  = in.sequence[in.pair[blockId].first ];
-    const dSequenceSlice& second = in.sequence[in.pair[blockId].second];
+    if(blockId < in.pair.getSize()) {
+        const dSequenceSlice& first  = in.sequence[in.pair[blockId].first ];
+        const dSequenceSlice& second = in.sequence[in.pair[blockId].second];
 
-    // We must make sure that, if the sequences have different lenghts, the first
-    // sequence must be longer than the second. This will allow the alignment
-    // heuristic used to be more accurate.
-    pairwise::Score result = sequenceAlign(
-        first.getSize() > second.getSize() ? first  : second
-    ,   first.getSize() > second.getSize() ? second : first
-    ,   in.table.getRaw()
-    ,   in.penalty
-    );
+        // We must make sure that, if the sequences have different lenghts, the first
+        // sequence must be longer than the second. This will allow the alignment
+        // heuristic used to be more accurate.
+        pairwise::Score result = fullAlignment(
+            first.getSize() > second.getSize() ? first  : second
+        ,   first.getSize() > second.getSize() ? second : first
+        ,   in.table.getRaw()
+        ,   in.penalty
+        );
 
-    onlythread(0) out.getBuffer()[blockId] = result;
+        onlythread(0) out.getBuffer()[blockId] = result;
+    }
 }
 
 /**
