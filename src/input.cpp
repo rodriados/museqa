@@ -96,7 +96,7 @@ const Option& Parser::find(const std::string& needle) const
  */
 const InputError InputError::unknown(const std::string& option)
 {
-    return InputError("unknown option " s_bold c_red_bg + option + s_reset);
+    return InputError("unknown option " s_bold c_red_fg + option + s_reset);
 }
 
 /**
@@ -106,5 +106,5 @@ const InputError InputError::unknown(const std::string& option)
  */
 const InputError InputError::missing(const std::string& option)
 {
-    return InputError("required option " s_bold c_green_bg + option + s_reset);
+    return InputError("required option " s_bold c_green_fg + option + s_reset);
 }

@@ -19,7 +19,7 @@ Fasta::Fasta(const std::string& fname)
 {
     onlymaster {
         this->load(fname);
-        debug("loaded %lu sequences from %s", this->getCount(), fname.c_str());
+        info("loaded %lu sequences from %s", this->getCount(), fname.c_str());
     }
 }
 
@@ -32,7 +32,7 @@ void Fasta::load(const std::string& fname)
     std::fstream ffile(fname, std::fstream::in);
 
     if(ffile.fail())
-        finalize(Error("input file is invalid or does not exist."));
+        finalize({"input file is invalid or does not exist."});
 
     while(!ffile.eof() && !ffile.fail())
         this->extract(ffile);
@@ -65,7 +65,6 @@ bool Fasta::extract(std::fstream& ffile)
         sequence.append(buffer);
 
     this->push(description, sequence);
-
     return true;
 }
 

@@ -8,21 +8,6 @@
 
 #pragma once
 
-/*
- * Leave uncommented if compiling in debug mode. This may affect many aspects
- * of the software, such as error reporting.
- */
-#define msa_debug
-
-/*
- * The software's information. Any of the provided information piece can be printed
- * from the command line as an argument.
- */
-#define msa_appname "msa"
-#define msa_version "0.1.alpha"
-#define msa_author  "Rodrigo Albuquerque de Oliveira Siqueira"
-#define msa_email   "rodriados@gmail.com"
-
 /* 
  * Checks whether the system we are compiling in is POSIX compatible. If it
  * is not POSIX compatible, some conditional compiling may take place.
@@ -37,45 +22,12 @@
 #define msa_windows
 #endif
 
-#include <cstdio>
-#include <string>
 #include <cstdint>
 #include <cstddef>
 
-#include "colors.h"
+#include "config.h"
+#include "helper.h"
+
 #include "node.hpp"
-
-/*
- * Defines some debug macro functions. These functions should be used to
- * print out debugging information.
- */ 
-#ifdef msa_debug
-#define debug(msg, ...) fprintf(stderr, msa_appname style(bold, " [ debug]: ") msg "\n", ##__VA_ARGS__)
-#else
-#ifndef __CUDA_ARCH__
-#define debug(msg, ...) if(verbose) {fprintf(stderr, msa_appname style(bold, " [ debug]: ") msg "\n", ##__VA_ARGS__);}
-#else
-#define debug(msg, ...) // do not print anything from device, please.
-#endif
-#endif
-
-/**
- * This struct handles error messages so they can be easily accessible.
- * This struct shall be inherited by any module willing to keep its errors.
- * @since 0.1.alpha
- */
-struct Error
-{
-    std::string msg;
-    Error() : msg("") {}
-    Error(const std::string& msg) : msg(msg) {}
-    static const Error success() { return Error(); };
-};
-
-/*
- * Declaring global variables and functions.
- */
-extern bool verbose;
-[[noreturn]] extern void finalize(Error);
 
 #endif

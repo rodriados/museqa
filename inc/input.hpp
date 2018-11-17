@@ -14,15 +14,28 @@
 
 #include "msa.hpp"
 
+#include <cstdio>
+
 /**
  * Allows the creation of error instances related to the Input module.
  * @since 0.1.alpha
  */
 struct InputError : public Error
 {
-    using Error::Error;
+    /**
+     * Constructs a new error instance from string.
+     * @param msg The error message.
+     */
+    InputError(const std::string& msg)
+    :   sref(msg)
+    {
+        this->msg = this->sref.c_str();
+    }
+
     static const InputError missing(const std::string&);
     static const InputError unknown(const std::string&);
+
+    std::string sref;   /// The C++ string reference.
 };
 
 /**

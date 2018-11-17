@@ -13,38 +13,31 @@
 #include "timer.hpp"
 #include "device.cuh"
 #include "cluster.hpp"
-
 #include "pairwise.hpp"
 
 /*
- * Declaring global variables.
+ * Declaring aliases for output file descriptions.
  */
-bool verbose = false;
-constexpr auto& out = std::cout;
-constexpr auto& err = std::cerr;
-
-/*
- * Declaring global no-return functions.
- */
-[[noreturn]] void usage();
-[[noreturn]] void version();
+static std::ostream& out = std::cout;
+static std::ostream& err = std::cerr;
 
 /**
  * The application class. This class is responsible for running the application's
  * specific functions.
  * @since 0.1.alpha
  */
-class App final
+class Application final
 {
-    private:
-        Timer<> timer;          /// The timer to use when measuring execution times.
 
     private:
         Fasta fasta;            /// The Fasta file to be aligned.
         Pairwise pwise;         /// The pairwise step instance.
 
+    protected:
+        Timer<> timer;          /// The timer to use when measuring execution times.
+
     public:
-        App() = default;
+        Application() = default;
 
         /**
          * Runs the application. This method times the execution of all steps for
@@ -88,7 +81,7 @@ class App final
         static void report(const std::string& name, double elapsed)
         {
             onlymaster {
-                out << msa_appname << s_bold " [report]: " s_reset
+                out << s_bold "[ report]: " s_reset
                     << s_bold c_green_fg << name << s_reset " in "
                     << elapsed << " seconds" << std::endl;
             }
@@ -105,86 +98,31 @@ int main(int argc, char **argv)
 {
     cluster::init(argc, argv);
 
-    if(cluster::size < 2)
-        finalize(Error("at least 2 nodes are needed."));
-
-    onlyslaves if(!device::exists())
-        finalize(DeviceError::noGPU());
-
     cmd.init({
         {"h", "help",     "Displays this help menu." }
     ,   {"v", "version",  "Displays the software version." }
-    ,   {"b", "verbose",  "Activates verbose mode." }
     ,   {"m", "multigpu", "Try to use multiple devices in a single host."}
     ,   {"f", "file",     "File to be processed.", "filename"}
     ,   {"x", "matrix",   "Choose the scoring matrix to use.", "matrix"}
     }, {"filename"});
 
     cmd.parse(argc, argv);
-    if(cmd.has("help"))     usage();
-    if(cmd.has("version"))  version();
+    if(cmd.has("help"))    { onlymaster usage();   exit(0); }
+    if(cmd.has("version")) { onlymaster version(); exit(0); }
     cmd.check();
 
-    verbose = cmd.has("verbose");
-    cluster::sync();
+    if(cluster::size < 2)
+        finalize({"at least 2 nodes are needed."});
+
+    onlyslaves if(!device::exists())
+        finalize(DeviceError::noGPU());
 
     onlyslaves device::select();
+    cluster::sync();
 
-    App msa;
-    msa.run();
+    Application app;
+    app.run();
 
     cluster::finalize();
     return 0;
-}
-
-/**
- * Prints out a message of help for the user. The message uses the description
- * of options given and set on main.
- * @see main
- */
-[[noreturn]] void usage()
-{
-    onlymaster {
-        err << msa_appname << s_bold " [usage]: " s_reset
-            << "mpirun [...] " << cmd.getAppname() << " [options]" << std::endl
-            << msa_appname << s_bold " [options]:" << std::endl;
-
-        for(const Option& option : cmd.getOptions())
-            err << s_bold "  -" << option.getSname() << ", --" << option.getLname() << s_reset " "
-                << (!option.getArgument().empty() ? option.getArgument() : "") << std::endl
-                << "    " << option.getDescription() << std::endl;
-    }
-
-    finalize(Error::success());
-}
-
-/**
- * Prints out the software's current version. This is important so the user can
- * know whether they really are using the software they want to.
- * @see main
- */
-[[noreturn]] void version()
-{
-    onlymaster {
-        err << msa_appname << s_bold " [version]: " s_reset
-            << msa_version << std::endl;
-    }
-
-    finalize(Error::success());
-}
-
-/**
- * Aborts the execution and kills all processes.
- * @param error Error detected during execution.
- */
-[[noreturn]] void finalize(Error error)
-{
-    if(!error.msg.empty()) {
-        err << msa_appname << s_bold " [fatal error]: " s_reset
-            << error.msg << std::endl
-            << "execution has terminated." << std::endl;
-    }
-
-    cluster::finalize();
-    exit(0);
 }

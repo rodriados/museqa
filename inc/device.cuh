@@ -16,7 +16,15 @@
  */
 struct DeviceError : public Error
 {
-    using Error::Error;
+    /**
+     * Constructs a new error instance.
+     * @param msg The error message.
+     */
+    DeviceError(const char *msg)
+    {
+        this->msg = msg;
+    }
+    
     static const DeviceError noGPU();
     static const DeviceError execution(const char *);
 };
@@ -50,17 +58,17 @@ typedef cudaDeviceProp DeviceProperties;
  * a CUDA function is called. This verifies for any errors and tries to inform what
  * was the error.
  */
-#define cudacall(call)                                                        \
+#define cudacall(call)                                                          \
     if((call) != cudaSuccess) {                                                 \
         DeviceStatus err = cudaGetLastError();                                  \
-        debug("error in %s:%d", __FILE__, __LINE__);                            \
+        info("error in %s:%d", __FILE__, __LINE__);                             \
         finalize(DeviceError::execution(cudaGetErrorString(err)));              \
     }
 
-#define cudacheck() {                                                         \
+#define cudacheck() {                                                           \
     DeviceStatus err = cudaGetLastError();                                      \
     if(err != cudaSuccess) {                                                    \
-        debug("error in %s:%d", __FILE__, __LINE__);                            \
+        info("error in %s:%d", __FILE__, __LINE__);                             \
         finalize(DeviceError::execution(cudaGetErrorString(err)));              \
     }}
 
