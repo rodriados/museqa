@@ -8,6 +8,8 @@
 
 #pragma once
 
+#ifndef msa_disable_cluster
+
 /*
  * Defining macro indicating the node rank to be used as the master node. It
  * is recommended not to change it, as no other rank is garanteed to exist.
@@ -55,14 +57,21 @@ namespace node
     }
 };
 
+#undef master_node_id
+#endif
+
 /*
  * Defines some process control macros. These macros are to be used when
  * it is needed to check whether the current process is master or not.
  */
-#define onlymaster    if(node::ismaster())
-#define onlyslaves    if(node::isslave())
-#define onlyslave(i)  if(node::isslave() && node::is(i))
-
-#undef master_node_id
+#ifndef msa_disable_cluster
+#define onlymaster   if(node::ismaster())
+#define onlyslaves   if(node::isslave())
+#define onlyslave(i) if(node::isslave() && node::is(i))
+#else
+#define onlymaster   if(1)
+#define onlyslaves   if(0)
+#define onlyslave(i) if(0)
+#endif
 
 #endif

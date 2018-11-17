@@ -66,6 +66,7 @@ class App final
         void load()
         {
             this->fasta = Fasta(cmd.get("filename"));
+            Fasta::broadcast(this->fasta);
             cluster::sync();
         }
 
@@ -87,7 +88,7 @@ class App final
         static void report(const std::string& name, double elapsed)
         {
             onlymaster {
-                out << MSA << s_bold " [report]: " s_reset
+                out << msa_appname << s_bold " [report]: " s_reset
                     << s_bold c_green_fg << name << s_reset " in "
                     << elapsed << " seconds" << std::endl;
             }
@@ -144,9 +145,9 @@ int main(int argc, char **argv)
 [[noreturn]] void usage()
 {
     onlymaster {
-        err << MSA << s_bold " [usage]: " s_reset
+        err << msa_appname << s_bold " [usage]: " s_reset
             << "mpirun [...] " << cmd.getAppname() << " [options]" << std::endl
-            << MSA << s_bold " [options]:" << std::endl;
+            << msa_appname << s_bold " [options]:" << std::endl;
 
         for(const Option& option : cmd.getOptions())
             err << s_bold "  -" << option.getSname() << ", --" << option.getLname() << s_reset " "
@@ -165,8 +166,8 @@ int main(int argc, char **argv)
 [[noreturn]] void version()
 {
     onlymaster {
-        err << MSA << s_bold " [version]: " s_reset
-            << MSA_VERSION << std::endl;
+        err << msa_appname << s_bold " [version]: " s_reset
+            << msa_version << std::endl;
     }
 
     finalize(Error::success());
@@ -179,7 +180,7 @@ int main(int argc, char **argv)
 [[noreturn]] void finalize(Error error)
 {
     if(!error.msg.empty()) {
-        err << MSA << s_bold " [fatal error]: " s_reset
+        err << msa_appname << s_bold " [fatal error]: " s_reset
             << error.msg << std::endl
             << "execution has terminated." << std::endl;
     }

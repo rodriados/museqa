@@ -8,6 +8,8 @@
 
 #pragma once
 
+#ifndef msa_disable_cluster
+
 #include <cstdint>
 #include <vector>
 #include <mpi.h>
@@ -570,4 +572,5 @@ namespace cluster
     }
 };
 
+#endif
 #endif

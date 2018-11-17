@@ -21,8 +21,6 @@ Fasta::Fasta(const std::string& fname)
         this->load(fname);
         debug("loaded %lu sequences from %s", this->getCount(), fname.c_str());
     }
-
-    broadcast(*this);
 }
 
 /**
@@ -97,8 +95,9 @@ void Fasta::push(const std::string& description, const char *buffer, size_t size
  * This method will send all sequences to all nodes.
  * @param fasta The target instance for broadcast.
  */
-void broadcast(Fasta& fasta)
+void Fasta::broadcast(Fasta& fasta)
 {
+#ifndef msa_disable_cluster
     std::vector<char> data;
     std::vector<size_t> sizes(fasta.getCount());
 
@@ -114,4 +113,5 @@ void broadcast(Fasta& fasta)
         fasta.push("__slave", &data[off], sizes[i]);
         off += sizes[i];
     }
+#endif
 }

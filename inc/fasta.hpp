@@ -9,7 +9,6 @@
 #pragma once
 
 #include <string>
-#include <memory>
 #include <fstream>
 
 #include "sequence.hpp"
@@ -112,12 +111,12 @@ class Fasta final
 
         void load(const std::string&);
 
+        static void broadcast(Fasta&);
+
     private:
         bool extract(std::fstream&);
         void push(const std::string&, const std::string&);
         void push(const std::string&, const char *, size_t);
-
-    friend void broadcast(Fasta&);
 };
 
 #endif
