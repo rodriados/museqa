@@ -93,6 +93,7 @@ class Fasta final
 
         /**
          * Gives access to a specific sequence of the list.
+         * @param offset The requested sequence offset.
          * @return The requested sequence.
          */
         inline const FastaSequence& operator[](ptrdiff_t offset) const
