@@ -20,7 +20,7 @@
 class FastaSequence : public Sequence
 {
     private:
-        const std::string description;  /// The sequence description.
+        std::string description;  /// The sequence description.
 
     public:
         FastaSequence() = default;
@@ -111,13 +111,14 @@ class Fasta final
         }
 
         void load(const std::string&);
+        void push(const FastaSequence&);
+        void push(const std::string&, const std::string&);
+        void push(const std::string&, const char *, size_t);
 
         static void broadcast(Fasta&);
 
     private:
         bool extract(std::fstream&);
-        void push(const std::string&, const std::string&);
-        void push(const std::string&, const char *, size_t);
 };
 
 #endif

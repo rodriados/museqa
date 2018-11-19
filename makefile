@@ -44,6 +44,7 @@ PYXCFILES := $(shell find $(SRCDIR) -name '*.pyx')
 
 SRCINTERNAL = $(sort $(dir $(wildcard $(SRCDIR)/*/. $(SRCDIR)/*/*/.)))
 OBJINTERNAL = $(SRCINTERNAL:$(SRCDIR)/%=$(OBJDIR)/%)
+TSTINTERNAL = $(SRCINTERNAL:$(SRCDIR)/%=$(TESTDIR)/$(NAME)/%)
 
 ODEPS = $(MPCCFILES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)                        	\
         $(MPPPFILES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)                      	\
@@ -92,10 +93,10 @@ $(TESTDIR)/$(NAME)/%.so: $(OBJDIR)/%.cxx $$(wildcard $(OBJDIR)/%.so) $(OBJDIR)/h
 	$(PYCC) $(PYCCFLAGS) $^ -o $@
 
 install:
-	@mkdir -p $(OBJINTERNAL) $(TESTDIR)/$(NAME)
+	@mkdir -p $(OBJINTERNAL) $(TSTINTERNAL)
 
 clean:
-	@rm -rf $(NAME) $(OBJDIR) $(TESTDIR)/$(NAME)/*.so $(SRCDIR)/*~ *~
+	@rm -rf $(NAME) $(OBJDIR) $(TESTDIR)/$(NAME)/*.so $(TESTDIR)/$(NAME)/*.pyc $(SRCDIR)/*~ *~
 
 .PHONY: all clean install production testing
 

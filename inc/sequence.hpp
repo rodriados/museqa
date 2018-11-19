@@ -47,6 +47,15 @@ class Sequence : public Buffer<char>
         {
             return this->getSize();
         }
+
+        /**
+         * Transforms the sequence into a string.
+         * @return The sequence representation as a string.
+         */
+        inline std::string toString() const
+        {
+            return std::string(this->getBuffer(), this->getLength());
+        }
 };
 
 /**
@@ -56,9 +65,7 @@ class Sequence : public Buffer<char>
  */
 inline std::ostream& operator<<(std::ostream& os, const BaseBuffer<char>& sequence)
 {
-    for(size_t i = 0; i < sequence.getSize(); ++i)
-        os << sequence[i];
-
+    os << std::string(sequence.getBuffer(), sequence.getSize());
     return os;
 }
 

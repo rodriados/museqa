@@ -19,9 +19,12 @@ cdef extern from "sequence.hpp":
         cSequence& operator=(const cSequence&)
 
         long getLength()
+        string toString()
 
 # Creates an sequence. This sequence is a buffer an any modification to
 # it shall be implemented by inherited methods.
 # @since 0.1.alpha
 cdef class Sequence:
-    cdef cSequence _refSequence
+
+    # Reference for the instance of the wrapped C++ object.
+    cdef cSequence _wrapped

@@ -70,6 +70,15 @@ bool Fasta::extract(std::fstream& ffile)
 
 /**
  * Pushes a new sequence into the list.
+ * @param sequence The sequence to be added to the list.
+ */
+void Fasta::push(const FastaSequence& sequence)
+{
+    this->list.push_back(FastaSequence(sequence));
+}
+
+/**
+ * Pushes a new sequence into the list.
  * @param description The new sequence description.
  * @param string A string that will originate a new sequence into the list.
  */

@@ -3,6 +3,7 @@
 # Multiple Sequence Alignment sequence wrapper file.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
 # @copyright 2018 Rodrigo Siqueira
+from libcpp.string cimport string
 from sequence cimport cSequence
 
 # Creates an sequence. This sequence is a buffer an any modification to
@@ -11,21 +12,26 @@ from sequence cimport cSequence
 cdef class Sequence:
 
     # Instantiates a new sequence.
-    # @param mixed source The string data source.
-    def __cinit__(self, source):
-        if isinstance(source, basestring):
-            self._refSequence = cSequence(<string>source)
-        else:
-            self._refSequence = <const cSequence&>source._refSequence
+    # @param str contents The string contents.
+    def __cinit__(self, contents, *_):
+        cdef string cstr = <string>(str(contents))
+        self._wrapped = cSequence(cstr)
 
     # Gives access to a specific location in buffer's data.
     # @param offset The requested buffer offset.
     # @return char The buffer's position pointer.
     def __getitem__(self, int offset):
-        return str(unichr(self._refSequence[offset]))
+        if offset >= self.length:
+            raise IndexError("list index out of range")
+        return str(unichr(self._wrapped[offset]))
+
+    # Transforms the sequence into a string.
+    # @return The sequence representation as a string.
+    def __str__(self):
+        return self._wrapped.toString()
 
     @property
     # Informs the length of the sequence.
     # @return int The sequence's length.
     def length(self):
-        return self._refSequence.getLength()
+        return self._wrapped.getLength()
