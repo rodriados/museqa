@@ -1,10 +1,10 @@
 /** 
- * Multiple Sequence Alignment input header file.
+ * Multiple Sequence Alignment command line header file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018 Rodrigo Siqueira
  */
-#ifndef INPUT_HPP_INCLUDED
-#define INPUT_HPP_INCLUDED
+#ifndef CLI_HPP_INCLUDED
+#define CLI_HPP_INCLUDED
 
 #pragma once
 
@@ -14,28 +14,15 @@
 
 #include "msa.hpp"
 
-#include <cstdio>
-
 /**
  * Allows the creation of error instances related to the Input module.
  * @since 0.1.alpha
  */
-struct InputError : public Error
+struct CliError : public Error
 {
-    /**
-     * Constructs a new error instance from string.
-     * @param msg The error message.
-     */
-    InputError(const std::string& msg)
-    :   sref(msg)
-    {
-        this->msg = this->sref.c_str();
-    }
-
-    static const InputError missing(const std::string&);
-    static const InputError unknown(const std::string&);
-
-    std::string sref;   /// The C++ string reference.
+    using Error::Error;
+    static const CliError missing(const std::string&);
+    static const CliError unknown(const std::string&);
 };
 
 /**
@@ -147,7 +134,7 @@ class Option
  * be easily retrieved when needed.
  * @since 0.1.alpha
  */
-class Parser
+class CliParser
 {
     protected:
         std::string appname;                        /// The name used by the application.
@@ -156,7 +143,7 @@ class Parser
         std::map<std::string, std::string> values;  /// The list of parsed values.
 
     public:
-        Parser() noexcept = default;
+        CliParser() noexcept = default;
 
         /**
          * Checks whether an argument exists.
@@ -201,7 +188,6 @@ class Parser
 
         void init(const std::vector<Option>&, const std::vector<std::string>&);
         void parse(int, char **);
-        void check() const;
 
     private:
         const Option& find(const std::string&) const;
@@ -210,6 +196,6 @@ class Parser
 /*
  * Declaring global variables and functions.
  */
-extern Parser cmd;
+extern CliParser cli;
 
 #endif

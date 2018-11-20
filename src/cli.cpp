@@ -8,19 +8,19 @@
 #include <string>
 
 #include "msa.hpp"
-#include "input.hpp"
+#include "cli.hpp"
 
 /*
  * Declaring global variables and functions.
  */
-Parser cmd;
+CliParser cli;
 
 /**
  * Initializes the parser with the options it should parse.
  * @param options The list of available options for this parser.
  * @param arguments The list of positional (and required) arguments.
  */
-void Parser::init
+void CliParser::init
     (   const std::vector<Option>& options
     ,   const std::vector<std::string>& arguments   )
 {
@@ -33,7 +33,7 @@ void Parser::init
  * @param argc The number of command line arguments.
  * @param argv The command line arguments.
  */
-void Parser::parse(int argc, char **argv)
+void CliParser::parse(int argc, char **argv)
 {
     unsigned int position = 0;
     this->appname = argv[0];
@@ -49,7 +49,7 @@ void Parser::parse(int argc, char **argv)
         }
 
         if(!option.isUnknown() && option.isVariadic()) {
-            if(i + 1 >= argc) finalize(InputError::unknown(option.getLname()));
+            if(i + 1 >= argc) finalize(CliError::unknown(option.getLname()));
             this->values[option.getArgument()] = argv[++i];
             continue;
         }
@@ -59,18 +59,12 @@ void Parser::parse(int argc, char **argv)
             continue;
         }
 
-        finalize(InputError::unknown(argv[i]));
+        finalize(CliError::unknown(argv[i]));
     }
-}
 
-/**
- * Checks whether all required arguments have been sent.
- */
-void Parser::check() const
-{
     for(const std::string& required : this->arguments)
         if(!this->has(required))
-            finalize(InputError::missing(required));
+            finalize(CliError::missing(required));
 }
 
 /**
@@ -78,7 +72,7 @@ void Parser::check() const
  * @param needle The option being searched for.
  * @return The found option or an unknown option.
  */
-const Option& Parser::find(const std::string& needle) const
+const Option& CliParser::find(const std::string& needle) const
 {
     static Option unknown {};
 
@@ -94,9 +88,9 @@ const Option& Parser::find(const std::string& needle) const
  * @param option The unknown option.
  * @return The error instance.
  */
-const InputError InputError::unknown(const std::string& option)
+const CliError CliError::unknown(const std::string& option)
 {
-    return InputError("unknown option " s_bold c_red_fg + option + s_reset);
+    return {"unknown option " s_bold c_red_fg + option + s_reset, ErrorFatal};
 }
 
 /**
@@ -104,7 +98,7 @@ const InputError InputError::unknown(const std::string& option)
  * @param option The missing option.
  * @return The error instance.
  */
-const InputError InputError::missing(const std::string& option)
+const CliError CliError::missing(const std::string& option)
 {
-    return InputError("required option " s_bold c_green_fg + option + s_reset);
+    return {"required option " s_bold c_green_fg + option + s_reset, ErrorFatal};
 }

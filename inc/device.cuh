@@ -16,15 +16,7 @@
  */
 struct DeviceError : public Error
 {
-    /**
-     * Constructs a new error instance.
-     * @param msg The error message.
-     */
-    DeviceError(const char *msg)
-    {
-        this->msg = msg;
-    }
-    
+    using Error::Error;
     static const DeviceError noGPU();
     static const DeviceError execution(const char *);
 };

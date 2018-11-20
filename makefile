@@ -46,8 +46,8 @@ SRCINTERNAL = $(sort $(dir $(wildcard $(SRCDIR)/*/. $(SRCDIR)/*/*/.)))
 OBJINTERNAL = $(SRCINTERNAL:$(SRCDIR)/%=$(OBJDIR)/%)
 TSTINTERNAL = $(SRCINTERNAL:$(SRCDIR)/%=$(TESTDIR)/$(NAME)/%)
 
-ODEPS = $(MPCCFILES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)                        	\
-        $(MPPPFILES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)                      	\
+ODEPS = $(MPCCFILES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)                            \
+        $(MPPPFILES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)                          \
         $(NVCCFILES:$(SRCDIR)/%.cu=$(OBJDIR)/%.o)
 TDEPS = $(PYXCFILES:$(SRCDIR)/%.pyx=$(OBJDIR)/%.so)                         \
         $(PYXCFILES:$(SRCDIR)/%.pyx=$(TESTDIR)/$(NAME)/%.so)
@@ -81,6 +81,7 @@ $(OBJDIR)/%.o $(OBJDIR)/%.so: $(SRCDIR)/%.cu
 	@$(NVCC) $(NVCCFLAGS) -M $< -odir $(patsubst %/,%,$(dir $@)) > $(@:%.o=%.d)
 	$(NVCC) $(NVCCFLAGS) -c $< -o $@
 
+# If no correspondent file has been found, simply ignore.
 $(OBJDIR)/%.so: ;
 
 # Converting Cython files to C++

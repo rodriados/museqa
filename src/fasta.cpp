@@ -21,6 +21,8 @@ Fasta::Fasta(const std::string& fname)
         this->load(fname);
         info("loaded %lu sequences from %s", this->getCount(), fname.c_str());
     }
+
+    broadcast(*this);
 }
 
 /**
@@ -32,7 +34,7 @@ void Fasta::load(const std::string& fname)
     std::fstream ffile(fname, std::fstream::in);
 
     if(ffile.fail())
-        finalize({"input file is invalid or does not exist."});
+        finalize({"input file is invalid or does not exist.", ErrorRuntime});
 
     while(!ffile.eof() && !ffile.fail())
         this->extract(ffile);

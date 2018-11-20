@@ -7,7 +7,7 @@
 #include <cuda.h>
 
 #include "msa.hpp"
-#include "input.hpp"
+#include "cli.hpp"
 #include "device.cuh"
 
 /*
@@ -59,7 +59,7 @@ bool device::exists()
  */
 int device::select()
 {
-    const int devices = cmd.has("multigpu")
+    const int devices = cli.has("multigpu")
         ? device::count()
         : device::exists();
 
@@ -83,7 +83,7 @@ const DeviceProperties& device::properties()
  */
 const DeviceError DeviceError::noGPU()
 {
-    return DeviceError("No compatible GPU has been found.");
+    return {"No compatible GPU has been found.", ErrorFatal};
 }
 
 /**
@@ -93,6 +93,6 @@ const DeviceError DeviceError::noGPU()
  */
  const DeviceError DeviceError::execution(const char *msg)
  {
-    return DeviceError(msg);
+    return {msg, ErrorFatal};
  }
  

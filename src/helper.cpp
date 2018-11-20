@@ -5,49 +5,25 @@
  */
 #include <stdexcept>
 #include <cstdio>
+#include <map>
 
 #include "config.h"
-#include "helper.h"
+#include "helper.hpp"
 
 #ifndef msa_disable_cluster
-#include "node.hpp"
 #include "cluster.hpp"
 #endif
 
-/**
- * Prints out a message of help for the user. The message uses the description
- * of options given and set on main. The message consists of all command line
- * options currently available. The name, arguments and a brief description of
- * each command are also shown.
- * @see main
+/*
+ * Maps error severity to its name. This is useful so we can show the user what
+ * kind of error was thrown and detected in the code.
  */
-void usage()
-{
-#ifndef msa_disable_cluster
-    onlymaster {
-        fprintf(stderr, s_bold "[  usage]:" s_reset " msarun [options] filename\n");
-    }
-
-    finalize({});
-#endif
-}
-
-/**
- * Prints out the software's current version. This is important so the user can
- * know whether they really are using the software they want to. The version of
- * this software is defined in the main header file, and should not be hardwired.
- * @see inc/msa.hpp
- */
-void version()
-{
-#ifndef msa_disable_cluster
-    onlymaster {
-        fprintf(stderr, s_bold "[version]:" s_reset " %s\n", msa_version);
-    }
-
-    finalize({});
-#endif
-}
+static const std::map<int, const char *> errname = {
+    {ErrorSuccess,                ""}
+,   {ErrorWarning,                "warning"}
+,   {ErrorRuntime,                "runtime"}
+,   {ErrorFatal,                  "fatal"}
+};
 
 /**
  * Aborts the execution and indicates the execution shuold terminate. In case this
@@ -57,13 +33,39 @@ void version()
 void finalize(Error error)
 {
 #ifndef msa_disable_cluster
-    if(error.msg != NULL) {
-        fprintf(stderr, s_bold "[  error]: " c_red_fg "fatal" s_reset ": %s\n", error.msg);
-    }
-
+    errlog(error);
     cluster::finalize();
     exit(0);
 #else
     throw std::logic_error(error.msg);
 #endif
+}
+
+/**
+ * Prints information about a caught error or warning.
+ * @param error The error to be reported.
+ */
+void errlog(Error error)
+{
+    if(error.severity & ErrorWarning) {
+        printf("[warning] %s\n", error.msg.c_str());
+        fflush(stdout);
+    }
+
+    else if(error.severity != ErrorSuccess) {
+        printf("[error][%s] %s\n", errname.at(error.severity), error.msg.c_str());
+        fflush(stdout);
+    }
+}
+
+/**
+ * Reports the progress of a given task.
+ * @param taskname The name of the task to be reported.
+ * @param done The amount of the task that is already done.
+ * @param total The total to be processed by the task.
+ */
+void progress(const char *taskname, uint32_t done, uint32_t total)
+{
+    printf("[progress] %s %u %u\n", taskname, done, total);
+    fflush(stdout);
 }

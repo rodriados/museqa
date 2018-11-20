@@ -23,4 +23,22 @@
 #define msa_author  "Rodrigo Albuquerque de Oliveira Siqueira"
 #define msa_email   "rodriados@gmail.com"
 
+/* 
+ * Checks whether the system we are compiling in is POSIX compatible. If it
+ * is not POSIX compatible, some conditional compiling may take place.
+ */
+#if defined(unix) || defined(__unix__) || defined(__unix) || defined(__linux__)
+#define msa_posix
+#define msa_unix
+#elif defined(__APPLE__) && defined(__MACH__)
+#define msa_posix
+#define msa_apple
+#elif defined(WIN32) || defined(_WIN32) || defined(__WIN32)
+#define msa_windows
+#endif
+
+#ifdef msa_windows
+#error MSA is not currently compatible with Windows.
+#endif
+
 #endif
