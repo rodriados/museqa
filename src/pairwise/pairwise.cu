@@ -41,5 +41,5 @@ void pairwise::Algorithm::generate()
         for(uint16_t j = i + 1; j < n; ++j)
             this->pair.push_back({i, j});
 
-    debug("generated %d sequence pairs", this->pair.size());
+    info("generated %d sequence pairs", this->pair.size());
 }

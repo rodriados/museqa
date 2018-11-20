@@ -7,7 +7,7 @@
 #include <cstring>
 #include <map>
 
-#include "input.hpp"
+#include "cli.hpp"
 #include "device.cuh"
 #include "pairwise/pairwise.hpp"
 
@@ -221,7 +221,7 @@ using Line = int8_t[25];
  */
 void pairwise::Algorithm::loadBlosum()
 {
-    int index = tablemap[cmd.get("matrix")];
+    int index = tablemap[cli.get("matrix")];
 
     onlyslaves {
         Line *table;
@@ -233,5 +233,5 @@ void pairwise::Algorithm::loadBlosum()
         this->penalty = abs(tabledata[index][24][0]);
     }
 
-    onlymaster debug("using scoring table %s", tablenames[index].c_str());
+    onlymaster info("using scoring table %s", tablenames[index].c_str());
 }

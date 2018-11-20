@@ -13,7 +13,7 @@
 
 #include "buffer.hpp"
 #include "pointer.hpp"
- 
+
 #include "pairwise/sequence.cuh"
 #include "pairwise/pairwise.hpp"
 
@@ -41,7 +41,7 @@ namespace pairwise
             void gather() override;
 
         private:
-            std::set<ptrdiff_t> select(std::vector<Workpair>&) const;
+            size_t select(std::vector<Workpair>&, std::set<ptrdiff_t>&) const;
             //void recover(std::vector<ptrdiff_t>&, Buffer<Score>&);
     };
 
@@ -58,6 +58,7 @@ namespace pairwise
             SharedPointer<int8_t[25][25]> table;    // The scoring table to be used.
             dSequenceList sequence;                 // The list of sequences to process.
             Buffer<Workpair> pair;                  // The list of workpairs to process.
+            Buffer<Score> glcache;                  // Memory allocated for execution.
         };
 
         extern __global__ void run(Input, Buffer<Score>);
