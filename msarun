@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Multiple Sequence Alignment controller script.
+# @author Rodrigo Siqueira <rodriados@gmail.com>
+# @copyright 2018 Rodrigo Siqueira
+
+# Creates a new named pipe and returns its name. The pipe allows to stablish
+# communication to and from an external process.
+createpipe()
+{
+    # Creates a named pipe. The name of the pipe will simply be that of a
+    # temporary file, which not forceably exists.
+    local pipe=$(mktemp -u)
+    mkfifo $pipe
+
+    # Return the name of pipe created.
+    echo $pipe
+}
+
+#Creates the pipe to communicate with watchdog process.
+pipe=$(createpipe)
+
+mpirun --hostfile hostfile obj/msa $1 >$pipe &
+src/watchdog.sh $! <$pipe
+trap 'rm -f $pipe' EXIT

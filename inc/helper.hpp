@@ -59,6 +59,6 @@ struct Error
  */
 extern void errlog(Error);
 extern void finalize(Error);
-extern void progress(const char *, uint32_t, uint32_t);
+extern void progress(const char *, uint32_t, uint32_t, const std::string&);
 
 #endif

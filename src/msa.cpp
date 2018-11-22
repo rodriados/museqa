@@ -74,7 +74,7 @@ class Application final
         static void report(const std::string& name, double elapsed)
         {
             onlymaster {
-                printf(s_bold "[report] " c_green_fg "%s" s_reset " in %.3f seconds\n", name.c_str(), elapsed);
+                printf(s_bold "[report] " c_green_fg "%s" s_reset " done in %.3f seconds\n", name.c_str(), elapsed);
                 fflush(stdout);
             }
         }
@@ -108,8 +108,7 @@ int main(int argc, char **argv)
     cluster::sync();
 
     Application::run();
-
-    onlymaster printf("[end]\n");
+    
     cluster::finalize();
     return 0;
 }

@@ -5,6 +5,7 @@
  */
 #include <stdexcept>
 #include <cstdio>
+#include <string>
 #include <map>
 
 #include "config.h"
@@ -19,10 +20,10 @@
  * kind of error was thrown and detected in the code.
  */
 static const std::map<int, const char *> errname = {
-    {ErrorSuccess,                ""}
-,   {ErrorWarning,                "warning"}
-,   {ErrorRuntime,                "runtime"}
-,   {ErrorFatal,                  "fatal"}
+    {ErrorSuccess, ""}
+,   {ErrorWarning, "warning"}
+,   {ErrorRuntime, "runtime"}
+,   {ErrorFatal,   "fatal"}
 };
 
 /**
@@ -47,15 +48,19 @@ void finalize(Error error)
  */
 void errlog(Error error)
 {
+#ifndef msa_disable_cluster
     if(error.severity & ErrorWarning) {
         printf("[warning] %s\n", error.msg.c_str());
         fflush(stdout);
     }
 
     else if(error.severity != ErrorSuccess) {
-        printf("[error][%s] %s\n", errname.at(error.severity), error.msg.c_str());
+        printf("[error] [%s] %s\n", errname.at(error.severity), error.msg.c_str());
         fflush(stdout);
     }
+#else
+    throw std::logic_error(error.msg);
+#endif
 }
 
 /**
@@ -63,9 +68,12 @@ void errlog(Error error)
  * @param taskname The name of the task to be reported.
  * @param done The amount of the task that is already done.
  * @param total The total to be processed by the task.
+ * @param msg The progress message to print.
  */
-void progress(const char *taskname, uint32_t done, uint32_t total)
+void progress(const char *taskname, uint32_t done, uint32_t total, const std::string& msg)
 {
-    printf("[progress] %s %u %u\n", taskname, done, total);
+#ifndef msa_disable_cluster
+    printf("[progress] %d %d %s %u %u %s\n", cluster::rank, cluster::size, taskname, done, total, msg.c_str());
     fflush(stdout);
+#endif
 }

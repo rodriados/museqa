@@ -1,3 +1,6 @@
+# Multiple Sequence Alignment makefile.
+# @author Rodrigo Siqueira <rodriados@gmail.com>
+# @copyright 2018 Rodrigo Siqueira
 NAME = msa
 
 INCDIR = inc
@@ -49,19 +52,30 @@ TSTINTERNAL = $(SRCINTERNAL:$(SRCDIR)/%=$(TESTDIR)/$(NAME)/%)
 ODEPS = $(MPCCFILES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)                            \
         $(MPPPFILES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)                          \
         $(NVCCFILES:$(SRCDIR)/%.cu=$(OBJDIR)/%.o)
-TDEPS = $(PYXCFILES:$(SRCDIR)/%.pyx=$(OBJDIR)/%.so)                         \
+TDEPS = $(PYXCFILES:$(SRCDIR)/%.pyx=$(OBJDIR)/%.pyx.o)                      \
         $(PYXCFILES:$(SRCDIR)/%.pyx=$(TESTDIR)/$(NAME)/%.so)
 HDEPS = $(ODEPS:$(OBJDIR)/%.o=$(OBJDIR)/%.d)
 
 all: production
 
-production: install $(NAME)
+install:
+	@mkdir -p $(OBJINTERNAL)
+	@mkdir -p $(TSTINTERNAL)
+
+production: install $(OBJDIR)/$(NAME)
+	@chmod +x src/watchdog.sh
+	@chmod +x hostfinder
+	@chmod +x msarun
 
 testing: override MPPP = $(PYCC)
 testing: override DEFS = -Dmsa_disable_cluster
 testing: install $(TDEPS)
 
-$(NAME): $(ODEPS)
+clean:
+	@rm -rf $(NAME) $(OBJDIR) $(SRCDIR)/*~ *~
+	@rm -rf $(TSTINTERNAL) $(TESTDIR)/$(NAME)/*.so $(TESTDIR)/$(NAME)/*.pyc
+
+$(OBJDIR)/$(NAME): $(ODEPS)
 	$(NVCC) $(LINKFLAGS) $^ -o $@
 
 # Creates dependency on header files. This is valuable so that whenever
@@ -73,16 +87,16 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	$(MPCC) $(MPCCFLAGS) -MMD -c $< -o $@
 
 # Compiling C++ files.
-$(OBJDIR)/%.o $(OBJDIR)/%.so: $(SRCDIR)/%.cpp
+$(OBJDIR)/%.o $(OBJDIR)/%.pyx.o: $(SRCDIR)/%.cpp
 	$(MPPP) $(MPPPFLAGS) -MMD -c $< -o $@
 
 # Compiling CUDA files.
-$(OBJDIR)/%.o $(OBJDIR)/%.so: $(SRCDIR)/%.cu
+$(OBJDIR)/%.o $(OBJDIR)/%.pyx.o: $(SRCDIR)/%.cu
 	@$(NVCC) $(NVCCFLAGS) -M $< -odir $(patsubst %/,%,$(dir $@)) > $(@:%.o=%.d)
 	$(NVCC) $(NVCCFLAGS) -c $< -o $@
 
 # If no correspondent file has been found, simply ignore.
-$(OBJDIR)/%.so: ;
+$(OBJDIR)/%.pyx.o: ;
 
 # Converting Cython files to C++
 $(OBJDIR)/%.cxx: $(SRCDIR)/%.pyx
@@ -90,15 +104,9 @@ $(OBJDIR)/%.cxx: $(SRCDIR)/%.pyx
 
 # Compiling Cython C++ files to Python modules
 .SECONDEXPANSION:
-$(TESTDIR)/$(NAME)/%.so: $(OBJDIR)/%.cxx $$(wildcard $(OBJDIR)/%.so) $(OBJDIR)/helper.so
+$(TESTDIR)/$(NAME)/%.so: $(OBJDIR)/%.cxx $$(wildcard $(OBJDIR)/%.pyx.o) $(OBJDIR)/helper.pyx.o
 	$(PYCC) $(PYCCFLAGS) $^ -o $@
-
-install:
-	@mkdir -p $(OBJINTERNAL) $(TSTINTERNAL)
-
-clean:
-	@rm -rf $(NAME) $(OBJDIR) $(TESTDIR)/$(NAME)/*.so $(TESTDIR)/$(NAME)/*.pyc $(SRCDIR)/*~ *~
 
 .PHONY: all clean install production testing
 
-.PRECIOUS: $(OBJDIR)/%.cxx $(OBJDIR)/%.so
+.PRECIOUS: $(OBJDIR)/%.cxx $(OBJDIR)/%.pyx.o
