@@ -10,9 +10,6 @@
 #include "cli.hpp"
 #include "device.cuh"
 
-/*
- * Declaring global variables.
- */
 int deviceId = -1;
 int deviceCount = -1;
 DeviceProperties deviceProps;
@@ -76,23 +73,3 @@ const DeviceProperties& device::properties()
     device::get();
     return deviceProps;
 }
-
-/**
- * Creates an error instance for no device.
- * @return The error instance.
- */
-const DeviceError DeviceError::noGPU()
-{
-    return {"No compatible GPU has been found.", ErrorFatal};
-}
-
-/**
- * Creates an error instance for execution error.
- * @param msg The acquired error message.
- * @return The error instance.
- */
- const DeviceError DeviceError::execution(const char *msg)
- {
-    return {msg, ErrorFatal};
- }
- 

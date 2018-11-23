@@ -12,8 +12,7 @@
 #include <cstddef>
 
 #include "config.h"
-#include "helper.hpp"
-
 #include "node.hpp"
+#include "helper.hpp"
 
 #endif

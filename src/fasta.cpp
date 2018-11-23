@@ -34,7 +34,7 @@ void Fasta::load(const std::string& fname)
     std::fstream ffile(fname, std::fstream::in);
 
     if(ffile.fail())
-        finalize({"input file is invalid or does not exist.", ErrorRuntime});
+        error("'%s' is not a file or does not exist.", fname.c_str());
 
     while(!ffile.eof() && !ffile.fail())
         this->extract(ffile);
@@ -107,7 +107,7 @@ void Fasta::push(const std::string& description, const char *buffer, size_t size
  */
 void Fasta::broadcast(Fasta& fasta)
 {
-#ifndef msa_disable_cluster
+#ifndef msa_compile_cython
     std::vector<char> data;
     std::vector<size_t> sizes(fasta.getCount());
 

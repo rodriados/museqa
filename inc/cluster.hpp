@@ -8,7 +8,7 @@
 
 #pragma once
 
-#ifndef msa_disable_cluster
+#ifndef msa_compile_cython
 
 #include <cstdint>
 #include <vector>
@@ -21,7 +21,7 @@
 namespace cluster
 {
     /*
-     * Declaring global variable.
+     * Holds all dynamically created datatype instances.
      */
     extern std::vector<MPI_Datatype> customDTypes;
 
@@ -124,7 +124,7 @@ namespace cluster
              */
             inline Datatype() noexcept
             {
-                const int size = Reflection<T>::getSize();
+                constexpr int size = Reflection<T>::getSize();
 
                 int blockl[size];
                 MPI_Aint offset[size];

@@ -319,9 +319,6 @@ namespace pairwise
     };
 };
 
-/*
- * Declaring global function.
- */
 extern std::ostream& operator<<(std::ostream&, const pairwise::dSequence&);
 
 #endif

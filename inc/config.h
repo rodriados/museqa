@@ -34,10 +34,6 @@
 #define msa_posix
 #define msa_apple
 #elif defined(WIN32) || defined(_WIN32) || defined(__WIN32)
-#define msa_windows
-#endif
-
-#ifdef msa_windows
 #error MSA is not currently compatible with Windows.
 #endif
 

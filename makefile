@@ -68,7 +68,7 @@ production: install $(OBJDIR)/$(NAME)
 	@chmod +x msarun
 
 testing: override MPPP = $(PYCC)
-testing: override DEFS = -Dmsa_disable_cluster
+testing: override DEFS = -Dmsa_compile_cython
 testing: install $(TDEPS)
 
 clean:
@@ -104,7 +104,7 @@ $(OBJDIR)/%.cxx: $(SRCDIR)/%.pyx
 
 # Compiling Cython C++ files to Python modules
 .SECONDEXPANSION:
-$(TESTDIR)/$(NAME)/%.so: $(OBJDIR)/%.cxx $$(wildcard $(OBJDIR)/%.pyx.o) $(OBJDIR)/helper.pyx.o
+$(TESTDIR)/$(NAME)/%.so: $(OBJDIR)/%.cxx $$(wildcard $(OBJDIR)/%.pyx.o)
 	$(PYCC) $(PYCCFLAGS) $^ -o $@
 
 .PHONY: all clean install production testing

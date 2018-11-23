@@ -10,9 +10,6 @@
 #include "msa.hpp"
 #include "cli.hpp"
 
-/*
- * Declaring global variables and functions.
- */
 CliParser cli;
 
 /**
@@ -49,7 +46,7 @@ void CliParser::parse(int argc, char **argv)
         }
 
         if(!option.isUnknown() && option.isVariadic()) {
-            if(i + 1 >= argc) finalize(CliError::unknown(option.getLname()));
+            if(i + 1 >= argc) error("unknown option '%s'", option.getLname().c_str());
             this->values[option.getArgument()] = argv[++i];
             continue;
         }
@@ -59,12 +56,12 @@ void CliParser::parse(int argc, char **argv)
             continue;
         }
 
-        finalize(CliError::unknown(argv[i]));
+        error("unknown option '%s'", argv[i]);
     }
 
     for(const std::string& required : this->arguments)
         if(!this->has(required))
-            finalize(CliError::missing(required));
+            error("required option '%s' is missing", required.c_str());
 }
 
 /**
@@ -81,24 +78,4 @@ const Option& CliParser::find(const std::string& needle) const
             return option;
 
     return unknown;
-}
-
-/**
- * Creates an error instance for unknown option.
- * @param option The unknown option.
- * @return The error instance.
- */
-const CliError CliError::unknown(const std::string& option)
-{
-    return {"unknown option " s_bold c_red_fg + option + s_reset, ErrorFatal};
-}
-
-/**
- * Creates an error instance for missing option.
- * @param option The missing option.
- * @return The error instance.
- */
-const CliError CliError::missing(const std::string& option)
-{
-    return {"required option " s_bold c_green_fg + option + s_reset, ErrorFatal};
 }

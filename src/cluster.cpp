@@ -10,9 +10,6 @@
 
 namespace cluster
 {
-    /*
-     * Declaring global variables.
-     */
     int rank = 0;
     int size = 0;
     std::vector<MPI_Datatype> customDTypes;

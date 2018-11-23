@@ -3,77 +3,38 @@
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018 Rodrigo Siqueira
  */
-#include <stdexcept>
+#include <cstdarg>
 #include <cstdio>
-#include <string>
-#include <map>
 
-#include "config.h"
 #include "helper.hpp"
-
-#ifndef msa_disable_cluster
 #include "cluster.hpp"
-#endif
-
-/*
- * Maps error severity to its name. This is useful so we can show the user what
- * kind of error was thrown and detected in the code.
- */
-static const std::map<int, const char *> errname = {
-    {ErrorSuccess, ""}
-,   {ErrorWarning, "warning"}
-,   {ErrorRuntime, "runtime"}
-,   {ErrorFatal,   "fatal"}
-};
 
 /**
- * Aborts the execution and indicates the execution shuold terminate. In case this
- * function is being compiled for test purposes, in throws an exception.
- * @param error Error detected during execution.
+ * Prints information about a error caught and quits the execution.
+ * @param format The formating string to print.
  */
-void finalize(Error error)
+[[noreturn]] void error(const char *format, ...)
 {
-#ifndef msa_disable_cluster
-    errlog(error);
-    cluster::finalize();
-    exit(0);
-#else
-    throw std::logic_error(error.msg);
-#endif
-}
+    va_list args;
+    va_start(args, format);
 
-/**
- * Prints information about a caught error or warning.
- * @param error The error to be reported.
- */
-void errlog(Error error)
-{
-#ifndef msa_disable_cluster
-    if(error.severity & ErrorWarning) {
-        printf("[warning] %s\n", error.msg.c_str());
-        fflush(stdout);
-    }
+    printf("[error] ");
+    vprintf(format, args);
+    putchar('\n');
 
-    else if(error.severity != ErrorSuccess) {
-        printf("[error] [%s] %s\n", errname.at(error.severity), error.msg.c_str());
-        fflush(stdout);
-    }
-#else
-    throw std::logic_error(error.msg);
-#endif
-}
+    va_end(args);
 
-/**
- * Reports the progress of a given task.
- * @param taskname The name of the task to be reported.
- * @param done The amount of the task that is already done.
- * @param total The total to be processed by the task.
- * @param msg The progress message to print.
- */
-void progress(const char *taskname, uint32_t done, uint32_t total, const std::string& msg)
-{
-#ifndef msa_disable_cluster
-    printf("[progress] %d %d %s %u %u %s\n", cluster::rank, cluster::size, taskname, done, total, msg.c_str());
     fflush(stdout);
-#endif
+    cluster::finalize();
+    exit(1);
+}
+
+/**
+ * Shows the current software version. This macro function serves as the current
+ * software version to all modules.
+ */
+void version()
+{
+    printf("[version] " s_bold c_green_fg msa_version s_reset "\n");
+    fflush(stdout);
 }

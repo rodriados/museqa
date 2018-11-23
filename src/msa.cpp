@@ -91,10 +91,10 @@ int main(int argc, char **argv)
     cluster::init(argc, argv);
 
     if(cluster::size < 2)
-        finalize({"at least 2 nodes are needed.", ErrorFatal});
+        error("at least 2 nodes are needed.");
 
     onlyslaves if(!device::exists())
-        finalize(DeviceError::noGPU());
+        error("No compatible GPU has been found.");
 
     cli.init({
         {"m", "multigpu", "Try to use multiple devices in a single host."}
@@ -107,8 +107,8 @@ int main(int argc, char **argv)
     onlyslaves device::select();
     cluster::sync();
 
-    Application::run();
-    
+    Application::run();    
     cluster::finalize();
+
     return 0;
 }

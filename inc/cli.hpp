@@ -12,19 +12,6 @@
 #include <vector>
 #include <map>
 
-#include "msa.hpp"
-
-/**
- * Allows the creation of error instances related to the Input module.
- * @since 0.1.alpha
- */
-struct CliError : public Error
-{
-    using Error::Error;
-    static const CliError missing(const std::string&);
-    static const CliError unknown(const std::string&);
-};
-
 /**
  * Stores all information about a given option available from the command
  * line. There should be an instance for each option available.
@@ -193,9 +180,6 @@ class CliParser
         const Option& find(const std::string&) const;
 };
 
-/*
- * Declaring global variables and functions.
- */
 extern CliParser cli;
 
 #endif

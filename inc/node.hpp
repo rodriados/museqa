@@ -8,7 +8,7 @@
 
 #pragma once
 
-#ifndef msa_disable_cluster
+#ifndef msa_compile_cython
 
 /*
  * Defining macro indicating the node rank to be used as the master node. It
@@ -18,9 +18,6 @@
 
 namespace cluster
 {
-    /*
-     * Declaring global variables
-     */
     extern int size;
     extern int rank;
     static constexpr const int master = master_node_id;
@@ -64,7 +61,7 @@ namespace node
  * Defines some process control macros. These macros are to be used when
  * it is needed to check whether the current process is master or not.
  */
-#ifndef msa_disable_cluster
+#ifndef msa_compile_cython
 #define onlymaster   if(node::ismaster())
 #define onlyslaves   if(node::isslave())
 #define onlyslave(i) if(node::isslave() && node::is(i))
