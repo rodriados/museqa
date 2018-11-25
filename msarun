@@ -16,9 +16,61 @@ createpipe()
     echo $pipe
 }
 
+# Lists all available command line options and shows information about them,
+# letting the user know what is the use of this script.
+showhelp()
+{
+    echo "Usage: msarun [options] file"
+    echo "Options:"
+    echo "  -h, --help                  Prints this information."
+    echo "  -v, --version               Prints the software version."
+    echo "  -f, --file      <file>      The FASTA file to align."
+    echo "  -m, --multigpu              Try to use multiple devices in a single host."
+    echo "  -x, --matrix    <matrix>    The scoring matrix to use for alignment."
+    echo "  -H, --hostfile  <hostfile>  The cluster configuration file."
+}
+
+# Initializing command line variables and flags
+file=false
+matrix="blosum62"
+hostfile=
+msaflags=()
+
+# Parses the command line options and sets all respective variables. Any positional
+# value unlinked to any option sent will also be captured.
+while [ $# -gt 0 ]; do
+    case $1 in
+        -h | --help     ) showhelp;             exit 0  ;;
+        -f | --file     ) file="$2";            shift 2 ;;
+        -x | --matrix   ) matrix="$2";          shift 2 ;;
+        -v | --version  ) obj/msa -v;           exit 0  ;;
+        -H | --hostfile ) hostfile="$2";        shift 2 ;;
+        *               ) msaflags+=("$1");     shift   ;;
+    esac
+done
+
+# Discovers the name of hostfile to be used. If no valid file name is given,
+# the name is defaulted to "hostfile".
+if [[ -z "$hostfile" || (-e "$hostfile" && ! -f "$hostfile") ]]; then
+    hostfile="hostfile"
+fi
+
+# If no file option has been sent, we can get it from positional values.
+if [ -z "$file" ]; then
+    file="${msaflags[0]}"
+    msaflags=("${msaflags[@]:1}")
+fi
+
 #Creates the pipe to communicate with watchdog process.
 pipe=$(createpipe)
-
-mpirun --hostfile hostfile obj/msa $1 >$pipe &
-src/watchdog.sh $! <$pipe
 trap 'rm -f $pipe' EXIT
+
+# If the hostfile does not exist, then it shall be created.
+if [[ ! -f "$hostfile" ]]; then
+    ./hostfinder --watchdog --file $hostfile >$pipe &
+    src/watchdog.sh $! keep <$pipe
+fi
+
+# Run the main project software.
+mpirun -q --hostfile $hostfile obj/msa -f $file -x $matrix ${msaflags[@]} > $pipe &
+src/watchdog.sh $! <$pipe

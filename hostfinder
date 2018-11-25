@@ -124,9 +124,9 @@ showhelp()
 {
     echo "Usage: hostfinder [options] file"
     echo "Options:"
-    echo "  -h, --help          Prints this information."
-    echo "  -f, --file          The name of to be generated."
-    echo "  -w, --watchdog      Display watchdog messages."
+    echo "  -h, --help                  Prints this information."
+    echo "  -f, --file      <file>      The file to be generated."
+    echo "  -w, --watchdog              Display watchdog messages."
 }
 
 # Presents an error when an unrecognized command line option is detected. This
@@ -138,13 +138,13 @@ invalid_arg()
 }
 
 # Initializing command line variables and flags
-file=false
+file=
 watchdog=false
 positional=()
 
 # Parses the command line options and sets all respective variables. Any positional
 # value unlinked to any option sent will also be captured.
-while [[ $# -gt 0 ]]; do
+while [ $# -gt 0 ]; do
     case $1 in
         -h | --help     )   showhelp;           exit 0  ;;
         -f | --file     )   file="$2";          shift 2 ;;
@@ -156,7 +156,7 @@ done
 
 # If no file option has been sent, we can get it from positional values. If neither
 # options are available, the file name will be posteriorly default-defined.
-if [ "$file" = false ]; then
+if [ -z "$file" ]; then
     file="${positional[0]}"
     positional=("${positional[@]:1}")
 fi
@@ -166,13 +166,13 @@ fi
 if [ "$watchdog" = false ]; then
     #Creates the pipe to communicate with watchdog process.
     pipe=$(createpipe)
+    trap 'rm -f $pipe' EXIT
 
     # Initializes the scan for hosts in network in backgound and redirects its
     # output to a watchdog process. After the operation is over, the pipe will be
     # automatically deleted.
     findhosts $file ${positional[@]} >$pipe &
     src/watchdog.sh $! <$pipe
-    trap 'rm -f $pipe' EXIT
 else
     # If the script has been invoked in watchdog mode, than it shall show watchdog
     # messages while scanning for hosts.

@@ -50,7 +50,7 @@ __device__ pairwise::Score sliceAlignment
     ,   const int8_t penalty
     ,   pairwise::Score done
     ,   pairwise::Score left
-    ,   const uint8_t letter,bool t                )
+    ,   const uint8_t letter                )
 {
     threaddecl(blockId, threadId);
 
@@ -136,7 +136,7 @@ __device__ pairwise::Score fullAlignment
             pairwise::Score left = column[lineOffset];
             uint8_t letter = two[lineOffset];
 
-            column[lineOffset] = sliceAlignment(decoded, table, penalty, done, left, letter, !lineOffset);
+            column[lineOffset] = sliceAlignment(decoded, table, penalty, done, left, letter);
         }
 
         __syncthreads();
@@ -274,6 +274,8 @@ void pairwise::Needleman::run()
     std::set<ptrdiff_t> selected;
     std::vector<pairwise::Workpair> missing = this->pair;
 
+    uint32_t done = 0, total = missing.size();
+
 #ifdef pw_prefer_shared_mem
     cudacall(cudaFuncSetCacheConfig(needleman::run, cudaFuncCachePreferShared));
 #else
@@ -294,7 +296,12 @@ void pairwise::Needleman::run()
         for(auto i = selected.rbegin(); i != selected.rend(); ++i)
             missing.erase(missing.begin() + *i);
 
+        watchdog("pairwise", done, total, "processing pairs");
+        done += selected.size();
+
         device::sync();
         //this->recover(selected, out);
     }
+
+    watchdog("pairwise", done, total, "processing pairs");
 }

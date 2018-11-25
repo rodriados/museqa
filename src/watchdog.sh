@@ -141,4 +141,6 @@ while IFS= read -r line; do
 done <&0
 
 # Cleaning the progress bar spinner.
-printf "\r  \n"
+if [ "$2" != "keep" ]; then
+    printf "\r  \n"
+fi
