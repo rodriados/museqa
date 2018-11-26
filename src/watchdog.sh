@@ -29,7 +29,7 @@ fi
 bar_counter=0
 bar_percent=0
 bar_message=""
-bar_process="idle"
+bar_process="starting"
 
 # Initializing the percent tracking variables.
 elements_done=()

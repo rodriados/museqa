@@ -112,3 +112,22 @@ int main(int argc, char **argv)
 
     return 0;
 }
+
+/**
+ * Quits the software execution with a code.
+ * @param code The exit code.
+ */
+void quit [[noreturn]] (uint8_t code)
+{
+    cluster::finalize();
+    exit(code);
+}
+
+/**
+ * Prints the software version and quits execution.
+ */
+void version [[noreturn]] ()
+{
+    printf("[version] %s\n", msa_version);
+    quit();
+}
