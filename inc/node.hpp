@@ -10,11 +10,11 @@
 
 #ifndef msa_compile_cython
 
-/*
- * Defining macro indicating the node rank to be used as the master node. It
- * is recommended not to change it, as no other rank is garanteed to exist.
- */
-#define master_node_id 0
+  /*
+   * Defining macro indicating the node rank to be used as the master node. It
+   * is recommended not to change it, as no other rank is garanteed to exist.
+   */
+  #define master_node_id 0
 
 namespace cluster
 {
@@ -54,7 +54,7 @@ namespace node
     }
 };
 
-#undef master_node_id
+  #undef master_node_id
 #endif
 
 /*
@@ -62,13 +62,13 @@ namespace node
  * it is needed to check whether the current process is master or not.
  */
 #ifndef msa_compile_cython
-#define onlymaster   if(node::ismaster())
-#define onlyslaves   if(node::isslave())
-#define onlyslave(i) if(node::isslave() && node::is(i))
+  #define onlymaster   if(node::ismaster())
+  #define onlyslaves   if(node::isslave())
+  #define onlyslave(i) if(node::isslave() && node::is(i))
 #else
-#define onlymaster   if(1)
-#define onlyslaves   if(0)
-#define onlyslave(i) if(0)
+  #define onlymaster   if(1)
+  #define onlyslaves   if(0)
+  #define onlyslave(i) if(0)
 #endif
 
 #endif
