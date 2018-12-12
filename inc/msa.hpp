@@ -51,7 +51,7 @@
  */
 struct Exception : public std::exception
 {
-    std::string msg(128);       /// The exception message.
+    std::string msg;       /// The exception message.
 
     /**
      * Builds a new exception instance.
@@ -69,6 +69,7 @@ struct Exception : public std::exception
     template <typename ...T>
     explicit Exception(const std::string& fmt, T... args)
     {
+        msg.reserve(128);
         sprintf(msg.data(), fmt.data(), args...);
     }
 
@@ -86,11 +87,10 @@ struct Exception : public std::exception
     {
         return msg.data();
     }
-}
+};
 
 #ifndef msa_compile_cython
-  extern void halt [[noreturn]] (uint8_t = 0);
-  extern void version [[noreturn]] ();
+[[noreturn]] extern void halt(uint8_t = 0);
 #endif
 
 /**
@@ -103,7 +103,7 @@ template <typename ...T>
 inline void info(const std::string& fmt, T... args)
 {
 #ifndef msa_compile_cython
-    puts(s_bold "[info]" s_reset ": ");
+    printf(s_bold "[info]" s_reset " ");
     printf(fmt.data(), args...);
     putchar('\n');
 #endif
@@ -119,7 +119,7 @@ template <typename ...T>
 inline void error(const std::string& fmt, T... args)
 {
 #ifndef msa_compile_cython
-    puts("[error]: ");
+    printf("[error] ");
     printf(fmt.data(), args...);
     putchar('\n');
     halt(1);
@@ -138,7 +138,7 @@ template <typename ...T>
 inline void warning(const std::string& fmt, T... args)
 {
 #ifndef msa_compile_cython
-    puts(s_bold "[warning]" s_reset ": ");
+    printf(s_bold "[warning]" s_reset " ");
     printf(fmt.data(), args...);
     putchar('\n');
 #endif
@@ -154,7 +154,7 @@ template <typename ...T>
 inline void watchdog(const std::string& task, uint32_t done, uint32_t total, const std::string& fmt, T... args)
 {
 #ifndef msa_compile_cython
-    puts("[watchdog]: ");
+    printf("[watchdog] ");
     printf("%s %u %u %u %u ", task.data(), cluster::rank, cluster::size, done, total);
     printf(fmt.data(), args...);
     putchar('\n');
