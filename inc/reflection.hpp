@@ -28,8 +28,8 @@
 #include <cstdint>
 
 #if defined(__GNUC__)
-#  pragma GCC diagnostic push
-#  pragma GCC diagnostic ignored "-Wnon-template-friend"
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wnon-template-friend"
 #endif
 
 namespace reflection
@@ -38,7 +38,7 @@ namespace reflection
      * A memory aligned storage container.
      * @tparam S The number of elements in storage.
      * @tparam A The alignment the storage should use.
-     * @since 0.1.alpha
+     * @since 0.1.1
      */
     template <size_t S, size_t A>
     struct AlignedStorage
@@ -50,7 +50,7 @@ namespace reflection
      * Base for representing a tuple member and holding its value.
      * @tparam N The index of the member of the tuple.
      * @tparam T The type of the member of the tuple.
-     * @since 0.1.alpha
+     * @since 0.1.1
      */
     template <size_t N, typename T>
     struct BaseMember
@@ -62,7 +62,7 @@ namespace reflection
      * The base struct for a type tuple.
      * @tparam I The indeces for the tuple members.
      * @tparam T The types of the tuple members.
-     * @since 0.1.alpha
+     * @since 0.1.1
      */
     template <typename I, typename ...T>
     struct BaseTuple;
@@ -130,7 +130,7 @@ namespace reflection
         /**
          * Cleans a type from any reference, constness, volatile-ness or the like.
          * @tparam T The type to be cleaned.
-         * @since 0.1.alpha
+         * @since 0.1.1
          */
         template <typename T>
         using clean = std::remove_cv_t<std::remove_reference_t<T>>;
@@ -139,7 +139,7 @@ namespace reflection
     /**
      * Tuple responsible for representing a struct to be translated.
      * @tparam T The tuple's list of member types.
-     * @since 0.1.alpha
+     * @since 0.1.1
      */
     template <typename ...T>
     struct Tuple : BaseTuple<std::make_index_sequence<sizeof...(T)>, T...>
@@ -162,7 +162,7 @@ namespace reflection
      * The type of a tuple element.
      * @tparam I The index of tuple element.
      * @tparam T The target tuple.
-     * @since 0.1.alpha
+     * @since 0.1.1
      */
     template <size_t I, typename T>
     using TupleElement = std::remove_reference<decltype(internal::t_get<I>(std::declval<T>()))>;
@@ -173,7 +173,7 @@ namespace reflection
          * Generates friend declarations and helps with overload resolution.
          * @tparam T The object type to be scaned.
          * @tparam N The index of requested object member.
-         * @since 0.1.alpha
+         * @since 0.1.1
          */
         template <typename T, size_t N>
         struct Tag
@@ -183,7 +183,7 @@ namespace reflection
 
         /**#@+
          * Defines the friend function that automagically returns member's types.
-         * @since 0.1.alpha
+         * @since 0.1.1
          */
         template <typename T, typename U, size_t N, bool B>
         struct TagDef
@@ -211,7 +211,7 @@ namespace reflection
      * whether they are really cached or not).
      * @tparam T The object type to be scaned.
      * @tparam N The number of members.
-     * @since 0.1.alpha
+     * @since 0.1.1
      */
     template <typename T, size_t N>
     struct Loophole
@@ -243,7 +243,7 @@ namespace reflection
          * This struct is a helper for creating an aligned tuple. This is useful for
          * retrieving offsets out of tuples.
          * @tparam T The list of tuple's types.
-         * @since 0.1.alpha
+         * @since 0.1.1
          */
         template <class T>
         struct AlignedStorageTuple;
@@ -259,7 +259,7 @@ namespace reflection
          * This struct is a helper to turn a data structure into a tuple.
          * @tparam T The structure to be scaned.
          * @tparam I The structure's number of members.
-         * @since 0.1.alpha
+         * @since 0.1.1
          */
         template <class T, class U>
         struct LoopholeTypeList;
@@ -295,7 +295,7 @@ namespace reflection
      * This type creates a tuple in which offsets are aligned to the those of the
      * base data structure.
      * @tparam T The base structure for the tuple.
-     * @since 0.1.alpha
+     * @since 0.1.1
      */
     template <typename T>
     using AlignedTuple = typename internal::AlignedStorageTuple<T>::type;
@@ -303,7 +303,7 @@ namespace reflection
     /**
      * This type turns a data structure into a tuple.
      * @tparam T The structure to be transformed.
-     * @since 0.1.alpha
+     * @since 0.1.1
      */
     template <typename T>
     using LoopholeTuple = typename internal::LoopholeTypeList
@@ -316,7 +316,7 @@ namespace reflection
  * Applies reflection over a data structure, thus allowing us to automagically get
  * information about the structure during compile- and run-times.
  * @tparam T The data structure to be introspected.
- * @since 0.1.alpha
+ * @since 0.1.1
  */
 template <typename T>
 class Reflection
@@ -324,14 +324,14 @@ class Reflection
     private:
         /**
          * Cleaning the type to be reflected.
-         * @since 0.1.alpha
+         * @since 0.1.1
          */
         using Type = reflection::internal::clean<T>;
 
     public:
         /**
          * The tuple aligned to reflected type.
-         * @since 0.1.alpha
+         * @since 0.1.1
          */
         using Tuple = reflection::LoopholeTuple<Type>;
 
@@ -375,7 +375,7 @@ class Reflection
 };
 
 #if defined(__GNUC__)
-#  pragma GCC diagnostic pop
+  #pragma GCC diagnostic pop
 #endif
 
 #endif

@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "helper.hpp"
+#include "msa.hpp"
 
 /*
  * Checks whether a compatible device is available. If not, compilation
@@ -23,13 +23,13 @@
 
 /**
  * Aliases the device error enumerator to a more meaningful name.
- * @since 0.1.alpha
+ * @since 0.1.1
  */
 typedef cudaError_t DeviceStatus;
 
 /**
  * Exposes some CUDA devices's properties.
- * @since 0.1.alpha
+ * @since 0.1.1
  */
 typedef cudaDeviceProp DeviceProperties;
 
@@ -38,16 +38,16 @@ typedef cudaDeviceProp DeviceProperties;
  * a CUDA function is called. This verifies for any errors and tries to inform what
  * was the error.
  */
-  #define cudacall(call)                                                          \
+  #define cudacall(call)                                                        \
     if((call) != cudaSuccess) {                                                 \
         DeviceStatus err = cudaGetLastError();                                  \
-        error("'%s' in %s:%d", cudaGetErrorString(err), __FILE__, __LINE__);    \
+        error("%s in %s:%d", cudaGetErrorString(err), __FILE__, __LINE__);      \
     }
 
-  #define cudacheck() {                                                           \
+  #define cudacheck() {                                                         \
     DeviceStatus err = cudaGetLastError();                                      \
     if(err != cudaSuccess) {                                                    \
-        error("'%s' in %s:%d", cudaGetErrorString(err), __FILE__, __LINE__);    \
+        error("%s in %s:%d", cudaGetErrorString(err), __FILE__, __LINE__);      \
     }}
 
 #endif
@@ -64,14 +64,14 @@ typedef cudaDeviceProp DeviceProperties;
 
 /**
  * Offers a set of tools to easily gather information about the device(s) connected.
- * @since 0.1.alpha
+ * @since 0.1.1
  */
 namespace device
 {
 #ifdef __CUDACC__
     /**
      * Aliases the memory copy kind indicator.
-     * @since 0.1.alpha
+     * @since 0.1.1
      */
     typedef cudaMemcpyKind CopyKind;
 
@@ -130,6 +130,7 @@ namespace device
     /**
      * Synchronizes the device and host execution. This blocks the
      * host execution until the device's execution is over.
+     * @see cluster::sync
      */
     inline void sync()
     {
@@ -145,7 +146,7 @@ namespace device
   #define _calcBlckId_ (blockIdx.y * gridDim.x + blockIdx.x)
   #define _calcThrdId_ (threadIdx.y * blockDim.x + threadIdx.x)
 
-  #define threaddecl(blk, thd)                                                  \
+  #define threadid(blk, thd)                                                    \
     const uint32_t blk = _calcBlckId_, thd = _calcThrdId_;                      \
     const uint32_t& _intBlkIdRef_ = blk, & _intThdIdRef_ = thd;
 

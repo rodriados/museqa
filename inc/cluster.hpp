@@ -21,11 +21,6 @@
 namespace cluster
 {
     /*
-     * Holds all dynamically created datatype instances.
-     */
-    extern std::vector<MPI_Datatype> customDTypes;
-
-    /*
      * Forward declaration of Datatype, so that datatypes that already exist can
      * be used to form a new datatype.
      */
@@ -37,10 +32,10 @@ namespace cluster
         /**
          * The initial struct for generating new datatypes.
          * @tparam T The type to be represented by the datatype.
-         * @since 0.1.alpha
+         * @since 0.1.1
          */
         template <typename T>
-        struct GenerateDatatype
+        struct DatatypeBuilder
         {
             /**
              * Initializes the recursion through the reflection tuple of type so its corresponding
@@ -51,17 +46,17 @@ namespace cluster
              */
             inline static void gen(int *blockl, MPI_Aint *offset, MPI_Datatype *type)
             {
-                GenerateDatatype<typename Reflection<T>::Tuple>::template gen<T>(blockl, offset, type);
+                DatatypeBuilder<typename Reflection<T>::Tuple>::template gen<T>(blockl, offset, type);
             }
         };
 
         /**
          * The final recursion step for creating a new datatype.
          * @param T The last type in reflection tuple to become part of the datatype.
-         * @since 0.1.alpha
+         * @since 0.1.1
          */
         template <typename T>
-        struct GenerateDatatype<reflection::Tuple<T>>
+        struct DatatypeBuilder<reflection::Tuple<T>>
         {
             /**
              * Terminates the recursion through the reflection tuple of the original type.
@@ -84,10 +79,10 @@ namespace cluster
          * The middle recursion steps for creating a new datatype.
          * @tparam T The current type in reflection tuple to become part of the datatype.
          * @tparam U The following types in reflection tuple.
-         * @since 0.1.alpha
+         * @since 0.1.1
          */
         template <typename T, typename ...U>
-        struct GenerateDatatype<reflection::Tuple<T, U...>>
+        struct DatatypeBuilder<reflection::Tuple<T, U...>>
         {
             /**
              * Processes a step of the recursion through the reflection tuple of the original type.
@@ -100,22 +95,25 @@ namespace cluster
             template <typename O, size_t N = 0>
             inline static void gen(int *blockl, MPI_Aint *offset, MPI_Datatype *type)
             {
-                GenerateDatatype<reflection::Tuple<T>>::template gen<O, N>(blockl, offset, type);
-                GenerateDatatype<reflection::Tuple<U...>>::template gen<O, N+1>(blockl, offset, type);
+                DatatypeBuilder<reflection::Tuple<T>>::template gen<O, N>(blockl, offset, type);
+                DatatypeBuilder<reflection::Tuple<U...>>::template gen<O, N+1>(blockl, offset, type);
             }
         };
     };
 
+    extern std::vector<MPI_Datatype> dtypes;
+    static const MPI_Comm world = MPI_COMM_WORLD;
+
     /**
      * Generates a new datatype for a user defined type.
      * @tparam T The type to which datatype must be created.
-     * @since 0.1.alpha
+     * @since 0.1.1
      */
     template <typename T>
     struct Datatype
     {
         protected:
-            MPI_Datatype dtypeid;       /// The datatype of type T.
+            MPI_Datatype dtype;       /// The datatype of type T.
 
         private:
             /**
@@ -130,12 +128,12 @@ namespace cluster
                 MPI_Aint offset[size];
                 MPI_Datatype type[size];
 
-                internal::GenerateDatatype<T>::gen(blockl, offset, type);
+                internal::DatatypeBuilder<T>::gen(blockl, offset, type);
 
-                MPI_Type_create_struct(size, blockl, offset, type, &this->dtypeid);
-                MPI_Type_commit(&this->dtypeid);
+                MPI_Type_create_struct(size, blockl, offset, type, &dtype);
+                MPI_Type_commit(&dtype);
 
-                customDTypes.push_back(this->dtypeid);
+                dtypes.push_back(dtype);
             }
 
             /**
@@ -156,7 +154,7 @@ namespace cluster
              */
             inline static MPI_Datatype get()
             {
-                return Datatype<T>::getInstance().dtypeid;
+                return Datatype<T>::getInstance().dtype;
             }
     };
 
@@ -172,7 +170,7 @@ namespace cluster
     /**#@+
      * Template specializations for built-in types. These types are created for built-in
      * types automatically and do not need to be created.
-     * @since 0.1.alpha
+     * @since 0.1.1
      */
     template <> struct Datatype<char>     { use_built_in(MPI_CHAR); };
     template <> struct Datatype<int8_t>   { use_built_in(MPI_CHAR); };
@@ -191,7 +189,7 @@ namespace cluster
     /**
      * Represents the base of a communication payload.
      * @tparam T The payload's data type.
-     * @since 0.1.alpha
+     * @since 0.1.1
      */
     template <typename T>
     class BasePayload
@@ -233,12 +231,12 @@ namespace cluster
              */
             inline int broadcast(int root = master)
             {
-                if(this->dynamic) {
-                    MPI_Bcast(&this->size, 1, Datatype<size_t>::get(), root, MPI_COMM_WORLD);
-                    if(cluster::rank != root) this->resize(this->size);
+                if(dynamic) {
+                    MPI_Bcast(&size, 1, Datatype<size_t>::get(), root, world);
+                    if(cluster::rank != root) resize(size);
                 }
 
-                return MPI_Bcast(this->buffer, this->size, Datatype<T>::get(), root, MPI_COMM_WORLD);
+                return MPI_Bcast(buffer, size, Datatype<T>::get(), root, world);
             }
 
             /**
@@ -250,15 +248,15 @@ namespace cluster
              */
             inline int receive(int source = master, int tag = MPI_TAG_UB, MPI_Status *status = MPI_STATUS_IGNORE)
             {
-                if(this->dynamic) {
+                if(dynamic) {
                     int size;
                     MPI_Status probed;
-                    MPI_Probe(source, tag, MPI_COMM_WORLD, &probed);
+                    MPI_Probe(source, tag, world, &probed);
                     MPI_Get_count(&probed, Datatype<int>::get(), &size);
-                    this->resize(size);
+                    resize(size);
                 }
 
-                return MPI_Recv(this->buffer, this->size, Datatype<T>::get(), source, tag, MPI_COMM_WORLD, status);
+                return MPI_Recv(buffer, size, Datatype<T>::get(), source, tag, world, status);
             }
 
             /**
@@ -269,7 +267,7 @@ namespace cluster
              */
             inline int send(int dest = master, int tag = MPI_TAG_UB)
             {
-                return MPI_Send(this->buffer, this->size, Datatype<T>::get(), dest, tag, MPI_COMM_WORLD);
+                return MPI_Send(buffer, size, Datatype<T>::get(), dest, tag, world);
             }
 
             /**
@@ -282,13 +280,13 @@ namespace cluster
              */
             inline int scatter(BasePayload<T>& buffer, int *count, int *displ, int root = master)
             {
-                if(this->dynamic) {
-                    this->resize(count[rank]);
+                if(dynamic) {
+                    resize(count[rank]);
                 }
 
                 return MPI_Scatterv(
                     buffer.buffer, count, displ, Datatype<T>::get(),
-                    this->buffer, count[rank], Datatype<T>::get(), root, MPI_COMM_WORLD
+                    this->buffer, count[rank], Datatype<T>::get(), root, world
                 );
             }
 
@@ -317,7 +315,7 @@ namespace cluster
     /**
      * Represents a communication payload.
      * @tparam T The payload's data type.
-     * @since 0.1.alpha
+     * @since 0.1.1
      * @see P0136R1
      */
     template <typename T>
@@ -347,7 +345,7 @@ namespace cluster
     /**
      * Represents a communication payload.
      * @tparam T The payload's data type.
-     * @since 0.1.alpha
+     * @since 0.1.1
      */
     template <typename T>
     class Payload<std::vector<T>> : public BasePayload<T>
@@ -371,8 +369,8 @@ namespace cluster
              */
             void resize(size_t size) override
             {
-                this->target.resize(size);
-                this->buffer = this->target.data();
+                target.resize(size);
+                this->buffer = target.data();
                 this->size = size;
             }
     };
@@ -380,7 +378,7 @@ namespace cluster
     /**
      * Represents a communication payload.
      * @tparam T The payload's data type.
-     * @since 0.1.alpha
+     * @since 0.1.1
      */
     template <typename T>
     class Payload<BaseBuffer<T>> : public BasePayload<T>
@@ -404,8 +402,8 @@ namespace cluster
              */
             void resize(size_t size) override
             {
-                this->target = {new T[size], size};
-                this->buffer = this->target.getBuffer();
+                target = {new T[size], size};
+                this->buffer = target.getBuffer();
                 this->size = size;
             }
     };
@@ -418,8 +416,8 @@ namespace cluster
     inline void init(int& argc, char **& argv)
     {
         MPI_Init(&argc, &argv);
-        MPI_Comm_rank(MPI_COMM_WORLD, &cluster::rank);
-        MPI_Comm_size(MPI_COMM_WORLD, &cluster::size);
+        MPI_Comm_rank(world, &cluster::rank);
+        MPI_Comm_size(world, &cluster::size);
     }
 
     /**#@+
@@ -553,10 +551,11 @@ namespace cluster
     /**
      * Synchronizes all of the cluster's nodes.
      * @return MPI error code if not successful.
+     * @see device::sync
      */
     inline int sync()
     {
-        return MPI_Barrier(MPI_COMM_WORLD);
+        return MPI_Barrier(world);
     }
 
     /**
@@ -565,7 +564,7 @@ namespace cluster
      */
     inline int finalize()
     {
-        for(MPI_Datatype& dtype : customDTypes)
+        for(MPI_Datatype& dtype : dtypes)
             MPI_Type_free(&dtype);
 
         return MPI_Finalize();
