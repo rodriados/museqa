@@ -17,7 +17,7 @@
 /**
  * Purifies the type by removing array extent.
  * @tparam T The type to be cleaned.
- * @since 0.1.alpha
+ * @since 0.1.1
  */
 template <typename T>
 using Pure = typename std::remove_extent<T>::type;
@@ -25,7 +25,7 @@ using Pure = typename std::remove_extent<T>::type;
 /**
  * Type of function to use for freeing pointers.
  * @tparam T The pointer type.
- * @since 0.1.alpha
+ * @since 0.1.1
  */
 template <typename T>
 using Deleter = void (*)(Pure<T> *);
@@ -57,7 +57,7 @@ namespace pointer
     /**
      * Holds a pure type pointer and keeps its reference counter.
      * @tparam T The pointer type.
-     * @since 0.1.alpha
+     * @since 0.1.1
      */
     template <typename T>
     class Holder
@@ -77,7 +77,7 @@ namespace pointer
              */
             inline const Deleter<T>& getDeleter()
             {
-                return this->dfunc;
+                return dfunc;
             }
 
             /**
@@ -86,7 +86,7 @@ namespace pointer
              */
             cudadecl inline PureT *getRaw()
             {
-                return this->ptr;
+                return ptr;
             }
 
             /**
@@ -138,7 +138,7 @@ namespace pointer
              */
             inline ~Holder() noexcept
             {
-                (this->dfunc)(this->ptr);
+                (dfunc)(ptr);
             }
     };
 };
@@ -146,18 +146,18 @@ namespace pointer
 /**
  * Represents the base class of a smart pointer.
  * @tparam T The type of pointer to be held.
- * @since 0.1.alpha
+ * @since 0.1.1
  */
 template <typename T>
 class BasePointer
 {
     protected:
         using PureT = Pure<T>;
-        using This = BasePointer<T>;
+        using self = BasePointer<T>;
 
     protected:
-        pointer::Holder<T> *meta = nullptr; /// The pointer metadata.
-        PureT *ptr = nullptr;               /// The raw pointer.
+        pointer::Holder<T> *meta = nullptr;     /// The pointer metadata.
+        PureT *ptr = nullptr;                   /// The raw pointer.
 
     public:
         BasePointer() = default;
@@ -166,7 +166,7 @@ class BasePointer
          * The copy constructor. Builds a copy of an instance.
          * @param other The instance to be copied.
          */
-        inline BasePointer(const This& other)
+        inline BasePointer(const self& other)
         :   meta(pointer::Holder<T>::acquire(other.meta))
         ,   ptr(other.ptr) {}
 
@@ -174,7 +174,7 @@ class BasePointer
          * The move constructor. Builds a copy of an instance, by moving.
          * @param other The instance to be moved.
          */
-        inline BasePointer(This&& other)
+        inline BasePointer(self&& other)
         :   meta(other.meta)
         ,   ptr(other.ptr)
         {
@@ -197,7 +197,7 @@ class BasePointer
          */
         inline ~BasePointer() noexcept
         {
-            pointer::Holder<T>::release(this->meta);
+            pointer::Holder<T>::release(meta);
         }
 
         /**
@@ -205,12 +205,12 @@ class BasePointer
          * @param other The instance to be copied.
          * @return The current object.
          */
-        inline This& operator=(const This& other)
+        inline self& operator=(const self& other)
         {
-            if(this->meta != other.meta) {
-                pointer::Holder<T>::release(this->meta);
-                this->meta = pointer::Holder<T>::acquire(other.meta);
-                this->ptr = other.ptr;
+            if(meta != other.meta) {
+                pointer::Holder<T>::release(meta);
+                meta = pointer::Holder<T>::acquire(other.meta);
+                ptr = other.ptr;
             }
 
             return *this;
@@ -221,12 +221,12 @@ class BasePointer
          * @param other The instance to be moved.
          * @return The current object.
          */
-        inline This& operator=(This&& other) noexcept
+        inline self& operator=(self&& other) noexcept
         {
-            if(this->meta != other.meta) {
-                pointer::Holder<T>::release(this->meta);
-                this->meta = other.meta;
-                this->ptr = other.ptr;
+            if(meta != other.meta) {
+                pointer::Holder<T>::release(meta);
+                meta = other.meta;
+                ptr = other.ptr;
                 other.meta = nullptr;
                 other.ptr = nullptr;
             }
@@ -239,10 +239,10 @@ class BasePointer
          * @param ptr The new pointer target.
          * @return The current object.
          */
-        inline This& operator=(PureT *ptr)
+        inline self& operator=(PureT *ptr)
         {
-            pointer::Holder<T>::release(this->meta);
-            this->meta = pointer::Holder<T>::acquire(ptr);
+            pointer::Holder<T>::release(meta);
+            meta = pointer::Holder<T>::acquire(ptr);
             this->ptr = ptr;
             return *this;
         }
@@ -253,7 +253,7 @@ class BasePointer
          */
         cudadecl inline PureT& operator*()
         {
-            return *this->ptr;
+            return *ptr;
         }
 
         /**
@@ -262,7 +262,7 @@ class BasePointer
          */
         cudadecl inline PureT *operator&()
         {
-            return this->ptr;
+            return ptr;
         }
 
         /**
@@ -271,7 +271,7 @@ class BasePointer
          */
         cudadecl inline PureT *operator->()
         {
-            return this->ptr;
+            return ptr;
         }
 
         /**
@@ -280,7 +280,7 @@ class BasePointer
          */
         inline const Deleter<T>& getDeleter()
         {
-            return this->meta->getDeleter();
+            return meta->getDeleter();
         }
 
         /**
@@ -289,7 +289,7 @@ class BasePointer
          */
         cudadecl inline PureT *getRaw() const
         {
-            return this->ptr;
+            return ptr;
         }
 };
 
@@ -297,22 +297,22 @@ class BasePointer
  * Represents a smart pointer. This class can be used to represent a pointer that is
  * deleted automatically when all references to it have been destroyed.
  * @tparam T The type of pointer to be held.
- * @since 0.1.alpha
+ * @since 0.1.1
  */
 template <typename T, typename E = void>
 class SharedPointer : public BasePointer<T>
 {
     protected:
         using PureT = Pure<T>;
-        using This = SharedPointer<T, E>;
+        using self = SharedPointer<T, E>;
 
     public:
         SharedPointer() = default;
         
         using BasePointer<T>::BasePointer;
 
-        This& operator=(const This&) = default;
-        This& operator=(This&&) = default;
+        self& operator=(const self&) = default;
+        self& operator=(self&&) = default;
 };
 
 /**
@@ -320,18 +320,17 @@ class SharedPointer : public BasePointer<T>
  * is deleted automatically when all references to it have been destroyed.
  * @tparam T The type of pointer to be held.
  * @tparam D The pointer deleter function.
- * @since 0.1.alpha
+ * @since 0.1.1
  */
 template <typename T>
 class SharedPointer<T, typename std::enable_if<std::is_array<T>::value>::type> : public BasePointer<T>
 {
     protected:
         using PureT = Pure<T>;
-        using This = SharedPointer<T, typename std::enable_if<std::is_array<T>::value>::type>;
+        using self = SharedPointer<T, typename std::enable_if<std::is_array<T>::value>::type>;
 
     public:
         SharedPointer() = default;
-
         using BasePointer<T>::BasePointer;
 
         /**
@@ -339,14 +338,14 @@ class SharedPointer<T, typename std::enable_if<std::is_array<T>::value>::type> :
          * @param other The base pointer instance.
          * @param displ The new pointer displacement.
          */
-        inline SharedPointer(const This& other, ptrdiff_t displ = 0)
+        inline SharedPointer(const self& other, ptrdiff_t displ = 0)
         :   BasePointer<T>(other)
         {
             this->ptr = other.ptr + displ;
         }
 
-        This& operator=(const This&) = default;
-        This& operator=(This&&) = default;
+        self& operator=(const self&) = default;
+        self& operator=(self&&) = default;
 
         /**
          * Gives access to an object in a pointer offset.
@@ -363,9 +362,9 @@ class SharedPointer<T, typename std::enable_if<std::is_array<T>::value>::type> :
          * @param offset The offset to pointer.
          * @return New offset pointer instane.
          */
-        inline This operator+(ptrdiff_t offset) const
+        inline self operator+(ptrdiff_t offset) const
         {
-            return This(*this, offset);
+            return self(*this, offset);
         }
 
         /**
