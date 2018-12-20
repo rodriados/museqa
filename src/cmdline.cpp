@@ -8,17 +8,17 @@
 #include <map>
 
 #include "msa.hpp"
-#include "cmd.hpp"
+#include "cmdline.hpp"
 
-cmd::Parser cmd::parser;
+cmdline::Parser cmdline::parser;
 
 /**
  * Initializes the parser with the options it should parse.
  * @param options The list of available options for this parser.
  */
-void cmd::Parser::init(const std::vector<cmd::Option>& options)
+void cmdline::Parser::init(const std::vector<cmdline::Option>& options)
 {
-    for(const cmd::Option& option : options) {
+    for(const cmdline::Option& option : options) {
         if(option.isRequired())
             required.push_back(option.getLname());
 
@@ -32,10 +32,10 @@ void cmd::Parser::init(const std::vector<cmd::Option>& options)
  * @param argc The number of command line arguments.
  * @param argv The command line arguments.
  */
-void cmd::Parser::parse(int argc, char **argv)
+void cmdline::Parser::parse(int argc, char **argv)
 {
     for(int i = 1; i < argc; ++i) {
-        const cmd::Option& option = find(argv[i]);
+        const cmdline::Option& option = find(argv[i]);
 
         if(!option.isUnknown() && option.isVariadic()) {
             if(i + 1 >= argc)
@@ -65,9 +65,9 @@ void cmd::Parser::parse(int argc, char **argv)
  * @param needle The option being searched for.
  * @return The found option or an unknown option.
  */
-const cmd::Option& cmd::Parser::find(const std::string& needle) const
+const cmdline::Option& cmdline::Parser::find(const std::string& needle) const
 {
-    static cmd::Option unknown {};
+    static cmdline::Option unknown {};
     const auto& value = options.find(needle);
 
     return value != options.end()

@@ -3,8 +3,8 @@
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018 Rodrigo Siqueira
  */
-#ifndef CMD_HPP_INCLUDED
-#define CMD_HPP_INCLUDED
+#ifndef CMDLINE_HPP_INCLUDED
+#define CMDLINE_HPP_INCLUDED
 
 #pragma once
 
@@ -13,7 +13,7 @@
 #include <vector>
 #include <map>
 
-namespace cmd
+namespace cmdline
 {
     /**
      * Option flags enumeration.
@@ -260,11 +260,11 @@ namespace cmd
     }
 
     /**
-     * Parses the command line arguments.
+     * Initializes the command line arguments.
      * @param argc Number of arguments sent by command line.
      * @param argv The arguments sent by command line.
      */
-    inline void parse(int argc, char **argv)
+    inline void init(int argc, char **argv)
     {
         parser.init(config);
         parser.parse(argc, argv);
