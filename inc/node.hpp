@@ -10,17 +10,18 @@
 
 #ifndef msa_compile_cython
 
-  /*
-   * Defining macro indicating the node rank to be used as the master node. It
-   * is recommended not to change it, as no other rank is garanteed to exist.
-   */
-  #define master_node_id 0
+/*
+* Defining macro indicating the node rank to be used as the master node. It
+* is recommended not to change it, as no other rank is garanteed to exist.
+*/
+#define master_node_id 0
 
 namespace cluster
 {
     extern int size;
     extern int rank;
-    static constexpr const int master = master_node_id;
+
+    static constexpr int master = master_node_id;
 };
 
 namespace node
@@ -54,7 +55,7 @@ namespace node
     }
 };
 
-  #undef master_node_id
+#undef master_node_id
 #endif
 
 /*

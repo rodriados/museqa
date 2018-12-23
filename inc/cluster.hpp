@@ -102,7 +102,6 @@ namespace cluster
     };
 
     extern std::vector<MPI_Datatype> dtypes;
-    static const MPI_Comm world = MPI_COMM_WORLD;
 
     /**
      * Generates a new datatype for a user defined type.
@@ -232,11 +231,11 @@ namespace cluster
             inline int broadcast(int root = master)
             {
                 if(dynamic) {
-                    MPI_Bcast(&size, 1, Datatype<size_t>::get(), root, world);
+                    MPI_Bcast(&size, 1, Datatype<size_t>::get(), root, MPI_COMM_WORLD);
                     if(cluster::rank != root) resize(size);
                 }
 
-                return MPI_Bcast(buffer, size, Datatype<T>::get(), root, world);
+                return MPI_Bcast(buffer, size, Datatype<T>::get(), root, MPI_COMM_WORLD);
             }
 
             /**
@@ -251,12 +250,12 @@ namespace cluster
                 if(dynamic) {
                     int size;
                     MPI_Status probed;
-                    MPI_Probe(source, tag, world, &probed);
+                    MPI_Probe(source, tag, MPI_COMM_WORLD, &probed);
                     MPI_Get_count(&probed, Datatype<int>::get(), &size);
                     resize(size);
                 }
 
-                return MPI_Recv(buffer, size, Datatype<T>::get(), source, tag, world, status);
+                return MPI_Recv(buffer, size, Datatype<T>::get(), source, tag, MPI_COMM_WORLD, status);
             }
 
             /**
@@ -267,7 +266,7 @@ namespace cluster
              */
             inline int send(int dest = master, int tag = MPI_TAG_UB)
             {
-                return MPI_Send(buffer, size, Datatype<T>::get(), dest, tag, world);
+                return MPI_Send(buffer, size, Datatype<T>::get(), dest, tag, MPI_COMM_WORLD);
             }
 
             /**
@@ -286,7 +285,7 @@ namespace cluster
 
                 return MPI_Scatterv(
                     buffer.buffer, count, displ, Datatype<T>::get(),
-                    this->buffer, count[rank], Datatype<T>::get(), root, world
+                    this->buffer, count[rank], Datatype<T>::get(), root, MPI_COMM_WORLD
                 );
             }
 
@@ -415,9 +414,11 @@ namespace cluster
      */
     inline void init(int& argc, char **& argv)
     {
-        MPI_Init(&argc, &argv);
-        MPI_Comm_rank(world, &cluster::rank);
-        MPI_Comm_size(world, &cluster::size);
+        int provided;
+
+        MPI_Init_thread(&argc, &argv, MPI_THREAD_SERIALIZED, &provided);
+        MPI_Comm_rank(MPI_COMM_WORLD, &cluster::rank);
+        MPI_Comm_size(MPI_COMM_WORLD, &cluster::size);
     }
 
     /**#@+
@@ -431,7 +432,7 @@ namespace cluster
     template <typename T>
     inline int broadcast
         (   T& buffer
-        ,   int root = master               )
+        ,   int root = master   )
     {
         Payload<T> payload(buffer);
         return payload.broadcast(root);
@@ -441,7 +442,7 @@ namespace cluster
     inline int broadcast
         (   T *buffer
         ,   int count = 1
-        ,   int root = master               )
+        ,   int root = master   )
     {
         Payload<T> payload(buffer, count);
         return payload.broadcast(root);
@@ -495,7 +496,7 @@ namespace cluster
     inline int send
         (   T& buffer
         ,   int dest = master
-        ,   int tag = MPI_TAG_UB            )
+        ,   int tag = MPI_TAG_UB    )
     {
         Payload<T> payload(buffer);
         return payload.send(dest, tag);
@@ -506,7 +507,7 @@ namespace cluster
         (   T *buffer
         ,   int count = 1
         ,   int dest = master
-        ,   int tag = MPI_TAG_UB            )
+        ,   int tag = MPI_TAG_UB    )
     {
         Payload<T> payload(buffer, count);
         return payload.send(dest, tag);
@@ -555,7 +556,7 @@ namespace cluster
      */
     inline int sync()
     {
-        return MPI_Barrier(world);
+        return MPI_Barrier(MPI_COMM_WORLD);
     }
 
     /**
@@ -569,6 +570,8 @@ namespace cluster
 
         return MPI_Finalize();
     }
+
+    static const int any = MPI_ANY_SOURCE;
 };
 
 #endif

@@ -225,7 +225,6 @@ namespace cmdline
     };
 
     extern Parser parser;
-    extern const std::vector<Option> config;
 
     /**
      * Checks whether an argument exists.
@@ -261,12 +260,20 @@ namespace cmdline
 
     /**
      * Initializes the command line arguments.
+     * @param config The options available.
+     */
+    inline void init(const std::vector<Option>& options)
+    {
+        parser.init(options);
+    }
+
+    /**
+     * Parses the command line arguments.
      * @param argc Number of arguments sent by command line.
      * @param argv The arguments sent by command line.
      */
-    inline void init(int argc, char **argv)
+    inline void parse(int argc, char **argv)
     {
-        parser.init(config);
         parser.parse(argc, argv);
     }
 };

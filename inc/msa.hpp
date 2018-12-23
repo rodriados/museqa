@@ -90,7 +90,7 @@ struct Exception : public std::exception
 };
 
 #ifndef msa_compile_cython
-[[noreturn]] extern void halt(uint8_t = 0);
+extern void halt(uint8_t = 0);
 #endif
 
 /**
@@ -158,6 +158,25 @@ inline void watchdog(const std::string& task, uint32_t done, uint32_t total, con
     printf("%s %u %u %u %u ", task.data(), cluster::rank, cluster::size, done, total);
     printf(fmt.data(), args...);
     putchar('\n');
+#endif
+}
+
+/**
+ * Prints an error log message and forcefully breaks execution.
+ * This function shall be used with extreme caution.
+ * @tparam T The types of message arguments.
+ * @param fmt The message format.
+ * @param args The format values.
+ * @see error
+ */
+template <typename ...T>
+inline void shutdown(const std::string& fmt, T... args)
+{
+#ifndef msa_compile_cython
+    printf("[error] ");
+    printf(fmt.data(), args...);
+    putchar('\n');
+    exit(1);
 #endif
 }
 
