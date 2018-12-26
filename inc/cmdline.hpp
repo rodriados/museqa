@@ -8,23 +8,15 @@
 
 #pragma once
 
+#include <utility>
 #include <cstdint>
+#include <cstdlib>
 #include <string>
 #include <vector>
 #include <map>
 
 namespace cmdline
 {
-    /**
-     * Option flags enumeration.
-     * @since 0.1.1
-     */
-    enum Flag
-    {
-        required = 0x01
-    ,   variadic = 0x02
-    };
-
     /**
      * Stores all information about a given option available from the command
      * line. There should be an instance for each option available.
@@ -33,9 +25,10 @@ namespace cmdline
     class Option
     {
         protected:
-            std::string sname;            /// The option's short name.
-            std::string lname;            /// The option's long name.
-            uint8_t flag = 0;                   /// Is the option required?
+            std::string sname;              /// The option's short name.
+            std::string lname;              /// The option's long name.
+            bool variadic;                  /// Is the option variadic?
+            bool required;                  /// Is the option required?
 
         public:
             /**
@@ -49,10 +42,13 @@ namespace cmdline
                 (   const std::string& sname
                 ,   const std::string& lname
                 ,   const std::string& //description
-                ,   const uint8_t flag = 0             ) noexcept
+                ,   const bool variadic = false
+                ,   const bool required = false         )
+                noexcept
             :   sname(sname)
             ,   lname(lname)
-            ,   flag(flag) {}
+            ,   variadic(variadic)
+            ,   required(required) {}
 
             Option() noexcept = default;
             Option(const Option&) = default;
@@ -96,7 +92,7 @@ namespace cmdline
              */
             inline bool isRequired() const
             {
-                return flag & required;
+                return required;
             }
 
             /**
@@ -105,7 +101,7 @@ namespace cmdline
              */
             inline bool isVariadic() const
             {
-                return flag & variadic;
+                return variadic;
             }
 
             /**
@@ -133,7 +129,7 @@ namespace cmdline
         protected:
             std::string appname;                        /// The name used by the application.
             std::vector<std::string> positional;        /// The list of positional arguments.
-            std::map<std::string, std::string> args;    /// The map of parsed option arguments.
+            std::map<std::string, std::string> values;  /// The map of parsed option arguments values.
 
         public:
             /**
@@ -152,33 +148,57 @@ namespace cmdline
             Parser& operator=(const Parser&) = default;
             Parser& operator=(Parser&&) = default;
 
-            /**
+            /**#@+
              * Retrieves the value received by a named argument.
-             * @param argname The name of the requested argument.
+             * @tparam T The type the argument must be converted to.
+             * @param name The name of the requested argument.
              * @param fallback The value to be returned if none is found.
              * @return The value of requested argument.
              */
-            inline const std::string& get(const std::string& name, const std::string& fallback = "") const
-            {
-                const auto& value = args.find(name);
+            template <typename T = std::string>
+            inline typename std::enable_if<!std::is_arithmetic<T>::value, T>::type get
+              ( const std::string& name
+              , const T& fallback = {}      ) const
+            {                
+                static_assert(std::is_convertible<std::string, T>::value, "Cannot convert to requested type");
+                
+                const auto& pair = values.find(name);
 
-                return value != args.end()
-                    ? value->second
+                return pair != values.end()
+                    ? static_cast<T>(pair->second)
                     : fallback;
             }
 
-            /**
-             * Retrieves the value of a positional argument.
-             * @param index The requested argument index.
-             * @param fallback The value to be returned if none is found.
-             * @return The value of requested argument.
-             */
-            inline const std::string& get(uint16_t index, const std::string& fallback = "") const
+            template <typename T>
+            inline typename std::enable_if<std::is_integral<T>::value && std::is_signed<T>::value, T>::type get
+                (   const std::string& name
+                ,   const T& fallback = {}  ) const
             {
-                return positional.size() > index
-                    ? positional[index]
+                return has(name)
+                    ? static_cast<T>(strtoll(get(name).c_str(), nullptr, 0))
                     : fallback;
             }
+
+            template <typename T>
+            inline typename std::enable_if<std::is_integral<T>::value && std::is_unsigned<T>::value, T>::type get
+                (   const std::string& name
+                ,   const T& fallback = {}  ) const
+            {
+                return has(name)
+                    ? static_cast<T>(strtoull(get(name).c_str(), nullptr, 0))
+                    : fallback;
+            }
+
+            template <typename T>
+            inline typename std::enable_if<std::is_floating_point<T>::value, T>::type get
+                (   const std::string& name
+                ,   const T& fallback = {}  ) const
+            {
+                return has(name)
+                    ? static_cast<T>(strtold(get(name).c_str(), nullptr))
+                    : fallback;
+            }
+            /**#@-*/
 
             /**
              * Informs the name used to start the application.
@@ -190,12 +210,12 @@ namespace cmdline
             }
 
             /**
-             * Informs the number of positional arguments.
-             * @return The number of positional arguments.
+             * Informs the number of parsed arguments.
+             * @return The number of parsed arguments.
              */
             inline size_t getCount() const
             {
-                return positional.size();
+                return values.size();
             }
 
             /**
@@ -212,9 +232,9 @@ namespace cmdline
              * @param argname The name of the requested argument.
              * @return Does the argument exist?
              */
-            inline bool has(const std::string& argname)
+            inline bool has(const std::string& argname) const
             {
-                return args.find(argname) != args.end();
+                return values.find(argname) != values.end();
             }
 
             void init(const std::vector<Option>&);
@@ -227,6 +247,46 @@ namespace cmdline
     extern Parser parser;
 
     /**
+     * Retrieves the value received by a named argument.
+     * @tparam T The type the argument must be converted to.
+     * @param name The name of the requested argument.
+     * @param fallback The value to be returned if none is found.
+     * @return The value of requested argument.
+     */
+    template <typename T>
+    inline T get(const std::string& name, const T& fallback = {})
+    {
+        return parser.get<T>(name, fallback);
+    }
+
+    /**
+     * Informs the name used to start the application.
+     * @return The application name used.
+     */
+    inline const std::string& getAppname()
+    {
+        return parser.getAppname();
+    }
+
+    /**
+     * Informs the number of parsed arguments.
+     * @return The number of parsed arguments.
+     */
+    inline size_t getCount()
+    {
+        return parser.getCount();
+    }
+
+    /**
+     * Returns the whole list of positional arguments.
+     * @return The list of parsed positional arguments.
+     */
+    inline const std::vector<std::string>& getPositional()
+    {
+        return parser.getPositional();
+    }
+
+    /**
      * Checks whether an argument exists.
      * @param argname The name of the requested argument.
      * @return Does the argument exist?
@@ -234,28 +294,6 @@ namespace cmdline
     inline bool has(const std::string& argname)
     {
         return parser.has(argname);
-    }
-
-    /**
-     * Retrieves the value received by a named argument.
-     * @param argname The name of the requested argument.
-     * @param fallback The value to be returned if none is found.
-     * @return The value of requested argument.
-     */
-    inline const std::string& get(const std::string& argname, const std::string& fallback = "")
-    {
-        return parser.get(argname, fallback);
-    }
-
-    /**
-     * Retrieves the value of a positional argument.
-     * @param index The requested argument index.
-     * @param fallback The value to be returned if none is found.
-     * @return The value of requested argument.
-     */
-    inline const std::string& get(uint16_t index, const std::string& fallback = "")
-    {
-        return parser.get(index, fallback);
     }
 
     /**
