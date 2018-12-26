@@ -20,6 +20,24 @@
 
 namespace cluster
 {
+    /**
+     * Holds a group of nodes that can intercommunicate.
+     * @since 0.1.1
+     */
+    using NodeGroup = MPI_Comm;
+
+    /**
+     * Represents a value type that can be sent between nodes.
+     * @since 0.1.1
+     */
+    using Type = MPI_Datatype;
+
+    /**
+     * Holds the status of a cluster communication.
+     * @since 0.1.1
+     */
+    using Status = MPI_Status;
+
     /*
      * Forward declaration of Datatype, so that datatypes that already exist can
      * be used to form a new datatype.
@@ -101,7 +119,9 @@ namespace cluster
         };
     };
 
-    extern std::vector<MPI_Datatype> dtypes;
+    extern std::vector<Type> dtypes;
+    static constexpr int any = MPI_ANY_SOURCE;
+    static constexpr NodeGroup world = MPI_COMM_WORLD;
 
     /**
      * Generates a new datatype for a user defined type.
@@ -226,47 +246,54 @@ namespace cluster
             /**
              * Broadcasts data to all nodes connected in the cluster.
              * @param root The operation's root node.
+             * @param group The group of nodes the operation applies to.
              * @return MPI error code if not successful.
              */
-            inline int broadcast(int root = master)
+            inline int broadcast(int root = master, const NodeGroup& group = world)
             {
                 if(dynamic) {
-                    MPI_Bcast(&size, 1, Datatype<size_t>::get(), root, MPI_COMM_WORLD);
+                    MPI_Bcast(&size, 1, Datatype<size_t>::get(), root, group);
                     if(cluster::rank != root) resize(size);
                 }
 
-                return MPI_Bcast(buffer, size, Datatype<T>::get(), root, MPI_COMM_WORLD);
+                return MPI_Bcast(buffer, size, Datatype<T>::get(), root, group);
             }
 
             /**
              * Receives data from a node connected to the cluster.
              * @param source The source node.
              * @param tag The identifying tag.
+             * @param group The group of nodes the operation applies to.
              * @param status The transmission status.
              * @return MPI error code if not successful.
              */
-            inline int receive(int source = master, int tag = MPI_TAG_UB, MPI_Status *status = MPI_STATUS_IGNORE)
+            inline int receive
+                (   int source = master
+                ,   int tag = MPI_TAG_UB
+                ,   const NodeGroup& group = world
+                ,   Status *status = MPI_STATUS_IGNORE  )
             {
                 if(dynamic) {
                     int size;
-                    MPI_Status probed;
-                    MPI_Probe(source, tag, MPI_COMM_WORLD, &probed);
+                    Status probed;
+                    MPI_Probe(source, tag, group, &probed);
                     MPI_Get_count(&probed, Datatype<int>::get(), &size);
                     resize(size);
                 }
 
-                return MPI_Recv(buffer, size, Datatype<T>::get(), source, tag, MPI_COMM_WORLD, status);
+                return MPI_Recv(buffer, size, Datatype<T>::get(), source, tag, group, status);
             }
 
             /**
              * Sends data to a node connected to the cluster.
              * @param dest The destination node.
              * @param tag The identifying tag.
+             * @param group The group of nodes the operation applies to.
              * @return MPI error code if not successful.
              */
-            inline int send(int dest = master, int tag = MPI_TAG_UB)
+            inline int send(int dest = master, int tag = MPI_TAG_UB, const NodeGroup& group = world)
             {
-                return MPI_Send(buffer, size, Datatype<T>::get(), dest, tag, MPI_COMM_WORLD);
+                return MPI_Send(buffer, size, Datatype<T>::get(), dest, tag, group);
             }
 
             /**
@@ -275,18 +302,30 @@ namespace cluster
              * @param count The count of elements to send to each node.
              * @param displ The scatter displacement of each node.
              * @param root The operation's root node.
+             * @param group The group of nodes the operation applies to.
              * @return MPI error code if not successful.
              */
-            inline int scatter(BasePayload<T>& buffer, int *count, int *displ, int root = master)
+            inline int scatter
+                (   BasePayload<T>& buffer
+                ,   int *count
+                ,   int *displ
+                ,   int root = master
+                ,   const NodeGroup& group = world  )
             {
                 if(dynamic) {
                     resize(count[rank]);
                 }
 
-                return MPI_Scatterv(
-                    buffer.buffer, count, displ, Datatype<T>::get(),
-                    this->buffer, count[rank], Datatype<T>::get(), root, MPI_COMM_WORLD
-                );
+                return MPI_Scatterv
+                    (   buffer.buffer
+                    ,   count
+                    ,   displ
+                    ,   Datatype<T>::get()
+                    ,   this->buffer
+                    ,   count[rank]
+                    ,   Datatype<T>::get()
+                    ,   root
+                    ,   group               );
             }
 
         protected:
@@ -408,7 +447,31 @@ namespace cluster
     };
 
     /**
-     * Initializes the node's communication and identifies it in the cluster.
+     * Informs the rank of the node in the group.
+     * @param group The group of nodes the operation applies to.
+     * @return The node's rank in group.
+     */
+    inline int getRank(const NodeGroup& group = world)
+    {
+        int rank;
+        MPI_Comm_rank(group, &rank);
+        return rank;
+    }
+
+    /**
+     * Informs the number of nodes in the group.
+     * @param group The group of nodes the operation applies to.
+     * @return The number of nodes in group.
+     */
+    inline int getSize(const NodeGroup& group = world)
+    {
+        int size;
+        MPI_Comm_size(group, &size);
+        return size;
+    }
+
+    /**
+     * Initializes the cluster's communication and identifies the node in the cluster.
      * @param argc The number of arguments sent from terminal.
      * @param argv The arguments sent from terminal.
      */
@@ -417,8 +480,8 @@ namespace cluster
         int provided;
 
         MPI_Init_thread(&argc, &argv, MPI_THREAD_SERIALIZED, &provided);
-        MPI_Comm_rank(MPI_COMM_WORLD, &cluster::rank);
-        MPI_Comm_size(MPI_COMM_WORLD, &cluster::size);
+        cluster::rank = getRank();
+        cluster::size = getSize();
     }
 
     /**#@+
@@ -426,26 +489,29 @@ namespace cluster
      * @tparam T Type of buffer data to broadcast.
      * @param buffer The buffer to broadcast.
      * @param count The number of buffer's elements to broadcast.
+     * @param group The group of nodes the operation applies to.
      * @param root The operation's root node.
      * @return MPI error code if not successful.
      */
     template <typename T>
     inline int broadcast
         (   T& buffer
-        ,   int root = master   )
+        ,   const NodeGroup& group = world
+        ,   int root = master           )
     {
         Payload<T> payload(buffer);
-        return payload.broadcast(root);
+        return payload.broadcast(root, group);
     }
 
     template <typename T>
     inline int broadcast
         (   T *buffer
         ,   int count = 1
-        ,   int root = master   )
+        ,   const NodeGroup& group = world
+        ,   int root = master           )
     {
         Payload<T> payload(buffer, count);
-        return payload.broadcast(root);
+        return payload.broadcast(root, group);
     }
     /**#@-*/
 
@@ -456,6 +522,7 @@ namespace cluster
      * @param count The number of buffer's elements to receive.
      * @param source The source node.
      * @param tag The identifying tag.
+     * @param group The group of nodes the operation applies to.
      * @param status The transmission status.
      * @return MPI error code if not successful.
      */
@@ -464,10 +531,11 @@ namespace cluster
         (   T& buffer
         ,   int source = master
         ,   int tag = MPI_TAG_UB
-        ,   MPI_Status *status = MPI_STATUS_IGNORE  )
+        ,   const NodeGroup& group = world
+        ,   Status *status = MPI_STATUS_IGNORE  )
     {
         Payload<T> payload(buffer);
-        return payload.receive(source, tag, status);
+        return payload.receive(source, tag, group, status);
     }
 
     template <typename T>
@@ -476,10 +544,11 @@ namespace cluster
         ,   int count = 1
         ,   int source = master
         ,   int tag = MPI_TAG_UB
-        ,   MPI_Status *status = MPI_STATUS_IGNORE  )
+        ,   const NodeGroup& group = world
+        ,   Status *status = MPI_STATUS_IGNORE  )
     {
         Payload<T> payload(buffer, count);
-        return payload.receive(source, tag, status);
+        return payload.receive(source, tag, group, status);
     }
     /**#@-*/
 
@@ -490,16 +559,18 @@ namespace cluster
      * @param count The number of buffer's elements to send.
      * @param dest The destination node.
      * @param tag The identifying tag.
+     * @param group The group of nodes the operation applies to.
      * @return MPI error code if not successful.
      */
     template <typename T>
     inline int send
         (   T& buffer
         ,   int dest = master
-        ,   int tag = MPI_TAG_UB    )
+        ,   int tag = MPI_TAG_UB
+        ,   const NodeGroup& group = world  )
     {
         Payload<T> payload(buffer);
-        return payload.send(dest, tag);
+        return payload.send(dest, tag, group);
     }
 
     template <typename T>
@@ -507,10 +578,11 @@ namespace cluster
         (   T *buffer
         ,   int count = 1
         ,   int dest = master
-        ,   int tag = MPI_TAG_UB    )
+        ,   int tag = MPI_TAG_UB
+        ,   const NodeGroup& group = world  )
     {
         Payload<T> payload(buffer, count);
-        return payload.send(dest, tag);
+        return payload.send(dest, tag, group);
     }
     /**#@-*/
 
@@ -522,6 +594,7 @@ namespace cluster
      * @param sendcount The count of elements to send to each node.
      * @param senddispl The scatter displacement of each node.
      * @param root The operation's root node.
+     * @param group The group of nodes the operation applies to.
      * @return MPI error code if not successful.
      */
     template <typename T>
@@ -530,10 +603,11 @@ namespace cluster
         ,   T& recvbuf
         ,   std::vector<int>& sendcount
         ,   std::vector<int>& senddispl
-        ,   int root = master               )
+        ,   int root = master
+        ,   const NodeGroup& group = world  )
     {
         Payload<T> payload(recvbuf), buffer(sendbuf);
-        return payload.scatter(buffer, sendcount.data(), senddispl.data(), root);
+        return payload.scatter(buffer, sendcount.data(), senddispl.data(), root, group);
     }
 
     template <typename T>
@@ -542,36 +616,66 @@ namespace cluster
         ,   T *recvbuf
         ,   int *sendcount
         ,   int *senddispl
-        ,   int root = master               )
+        ,   int root = master
+        ,   const NodeGroup& group = world  )
     {
         Payload<T> payload(recvbuf, size), buffer(sendbuf);
-        return payload.scatter(buffer, sendcount, senddispl, root);
+        return payload.scatter(buffer, sendcount, senddispl, root, group);
     }
     /**#@-*/
 
     /**
-     * Synchronizes all of the cluster's nodes.
-     * @return MPI error code if not successful.
-     * @see device::sync
+     * Creates a new group communicator with the same nodes as the group given.
+     * @param group The group to be cloned.
+     * @return The created group communicator.
      */
-    inline int sync()
+    inline NodeGroup clone(const NodeGroup& group = world)
     {
-        return MPI_Barrier(MPI_COMM_WORLD);
+        NodeGroup newgroup;
+        MPI_Comm_dup(group, &newgroup);
+        return newgroup;
     }
 
     /**
-     * Finalizes the node's communication to the cluster.
+     * Creates new groups based on the colors selected by each node.
+     * @param color The group to which a node will take part.
+     * @param key The node's rank key in the new group.
+     * @param group The group that's being split.
+     * @return The new group to which the current node is part of.
+     */
+    inline NodeGroup split(int color, int key, const NodeGroup& group = world)
+    {
+        NodeGroup newgroup;
+        MPI_Comm_split(group, color, key, &newgroup);
+        return newgroup;
+    }
+
+    /**
+     * Synchronizes all of the cluster's nodes.
+     * @param group The group of nodes the operation applies to.
+     * @return MPI error code if not successful.
+     * @see device::sync
+     */
+    inline int sync(const NodeGroup& group = world)
+    {
+        return MPI_Barrier(group);
+    }
+
+    /**
+     * Finalizes the node's communication to the cluster group.
+     * @param group The group of nodes the operation applies to.
      * @return MPI error code if not successful.
      */
-    inline int finalize()
+    inline int finalize(const NodeGroup& group = world)
     {
-        for(MPI_Datatype& dtype : dtypes)
+        if(group != world)
+            return MPI_Comm_free(&group);
+
+        for(Type& dtype : dtypes)
             MPI_Type_free(&dtype);
 
         return MPI_Finalize();
     }
-
-    static const int any = MPI_ANY_SOURCE;
 };
 
 #endif

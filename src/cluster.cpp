@@ -13,6 +13,6 @@ namespace cluster
     int rank = 0;
     int size = 0;
     
-    std::vector<MPI_Datatype> dtypes;
+    std::vector<Type> dtypes;
 };
 
