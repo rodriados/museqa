@@ -12,15 +12,16 @@
 #include <cstddef>
 #include <utility>
 
+#include "utils.hpp"
 #include "device.cuh"
 
-/**
- * Purifies the type by removing array extent.
- * @tparam T The type to be cleaned.
+/*
+ * Aliases the type purifier.
+ * @tparam T The type to be purified.
  * @since 0.1.1
  */
 template <typename T>
-using Pure = typename std::remove_extent<T>::type;
+using Pure = utils::Pure<T>;
 
 /**
  * Type of function to use for freeing pointers.
@@ -28,7 +29,7 @@ using Pure = typename std::remove_extent<T>::type;
  * @since 0.1.1
  */
 template <typename T>
-using Deleter = void (*)(Pure<T> *);
+using Deleter = utils::Function<void, Pure<T> *>;
 
 namespace pointer
 {
