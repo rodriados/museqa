@@ -1,8 +1,10 @@
 /** 
  * Multiple Sequence Alignment reflection header file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018 Alexandr Poltavsky, Antony Polukhin, Rodrigo Siqueira
+ * @copyright 2018-2019 Alexandr Poltavsky, Antony Polukhin, Rodrigo Siqueira
  */
+#pragma once
+
 #ifndef REFLECTION_HPP_INCLUDED
 #define REFLECTION_HPP_INCLUDED
 
@@ -21,8 +23,6 @@
  * Note: CWG agreed that such techniques should be ill-formed, although the mechanism for prohibiting them
  * is as yet undetermined.
  */
-#pragma once
-
 #include <utility>
 #include <cstddef>
 #include <cstdint>
@@ -36,6 +36,18 @@
 
 namespace reflection
 {
+    /**
+     * A memory aligned storage container.
+     * @tparam S The number of elements in storage.
+     * @tparam A The alignment the storage should use.
+     * @since 0.1.1
+     */
+    template <size_t S, size_t A>
+    struct AlignedStorage
+    {
+        alignas(A) char storage[S]; /// The aligned storage container.
+    };
+
     /**
      * Base for representing a tuple member and holding its value.
      * @tparam N The index of the member of the tuple.
@@ -147,7 +159,7 @@ namespace reflection
      * @since 0.1.1
      */
     template <size_t I, typename T>
-    using TupleElement = utils::Unref<decltype(detail::t_get<I>(std::declval<T>()))>;
+    using TupleElement = typename std::remove_reference<decltype(detail::t_get<I>(std::declval<T>()))>::type;
 
     namespace detail
     {
@@ -233,7 +245,7 @@ namespace reflection
         template <typename ...T>
         struct AlignedTuple<Tuple<T...>>
         {
-            using type = Tuple<utils::AlignedStorage<sizeof(T), alignof(T)>...>;
+            using type = Tuple<AlignedStorage<sizeof(T), alignof(T)>...>;
         };
         /**#@-*/
 
@@ -289,7 +301,7 @@ namespace reflection
      */
     template <typename T>
     using LoopholeTuple = typename detail::LoopholeTypeList<
-            utils::Pure<T>, std::make_index_sequence<detail::count<utils::Pure<T>>(0)>
+            Pure<T>, std::make_index_sequence<detail::count<Pure<T>>(0)>
         >::type;
 };
 
@@ -307,7 +319,7 @@ class Reflection
          * Cleaning the type to be reflected.
          * @since 0.1.1
          */
-        using Type = utils::Pure<T>;
+        using Type = Pure<T>;
 
     public:
         /**

@@ -1,26 +1,38 @@
 /** 
- * Multiple Sequence Alignment optional type header file.
+ * Multiple Sequence Alignment expect type header file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018 Rodrigo Siqueira
+ * @copyright 2018-2019 Rodrigo Siqueira
  */
-#ifndef OPTIONAL_HPP_INCLUDED
-#define OPTIONAL_HPP_INCLUDED
-
 #pragma once
+
+#ifndef EXPECT_HPP_INCLUDED
+#define EXPECT_HPP_INCLUDED
 
 #include <cstddef>
 #include <utility>
 
-#include "utils.hpp"
-
-namespace detail
+namespace expect
 {
+    /**
+     * Checks whether two types can be compared to each other.
+     * @tparam A First type to check.
+     * @tparam B Second type to check.
+     * @return Are the types comparable.
+     */
+    template <typename A, typename B>
+    inline constexpr bool comparable()
+    {
+        return std::is_same<A, B>::value
+            || (std::is_arithmetic<A>::value && std::is_arithmetic<B>::value)
+            || std::is_convertible<B, A>::value;
+    }
+
     /*
-     * Forward declaration of Maybe, so it can be used as a complete type
+     * Forward declaration of Expect, so it can be used as a complete type
      * before defining it properly.
      */
     template <typename T>
-    struct Maybe;
+    struct Expect;
 
     /**
      * Represents the "nothing" value type. This struct is empty and shall always
@@ -28,7 +40,7 @@ namespace detail
      * @since 0.1.1
      */
     template <>
-    struct Maybe<void>
+    struct Expect<void>
     {
         /**
          * Checks whether the object is equal to another one.
@@ -37,7 +49,7 @@ namespace detail
          * @return Are the objects equal?
          */
         template <typename U>
-        inline constexpr bool operator==(const Maybe<U>&)
+        inline bool operator==(const Expect<U>&) const
         {
             return std::is_same<U, void>::value;
         }
@@ -49,9 +61,18 @@ namespace detail
          * @return Are the objects different?
          */
         template <typename U>
-        inline constexpr bool operator!=(const Maybe<U>&)
+        inline bool operator!=(const Expect<U>&) const
         {
             return !std::is_same<U, void>::value;
+        }
+
+        /**
+         * Informs how the object corresponds to a condition.
+         * @return Does object fulfill expectancy?
+         */
+        inline operator bool() const
+        {
+            return false;
         }
     };
 
@@ -62,26 +83,28 @@ namespace detail
      * @since 0.1.1
      */
     template <typename T>
-    struct Maybe
+    struct Expect
     {
         T value;                /// The value that may be held by the object.
         bool isEmpty = true;    /// Is the object actually empty?
 
-        inline constexpr Maybe() = default;
+        Expect() = default;
 
         /**
          * Builds a new valued-object.
+         * @tparam X The value type.
          * @param value The value to be held by the object.
          */
-        inline constexpr Maybe(const T& value)
-        : value {value}
+        template <typename X = T>
+        inline Expect(const X& value)
+        : value {static_cast<T>(value)}
         , isEmpty(false) {}
 
         /**
          * Builds a new valued-object.
          * @param value The value to be moved to the object.
          */
-        inline constexpr Maybe(T&& value)
+        inline Expect(T&& value)
         : value {std::move(value)}
         , isEmpty(false) {}
 
@@ -89,18 +112,20 @@ namespace detail
          * Builds a new empty object.
          * @param (ignored) The invalid object.
          */
-        inline constexpr Maybe(const Maybe<void>&)
+        inline Expect(const Expect<void>&)
         : isEmpty(true) {}
 
         /**
          * Copies an optional object.
+         * @tparam X The value type.
          * @param other The object to be copied.
          */
-        inline constexpr Maybe(const Maybe<T>& other)
+        template <typename X = T>
+        inline Expect(const Expect<X>& other)
         : isEmpty(other.isEmpty)
         {
             if(!isEmpty) {
-                new (&value) T(other.value);
+                new (&value) T(static_cast<T>(other.value));
             }
         }
 
@@ -108,7 +133,7 @@ namespace detail
          * Copies an optional object.
          * @param other The object to be copied.
          */
-        inline constexpr Maybe(Maybe<T>&& other)
+        inline Expect(Expect<T>&& other)
         : isEmpty(other.isEmpty)
         {
             if(!isEmpty) {
@@ -118,15 +143,15 @@ namespace detail
 
         /**
          * Checks whether the object is equal to another one.
-         * @tparam U The value-type of other object.
+         * @tparam X The value-type of other object.
          * @param other The other object to compare.
          * @return Are the objects equal?
          */
-        template <typename U>
-        inline constexpr bool operator==(const Maybe<U>& other) const
+        template <typename X = T>
+        inline bool operator==(const Expect<X>& other) const
         {
             return isEmpty == other.isEmpty
-                ? !isEmpty && utils::Comparable<T, U>::value && (value == other.value)
+                ? !isEmpty && comparable<T, X>() && (value == other.value)
                 : false;
         }
 
@@ -136,8 +161,8 @@ namespace detail
          * @param other The other object to compare.
          * @return Are the objects different?
          */
-        template <typename U>
-        inline constexpr bool operator!=(const Maybe<U>& other) const
+        template <typename X = T>
+        inline bool operator!=(const Expect<X>& other) const
         {
             return !(*this == other);
         }
@@ -146,7 +171,7 @@ namespace detail
          * Converts the object into a bool, informing whether empty.
          * @return Is the object empty?
          */
-        inline constexpr operator bool() const
+        inline operator bool() const
         {
             return !empty();
         }
@@ -155,7 +180,7 @@ namespace detail
          * Gets the value held by the object.
          * @return The value within the object.
          */
-        inline constexpr const T& get(const T& fallback = {}) const
+        inline const T& get(const T& fallback = {}) const
         {
             return !isEmpty ? value : fallback;
         }
@@ -164,7 +189,7 @@ namespace detail
          * Informs whether the object is empty or not.
          * @return Is the object empty?
          */
-        inline constexpr bool empty() const noexcept
+        inline bool empty() const noexcept
         {
             return isEmpty;
         }
@@ -172,36 +197,41 @@ namespace detail
 };
 
 /**
- * The optional type object. This represents a type that may not be initialized.
+ * The expected type object. This represents an expected type that may not be initialized.
  * @since 0.1.1
  */
 template <typename T>
-using Maybe = detail::Maybe<utils::Pure<T>>;
+using Expect = expect::Expect<T>;
 
 /**
  * Aliasing for the always empty type.
  * @since 0.1.1
  */
-using Nothing = Maybe<void>;
+using Nothing = expect::Expect<void>;
 
-/**#@+
- * Creates a new value wrapped in optional context.
+/**
+ * Creates a new value wrapped in an expected context.
  * @tparam T The value type.
  * @param value The value to be wrapped.
  * @return The wrapped value.
  */
 template <typename T>
-inline auto maybe(const T& value) -> Maybe<T>
+inline auto expected(const T& value) -> Expect<T>
 {
     return {value};
 }
 
+/**
+ * Creates a new value wrapped in expected context.
+ * @tparam T The value type.
+ * @param value The value to be wrapped.
+ * @return The wrapped value.
+ */
 template <typename T>
-auto maybe(T&& value) -> Maybe<T>
+inline auto expected(T&& value) -> Expect<T>
 {
     return {std::move(value)};
 }
-/**#@-*/
 
 /**
  * Creates a new optional context with no value.
@@ -209,12 +239,12 @@ auto maybe(T&& value) -> Maybe<T>
  * @return The empty context.
  */
 template <typename T = void>
-inline auto nothing() -> Maybe<T>
+inline auto nothing() -> Expect<T>
 {
     return {};
 }
 
-namespace detail
+namespace expect
 {
     /**
      * The left type value for an @ref Either instance. This type usually
@@ -240,13 +270,6 @@ namespace detail
         T value;    /// The value held by instance.
     };
 
-    /*
-     * Forward declaration of Either, so it can be used as a complete type
-     * before defining it properly.
-     */
-    template <typename L, typename R>
-    struct Either;
-
     /**
      * Heavilly inspired by Haskell, this struct represents a value whose type
      * is in between two alternatives. This is usually useful to return errors
@@ -260,7 +283,7 @@ namespace detail
     {
         /**
          * This object holds a value whose value is an alternative.
-         * @see Maybe
+         * @see Expect
          * @since 0.1.1
          */
         union
@@ -269,24 +292,28 @@ namespace detail
             R rightValue;       /// The right-type value reference.
         };
 
-        bool isLeft;            /// Is left the current value type?
+        bool isLeft = false;    /// Is the currently active value type left?
 
         Either() = delete;
 
         /**
          * Builds a new instance using left-type option.
+         * @tparam X The left-type.
          * @param l The left-typed value.
          */
-        inline constexpr Either(const Left<L>& l)
-        : leftValue {l.value}
+        template <typename X = L>
+        inline Either(const Left<X>& l)
+        : leftValue {static_cast<L>(l.value)}
         , isLeft(true) {}
 
         /**
          * Builds a new instance using right-type option.
+         * @tparam X The right-type.
          * @param r The right-typed value.
          */
-        inline constexpr Either(const Right<R>& r)
-        : rightValue {r.value}
+        template <typename X = R>
+        inline Either(const Right<X>& r)
+        : rightValue {static_cast<R>(r.value)}
         , isLeft(false) {}
 
         /**
@@ -307,26 +334,32 @@ namespace detail
 
         /**
          * Copies an alternative-typed object.
+         * @tparam X The left value-type of other object.
+         * @tparam Y The right value-type of other object.
          * @param other The object to be copied.
          */
-        inline constexpr Either(const Either<L, R>& other)
+        template <typename X, typename Y>
+        inline Either(const Either<X, Y>& other)
         : isLeft(other.isLeft)
         {
-            isLeft
-                ? new (&leftValue) L(other.leftValue)
-                : new (&rightValue) R(other.rightValue);
+            static_assert(std::is_convertible<X, L>::value, "Cannot convert left types.");
+            static_assert(std::is_convertible<Y, R>::value, "Cannot convert right types.");
+
+            isLeft == true
+                ? (void *) new (&leftValue) L(other.leftValue)
+                : (void *) new (&rightValue) R(other.rightValue);
         }
 
         /**
          * Copies an alternative-typed object.
          * @param other The object to be copied.
          */
-        inline constexpr Either(Either<L, R>&& other)
+        inline Either(Either<L, R>&& other)
         : isLeft(other.isLeft)
         {
-            isLeft
-                ? new (&leftValue) L(std::move(other.leftValue))
-                : new (&rightValue) R(std::move(other.rightValue));
+            isLeft == true
+                ? (void *) new (&leftValue) L(std::move(other.leftValue))
+                : (void *) new (&rightValue) R(std::move(other.rightValue));
         }
 
         /**
@@ -335,7 +368,7 @@ namespace detail
          */
         inline ~Either() noexcept
         {
-            isLeft
+            isLeft == true
                 ? leftValue.~L()
                 : rightValue.~R();
         }
@@ -348,11 +381,11 @@ namespace detail
          * @return Are the objects equal?
          */
         template <typename X, typename Y>
-        inline constexpr bool operator==(const Either<X, Y>& other)
+        inline bool operator==(const Either<X, Y>& other)
         {
             return isLeft == other.isLeft
-                ?  isLeft && utils::Comparable<L, X>::value && left() == other.left()
-                : !isLeft && utils::Comparable<R, Y>::value && right() == other.right();
+                ? isLeft == true  && comparable<L, X>() && left() == other.left()
+                : isLeft == false && comparable<R, Y>() && right() == other.right();
         }
 
         /**
@@ -373,7 +406,7 @@ namespace detail
          * are used for errors, and thus represent a false value.
          * @return The object's bool value.
          */
-        inline constexpr operator bool() const
+        inline operator bool() const
         {
             return !isLeft;
         }
@@ -382,10 +415,10 @@ namespace detail
          * Gets the left value stored by the object if the value stored is left-typed.
          * @return The left value of object.
          */
-        inline constexpr auto left() const -> Maybe<L>
+        inline auto left() const -> Expect<L>
         {
-            return isLeft
-                ? maybe(leftValue)
+            return isLeft == true
+                ? expected(leftValue)
                 : nothing();
         }
 
@@ -393,20 +426,30 @@ namespace detail
          * Gets the right value stored by the object if the value stored is right-typed.
          * @return The right value of object.
          */
-        inline constexpr auto right() const -> Maybe<R>
+        inline auto right() const -> Expect<R>
         {
-            return isLeft
-                ? nothing()
-                : maybe(rightValue);
+            return isLeft == false
+                ? expected(rightValue)
+                : nothing();
         }
     };
 };
 
+/**
+ * Exposing the left-type wrapper.
+ * @tparam T The wrapped type.
+ * @since 0.1.1
+ */
 template <typename T>
-using Left = detail::Left<utils::Pure<T>>;
+using Left = expect::Left<T>;
 
+/**
+ * Exposing the right-type wrapper.
+ * @tparam T The wrapped type.
+ * @since 0.1.1
+ */
 template <typename T>
-using Right = detail::Right<utils::Pure<T>>;
+using Right = expect::Right<T>;
 
 /**
  * The alternative typed object. This object allows holding a value whose type
@@ -416,44 +459,54 @@ using Right = detail::Right<utils::Pure<T>>;
  * @since 0.1.1
  */
 template <typename L, typename R>
-using Either = detail::Either<utils::Pure<L>, utils::Pure<R>>;
+using Either = expect::Either<L, R>;
 
-/**#@+
+/**
  * Creates a new value wrapped in a left alternative context.
  * @tparam T The value type.
  * @param value The value to be wrapped.
  * @return The wrapped value.
  */
 template <typename T>
-constexpr auto left(const T& x) -> Left<T>
+inline auto left(const T& x) -> Left<T>
 {
     return {x};
 }
 
+/**
+ * Creates a new value wrapped in a left alternative context.
+ * @tparam T The value type.
+ * @param value The value to be wrapped.
+ * @return The wrapped value.
+ */
 template <typename T>
-auto left(T&& x) -> Left<T>
+inline auto left(T&& x) -> Left<T>
 {
     return {std::move(x)};
 }
-/**#@-*/
 
-/**#@+
+/**
  * Creates a new value wrapped in a right alternative context.
  * @tparam T The value type.
  * @param value The value to be wrapped.
  * @return The wrapped value.
  */
 template <typename T>
-constexpr auto right(const T& x) -> Right<T>
+inline auto right(const T& x) -> Right<T>
 {
     return {x};
 }
 
+/**
+ * Creates a new value wrapped in a right alternative context.
+ * @tparam T The value type.
+ * @param value The value to be wrapped.
+ * @return The wrapped value.
+ */
 template <typename T>
-auto right(T&& x) -> Right<T>
+inline auto right(T&& x) -> Right<T>
 {
     return {std::move(x)};
 }
-/**#@-*/
 
 #endif
