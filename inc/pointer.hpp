@@ -1,27 +1,19 @@
 /**
  * Multiple Sequence Alignment pointer header file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018 Rodrigo Siqueira
+ * @copyright 2018-2019 Rodrigo Siqueira
  */
+#pragma once
+
 #ifndef POINTER_HPP_INCLUDED
 #define POINTER_HPP_INCLUDED
-
-#pragma once
 
 #include <cstdint>
 #include <cstddef>
 #include <utility>
 
+#include "cuda.cuh"
 #include "utils.hpp"
-#include "device.cuh"
-
-/*
- * Aliases the type purifier.
- * @tparam T The type to be purified.
- * @since 0.1.1
- */
-template <typename T>
-using Pure = utils::Pure<T>;
 
 /**
  * Type of function to use for freeing pointers.
@@ -29,7 +21,7 @@ using Pure = utils::Pure<T>;
  * @since 0.1.1
  */
 template <typename T>
-using Deleter = utils::Function<void, Pure<T> *>;
+using Deleter = void (*)(Pure<T> *);
 
 namespace pointer
 {
@@ -38,8 +30,8 @@ namespace pointer
      * @tparam T The pointer type.
      * @param ptr The pointer to be deleted.
      */
-    template <typename T, typename std::enable_if<!std::is_array<T>::value, int>::type = 0>
-    inline void deleter(Pure<T> *ptr)
+    template <typename T>
+    inline auto deleter(Pure<T> *ptr) -> typename std::enable_if<!std::is_array<T>::value, void>::type
     {
         delete ptr;
     }
@@ -49,250 +41,329 @@ namespace pointer
      * @tparam T The pointer type.
      * @param ptr The array pointer to be deleted.
      */
-    template <typename T, typename std::enable_if<std::is_array<T>::value, int>::type = 0>
-    inline void deleter(Pure<T> *ptr)
+    template <typename T>
+    inline auto deleter(Pure<T> *ptr) -> typename std::enable_if<std::is_array<T>::value, void>::type
     {
         delete[] ptr;
     }
 
     /**
-     * Holds a pure type pointer and keeps its reference counter.
+     * Holds raw pointer information.
      * @tparam T The pointer type.
      * @since 0.1.1
      */
     template <typename T>
-    class Holder
+    struct RawPointer
+    {
+        static_assert(!std::is_reference<T>::value, "Cannot create pointer to a reference.");
+
+        Pure<T> * const ptr = nullptr;          /// The pointer itself
+        const Deleter<T> delfunc = deleter<T>;  /// The pointer deleter function.
+        size_t count = 0;                       /// The number of references to pointer.
+
+        /**
+         * Initializes a new raw pointer holder.
+         * @param ptr The raw pointer to be held.
+         * @param delfunc The deleter function for pointer.
+         */
+        inline RawPointer(Pure<T> * const ptr, const Deleter<T>& delfunc)
+        :   ptr {ptr}
+        ,   delfunc {delfunc}
+        ,   count {1}
+        {}
+
+        /**
+         * Deletes the raw pointer by calling its deleter function.
+         * @see RawPointer::RawPointer
+         */
+        inline ~RawPointer() noexcept
+        {
+            (delfunc)(ptr);
+        }
+
+        /**
+         * Creates a new pointer context from given arguments.
+         * @param ptr The pointer to be put into context.
+         * @param delfunc The delete functor.
+         * @return New instance.
+         */
+        inline static RawPointer<T> *acquire(Pure<T> * const ptr, const Deleter<T>& delfunc = nullptr)
+        {
+            return new RawPointer<T> {ptr, delfunc ? delfunc : deleter<T>};
+        }
+
+        /**
+         * Acquires access to an already existing pointer.
+         * @param target The pointer to be acquired.
+         * @return The acquired pointer.
+         */
+        inline static RawPointer<T> *acquire(RawPointer<T> *target)
+        {
+            target && ++target->count;
+            return target;
+        }
+
+        /**
+         * Releases access to pointer, and deletes it if needed.
+         * @param target The pointer to be released.
+         * @see RawPointer::acquire
+         */
+        inline static void release(RawPointer<T> *target)
+        {
+            if(target && --target->count <= 0)
+                delete target;
+        }
+    };
+
+    /**
+     * Manages a raw pointer and all metadata directly related to it.
+     * @tparam T The pointer type.
+     * @since 0.1.1
+     */
+    template <typename T>
+    class Manager
     {
         protected:
-            using PureT = Pure<T>;
-
-        protected:
-            Deleter<T> dfunc = deleter<T>;  /// The pointer delete functor.
-            PureT *ptr = nullptr;           /// The raw pointer.
-            size_t count = 0;               /// The pointer references counter.
+            RawPointer<T> *raw = nullptr;       /// The raw pointer holder.
 
         public:
+            Manager() = default;
+
             /**
-             * Gives access to pointer deleter.
-             * @return The pointer deleter.
+             * Builds a new instance from pointer to acquire.
+             * @param ptr The pointer to acquire.
+             * @param delfunc The deleter function.
              */
-            inline const Deleter<T>& getDeleter()
+            inline Manager(Pure<T> * const ptr, const Deleter<T>& delfunc = nullptr)
+            :   raw {RawPointer<T>::acquire(ptr, delfunc)}
+            {}
+
+            /**
+             * Builds a new instance for an already existing pointer.
+             * @param other The manager to acquire pointer from.
+             */
+            inline Manager(const Manager<T>& other)
+            :   raw {RawPointer<T>::acquire(other.raw)}
+            {}
+
+            /**
+             * Builds a new instance by moving an already existing pointer.
+             * @param other The manager to acquire pointer from.
+             */
+            inline Manager(Manager<T>&& other)
+            :   raw {other.raw}
             {
-                return dfunc;
+                other.raw = nullptr;
+            }
+
+            /**
+             * Releases a reference to the pointer.
+             * @see Manager::Manager
+             */
+            inline ~Manager() noexcept
+            {
+                RawPointer<T>::release(raw);
+            }
+
+            /**
+             * The copy-assignment operator.
+             * @param other The instance to be copied.
+             * @return The current object.
+             */
+            inline Manager<T>& operator=(const Manager<T>& other)
+            {
+                RawPointer<T>::release(raw);
+
+                raw = RawPointer<T>::acquire(other.raw);
+                return *this;
+            }
+
+            /**
+             * The move-assignment operator.
+             * @param other The instance to be copied.
+             * @return The current object.
+             */
+            inline Manager<T>& operator=(Manager<T>&& other)
+            {
+                RawPointer<T>::release(raw);
+
+                raw = other.raw;
+                other.raw = nullptr;
+                return *this;
+            }
+
+            /**
+             * Checks whether this reference is still valid.
+             * @see Manager::Manager
+             */
+            inline operator bool() const
+            {
+                return raw
+                    && raw->ptr;
             }
 
             /**
              * Gives access to raw pointer.
              * @return The raw pointer.
              */
-            cudadecl inline PureT *getRaw()
+            inline Pure<T> *get() const
+            {
+                return raw->ptr;
+            }
+
+            /**
+             * Gives access to pointer deleter.
+             * @return The pointer deleter.
+             */
+            inline const Deleter<T>& getDeleter() const
+            {
+                return raw->delfunc;
+            }
+
+            /**
+             * Informs the number of references created to pointer.
+             * @return The number of references to pointer.
+             */
+            inline const size_t useCount() const
+            {
+                return raw->count;
+            }
+    };
+
+    /**
+     * Represents a smart pointer base. This class can be used to represent a pointer that is
+     * deleted automatically when all references to it have been destroyed.
+     * @tparam T The type of pointer to be held.
+     * @since 0.1.1
+     */
+    template <typename T>
+    class BasePtr
+    {
+        protected:
+            Pure<T> *ptr = nullptr;     /// The raw pointer.
+            Manager<T> manager;         /// The pointer manager.
+
+        public:
+            BasePtr() = default;
+            BasePtr(const BasePtr<T>&) = default;
+
+            /**
+             * Builds a new instance from a raw pointer.
+             * @param ptr The pointer to be encapsulated.
+             * @param delfunc The delete functor.
+             */
+            inline BasePtr(Pure<T> * const ptr, const Deleter<T>& delfunc = nullptr)
+            :   ptr {ptr}
+            ,   manager {ptr, delfunc}
+            {}
+
+            /**
+             * The move constructor. Builds a copy of an instance, by moving.
+             * @param other The instance to be moved.
+             */
+            inline BasePtr(BasePtr<T>&& other)
+            :   ptr {other.ptr}
+            ,   manager {std::move(other.manager)}
+            {
+                other.reset();
+            }
+
+            /**
+             * The move-assignment operator.
+             * @param other The instance to be moved.
+             * @return The current object.
+             */
+            inline BasePtr<T>& operator=(BasePtr<T>&& other) noexcept
+            {
+                ptr = other.ptr;
+                manager = std::move(other.manager);
+                other.reset();
+            }
+
+            BasePtr<T>& operator=(const BasePtr<T>&) noexcept = default;
+
+            /**
+             * Dereferences the pointer.
+             * @return The pointed object.
+             */
+            cudadecl inline Pure<T>& operator*()
+            {
+                return *ptr;
+            }
+
+            /**
+             * Gives access to the raw pointer.
+             * @return The raw pointer.
+             */
+            cudadecl inline Pure<T> *operator&()
             {
                 return ptr;
             }
 
             /**
-             * Creates a new pointer holder from given arguments.
-             * @param ptr The pointer to be acquired.
-             * @param dfunc The delete functor.
-             * @return New holder instance.
+             * Gives access to raw pointer for dereference operator.
+             * @return The raw pointer.
              */
-            static inline Holder<T> *acquire(PureT *ptr, const Deleter<T>& dfunc = nullptr)
+            cudadecl inline Pure<T> *operator->()
             {
-                return new Holder<T>(ptr, dfunc);
+                return ptr;
             }
 
             /**
-             * Acquires access to an already existing pointer holder.
-             * @param target The holder to be acquired.
-             * @return The acquired holder.
+             * Checks if the stored pointer is not null.
+             * @return Is the pointer not null?
              */
-            static inline Holder<T> *acquire(Holder<T> *target)
+            cudadecl inline operator bool() const
             {
-                target && ++(target->count);
-                return target;
+                return (bool) ptr;
             }
 
             /**
-             * Releases access to pointer holder, and deletes it if needed.
-             * @param target The holder to be released.
+             * Gives access to const-qualified raw pointer.
+             * @return The raw pointer.
              */
-            static inline void release(Holder<T> *target)
+            cudadecl inline Pure<T> *get() const
             {
-                if(target && --(target->count) <= 0)
-                    delete target;
+                return ptr;
             }
 
-        protected:
             /**
-             * Builds a new instance from pointer to acquire.
-             * @param ptr The pointer to acquire.
-             * @param dfunc The delete function.
+             * Gives access to pointer deleter.
+             * @return The pointer deleter.
              */
-            inline Holder(PureT *ptr, const Deleter<T>& dfunc = nullptr)
-            :   dfunc(dfunc ? dfunc : deleter<T>)
-            ,   ptr(ptr)
-            ,   count(1) {}
+            inline const Deleter<T>& getDeleter() const
+            {
+                return manager.getDeleter();
+            }
 
             /**
-             * Deletes the pointer. This constructor shall only be called
-             * when there are no more pointer references left.
+             * Resets the pointer manager to an empty state.
+             * @see BasePtr::BasePtr
              */
-            inline ~Holder() noexcept
+            inline void reset()
             {
-                (dfunc)(ptr);
+                ptr = nullptr;
+                manager = Manager<T> {};
+            }
+
+            /**
+             * Informs the number of references created to pointer.
+             * @return The number of references to pointer.
+             */
+            inline size_t useCount() const
+            {
+                return manager.useCount();
             }
     };
 };
 
 /**
- * Represents the base class of a smart pointer.
- * @tparam T The type of pointer to be held.
+ * Aliasing the base pointer object.
+ * @tparam T The pointer type.
  * @since 0.1.1
  */
 template <typename T>
-class BasePointer
-{
-    protected:
-        using PureT = Pure<T>;
-        using self = BasePointer<T>;
-
-    protected:
-        pointer::Holder<T> *meta = nullptr;     /// The pointer metadata.
-        PureT *ptr = nullptr;                   /// The raw pointer.
-
-    public:
-        BasePointer() = default;
-
-        /**
-         * The copy constructor. Builds a copy of an instance.
-         * @param other The instance to be copied.
-         */
-        inline BasePointer(const self& other)
-        :   meta(pointer::Holder<T>::acquire(other.meta))
-        ,   ptr(other.ptr) {}
-
-        /**
-         * The move constructor. Builds a copy of an instance, by moving.
-         * @param other The instance to be moved.
-         */
-        inline BasePointer(self&& other)
-        :   meta(other.meta)
-        ,   ptr(other.ptr)
-        {
-            other.meta = nullptr;
-            other.ptr = nullptr;
-        }
-
-        /**
-         * Builds a new instance from a raw pointer.
-         * @param ptr The pointer to be encapsulated.
-         * @param dfunc The delete functor.
-         */
-        inline BasePointer(PureT *ptr, const Deleter<T>& dfunc = nullptr)
-        :   meta(pointer::Holder<T>::acquire(ptr, dfunc))
-        ,   ptr(ptr) {}
-
-        /**
-         * Destroys a pointer instance. The raw pointer will only be freed if the
-         * instance counter drops to zero or less.
-         */
-        inline ~BasePointer() noexcept
-        {
-            pointer::Holder<T>::release(meta);
-        }
-
-        /**
-         * The copy-assignment operator.
-         * @param other The instance to be copied.
-         * @return The current object.
-         */
-        inline self& operator=(const self& other)
-        {
-            if(meta != other.meta) {
-                pointer::Holder<T>::release(meta);
-                meta = pointer::Holder<T>::acquire(other.meta);
-                ptr = other.ptr;
-            }
-
-            return *this;
-        }
-
-        /**
-         * The move-assignment operator.
-         * @param other The instance to be moved.
-         * @return The current object.
-         */
-        inline self& operator=(self&& other) noexcept
-        {
-            if(meta != other.meta) {
-                pointer::Holder<T>::release(meta);
-                meta = other.meta;
-                ptr = other.ptr;
-                other.meta = nullptr;
-                other.ptr = nullptr;
-            }
-
-            return *this;
-        }
-
-        /**
-         * The assignment operator. Changes the pointer.
-         * @param ptr The new pointer target.
-         * @return The current object.
-         */
-        inline self& operator=(PureT *ptr)
-        {
-            pointer::Holder<T>::release(meta);
-            meta = pointer::Holder<T>::acquire(ptr);
-            this->ptr = ptr;
-            return *this;
-        }
-
-        /**
-         * Dereferences the pointer.
-         * @return The pointed object.
-         */
-        cudadecl inline PureT& operator*()
-        {
-            return *ptr;
-        }
-
-        /**
-         * Gives access to the raw pointer.
-         * @return The raw pointer.
-         */
-        cudadecl inline PureT *operator&()
-        {
-            return ptr;
-        }
-
-        /**
-         * Gives access to raw pointer for dereference operator.
-         * @return The raw pointer.
-         */
-        cudadecl inline PureT *operator->()
-        {
-            return ptr;
-        }
-
-        /**
-         * Gives access to pointer deleter.
-         * @return The pointer deleter.
-         */
-        inline const Deleter<T>& getDeleter()
-        {
-            return meta->getDeleter();
-        }
-
-        /**
-         * Gives access to const-qualified raw pointer.
-         * @return The raw pointer.
-         */
-        cudadecl inline PureT *getRaw() const
-        {
-            return ptr;
-        }
-};
+using BasePtr = pointer::BasePtr<T>;
 
 /**
  * Represents a smart pointer. This class can be used to represent a pointer that is
@@ -301,71 +372,40 @@ class BasePointer
  * @since 0.1.1
  */
 template <typename T, typename E = void>
-class SharedPointer : public BasePointer<T>
+class SmartPtr : public BasePtr<T>
 {
-    protected:
-        using PureT = Pure<T>;
-        using self = SharedPointer<T, E>;
-
     public:
-        SharedPointer() = default;
-        
-        using BasePointer<T>::BasePointer;
+        inline SmartPtr() = default;
+        inline SmartPtr(const SmartPtr&) = default;
+        inline SmartPtr(SmartPtr&&) = default;
 
-        self& operator=(const self&) = default;
-        self& operator=(self&&) = default;
+        using BasePtr<T>::BasePtr;
+
+        SmartPtr<T, E>& operator=(const SmartPtr<T, E>&) = default;
+        SmartPtr<T, E>& operator=(SmartPtr<T, E>&&) = default;
 };
 
 /**
  * Represents a smart array pointer. This class can be used to represent a pointer that
  * is deleted automatically when all references to it have been destroyed.
  * @tparam T The type of pointer to be held.
- * @tparam D The pointer deleter function.
  * @since 0.1.1
  */
 template <typename T>
-class SharedPointer<T, typename std::enable_if<std::is_array<T>::value>::type> : public BasePointer<T>
+class SmartPtr<T, typename std::enable_if<std::is_array<T>::value>::type> : public BasePtr<T>
 {
-    protected:
-        using PureT = Pure<T>;
-        using self = SharedPointer<T, typename std::enable_if<std::is_array<T>::value>::type>;
-
     public:
-        SharedPointer() = default;
-        using BasePointer<T>::BasePointer;
-
-        /**
-         * Creates a new instance as an offset to a pointer.
-         * @param other The base pointer instance.
-         * @param displ The new pointer displacement.
-         */
-        inline SharedPointer(const self& other, ptrdiff_t displ = 0)
-        :   BasePointer<T>(other)
-        {
-            this->ptr = other.ptr + displ;
-        }
-
-        self& operator=(const self&) = default;
-        self& operator=(self&&) = default;
+        inline SmartPtr() = default;
+        using BasePtr<T>::BasePtr;
 
         /**
          * Gives access to an object in a pointer offset.
          * @param offset The offset to be accessed.
          * @return The requested object instance.
          */
-        cudadecl inline PureT& operator[](ptrdiff_t offset)
+        cudadecl inline Pure<T>& operator[](ptrdiff_t offset)
         {
             return this->ptr[offset];
-        }
-
-        /**
-         * Creates a new offset pointer instance.
-         * @param offset The offset to pointer.
-         * @return New offset pointer instane.
-         */
-        inline self operator+(ptrdiff_t offset) const
-        {
-            return self(*this, offset);
         }
 
         /**
@@ -373,7 +413,7 @@ class SharedPointer<T, typename std::enable_if<std::is_array<T>::value>::type> :
          * @param offset The offset to pointer.
          * @return The offset object instance.
          */
-        cudadecl inline PureT& getOffset(ptrdiff_t offset) const
+        cudadecl inline Pure<T>& getOffset(ptrdiff_t offset) const
         {
             return this->ptr[offset];
         }
