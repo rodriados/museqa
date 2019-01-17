@@ -1,12 +1,12 @@
 /** 
  * Multiple Sequence Alignment command line header file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018 Rodrigo Siqueira
+ * @copyright 2018-2019 Rodrigo Siqueira
  */
+#pragma once
+
 #ifndef CMDLINE_HPP_INCLUDED
 #define CMDLINE_HPP_INCLUDED
-
-#pragma once
 
 #include <utility>
 #include <cstdint>

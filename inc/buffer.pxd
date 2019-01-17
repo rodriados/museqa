@@ -2,7 +2,7 @@
 # cython: language_level = 2
 # Multiple Sequence Alignment buffer export file.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
-# @copyright 2018 Rodrigo Siqueira
+# @copyright 2018-2019 Rodrigo Siqueira
 from libcpp.vector cimport vector
 
 cdef extern from "buffer.hpp":

@@ -1,12 +1,12 @@
 /** 
  * Multiple Sequence Alignment buffer header file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018 Rodrigo Siqueira
+ * @copyright 2018-2019 Rodrigo Siqueira
  */
+#pragma once
+
 #ifndef BUFFER_HPP_INCLUDED
 #define BUFFER_HPP_INCLUDED
-
-#pragma once
 
 #include <cstdint>
 #include <cstring>
@@ -23,8 +23,8 @@ template <typename T>
 class BaseBuffer
 {
     protected:
-        SharedPointer<T[]> buffer;  /// The buffer being encapsulated.
-        size_t size = 0;            /// The number of buffer blocks.
+        SmartPtr<T[]> buffer;   /// The buffer being encapsulated.
+        size_t size = 0;        /// The number of buffer blocks.
 
     public:
         BaseBuffer() = default;
@@ -38,7 +38,8 @@ class BaseBuffer
          */
         inline BaseBuffer(T *buffer, size_t size, const Deleter<T>& dfunc = nullptr)
         :   buffer(buffer, dfunc)
-        ,   size(size) {}
+        ,   size(size)
+        {}
 
         BaseBuffer<T>& operator=(const BaseBuffer<T>&) = default;
         BaseBuffer<T>& operator=(BaseBuffer<T>&&) = default;
@@ -66,7 +67,7 @@ class BaseBuffer
          * Gives access to buffer's pointer.
          * @return The buffer's smart pointer.
          */
-        cudadecl inline const SharedPointer<T[]>& getPointer() const
+        cudadecl inline const SmartPtr<T[]>& getPointer() const
         {
             return this->buffer;
         }
@@ -86,9 +87,10 @@ class BaseBuffer
          * @param ptr The buffer pointer.
          * @param size The size of buffer.
          */
-        inline explicit BaseBuffer(const SharedPointer<T[]>& ptr, size_t size)
+        inline explicit BaseBuffer(const SmartPtr<T[]>& ptr, size_t size)
         :   buffer(ptr)
-        ,   size(size) {}
+        ,   size(size)
+        {}
 };
 
 /**
@@ -179,7 +181,8 @@ class BufferSlice : public BaseBuffer<T>
          */
         inline BufferSlice(const BaseBuffer<T>& target, ptrdiff_t displ = 0, size_t size = 0)
         :   BaseBuffer<T>(target.getPointer() + displ, size)
-        ,   displ(displ) {}
+        ,   displ(displ)
+        {}
 
         /**
          * Constructs a slice from an already existing instance into another buffer.
@@ -188,7 +191,8 @@ class BufferSlice : public BaseBuffer<T>
          */
         inline BufferSlice(const BaseBuffer<T>& target, const BufferSlice<T>& slice)
         :   BaseBuffer<T>(target.getPointer() + slice.getDispl(), slice.getSize())
-        ,   displ(slice.getDispl()) {}
+        ,   displ(slice.getDispl())
+        {}
 
         BufferSlice<T>& operator=(const BufferSlice<T>&) = default;
         BufferSlice<T>& operator=(BufferSlice<T>&&) = default;
