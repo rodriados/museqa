@@ -53,32 +53,60 @@ namespace pointer
      * @since 0.1.1
      */
     template <typename T>
-    struct RawPointer
+    struct PointerStorage
     {
         static_assert(!std::is_reference<T>::value, "Cannot create pointer to a reference.");
-
-        Pure<T> * const ptr = nullptr;          /// The pointer itself
+        
+        Pure<T> * const ptr = nullptr;          /// The pointer itself.
         const Deleter<T> delfunc = deleter<T>;  /// The pointer deleter function.
-        size_t count = 0;                       /// The number of references to pointer.
 
         /**
-         * Initializes a new raw pointer holder.
+         * Initializes a new pointer storage object.
          * @param ptr The raw pointer to be held.
          * @param delfunc The deleter function for pointer.
          */
-        inline RawPointer(Pure<T> * const ptr, const Deleter<T>& delfunc)
+        inline PointerStorage(Pure<T> * const ptr, const Deleter<T>& delfunc)
         :   ptr {ptr}
         ,   delfunc {delfunc}
+        {}
+
+        /**
+         * Allows easy conversion to built-in pointer type.
+         * @return The built-in pointer.
+         */
+        inline operator Pure<T> *()
+        {
+            return ptr;
+        }
+    };
+
+    /**
+     * Counts the number of references of a given pointer.
+     * @tparam T The pointer type.
+     * @since 0.1.1
+     */
+    template <typename T>
+    struct PointerKeeper : public PointerStorage<T>
+    {
+        size_t count = 0;                       /// The number of references to pointer.
+
+        /**
+         * Initializes a new pointer counter.
+         * @param ptr The raw pointer to be held.
+         * @param delfunc The deleter function for pointer.
+         */
+        inline PointerKeeper(Pure<T> * const ptr, const Deleter<T>& delfunc)
+        :   PointerStorage<T> {ptr, delfunc}
         ,   count {1}
         {}
 
         /**
          * Deletes the raw pointer by calling its deleter function.
-         * @see RawPointer::RawPointer
+         * @see PointerKeeper::PointerKeeper
          */
-        inline ~RawPointer() noexcept
+        inline ~PointerKeeper() noexcept
         {
-            (delfunc)(ptr);
+            (this->delfunc)(this->ptr);
         }
 
         /**
@@ -87,9 +115,9 @@ namespace pointer
          * @param delfunc The delete functor.
          * @return New instance.
          */
-        inline static RawPointer<T> *acquire(Pure<T> * const ptr, const Deleter<T>& delfunc = nullptr)
+        inline static PointerKeeper<T> *acquire(Pure<T> * const ptr, const Deleter<T>& delfunc = nullptr)
         {
-            return new RawPointer<T> {ptr, delfunc ? delfunc : deleter<T>};
+            return new PointerKeeper<T> {ptr, delfunc ? delfunc : deleter<T>};
         }
 
         /**
@@ -97,7 +125,7 @@ namespace pointer
          * @param target The pointer to be acquired.
          * @return The acquired pointer.
          */
-        inline static RawPointer<T> *acquire(RawPointer<T> *target)
+        inline static PointerKeeper<T> *acquire(PointerKeeper<T> *target)
         {
             target && ++target->count;
             return target;
@@ -106,9 +134,9 @@ namespace pointer
         /**
          * Releases access to pointer, and deletes it if needed.
          * @param target The pointer to be released.
-         * @see RawPointer::acquire
+         * @see PointerKeeper::acquire
          */
-        inline static void release(RawPointer<T> *target)
+        inline static void release(PointerKeeper<T> *target)
         {
             if(target && --target->count <= 0)
                 delete target;
@@ -124,7 +152,7 @@ namespace pointer
     class Manager
     {
         protected:
-            RawPointer<T> *raw = nullptr;       /// The raw pointer holder.
+            PointerKeeper<T> *raw = nullptr;   /// The raw info storage.
 
         public:
             Manager() = default;
@@ -135,7 +163,7 @@ namespace pointer
              * @param delfunc The deleter function.
              */
             inline Manager(Pure<T> * const ptr, const Deleter<T>& delfunc = nullptr)
-            :   raw {RawPointer<T>::acquire(ptr, delfunc)}
+            :   raw {PointerKeeper<T>::acquire(ptr, delfunc)}
             {}
 
             /**
@@ -143,7 +171,7 @@ namespace pointer
              * @param other The manager to acquire pointer from.
              */
             inline Manager(const Manager<T>& other)
-            :   raw {RawPointer<T>::acquire(other.raw)}
+            :   raw {PointerKeeper<T>::acquire(other.raw)}
             {}
 
             /**
@@ -162,7 +190,7 @@ namespace pointer
              */
             inline ~Manager() noexcept
             {
-                RawPointer<T>::release(raw);
+                PointerKeeper<T>::release(raw);
             }
 
             /**
@@ -172,9 +200,9 @@ namespace pointer
              */
             inline Manager<T>& operator=(const Manager<T>& other)
             {
-                RawPointer<T>::release(raw);
+                PointerKeeper<T>::release(raw);
 
-                raw = RawPointer<T>::acquire(other.raw);
+                raw = PointerKeeper<T>::acquire(other.raw);
                 return *this;
             }
 
@@ -185,7 +213,7 @@ namespace pointer
              */
             inline Manager<T>& operator=(Manager<T>&& other)
             {
-                RawPointer<T>::release(raw);
+                PointerKeeper<T>::release(raw);
 
                 raw = other.raw;
                 other.raw = nullptr;
@@ -237,31 +265,39 @@ namespace pointer
      * @since 0.1.1
      */
     template <typename T>
-    class BasePtr
+    class BasePointer
     {
         protected:
             Pure<T> *ptr = nullptr;     /// The raw pointer.
             Manager<T> manager;         /// The pointer manager.
 
         public:
-            BasePtr() = default;
-            BasePtr(const BasePtr<T>&) = default;
+            BasePointer() = default;
+            BasePointer(const BasePointer<T>&) = default;
 
             /**
              * Builds a new instance from a raw pointer.
              * @param ptr The pointer to be encapsulated.
              * @param delfunc The delete functor.
              */
-            inline BasePtr(Pure<T> * const ptr, const Deleter<T>& delfunc = nullptr)
+            inline BasePointer(Pure<T> * const ptr, const Deleter<T>& delfunc = nullptr)
             :   ptr {ptr}
             ,   manager {ptr, delfunc}
+            {}
+
+            /**
+             * Builds a new instance from a pointer storage instance.
+             * @param storage The pointer storage object.
+             */
+            inline BasePointer(const PointerStorage<T>& storage)
+            :   BasePointer {storage.ptr, storage.delfunc}
             {}
 
             /**
              * The move constructor. Builds a copy of an instance, by moving.
              * @param other The instance to be moved.
              */
-            inline BasePtr(BasePtr<T>&& other)
+            inline BasePointer(BasePointer<T>&& other)
             :   ptr {other.ptr}
             ,   manager {std::move(other.manager)}
             {
@@ -273,14 +309,14 @@ namespace pointer
              * @param other The instance to be moved.
              * @return The current object.
              */
-            inline BasePtr<T>& operator=(BasePtr<T>&& other) noexcept
+            inline BasePointer<T>& operator=(BasePointer<T>&& other) noexcept
             {
                 ptr = other.ptr;
                 manager = std::move(other.manager);
                 other.reset();
             }
 
-            BasePtr<T>& operator=(const BasePtr<T>&) noexcept = default;
+            BasePointer<T>& operator=(const BasePointer<T>&) = default;
 
             /**
              * Dereferences the pointer.
@@ -338,7 +374,7 @@ namespace pointer
 
             /**
              * Resets the pointer manager to an empty state.
-             * @see BasePtr::BasePtr
+             * @see BasePointer::BasePointer
              */
             inline void reset()
             {
@@ -363,7 +399,15 @@ namespace pointer
  * @since 0.1.1
  */
 template <typename T>
-using BasePtr = pointer::BasePtr<T>;
+using BasePointer = pointer::BasePointer<T>;
+
+/**
+ * Aliasing the raw pointer object type.
+ * @tparam T The pointer type.
+ * @since 0.1.1
+ */
+template <typename T>
+using RawPointer = pointer::PointerStorage<T>;
 
 /**
  * Represents a smart pointer. This class can be used to represent a pointer that is
@@ -372,17 +416,17 @@ using BasePtr = pointer::BasePtr<T>;
  * @since 0.1.1
  */
 template <typename T, typename E = void>
-class SmartPtr : public BasePtr<T>
+class Pointer : public BasePointer<T>
 {
     public:
-        inline SmartPtr() = default;
-        inline SmartPtr(const SmartPtr&) = default;
-        inline SmartPtr(SmartPtr&&) = default;
+        inline Pointer() = default;
+        inline Pointer(const Pointer&) = default;
+        inline Pointer(Pointer&&) = default;
 
-        using BasePtr<T>::BasePtr;
+        using BasePointer<T>::BasePointer;
 
-        SmartPtr<T, E>& operator=(const SmartPtr<T, E>&) = default;
-        SmartPtr<T, E>& operator=(SmartPtr<T, E>&&) = default;
+        Pointer<T, E>& operator=(const Pointer<T, E>&) = default;
+        Pointer<T, E>& operator=(Pointer<T, E>&&) = default;
 };
 
 /**
@@ -392,11 +436,11 @@ class SmartPtr : public BasePtr<T>
  * @since 0.1.1
  */
 template <typename T>
-class SmartPtr<T, typename std::enable_if<std::is_array<T>::value>::type> : public BasePtr<T>
+class Pointer<T, typename std::enable_if<std::is_array<T>::value>::type> : public BasePointer<T>
 {
     public:
-        inline SmartPtr() = default;
-        using BasePtr<T>::BasePtr;
+        inline Pointer() = default;
+        using BasePointer<T>::BasePointer;
 
         /**
          * Gives access to an object in a pointer offset.
@@ -418,5 +462,4 @@ class SmartPtr<T, typename std::enable_if<std::is_array<T>::value>::type> : publ
             return this->ptr[offset];
         }
 };
-
 #endif
