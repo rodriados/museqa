@@ -363,7 +363,7 @@ class Reflection
         template <typename ...U>
         static constexpr Tuple newInstance(U... values)
         {
-            return Tuple(values...);
+            return Tuple {values...};
         }
 };
 

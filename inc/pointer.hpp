@@ -16,12 +16,20 @@
 #include "utils.hpp"
 
 /**
+ * A universal pointer type. All pointer objects should be convertible to it.
+ * @tparam T The pointer type.
+ * @since 0.1.1
+ */
+template <typename T>
+using Pointer = Pure<T> *;
+
+/**
  * Type of function to use for freeing pointers.
  * @tparam T The pointer type.
  * @since 0.1.1
  */
 template <typename T>
-using Deleter = void (*)(Pure<T> *);
+using Deleter = void (*)(Pointer<T>);
 
 namespace pointer
 {
@@ -31,7 +39,7 @@ namespace pointer
      * @param ptr The pointer to be deleted.
      */
     template <typename T>
-    inline auto deleter(Pure<T> *ptr) -> typename std::enable_if<!std::is_array<T>::value, void>::type
+    inline auto deleter(Pointer<T> ptr) -> typename std::enable_if<!std::is_array<T>::value, void>::type
     {
         delete ptr;
     }
@@ -42,7 +50,7 @@ namespace pointer
      * @param ptr The array pointer to be deleted.
      */
     template <typename T>
-    inline auto deleter(Pure<T> *ptr) -> typename std::enable_if<std::is_array<T>::value, void>::type
+    inline auto deleter(Pointer<T> ptr) -> typename std::enable_if<std::is_array<T>::value, void>::type
     {
         delete[] ptr;
     }
@@ -53,28 +61,28 @@ namespace pointer
      * @since 0.1.1
      */
     template <typename T>
-    struct PointerStorage
+    struct Storage
     {
         static_assert(!std::is_reference<T>::value, "Cannot create pointer to a reference.");
         
-        Pure<T> * const ptr = nullptr;          /// The pointer itself.
-        const Deleter<T> delfunc = deleter<T>;  /// The pointer deleter function.
+        const Pointer<T> ptr = nullptr;             /// The pointer itself.
+        const Deleter<T> delfunc = deleter<T>;      /// The pointer deleter function.
 
         /**
          * Initializes a new pointer storage object.
          * @param ptr The raw pointer to be held.
          * @param delfunc The deleter function for pointer.
          */
-        inline PointerStorage(Pure<T> * const ptr, const Deleter<T>& delfunc)
+        inline Storage(const Pointer<T> ptr, const Deleter<T> delfunc = nullptr)
         :   ptr {ptr}
-        ,   delfunc {delfunc}
+        ,   delfunc {delfunc ? delfunc : deleter<T>}
         {}
 
         /**
-         * Allows easy conversion to built-in pointer type.
-         * @return The built-in pointer.
+         * Converts to universal pointer type.
+         * @return The pointer converted to universal type.
          */
-        inline operator Pure<T> *()
+        inline operator Pointer<T>() const
         {
             return ptr;
         }
@@ -86,7 +94,7 @@ namespace pointer
      * @since 0.1.1
      */
     template <typename T>
-    struct PointerKeeper : public PointerStorage<T>
+    struct Observer : public Storage<T>
     {
         size_t count = 0;                       /// The number of references to pointer.
 
@@ -95,16 +103,16 @@ namespace pointer
          * @param ptr The raw pointer to be held.
          * @param delfunc The deleter function for pointer.
          */
-        inline PointerKeeper(Pure<T> * const ptr, const Deleter<T>& delfunc)
-        :   PointerStorage<T> {ptr, delfunc}
+        inline Observer(const Pointer<T> ptr, const Deleter<T> delfunc)
+        :   Storage<T> {ptr, delfunc}
         ,   count {1}
         {}
 
         /**
          * Deletes the raw pointer by calling its deleter function.
-         * @see PointerKeeper::PointerKeeper
+         * @see Observer::Observer
          */
-        inline ~PointerKeeper() noexcept
+        inline ~Observer() noexcept
         {
             (this->delfunc)(this->ptr);
         }
@@ -115,9 +123,9 @@ namespace pointer
          * @param delfunc The delete functor.
          * @return New instance.
          */
-        inline static PointerKeeper<T> *acquire(Pure<T> * const ptr, const Deleter<T>& delfunc = nullptr)
+        inline static Observer<T> *acquire(const Pointer<T> ptr, const Deleter<T> delfunc = nullptr)
         {
-            return new PointerKeeper<T> {ptr, delfunc ? delfunc : deleter<T>};
+            return new Observer<T> {ptr, delfunc};
         }
 
         /**
@@ -125,7 +133,7 @@ namespace pointer
          * @param target The pointer to be acquired.
          * @return The acquired pointer.
          */
-        inline static PointerKeeper<T> *acquire(PointerKeeper<T> *target)
+        inline static Observer<T> *acquire(Observer<T> *target)
         {
             target && ++target->count;
             return target;
@@ -134,9 +142,9 @@ namespace pointer
         /**
          * Releases access to pointer, and deletes it if needed.
          * @param target The pointer to be released.
-         * @see PointerKeeper::acquire
+         * @see Observer::acquire
          */
-        inline static void release(PointerKeeper<T> *target)
+        inline static void release(Observer<T> *target)
         {
             if(target && --target->count <= 0)
                 delete target;
@@ -152,7 +160,7 @@ namespace pointer
     class Manager
     {
         protected:
-            PointerKeeper<T> *raw = nullptr;   /// The raw info storage.
+            Observer<T> *raw = nullptr;   /// The raw info storage.
 
         public:
             Manager() = default;
@@ -162,8 +170,8 @@ namespace pointer
              * @param ptr The pointer to acquire.
              * @param delfunc The deleter function.
              */
-            inline Manager(Pure<T> * const ptr, const Deleter<T>& delfunc = nullptr)
-            :   raw {PointerKeeper<T>::acquire(ptr, delfunc)}
+            inline Manager(const Pointer<T> ptr, const Deleter<T> delfunc = nullptr)
+            :   raw {Observer<T>::acquire(ptr, delfunc)}
             {}
 
             /**
@@ -171,7 +179,7 @@ namespace pointer
              * @param other The manager to acquire pointer from.
              */
             inline Manager(const Manager<T>& other)
-            :   raw {PointerKeeper<T>::acquire(other.raw)}
+            :   raw {Observer<T>::acquire(other.raw)}
             {}
 
             /**
@@ -190,7 +198,7 @@ namespace pointer
              */
             inline ~Manager() noexcept
             {
-                PointerKeeper<T>::release(raw);
+                Observer<T>::release(raw);
             }
 
             /**
@@ -200,9 +208,9 @@ namespace pointer
              */
             inline Manager<T>& operator=(const Manager<T>& other)
             {
-                PointerKeeper<T>::release(raw);
+                Observer<T>::release(raw);
 
-                raw = PointerKeeper<T>::acquire(other.raw);
+                raw = Observer<T>::acquire(other.raw);
                 return *this;
             }
 
@@ -213,7 +221,7 @@ namespace pointer
              */
             inline Manager<T>& operator=(Manager<T>&& other)
             {
-                PointerKeeper<T>::release(raw);
+                Observer<T>::release(raw);
 
                 raw = other.raw;
                 other.raw = nullptr;
@@ -234,7 +242,7 @@ namespace pointer
              * Gives access to raw pointer.
              * @return The raw pointer.
              */
-            inline Pure<T> *get() const
+            inline const Pointer<T> get() const
             {
                 return raw->ptr;
             }
@@ -243,7 +251,7 @@ namespace pointer
              * Gives access to pointer deleter.
              * @return The pointer deleter.
              */
-            inline const Deleter<T>& getDeleter() const
+            inline const Deleter<T> getDeleter() const
             {
                 return raw->delfunc;
             }
@@ -268,8 +276,8 @@ namespace pointer
     class BasePointer
     {
         protected:
-            Pure<T> *ptr = nullptr;     /// The raw pointer.
-            Manager<T> manager;         /// The pointer manager.
+            Pointer<T> ptr = nullptr;       /// The raw pointer.
+            Manager<T> manager;             /// The pointer manager.
 
         public:
             BasePointer() = default;
@@ -280,7 +288,7 @@ namespace pointer
              * @param ptr The pointer to be encapsulated.
              * @param delfunc The delete functor.
              */
-            inline BasePointer(Pure<T> * const ptr, const Deleter<T>& delfunc = nullptr)
+            inline BasePointer(const Pointer<T> ptr, const Deleter<T> delfunc = nullptr)
             :   ptr {ptr}
             ,   manager {ptr, delfunc}
             {}
@@ -289,7 +297,8 @@ namespace pointer
              * Builds a new instance from a pointer storage instance.
              * @param storage The pointer storage object.
              */
-            inline BasePointer(const PointerStorage<T>& storage)
+            template <typename U = T>
+            inline BasePointer(const Storage<U>& storage)
             :   BasePointer {storage.ptr, storage.delfunc}
             {}
 
@@ -322,7 +331,7 @@ namespace pointer
              * Dereferences the pointer.
              * @return The pointed object.
              */
-            cudadecl inline Pure<T>& operator*()
+            cudadecl inline Pure<T>& operator*() const
             {
                 return *ptr;
             }
@@ -331,7 +340,7 @@ namespace pointer
              * Gives access to the raw pointer.
              * @return The raw pointer.
              */
-            cudadecl inline Pure<T> *operator&()
+            cudadecl inline const Pointer<T> operator&() const
             {
                 return ptr;
             }
@@ -340,7 +349,7 @@ namespace pointer
              * Gives access to raw pointer for dereference operator.
              * @return The raw pointer.
              */
-            cudadecl inline Pure<T> *operator->()
+            cudadecl inline const Pointer<T> operator->() const
             {
                 return ptr;
             }
@@ -351,14 +360,14 @@ namespace pointer
              */
             cudadecl inline operator bool() const
             {
-                return (bool) ptr;
+                return ptr != nullptr;
             }
 
             /**
              * Gives access to const-qualified raw pointer.
              * @return The raw pointer.
              */
-            cudadecl inline Pure<T> *get() const
+            cudadecl inline const Pointer<T> get() const
             {
                 return ptr;
             }
@@ -367,7 +376,7 @@ namespace pointer
              * Gives access to pointer deleter.
              * @return The pointer deleter.
              */
-            inline const Deleter<T>& getDeleter() const
+            inline const Deleter<T> getDeleter() const
             {
                 return manager.getDeleter();
             }
@@ -407,7 +416,7 @@ using BasePointer = pointer::BasePointer<T>;
  * @since 0.1.1
  */
 template <typename T>
-using RawPointer = pointer::PointerStorage<T>;
+using RawPointer = pointer::Storage<T>;
 
 /**
  * Represents a smart pointer. This class can be used to represent a pointer that is
@@ -415,32 +424,27 @@ using RawPointer = pointer::PointerStorage<T>;
  * @tparam T The type of pointer to be held.
  * @since 0.1.1
  */
-template <typename T, typename E = void>
-class Pointer : public BasePointer<T>
-{
-    public:
-        inline Pointer() = default;
-        inline Pointer(const Pointer&) = default;
-        inline Pointer(Pointer&&) = default;
-
-        using BasePointer<T>::BasePointer;
-
-        Pointer<T, E>& operator=(const Pointer<T, E>&) = default;
-        Pointer<T, E>& operator=(Pointer<T, E>&&) = default;
-};
-
-/**
- * Represents a smart array pointer. This class can be used to represent a pointer that
- * is deleted automatically when all references to it have been destroyed.
- * @tparam T The type of pointer to be held.
- * @since 0.1.1
- */
 template <typename T>
-class Pointer<T, typename std::enable_if<std::is_array<T>::value>::type> : public BasePointer<T>
+class AutoPointer : public BasePointer<T>
 {
     public:
-        inline Pointer() = default;
+        inline AutoPointer() = default;
+        inline AutoPointer(const AutoPointer<T>&) = default;
+        inline AutoPointer(AutoPointer<T>&&) = default;
+
         using BasePointer<T>::BasePointer;
+
+        AutoPointer<T>& operator=(const AutoPointer<T>&) = default;
+        AutoPointer<T>& operator=(AutoPointer<T>&&) = default;
+
+        /**
+         * Converts to universal pointer type.
+         * @return The pointer converted to universal type.
+         */
+        cudadecl inline operator Pointer<T>() const
+        {
+            return this->ptr;
+        }
 
         /**
          * Gives access to an object in a pointer offset.
@@ -449,6 +453,7 @@ class Pointer<T, typename std::enable_if<std::is_array<T>::value>::type> : publi
          */
         cudadecl inline Pure<T>& operator[](ptrdiff_t offset)
         {
+            static_assert(std::is_array<T>::value, "Pointer type is not an array");
             return this->ptr[offset];
         }
 
@@ -457,9 +462,12 @@ class Pointer<T, typename std::enable_if<std::is_array<T>::value>::type> : publi
          * @param offset The offset to pointer.
          * @return The offset object instance.
          */
+        template <typename U = T>
         cudadecl inline Pure<T>& getOffset(ptrdiff_t offset) const
         {
+            static_assert(std::is_array<T>::value, "Pointer type is not an array");
             return this->ptr[offset];
         }
 };
+
 #endif
