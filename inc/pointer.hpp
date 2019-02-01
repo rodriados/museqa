@@ -12,7 +12,6 @@
 #include <cstddef>
 #include <utility>
 
-#include "cuda.cuh"
 #include "utils.hpp"
 
 /**

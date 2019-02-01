@@ -11,6 +11,16 @@
 #include <cstddef>
 #include <utility>
 
+/*
+ * Creation of conditional macros that allow CUDA declarations to be used
+ * seamlessly throughout the code without any problems.
+ */
+#ifdef __CUDA_ARCH__
+  #define cudadecl __host__ __device__
+#else
+  #define cudadecl
+#endif
+
 /**
  * Purifies an array type to its base.
  * @tparam T The type to be purified.

@@ -24,7 +24,8 @@ struct Exception : public std::exception
      * @param msg The exception message.
      */
     explicit Exception(const std::string& msg)
-    : msg(msg) {}
+    :   msg {msg}
+    {}
 
     /**
      * Builds a new exception instance.
@@ -42,6 +43,8 @@ struct Exception : public std::exception
     Exception(const Exception&) = default;
     Exception(Exception&&) = delete;
 
+    virtual ~Exception() noexcept = default;
+
     Exception& operator=(const Exception&) = default;
     Exception& operator=(Exception&&) = delete;
 
@@ -49,10 +52,7 @@ struct Exception : public std::exception
      * Returns an explanatory string.
      * @return The explanatory string.
      */
-    inline const char *what() const noexcept
-    {
-        return msg.data();
-    }
+    inline const char *what() const noexcept { return msg.data(); }
 };
 
 #endif

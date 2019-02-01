@@ -103,14 +103,14 @@ namespace reflection
     namespace detail
     {
         /**
-         * Chooses the requested member base and returns its value.
+         * Retrieves the requested member base and returns its value.
          * @param base The selected tuple member base.
          * @tparam N The requested member index.
          * @tparam T The member type to be matched.
          * @return The member's value.
          */
         template <size_t N, typename T>
-        constexpr const T& t_get_impl(const BaseMember<N, T>& base) noexcept
+        constexpr const T& retrieve(const BaseMember<N, T>& base) noexcept
         {
             return base.value;
         }
@@ -123,10 +123,10 @@ namespace reflection
          * @return The requested member's value.
          */
         template <size_t N, typename ...T>
-        constexpr decltype(auto) t_get(const Tuple<T...>& tuple) noexcept
+        constexpr decltype(auto) get(const Tuple<T...>& tuple) noexcept
         {
             static_assert(N < Tuple<T...>::size, "Requested tuple index is out of bounds!");
-            return t_get_impl<N>(tuple);
+            return retrieve<N>(tuple);
         }
     };
 
@@ -148,7 +148,7 @@ namespace reflection
         template <size_t N>
         constexpr decltype(auto) get() noexcept
         {
-            return detail::t_get<N>(*this);
+            return detail::get<N>(*this);
         }
     };
 
@@ -159,7 +159,7 @@ namespace reflection
      * @since 0.1.1
      */
     template <size_t I, typename T>
-    using TupleElement = typename std::remove_reference<decltype(detail::t_get<I>(std::declval<T>()))>::type;
+    using TupleElement = typename std::remove_reference<decltype(detail::get<I>(std::declval<T>()))>::type;
 
     namespace detail
     {
@@ -188,13 +188,14 @@ namespace reflection
              */
             friend auto loophole(Tag<T, N>)
             {
-                return std::remove_all_extents_t<U>();
+                return typename std::remove_all_extents<U>::type {};
             }
         };
 
         // This specialization avoids multiple definition errors.
         template <typename T, typename U, size_t N>
-        struct TagDef<T, U, N, true> {};
+        struct TagDef<T, U, N, true>
+        {};
         /**#@-*/
     };
 
@@ -312,59 +313,50 @@ namespace reflection
  * @since 0.1.1
  */
 template <typename T>
-class Reflection
+struct Reflection
 {
-    private:
-        /**
-         * Cleaning the type to be reflected.
-         * @since 0.1.1
-         */
-        using Type = Pure<T>;
+    /**
+     * The tuple aligned to reflected type.
+     * @since 0.1.1
+     */
+    using Tuple = reflection::LoopholeTuple<Pure<T>>;
 
-    public:
-        /**
-         * The tuple aligned to reflected type.
-         * @since 0.1.1
-         */
-        using Tuple = reflection::LoopholeTuple<Type>;
+    static_assert(!std::is_union<T>::value, "It is forbidden to reflect unions!");
+    static_assert(sizeof(Pure<T>) == sizeof(Tuple), "Member sequence is not compatible!");
+    static_assert(alignof(Pure<T>) == alignof(Tuple), "Member sequence is not compatible!");
 
-        static_assert(!std::is_union<T>::value, "It is forbidden to reflect unions!");
-        static_assert(sizeof(Type) == sizeof(Tuple), "Member sequence is not compatible!");
-        static_assert(alignof(Type) == alignof(Tuple), "Member sequence is not compatible!");
+    /**
+     * Retrieves the offset of a member in the data structure by its index.
+     * @tparam N The index of required member.
+     * @return The member offset.
+     */
+    template <size_t N>
+    static constexpr ptrdiff_t getOffset() noexcept
+    {
+        constexpr reflection::AlignedTuple<Tuple> t {};
+        return &reflection::detail::get<N>(t).storage[0] - &reflection::detail::get<0>(t).storage[0];
+    }
 
-        /**
-         * Retrieves the offset of a member in the data structure by its index.
-         * @tparam N The index of required member.
-         * @return The member offset.
-         */
-        template <size_t N>
-        static constexpr ptrdiff_t getOffset() noexcept
-        {
-            namespace r = reflection;            
-            constexpr r::AlignedTuple<Tuple> l {};            
-            return &r::detail::t_get<N>(l).storage[0] - &r::detail::t_get<0>(l).storage[0];
-        }
+    /**
+     * Retrieves the number of members of the given data structure.
+     * @return The number of structure's members.
+     */
+    static constexpr size_t getSize() noexcept
+    {
+        return reflection::detail::count<Pure<T>>(0);
+    }
 
-        /**
-         * Retrieves the number of members of the given data structure.
-         * @return The number of structure's members.
-         */
-        static constexpr size_t getSize() noexcept
-        {
-            return reflection::detail::count<Type>(0);
-        }
-
-        /**
-         * Creates a new tuple instance based on the reflected type.
-         * @tparam U The list of types to create the new instance.
-         * @param values The list of values.
-         * @return The new tuple instance.
-         */
-        template <typename ...U>
-        static constexpr Tuple newInstance(U... values)
-        {
-            return Tuple {values...};
-        }
+    /**
+     * Creates a new tuple instance based on the reflected type.
+     * @tparam U The list of types to create the new instance.
+     * @param values The list of values.
+     * @return The new tuple instance.
+     */
+    template <typename ...U>
+    static constexpr Tuple newInstance(U... values)
+    {
+        return Tuple(values...);
+    }
 };
 
 #if defined(__GNUC__)

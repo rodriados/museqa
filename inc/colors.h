@@ -1,12 +1,12 @@
 /** 
  * Multiple Sequence Alignment color macros header file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018 Rodrigo Siqueira
+ * @copyright 2018-2019 Rodrigo Siqueira
  */
+#pragma once
+
 #ifndef COLORS_H_INCLUDED
 #define COLORS_H_INCLUDED
-
-#pragma once
 
 #ifndef msa_no_color
   #define c_black_fg      "\033[30m"
