@@ -1,75 +1,41 @@
 /** 
  * Multiple Sequence Alignment node header file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018 Rodrigo Siqueira
+ * @copyright 2018-2019 Rodrigo Siqueira
  */
+#pragma once
+
 #ifndef NODE_HPP_INCLUDED
 #define NODE_HPP_INCLUDED
 
-#pragma once
-
-#ifndef msa_compile_cython
-
-/*
-* Defining macro indicating the node rank to be used as the master node. It
-* is recommended not to change it, as no other rank is garanteed to exist.
-*/
-#define master_node_id 0
-
-namespace cluster
-{
-    extern int size;
-    extern int rank;
-
-    static constexpr int master = master_node_id;
-};
+#include <cstdint>
 
 namespace node
 {
-    /**
-     * Informs whether the current node has given rank.
-     * @param rank The rank to be checked.
-     * @return Does this node has given rank?
-     */        
-    inline bool is(int rank)
-    {
-        return cluster::rank == rank;
-    }
-
-    /**
-     * Informs whether the current node is the master node.
-     * @return Is this node the master?
-     */
-    inline bool ismaster()
-    {
-        return is(cluster::master);
-    }
-
-    /**
-     * Informs whether the current node is a slave node.
-     * @return Is this node a slave?
-     */
-    inline bool isslave()
-    {
-        return !is(cluster::master);
-    }
-};
-
-#undef master_node_id
+#ifndef msa_compile_cython
+    extern uint16_t size;
+    extern uint16_t rank;
 #endif
+
+    /*
+     * Defining macro indicating the node rank to be used as the master node. It
+     * is recommended not to change it, as no other rank is garanteed to exist.
+     */
+    enum : uint16_t { master = 0 };
+};
 
 /*
  * Defines some process control macros. These macros are to be used when
  * it is needed to check whether the current process is master or not.
  */
 #ifndef msa_compile_cython
-  #define onlymaster   if(node::ismaster())
-  #define onlyslaves   if(node::isslave())
-  #define onlyslave(i) if(node::isslave() && node::is(i))
+  #define onlymaster   if(node::rank == node::master)
+  #define onlyslaves   if(node::rank != node::master)
+  #define onlynode(i)  if((i) == node::rank)
 #else
   #define onlymaster   if(1)
   #define onlyslaves   if(0)
-  #define onlyslave(i) if(0)
+  #define onlynode(i)  if((i) == node::master)
 #endif
 
 #endif

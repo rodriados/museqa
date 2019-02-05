@@ -12,7 +12,7 @@
 #include <cstring>
 #include <vector>
 
-#include "device.cuh"
+#include "utils.hpp"
 #include "pointer.hpp"
 
 /**
@@ -23,8 +23,8 @@ template <typename T>
 class BaseBuffer
 {
     protected:
-        SmartPtr<T[]> buffer;   /// The buffer being encapsulated.
-        size_t size = 0;        /// The number of buffer blocks.
+        AutoPointer<T[]> buffer;    /// The buffer being encapsulated.
+        size_t size = 0;            /// The number of buffer blocks.
 
     public:
         BaseBuffer() = default;
@@ -33,12 +33,22 @@ class BaseBuffer
 
         /**
          * Encapsulates a buffer pointer.
+         * @param ptr The buffer pointer to encapsulate.
+         * @param size The size of buffer to encapsulate.
+         */
+        inline BaseBuffer(const RawPointer<T>& ptr, size_t size)
+        :   buffer {ptr}
+        ,   size {size}
+        {}
+
+        /**
+         * Encapsulates a buffer pointer.
          * @param buffer The buffer pointer to encapsulate.
          * @param size The size of buffer to encapsulate.
          */
-        inline BaseBuffer(T *buffer, size_t size, const Deleter<T>& dfunc = nullptr)
-        :   buffer(buffer, dfunc)
-        ,   size(size)
+        inline BaseBuffer(const Pointer<T> buffer, size_t size, const Deleter<T> dfunc = nullptr)
+        :   buffer {buffer, dfunc}
+        ,   size {size}
         {}
 
         BaseBuffer<T>& operator=(const BaseBuffer<T>&) = default;
@@ -49,27 +59,27 @@ class BaseBuffer
          * @param offset The requested buffer offset.
          * @return The buffer's position pointer.
          */
-        cudadecl inline const T& operator[](ptrdiff_t offset) const
+        cudadecl inline Pure<T>& operator[](ptrdiff_t offset) const
         {
-            return this->buffer.getOffset(offset);
+            return buffer.getOffset(offset);
         }
 
         /**
          * Gives access to buffer's data.
          * @return The buffer's internal pointer.
          */
-        cudadecl inline T *getBuffer() const
+        cudadecl inline const Pointer<T> getBuffer() const
         {
-            return this->buffer.getRaw();
+            return buffer.get();
         }
 
         /**
          * Gives access to buffer's pointer.
          * @return The buffer's smart pointer.
          */
-        cudadecl inline const SmartPtr<T[]>& getPointer() const
+        cudadecl inline const AutoPointer<T[]>& getPointer() const
         {
-            return this->buffer;
+            return buffer;
         }
 
         /**
@@ -78,7 +88,7 @@ class BaseBuffer
          */
         cudadecl inline size_t getSize() const
         {
-            return this->size;
+            return size;
         }
 
     protected:
@@ -87,9 +97,9 @@ class BaseBuffer
          * @param ptr The buffer pointer.
          * @param size The size of buffer.
          */
-        inline explicit BaseBuffer(const SmartPtr<T[]>& ptr, size_t size)
-        :   buffer(ptr)
-        ,   size(size)
+        inline explicit BaseBuffer(const AutoPointer<T[]>& ptr, size_t size)
+        :   buffer {ptr}
+        ,   size {size}
         {}
 };
 
@@ -115,9 +125,9 @@ class Buffer : public BaseBuffer<T>
          * @param buffer The buffer to be copied.
          */
         inline Buffer(const BaseBuffer<T>& buffer)
-        :   BaseBuffer<T>()
+        :   BaseBuffer<T> {}
         {
-            this->copy(buffer.getBuffer(), buffer.getSize());
+            copy(buffer.getBuffer(), buffer.getSize());
         }
 
         /**
@@ -125,10 +135,10 @@ class Buffer : public BaseBuffer<T>
          * @param buffer The buffer to be copied.
          * @param size The number of buffer blocks being copied.
          */
-        inline Buffer(const T *buffer, size_t size)
-        :   BaseBuffer<T>()
+        inline Buffer(const Pointer<T> buffer, size_t size)
+        :   BaseBuffer<T> {}
         {
-            this->copy(buffer, size);
+            copy(buffer, size);
         }
 
         /**
@@ -136,9 +146,9 @@ class Buffer : public BaseBuffer<T>
          * @param vector The vector from which the buffer will be created.
          */
         inline Buffer(const std::vector<T>& vector)
-        :   BaseBuffer<T>()
+        :   BaseBuffer<T> {}
         {
-            this->copy(vector.data(), vector.size());
+            copy(vector.data(), vector.size());
         }
 
         Buffer<T>& operator=(const Buffer<T>&) = default;
@@ -150,11 +160,11 @@ class Buffer : public BaseBuffer<T>
          * @param buffer The buffer to be copied.
          * @param size The buffer's data blocks number.
          */
-        inline void copy(const T *buffer, size_t size)
+        inline void copy(const Pointer<T> buffer, size_t size)
         {
             this->size = size;
             this->buffer = new T[size];
-            memcpy(this->buffer.getRaw(), buffer, sizeof(T) * size);
+            memcpy(this->buffer.get(), buffer, sizeof(T) * size);
         }
 };
 
@@ -180,8 +190,8 @@ class BufferSlice : public BaseBuffer<T>
          * @param size The number of blocks of the slice.
          */
         inline BufferSlice(const BaseBuffer<T>& target, ptrdiff_t displ = 0, size_t size = 0)
-        :   BaseBuffer<T>(target.getPointer() + displ, size)
-        ,   displ(displ)
+        :   BaseBuffer<T> {target.getPointer() + displ, size}
+        ,   displ {displ}
         {}
 
         /**
@@ -190,8 +200,8 @@ class BufferSlice : public BaseBuffer<T>
          * @param slice The slice data to be put into the new target.
          */
         inline BufferSlice(const BaseBuffer<T>& target, const BufferSlice<T>& slice)
-        :   BaseBuffer<T>(target.getPointer() + slice.getDispl(), slice.getSize())
-        ,   displ(slice.getDispl())
+        :   BaseBuffer<T> {target.getPointer() + slice.getDispl(), slice.getSize()}
+        ,   displ {slice.getDispl()}
         {}
 
         BufferSlice<T>& operator=(const BufferSlice<T>&) = default;
@@ -203,7 +213,7 @@ class BufferSlice : public BaseBuffer<T>
          */
         cudadecl inline ptrdiff_t getDispl() const
         {
-            return this->displ;
+            return displ;
         }
 };
 

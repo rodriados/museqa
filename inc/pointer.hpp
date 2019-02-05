@@ -67,6 +67,10 @@ namespace pointer
         const Pointer<T> ptr = nullptr;             /// The pointer itself.
         const Deleter<T> delfunc = deleter<T>;      /// The pointer deleter function.
 
+        Storage() = default;
+        Storage(const Storage<T>&) = default;
+        Storage(Storage<T>&&) = default;
+
         /**
          * Initializes a new pointer storage object.
          * @param ptr The raw pointer to be held.
@@ -76,6 +80,9 @@ namespace pointer
         :   ptr {ptr}
         ,   delfunc {delfunc ? delfunc : deleter<T>}
         {}
+
+        Storage<T>& operator=(const Storage<T>&) = default;
+        Storage<T>& operator=(Storage<T>&&) = default;
 
         /**
          * Converts to universal pointer type.

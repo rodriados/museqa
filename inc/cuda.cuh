@@ -139,7 +139,8 @@ namespace cuda
          * Clears the last error and resets it to success.
          * @return The last error registered by a runtime call.
          */
-        inline Status clear() noexcept {
+        inline Status clear() noexcept
+        {
             return cudaGetLastError();
         }
 
@@ -147,7 +148,8 @@ namespace cuda
          * Gets the last error from a runtime call in the same host thread.
          * @return The last error registered by a runtime call.
          */
-        inline Status last() noexcept {
+        inline Status last() noexcept
+        {
             return cudaPeekAtLastError();
         }
 
@@ -157,7 +159,8 @@ namespace cuda
          * @param status The error status obtained.
          * @return The error description.
          */
-        inline std::string describe(Status status) noexcept {
+        inline std::string describe(Status status) noexcept
+        {
             return cudaGetErrorString(static_cast<cudaError_t>(status));
         }
     };
@@ -197,7 +200,10 @@ namespace cuda
          * Informs the status code received from an operation.
          * @return The error status code.
          */
-        inline Status getCode() const { return status; }
+        inline Status getCode() const
+        {
+            return status;
+        }
     };
 
 #ifdef __CUDACC__
@@ -210,7 +216,7 @@ namespace cuda
      * @throw The error status code obtained raised to exception.
      */
     template <typename ...P>
-    inline void call(Status status, const std::string& fmt = {}, P... args) throw (Exception)
+    inline void call(Status status, const std::string& fmt = {}, P... args)
     {
         if(status != cuda::status::success)
             throw Exception {status, fmt, args...};
@@ -241,7 +247,7 @@ namespace cuda
          * is the ID of the device it defaults to.
          * @see cuda::Device
          */
-        static constexpr const Device original = 0;
+        enum : Device { original = 0 };
 
         extern int getCount();
         extern Device getCurrent();
@@ -283,15 +289,15 @@ namespace cuda
          * Sets the cache preference to a kernel.
          * @tparam P The kernel parameter types.
          * @param kernel The kernel to set the cache preference.
-         * @param preference The cache preference to set.
+         * @param pref The cache preference to set.
          * @return Any detected error or nothing.
          */
         template <typename ...P>
-        inline void setCachePreference(const Kernel<P...> kernel, cache::Preference preference) 
+        inline void preference(const Kernel<P...> kernel, cache::Preference pref) 
         {
             call(cudaFuncSetCacheConfig(
                 reinterpret_cast<const void *>(kernel)
-            ,   static_cast<cudaFuncCache>(preference))
+            ,   static_cast<cudaFuncCache>(pref))
             );
         }
     };
@@ -405,6 +411,15 @@ namespace cuda
             call(cudaFreeHost(ptr));
         }
     };
+
+    /**
+     * Halts host CPU thread execution until the device has finished processing all
+     * previously requested tasks, such as kernel launches, data copies and etc.
+     */
+    inline void barrier()
+    {
+        call(cudaDeviceSynchronize());
+    }
 #endif
 
     /**
@@ -418,7 +433,7 @@ namespace cuda
      * optimizations, as well as its use in constexpr code.
      * @since 0.1.1
      */
-    static constexpr NativeWord warpSize = 32;
+    enum : NativeWord { warpSize = 32 };
 };
 
 #endif
