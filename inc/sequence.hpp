@@ -1,15 +1,16 @@
 /** 
  * Multiple Sequence Alignment sequence header file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018 Rodrigo Siqueira
+ * @copyright 2018-2019 Rodrigo Siqueira
  */
+#pragma once
+
 #ifndef SEQUENCE_HPP_INCLUDED
 #define SEQUENCE_HPP_INCLUDED
 
-#pragma once
-
 #include <cstdint>
 #include <ostream>
+#include <utility>
 #include <string>
 
 #include "buffer.hpp"
@@ -34,7 +35,8 @@ class Sequence : public Buffer<char>
          * @param string The string containing this sequence's data.
          */
         inline Sequence(const std::string& string)
-        :   Buffer<char>(string.c_str(), string.size()) {}
+        :   Buffer<char>(string.c_str(), string.size())
+        {}
 
         Sequence& operator=(const Sequence&) = default;
         Sequence& operator=(Sequence&&) = default;
@@ -54,16 +56,19 @@ class Sequence : public Buffer<char>
          */
         inline std::string toString() const
         {
-            return std::string(this->getBuffer(), this->getLength());
+            return {this->getBuffer(), this->getLength()};
         }
 };
 
 /**
  * This function allows buffers to be directly printed into a ostream instance.
+ * @tparam T A BaseBuffer<char> derived type.
  * @param os The output stream object.
  * @param sequence The sequence to print.
  */
-inline std::ostream& operator<<(std::ostream& os, const BaseBuffer<char>& sequence)
+template <typename T>
+inline auto operator<<(std::ostream& os, const T& sequence)
+-> typename std::enable_if<std::is_base_of<BaseBuffer<char>, T>::value, std::ostream&>::type
 {
     os << std::string(sequence.getBuffer(), sequence.getSize());
     return os;

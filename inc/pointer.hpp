@@ -329,6 +329,7 @@ namespace pointer
                 ptr = other.ptr;
                 manager = std::move(other.manager);
                 other.reset();
+                return *this;
             }
 
             BasePointer<T>& operator=(const BasePointer<T>&) = default;

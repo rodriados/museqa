@@ -46,7 +46,7 @@ class BaseBuffer
          * @param buffer The buffer pointer to encapsulate.
          * @param size The size of buffer to encapsulate.
          */
-        inline BaseBuffer(const Pointer<T> buffer, size_t size, const Deleter<T> dfunc = nullptr)
+        inline BaseBuffer(const Pointer<const T> buffer, size_t size, const Deleter<T> dfunc = nullptr)
         :   buffer {buffer, dfunc}
         ,   size {size}
         {}
@@ -135,7 +135,7 @@ class Buffer : public BaseBuffer<T>
          * @param buffer The buffer to be copied.
          * @param size The number of buffer blocks being copied.
          */
-        inline Buffer(const Pointer<T> buffer, size_t size)
+        inline Buffer(const Pointer<const T> buffer, size_t size)
         :   BaseBuffer<T> {}
         {
             copy(buffer, size);
@@ -160,7 +160,7 @@ class Buffer : public BaseBuffer<T>
          * @param buffer The buffer to be copied.
          * @param size The buffer's data blocks number.
          */
-        inline void copy(const Pointer<T> buffer, size_t size)
+        inline void copy(const Pointer<const T> buffer, size_t size)
         {
             this->size = size;
             this->buffer = new T[size];
@@ -190,7 +190,7 @@ class BufferSlice : public BaseBuffer<T>
          * @param size The number of blocks of the slice.
          */
         inline BufferSlice(const BaseBuffer<T>& target, ptrdiff_t displ = 0, size_t size = 0)
-        :   BaseBuffer<T> {target.getPointer() + displ, size}
+        :   BaseBuffer<T> {target.getPointer(), size}
         ,   displ {displ}
         {}
 
@@ -200,12 +200,31 @@ class BufferSlice : public BaseBuffer<T>
          * @param slice The slice data to be put into the new target.
          */
         inline BufferSlice(const BaseBuffer<T>& target, const BufferSlice<T>& slice)
-        :   BaseBuffer<T> {target.getPointer() + slice.getDispl(), slice.getSize()}
+        :   BaseBuffer<T> {target.getPointer(), slice.getSize()}
         ,   displ {slice.getDispl()}
         {}
 
         BufferSlice<T>& operator=(const BufferSlice<T>&) = default;
         BufferSlice<T>& operator=(BufferSlice<T>&&) = default;
+
+        /**
+         * Gives access to a specific location in buffer's data.
+         * @param offset The requested buffer offset.
+         * @return The buffer's position pointer.
+         */
+        cudadecl inline Pure<T>& operator[](ptrdiff_t offset) const
+        {
+            return this->buffer.getOffset(offset + displ);
+        }
+
+        /**
+         * Gives access to buffer's data.
+         * @return The buffer's internal pointer.
+         */
+        cudadecl inline const Pointer<T> getBuffer() const
+        {
+            return this->buffer.get() + displ;
+        }
 
         /**
          * Informs the displacement of data pointed by the slice.
