@@ -9,7 +9,7 @@ cdef extern from "sequence.hpp":
 
     # Creates an sequence. This sequence is a buffer an any modification to
     # it shall be implemented by inherited methods.
-    # @since 0.1.alpha
+    # @since 0.1.1
     cdef cppclass cSequence "Sequence":
         cSequence() except +
         cSequence(const cSequence&) except +
@@ -23,8 +23,6 @@ cdef extern from "sequence.hpp":
 
 # Creates an sequence. This sequence is a buffer an any modification to
 # it shall be implemented by inherited methods.
-# @since 0.1.alpha
+# @since 0.1.1
 cdef class Sequence:
-
-    # Reference for the instance of the wrapped C++ object.
     cdef cSequence _ref

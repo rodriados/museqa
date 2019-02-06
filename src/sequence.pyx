@@ -8,14 +8,13 @@ from sequence cimport cSequence
 
 # Creates an sequence. This sequence is a buffer an any modification to
 # it shall be implemented by inherited methods.
-# @since 0.1.alpha
+# @since 0.1.1
 cdef class Sequence:
 
     # Instantiates a new sequence.
     # @param str contents The string contents.
-    def __cinit__(self, contents, *_):
-        cdef string cstr = str(contents)
-        self._ref = cSequence(cstr)
+    def __cinit__(self, str contents = None):
+        self._ref = cSequence(<string>contents)
 
     # Gives access to a specific location in buffer's data.
     # @param offset The requested buffer offset.
@@ -23,6 +22,7 @@ cdef class Sequence:
     def __getitem__(self, int offset):
         if offset >= self.length:
             raise IndexError("list index out of range")
+
         return str(unichr(self._ref[offset]))
 
     # Transforms the sequence into a string.
