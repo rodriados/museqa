@@ -41,12 +41,12 @@ struct Exception : public std::exception
     }
 
     Exception(const Exception&) = default;
-    Exception(Exception&&) = delete;
+    Exception(Exception&&) = default;
 
     virtual ~Exception() noexcept = default;
 
     Exception& operator=(const Exception&) = default;
-    Exception& operator=(Exception&&) = delete;
+    Exception& operator=(Exception&&) = default;
 
     /**
      * Returns an explanatory string.
