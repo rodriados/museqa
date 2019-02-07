@@ -22,14 +22,14 @@ cdef extern from "database.hpp":
         cDatabase(const cDatabase&) except +
 
         cDatabase& operator=(const cDatabase&)
-        const cSequence& operator[](long) except +IndexError
+        const cSequence& operator[](ptrdiff_t) except +IndexError
 
         void add(const cSequence&)
         void add(const cDatabaseEntry&)
         void add(const string&, const cSequence&)
 
-        long getCount()
-        const cDatabaseEntry& getEntry(long) except +IndexError
+        size_t getCount()
+        const cDatabaseEntry& getEntry(ptrdiff_t) except +IndexError
 
 # Stores a list of sequences read from possible different sources. The
 # sequences may be identified by description or inclusion index.

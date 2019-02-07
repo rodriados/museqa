@@ -16,9 +16,9 @@ cdef extern from "sequence.hpp":
         cSequence(const string&) except +
 
         cSequence& operator=(const cSequence&)
-        const char& operator[](long)
+        const char& operator[](ptrdiff_t)
 
-        long getLength()
+        size_t getLength()
         string toString()
 
 # Creates an sequence. This sequence is a buffer an any modification to
