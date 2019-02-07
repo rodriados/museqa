@@ -4,9 +4,12 @@
  * @copyright 2018 Rodrigo Siqueira
  */
 #include <string>
+#include <vector>
 #include <fstream>
 
 #include "database.hpp"
+#include "exception.hpp"
+
 #include "parser/fasta.hpp"
 
 /**
@@ -15,7 +18,7 @@
  * @param entry The destination entry for the sequence.
  * @return Could a sequence be extracted?
  */
-bool parser::fasta(std::fstream& file, DatabaseEntry& entry)
+bool extract(std::fstream& file, DatabaseEntry& entry)
 {
     std::string line, sequence;
 
@@ -34,4 +37,29 @@ bool parser::fasta(std::fstream& file, DatabaseEntry& entry)
     entry.sequence = sequence;
 
     return true;
+}
+
+/**
+ * Reads a file and parses all sequences contained in it.
+ * @param filename The name of the file to be loaded.
+ * @param parsef The parser function to use for parsing the file.
+ * @return The sequences parsed from file.
+ */
+std::vector<DatabaseEntry> parser::fasta(const std::string& filename)
+{
+    std::fstream file(filename, std::fstream::in);
+    std::vector<DatabaseEntry> result;
+
+    DatabaseEntry entry;
+
+    if(file.fail())
+        throw Exception("'" + filename + "' is not a file or does not exist");
+
+    while(!file.eof() && !file.fail())
+        if(extract(file, entry))
+            result.push_back(entry);
+
+    file.close();
+
+    return result;
 }

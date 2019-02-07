@@ -8,14 +8,15 @@
 #ifndef PARSER_FASTA_HPP_INCLUDED
 #define PARSER_FASTA_HPP_INCLUDED
 
-#include <fstream>
+#include <string>
+#include <vector>
 
 #include "parser.hpp"
 #include "database.hpp"
 
 namespace parser
 {
-    extern bool fasta(std::fstream&, DatabaseEntry&);
+    extern std::vector<DatabaseEntry> fasta(const std::string&);
 };
 
 #endif

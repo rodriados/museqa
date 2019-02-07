@@ -10,7 +10,7 @@ cdef extern from "database.hpp":
 
     # Allows sequences to be stored alongside their properties.
     # @since 0.1.1
-    cdef cppclass cDatabaseEntry "DatabaseEntry":
+    cdef struct cDatabaseEntry "DatabaseEntry":
         string description
         cSequence sequence
 

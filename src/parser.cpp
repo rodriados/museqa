@@ -22,31 +22,6 @@ static const std::map<std::string, parser::Parser> dispatcher = {
 };
 
 /**
- * Reads a file and parses all sequences contained in it.
- * @param filename The name of the file to be loaded.
- * @param parsef The parser function to use for parsing the file.
- * @return The sequences parsed from file.
- */
-std::vector<DatabaseEntry> readfile(const std::string& filename, parser::Parser parsef)
-{
-    std::fstream file(filename, std::fstream::in);
-    std::vector<DatabaseEntry> result;
-
-    DatabaseEntry entry;
-
-    if(file.fail())
-        throw Exception("'" + filename + "' is not a file or does not exist");
-
-    while(!file.eof() && !file.fail())
-        if(parsef(file, entry))
-            result.push_back(entry);
-
-    file.close();
-
-    return result;
-}
-
-/**
  * Parses a file producing new sequences, after choosing correct parser.
  * @param filename The file to be parsed.
  * @param ext The file type to parse as.
@@ -60,7 +35,7 @@ std::vector<DatabaseEntry> parser::parse(const std::string& filename, const std:
     if(pair == dispatcher.end())
         throw Exception("unknown file extension '" + extension + "'");
 
-    return readfile(filename, pair->second);
+    return pair->second(filename);
 }
 
 /**

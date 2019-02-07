@@ -107,6 +107,9 @@ $(OBJDIR)/%.cxx: $(SRCDIR)/%.pyx
 $(TESTDIR)/$(NAME)/%.so: $(OBJDIR)/%.cxx $$(wildcard $(OBJDIR)/%.pyx.o)
 	$(PYCC) $(PYCCFLAGS) $^ -o $@
 
+$(TESTDIR)/$(NAME)/parser.so: $(OBJDIR)/parser.cxx $(SRCDIR)/parser/*.cpp $(OBJDIR)/parser.pyx.o
+	$(PYCC) $(PYCCFLAGS) $^ -o $@
+
 .PHONY: all clean install production testing
 
 .PRECIOUS: $(OBJDIR)/%.cxx $(OBJDIR)/%.pyx.o

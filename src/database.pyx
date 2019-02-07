@@ -46,13 +46,19 @@ cdef class Database:
     # Adds new sequence(s) to database.
     # @param mixed arg The sequence(s) to add.
     def add(self, *args):
-        for sequence in args:
-            if isinstance(sequence, tuple):
-                self._addFromTuple(sequence[0], sequence[1])
-            elif isinstance(sequence, str):
-                self._addFromString(sequence)
-            elif isinstance(sequence, Sequence):
-                self._addFromSequence(sequence)
+        for arg in args:
+            if isinstance(arg, dict):
+                self._addFromDict(arg)
+            elif isinstance(arg, tuple):
+                self._addFromTuple(arg[0], arg[1])
+            elif isinstance(arg, str):
+                self._addFromString(arg)
+            elif isinstance(arg, Sequence):
+                self._addFromSequence(arg)
+            elif isinstance(arg, Database):
+                self._addFromDatabase(arg)
+            elif isinstance(arg, DatabaseEntry):
+                self._addFromDatabaseEntry(arg)
             else:
                 raise ValueError("Unknown sequence type.")
 
@@ -61,6 +67,23 @@ cdef class Database:
     # @return int The number of sequences.
     def count(self):
         return self._ref.getCount()
+
+    # Adds new database entries from a key-value dict.
+    # @param arg The dict to be added to database.
+    def _addFromDict(self, dict arg):
+        for key, value in arg.iteritems():
+            self._addFromTuple(str(key), value)
+
+    # Adds new database entries from an already existing database.
+    # @param dbase The database to be fused.
+    def _addFromDatabase(self, Database dbase):
+        for i in range(dbase.count):
+            self._addFromDatabaseEntry(dbase[i])
+
+    # Adds a new database entry from an already existing database entry.
+    # @param entry The entry to be added to database.
+    def _addFromDatabaseEntry(self, entry):
+        self._addFromTuple(entry.description, str(entry.sequence))
 
     # Adds a new database entry from an already existing sequence.
     # @param sequence The sequence to be added to database.
