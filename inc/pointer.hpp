@@ -15,20 +15,12 @@
 #include "utils.hpp"
 
 /**
- * A universal pointer type. All pointer objects should be convertible to it.
+ * Type of function used for freeing pointers.
  * @tparam T The pointer type.
  * @since 0.1.1
  */
 template <typename T>
-using Pointer = Pure<T> *;
-
-/**
- * Type of function to use for freeing pointers.
- * @tparam T The pointer type.
- * @since 0.1.1
- */
-template <typename T>
-using Deleter = void (*)(Pointer<T>);
+using Deleter = Functor<void, Pointer<T>>;
 
 namespace pointer
 {

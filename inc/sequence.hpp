@@ -14,7 +14,6 @@
 #include <string>
 
 #include "buffer.hpp"
-#include "pointer.hpp"
 
 /**
  * Creates an sequence. This sequence is a buffer an any modification to

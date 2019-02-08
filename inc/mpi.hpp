@@ -21,7 +21,6 @@
 #include "node.hpp"
 #include "utils.hpp"
 #include "buffer.hpp"
-#include "pointer.hpp"
 #include "exception.hpp"
 #include "reflection.hpp"
 
