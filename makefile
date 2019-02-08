@@ -44,6 +44,7 @@ MPCCFILES := $(shell find $(SRCDIR) -name '*.c')
 MPPPFILES := $(shell find $(SRCDIR) -name '*.cpp')
 NVCCFILES := $(shell find $(SRCDIR) -name '*.cu')
 PYXCFILES := $(shell find $(SRCDIR) -name '*.pyx')
+TDEPFILES := $(shell find $(TESTDIR)/$(NAME) -name '*.d')
 
 SRCINTERNAL = $(sort $(dir $(wildcard $(SRCDIR)/*/. $(SRCDIR)/*/*/.)))
 OBJINTERNAL = $(SRCINTERNAL:$(SRCDIR)/%=$(OBJDIR)/%)
@@ -80,7 +81,7 @@ $(OBJDIR)/$(NAME): $(ODEPS)
 
 # Creates dependency on header files. This is valuable so that whenever
 # a header file is changed, all objects depending on it will be recompiled.
--include $(HDEPS)
+-include $(HDEPS) $(TDEPFILES)
 
 # Compiling C files.
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
@@ -105,9 +106,6 @@ $(OBJDIR)/%.cxx: $(SRCDIR)/%.pyx
 # Compiling Cython C++ files to Python modules
 .SECONDEXPANSION:
 $(TESTDIR)/$(NAME)/%.so: $(OBJDIR)/%.cxx $$(wildcard $(OBJDIR)/%.pyx.o)
-	$(PYCC) $(PYCCFLAGS) $^ -o $@
-
-$(TESTDIR)/$(NAME)/parser.so: $(OBJDIR)/parser.cxx $(SRCDIR)/parser/*.cpp $(OBJDIR)/parser.pyx.o
 	$(PYCC) $(PYCCFLAGS) $^ -o $@
 
 .PHONY: all clean install production testing

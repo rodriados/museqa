@@ -635,7 +635,8 @@ namespace mpi
         ,   const Node& root = node::master
         ,   const Communicator& comm = world    )
     {
-        call(MPI_Bcast(buffer, count, datatype::get<T>(), root, comm.id));
+        const auto& type = datatype::get<T>();
+        call(MPI_Bcast(buffer, count, type, root, comm.id));
     }
 
     template <typename T>
@@ -685,7 +686,8 @@ namespace mpi
         ,   const Tag& tag = MPI_TAG_UB
         ,   const Communicator& comm = world    )
     {
-        call(MPI_Send(buffer, count, datatype::get<T>(), dest, tag < 0 ? MPI_TAG_UB : tag, comm.id));
+        const auto& type = datatype::get<T>();
+        call(MPI_Send(buffer, count, type, dest, tag < 0 ? MPI_TAG_UB : tag, comm.id));
     }
 
     template <typename T>
@@ -792,8 +794,8 @@ namespace mpi
 
         gather(&scount, 1, sizeList.data(), 1, root, comm);
         gather(&displ, 1, displList.data(), 1, root, comm);
-        if(comm.rank == root) in.resize(std::accumulate(sizeList.begin(), sizeList.end(), 0));
 
+        if(comm.rank == root) in.resize(std::accumulate(sizeList.begin(), sizeList.end(), 0));
         gather(out.getBuffer(), out.getSize(), in.getBuffer(), sizeList.data(), displList.data(), root, comm);
     }
 

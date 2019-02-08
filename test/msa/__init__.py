@@ -18,6 +18,13 @@ for fname in os.listdir(path):
 # it can import all of them at once without any other concerns.
 from . import *
 
+# Parses a list of files and produces a list of database entries.
+# @param list filenames The list of files to parse.
+# @param str ext Parse all files using this parser.
+# @return Database Database containing all sequences parsed from file.
+def parse(*filenames, **kwargs):
+    return parser.any(*filenames, **kwargs)
+
 del fname
 del path
 del sys

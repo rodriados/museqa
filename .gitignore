@@ -1,7 +1,8 @@
-msa
 obj/
 tex/
 .idea/
 *.o
-*.d
+*.so
+*.pyc
+*.pyo
 hostfile

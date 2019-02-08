@@ -13,3 +13,6 @@ cdef extern from "parser.hpp" namespace "parser":
 
     cdef vector[cDatabaseEntry] cparseMany "parser::parseMany"(const vector[string]&, const string&)
     cdef vector[cDatabaseEntry] cparseMany "parser::parseMany"(const vector[string]&)
+
+cdef extern from "parser/fasta.hpp" namespace "parser":
+    cdef vector[cDatabaseEntry] cfasta "parser::fasta"(const string&)
