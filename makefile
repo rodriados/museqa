@@ -44,16 +44,18 @@ MPCCFILES := $(shell find $(SRCDIR) -name '*.c')
 MPPPFILES := $(shell find $(SRCDIR) -name '*.cpp')
 NVCCFILES := $(shell find $(SRCDIR) -name '*.cu')
 PYXCFILES := $(shell find $(SRCDIR) -name '*.pyx')
-TDEPFILES := $(shell find $(TESTDIR)/$(NAME) -name '*.d')
+TDEPFILES := $(shell find $(TESTDIR)/$(NAME) -name '*.d')                   \
+             $(shell find $(OBJDIR)/$(TESTDIR) -name '*.d' 2>/dev/null)
 
 SRCINTERNAL = $(sort $(dir $(wildcard $(SRCDIR)/*/. $(SRCDIR)/*/*/.)))
-OBJINTERNAL = $(SRCINTERNAL:$(SRCDIR)/%=$(OBJDIR)/%)
+OBJINTERNAL = $(SRCINTERNAL:$(SRCDIR)/%=$(OBJDIR)/%)                        \
+              $(SRCINTERNAL:$(SRCDIR)/%=$(OBJDIR)/$(TESTDIR)/%)
 TSTINTERNAL = $(SRCINTERNAL:$(SRCDIR)/%=$(TESTDIR)/$(NAME)/%)
 
 ODEPS = $(MPCCFILES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)                            \
         $(MPPPFILES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)                          \
         $(NVCCFILES:$(SRCDIR)/%.cu=$(OBJDIR)/%.o)
-TDEPS = $(PYXCFILES:$(SRCDIR)/%.pyx=$(OBJDIR)/%.pyx.o)                      \
+TDEPS = $(PYXCFILES:$(SRCDIR)/%.pyx=$(OBJDIR)/$(TESTDIR)/%.so)              \
         $(PYXCFILES:$(SRCDIR)/%.pyx=$(TESTDIR)/$(NAME)/%.so)
 HDEPS = $(ODEPS:$(OBJDIR)/%.o=$(OBJDIR)/%.d)
 
@@ -88,26 +90,31 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	$(MPCC) $(MPCCFLAGS) -MMD -c $< -o $@
 
 # Compiling C++ files.
-$(OBJDIR)/%.o $(OBJDIR)/%.pyx.o: $(SRCDIR)/%.cpp
+$(OBJDIR)/%.o $(OBJDIR)/$(TESTDIR)/%.so: $(SRCDIR)/%.cpp
 	$(MPPP) $(MPPPFLAGS) -MMD -c $< -o $@
 
 # Compiling CUDA files.
-$(OBJDIR)/%.o $(OBJDIR)/%.pyx.o: $(SRCDIR)/%.cu
+$(OBJDIR)/%.o $(OBJDIR)/$(TESTDIR)/%.so: $(SRCDIR)/%.cu
 	@$(NVCC) $(NVCCFLAGS) -M $< -odir $(patsubst %/,%,$(dir $@)) > $(@:%.o=%.d)
 	$(NVCC) $(NVCCFLAGS) -c $< -o $@
 
-# If no correspondent file has been found, simply ignore.
-$(OBJDIR)/%.pyx.o: ;
-
 # Converting Cython files to C++
-$(OBJDIR)/%.cxx: $(SRCDIR)/%.pyx
+$(OBJDIR)/$(TESTDIR)/%.cxx: $(SRCDIR)/%.pyx
 	$(PYXC) $(PYXCFLAGS) $< -o $@
 
-# Compiling Cython C++ files to Python modules
+# Compiling Cython generated files.
+$(OBJDIR)/$(TESTDIR)/%.py.o: $(OBJDIR)/$(TESTDIR)/%.cxx
+	$(PYCC) $(PYCCFLAGS) -MMD -c $< -o $@
+
+# If no correspondent file has been found, simply ignore.
+$(OBJDIR)/$(TESTDIR)/%.so: ;
+
+# Linking Python modules.
+# Here, we use nvcc so we can access the GPU from Python modules.
 .SECONDEXPANSION:
-$(TESTDIR)/$(NAME)/%.so: $(OBJDIR)/%.cxx $$(wildcard $(OBJDIR)/%.pyx.o)
-	$(PYCC) $(PYCCFLAGS) $^ -o $@
+$(TESTDIR)/$(NAME)/%.so: $(OBJDIR)/$(TESTDIR)/%.py.o $$(wildcard $(OBJDIR)/$(TESTDIR)/%.so)
+	$(NVCC) -shared $^ -o $@
 
 .PHONY: all clean install production testing
 
-.PRECIOUS: $(OBJDIR)/%.cxx $(OBJDIR)/%.pyx.o
+.PRECIOUS: $(OBJDIR)/$(TESTDIR)/%.cxx $(OBJDIR)/$(TESTDIR)/%.py.o $(OBJDIR)/$(TESTDIR)/%.so

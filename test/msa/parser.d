@@ -1,1 +1,1 @@
-test/msa/parser.so: src/parser/fasta.cpp
+test/msa/parser.so: obj/test/parser/fasta.so
