@@ -14,6 +14,7 @@
 
 #include "utils.hpp"
 #include "pointer.hpp"
+#include "exception.hpp"
 
 /**
  * The base of a buffer class.
@@ -61,6 +62,10 @@ class BaseBuffer
          */
         cudadecl inline Pure<T>& operator[](ptrdiff_t offset) const
         {
+#ifdef msa_compile_cython
+            if(offset >= (signed) getSize())
+                throw Exception("buffer offset out of range");
+#endif
             return buffer.getOffset(offset);
         }
 
@@ -214,6 +219,10 @@ class BufferSlice : public BaseBuffer<T>
          */
         cudadecl inline Pure<T>& operator[](ptrdiff_t offset) const
         {
+#ifdef msa_compile_cython
+            if(offset >= (signed) this->getSize())
+                throw Exception("buffer offset out of range");
+#endif
             return this->buffer.getOffset(offset + displ);
         }
 

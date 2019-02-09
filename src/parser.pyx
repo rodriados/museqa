@@ -6,7 +6,7 @@
 from libcpp.vector cimport vector
 from libcpp.string cimport string
 from database cimport cDatabaseEntry
-from database import Database, DatabaseEntry
+from database import DatabaseEntry
 from parser cimport *
 
 # Converts a C++ database entry vector to a Python list.
@@ -18,16 +18,16 @@ cdef object toList(vector[cDatabaseEntry]& entries):
 # Parses a list of files and produces a list of database entries.
 # @param list filenames The list of files to parse.
 # @param str ext Parse all files using this parser.
-# @return Database Database containing all sequences parsed from file.
+# @return list List containing all entries parsed from file.
 def any(*filenames, **kwargs):
     cdef vector[string] files = filenames
     cdef string ext = str(kwargs.get("ext", str()))
     cdef vector[cDatabaseEntry] entries = cparseMany(files, ext)
-    return Database(*toList(entries))
+    return toList(entries)
 
 # Parses a FASTA file.
 # @param str filename The file to be parsed.
-# @return Database Database containing all sequences parsed from file.
+# @return list List containing all entries parsed from file.
 def fasta(str filename):
     cdef vector[cDatabaseEntry] entries = cfasta(filename)
-    return Database(*toList(entries))
+    return toList(entries)

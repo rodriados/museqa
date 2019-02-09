@@ -16,7 +16,7 @@ cdef extern from "sequence.hpp":
         cSequence(const string&) except +
 
         cSequence& operator=(const cSequence&)
-        const char& operator[](ptrdiff_t)
+        char& operator[](ptrdiff_t) except +IndexError
 
         size_t getLength()
         string toString()
@@ -25,4 +25,4 @@ cdef extern from "sequence.hpp":
 # it shall be implemented by inherited methods.
 # @since 0.1.1
 cdef class Sequence:
-    cdef cSequence _ref
+    cdef cSequence cRef

@@ -9,10 +9,12 @@
 #define DATABASE_HPP_INCLUDED
 
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
 #include "sequence.hpp"
+#include "exception.hpp"
 
 /**
  * Allows sequences to be stored alongside their respective properties.
@@ -33,7 +35,6 @@ class Database
 {
     protected:
         std::vector<DatabaseEntry> list;    /// The list of sequence entries in database.
-        uint32_t index = 0;                 /// The description index for anonymous sequences.
 
     public:
         Database() = default;
@@ -54,13 +55,35 @@ class Database
         }
 
         /**
+         * Informs the number of entries in database.
+         * @return The number of entries in database.
+         */
+        inline size_t getCount() const
+        {
+            return list.size();
+        }
+
+        /**
+         * Retrieves an entry from database.
+         * @param offset The entry offset index.
+         * @return The requested entry.
+         */
+        inline const DatabaseEntry& getEntry(ptrdiff_t offset) const
+        {
+#ifdef msa_compile_cython
+            if(offset >= (signed) getCount())
+                throw Exception("database offset out of range");
+#endif
+            return list.at(offset);
+        }
+
+        /**
          * Adds a new entry to database.
          * @param sequence The sequence to be added to database.
          */
         inline void add(const Sequence& sequence)
         {
-            std::string description = std::string("#") + std::to_string(++index);
-            add(description, sequence);
+            add("unnamed #" + std::to_string(getCount() + 1), sequence);
         }
 
         /**
@@ -83,6 +106,15 @@ class Database
         }
 
         /**
+         * Adds all entries from another database.
+         * @param dbase The database to merge into this.
+         */
+        inline void addMany(const Database& dbase)
+        {
+            addMany(dbase.list);
+        }
+
+        /**
          * Adds many entries to database
          * @param vector The list of sequences to add.
          */
@@ -98,8 +130,7 @@ class Database
          */
         inline void addMany(const std::vector<DatabaseEntry>& vector)
         {
-            for(const DatabaseEntry& entry : vector)
-                add(entry);
+            list.insert(list.end(), vector.begin(), vector.end());
         }
 
         /**
@@ -113,22 +144,35 @@ class Database
         }
 
         /**
-         * Informs the number of entries in database.
-         * @return The number of entries in database.
+         * Removes an element from database.
+         * @param offset Element to be removed from database.
          */
-        inline size_t getCount() const
+        inline void remove(ptrdiff_t offset)
         {
-            return list.size();
+#ifdef msa_compile_cython
+            if(offset >= (signed) getCount())
+                throw Exception("database offset out of range");
+#endif
+            list.erase(list.begin() + offset);
         }
 
         /**
-         * Retrieves an entry from database.
-         * @param offset The entry offset index.
-         * @return The requested entry.
+         * Removes many elements from database.
+         * @param selected Elements to be removed.
          */
-        inline const DatabaseEntry& getEntry(ptrdiff_t offset) const
+        inline void removeMany(const std::set<ptrdiff_t>& selected)
         {
-            return list.at(offset);
+            for(auto it = selected.rbegin(); it != selected.rend(); ++it)
+                remove(*it);
+        }
+
+        /**
+         * Removes many elements from database.
+         * @param selected Elements to be removed.
+         */
+        inline void removeMany(const std::vector<ptrdiff_t>& selected)
+        {
+            removeMany(std::set<ptrdiff_t> {selected.begin(), selected.end()});
         }
 };
 

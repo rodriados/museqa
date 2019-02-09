@@ -36,8 +36,10 @@ struct Exception : public std::exception
     template <typename ...T>
     explicit Exception(const std::string& fmt, T... args)
     {
-        msg.reserve(128);
-        sprintf(msg.data(), fmt.data(), args...);
+        char buffer[128];
+        
+        sprintf(buffer, fmt.data(), args...);
+        msg = buffer;
     }
 
     Exception(const Exception&) = default;

@@ -3,25 +3,38 @@
 # Multiple Sequence Alignment sequence database wrapper file.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
 # @copyright 2018-2019 Rodrigo Siqueira
+from libcpp.set cimport set
 from libcpp.string cimport string
 from sequence cimport cSequence, Sequence
 from database cimport cDatabase, cDatabaseEntry
 
 # Represents a sequence stored in database.
 # @since 0.1.1
-class DatabaseEntry:
+cdef class DatabaseEntry:
 
     # Initializes a new database entry representation.
-    # @param str description The sequence description
-    # @param Sequence sequence The sequence store in database
-    def __init__(self, str description, str sequence):
-        self.description = description
-        self.sequence = Sequence(sequence)
+    # @param string description The sequence description
+    # @param string sequence The sequence store in database
+    def __cinit__(self, string description, string sequence):
+        self.cRef.description = description
+        self.cRef.sequence = cSequence(sequence)
 
     # Transforms the entry into the sequence for exhibition.
     # @return The database entry representation as a string.
     def __str__(self):
-        return str(self.sequence)
+        return self.cRef.sequence.toString()
+
+    @property
+    # Gives access to the entry description string.
+    # @return The entry description.
+    def description(self):
+        return self.cRef.description
+
+    @property
+    # Gives access to the entry sequence.
+    # @return The entry sequence.
+    def sequence(self):
+        return Sequence(self.cRef.sequence.toString())
 
 # Stores a list of sequences read from possible different sources. The
 # sequences may be identified by description or inclusion index.
@@ -37,66 +50,70 @@ cdef class Database:
     # @param int offset The requested sequence offset.
     # @return Sequence The requested sequence.
     def __getitem__(self, int offset):
-        if offset >= self.count:
-            raise IndexError("database index out of range")
-
-        cdef cDatabaseEntry entry = self._ref.getEntry(offset)
+        cdef cDatabaseEntry entry = self.cRef.getEntry(offset)
         return DatabaseEntry(entry.description, entry.sequence.toString())
 
     # Adds new sequence(s) to database.
     # @param mixed arg The sequence(s) to add.
     def add(self, *args):
         for arg in args:
-            if isinstance(arg, dict):
-                self._addFromDict(arg)
+            if isinstance(arg, list):
+                self.add(*arg)
+            elif isinstance(arg, dict):
+                self.__addFromDict(arg)
             elif isinstance(arg, tuple):
-                self._addFromTuple(arg[0], arg[1])
+                self.__addFromTuple(arg[0], arg[1])
             elif isinstance(arg, str):
-                self._addFromString(arg)
+                self.__addFromString(arg)
             elif isinstance(arg, Sequence):
-                self._addFromSequence(arg)
+                self.__addFromSequence(arg)
             elif isinstance(arg, Database):
-                self._addFromDatabase(arg)
+                self.__addFromDatabase(arg)
             elif isinstance(arg, DatabaseEntry):
-                self._addFromDatabaseEntry(arg)
+                self.__addFromDatabaseEntry(arg)
             else:
                 raise ValueError("Unknown sequence type.")
+
+    # Removes sequence(s) from database.
+    # @param int offsets The sequence(s) offset(s) to remove.
+    def remove(self, *offsets):
+        cdef set[ptrdiff_t] indeces = [int(i) for i in offsets]
+        self.cRef.removeMany(indeces)
 
     @property
     # Informs the number of sequences in database.
     # @return int The number of sequences.
     def count(self):
-        return self._ref.getCount()
+        return self.cRef.getCount()
 
     # Adds new database entries from a key-value dict.
-    # @param arg The dict to be added to database.
-    def _addFromDict(self, dict arg):
+    # @param dict arg The dict to be added to database.
+    def __addFromDict(self, dict arg):
         for key, value in arg.iteritems():
-            self._addFromTuple(str(key), value)
+            self.__addFromTuple(str(key), value)
 
     # Adds new database entries from an already existing database.
     # @param dbase The database to be fused.
-    def _addFromDatabase(self, Database dbase):
-        for i in range(dbase.count):
-            self._addFromDatabaseEntry(dbase[i])
+    cdef void __addFromDatabase(self, Database dbase):
+        self.cRef.addMany(dbase.cRef)
 
     # Adds a new database entry from an already existing database entry.
     # @param entry The entry to be added to database.
-    def _addFromDatabaseEntry(self, entry):
-        self._addFromTuple(entry.description, str(entry.sequence))
+    cdef void __addFromDatabaseEntry(self, DatabaseEntry entry):
+        self.cRef.add(entry.cRef)
 
     # Adds a new database entry from an already existing sequence.
     # @param sequence The sequence to be added to database.
-    cdef void _addFromSequence(self, Sequence sequence):
-        self._ref.add(sequence._ref)
+    cdef void __addFromSequence(self, Sequence sequence):
+        self.cRef.add(sequence.cRef)
 
     # Adds a new database entry from a sequence as string.
     # @param sequence The sequence to be added to database.
-    cdef void _addFromString(self, string sequence):
-        self._ref.add(cSequence(sequence))
+    cdef void __addFromString(self, string sequence):
+        self.cRef.add(cSequence(sequence))
 
     # Adds a new database entry from a entry tuple.
     # @param desc The sequence description.
     # @param sequence The sequence to be added to database.
-    cdef void _addFromTuple(self, string desc, string sequence):
-        self._ref.add(desc, cSequence(sequence))
+    cdef void __addFromTuple(self, string desc, string sequence):
+        self.cRef.add(desc, cSequence(sequence))
