@@ -602,6 +602,7 @@ namespace mpi
         inline void free(Communicator& comm)
         {
             call(MPI_Comm_free(&comm.id));
+            comm = null;
         }
     };
 
@@ -906,7 +907,7 @@ namespace mpi
         size = d.quot + (d.rem > comm.rank);
         in.resize(size);
 
-        if(d.rem == 0) scatter(out.getBuffer(), size, in.getBuffer(), size, root, comm);
+        if(!d.rem) scatter(out.getBuffer(), size, in.getBuffer(), size, root, comm);
         else scatter(send, recv, size, d.quot * comm.rank + std::min(comm.rank, d.rem), root, comm);
     }
     /**#@-*/
@@ -929,6 +930,28 @@ namespace mpi
         call(MPI_Finalize());
     }
 };
+
+/**
+ * Checks whether two communicators are the same.
+ * @param a The first communicator to compare.
+ * @param b The second communicator to compare.
+ * @return Are both communicators the same?
+ */
+bool operator==(const mpi::Communicator& a, const mpi::Communicator& b)
+{
+    return a.id == b.id;
+}
+
+/**
+ * Checks whether two communicators are different.
+ * @param a The first communicator to compare.
+ * @param b The second communicator to compare.
+ * @return Are both communicators different?
+ */
+bool operator!=(const mpi::Communicator& a, const mpi::Communicator& b)
+{
+    return a.id != b.id;
+}
 
 #endif
 #endif

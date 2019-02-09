@@ -1,12 +1,12 @@
 /** 
  * Multiple Sequence Alignment main header file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018 Rodrigo Siqueira
+ * @copyright 2018-2019 Rodrigo Siqueira
  */
+#pragma once
+
 #ifndef MSA_HPP_INCLUDED
 #define MSA_HPP_INCLUDED
-
-#pragma once
 
 /*
  * Leave uncommented if compiling in debug mode. This may affect many aspects
@@ -34,60 +34,16 @@
   #define msa_posix
   #define msa_apple
 #elif defined(WIN32) || defined(_WIN32) || defined(__WIN32)
-  #error MSA is not compatible with Windows as yet.
+  #define msa_windows
 #endif
 
 #include <cstdint>
 #include <cstddef>
-#include <exception>
 #include <string>
 
 #include "colors.h"
 #include "node.hpp"
-
-/**
- * Holds an error message so it can be propagated through the code.
- * @since 0.1.1
- */
-struct Exception : public std::exception
-{
-    std::string msg;       /// The exception message.
-
-    /**
-     * Builds a new exception instance.
-     * @param msg The exception message.
-     */
-    explicit Exception(const std::string& msg)
-    : msg(msg) {}
-
-    /**
-     * Builds a new exception instance.
-     * @tparam T The format parameters' types.
-     * @param fmt The message format.
-     * @param args The format's parameters.
-     */
-    template <typename ...T>
-    explicit Exception(const std::string& fmt, T... args)
-    {
-        msg.reserve(128);
-        sprintf(msg.data(), fmt.data(), args...);
-    }
-
-    Exception(const Exception&) = default;
-    Exception(Exception&&) = delete;
-
-    Exception& operator=(const Exception&) = default;
-    Exception& operator=(Exception&&) = delete;
-
-    /**
-     * Returns an explanatory string.
-     * @return The explanatory string.
-     */
-    inline const char *what() const noexcept
-    {
-        return msg.data();
-    }
-};
+#include "exception.hpp"
 
 #ifndef msa_compile_cython
 extern void halt(uint8_t = 0);
@@ -158,25 +114,6 @@ inline void watchdog(const std::string& task, uint32_t done, uint32_t total, con
     printf("%s %u %u %u %u ", task.data(), cluster::rank, cluster::size, done, total);
     printf(fmt.data(), args...);
     putchar('\n');
-#endif
-}
-
-/**
- * Prints an error log message and forcefully breaks execution.
- * This function shall be used with extreme caution.
- * @tparam T The types of message arguments.
- * @param fmt The message format.
- * @param args The format values.
- * @see error
- */
-template <typename ...T>
-inline void shutdown(const std::string& fmt, T... args)
-{
-#ifndef msa_compile_cython
-    printf("[error] ");
-    printf(fmt.data(), args...);
-    putchar('\n');
-    exit(1);
 #endif
 }
 

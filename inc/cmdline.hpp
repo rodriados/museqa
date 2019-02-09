@@ -157,8 +157,8 @@ namespace cmdline
              */
             template <typename T = std::string>
             inline typename std::enable_if<!std::is_arithmetic<T>::value, T>::type get
-              ( const std::string& name
-              , const T& fallback = {}      ) const
+                (   const std::string& name
+                ,   const T& fallback = {}      ) const
             {                
                 static_assert(std::is_convertible<std::string, T>::value, "Cannot convert to requested type");
                 

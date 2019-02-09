@@ -1,84 +1,93 @@
 /** 
  * Multiple Sequence Alignment main file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018 Rodrigo Siqueira
+ * @copyright 2018-2019 Rodrigo Siqueira
  */
 #include <cstdio>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "msa.hpp"
-#include "cli.hpp"
-#include "fasta.hpp"
-#include "timer.hpp"
-#include "device.cuh"
-#include "cluster.hpp"
+#include "mpi.hpp"
+#include "cuda.cuh"
+#include "parser.hpp"
+#include "cmdline.hpp"
+#include "database.hpp"
+#include "exception.hpp"
+#include "stopwatch.hpp"
+
 #include "pairwise.hpp"
 
-/**
- * The application class. This class is responsible for running the application's
- * specific functions and managing its resources.
- * @since 0.1.alpha
+/*
+ * The list of command line options available. This list might be increased
+ * depending on the options available for the different steps of the software.
  */
-class Application final
-{
-    protected:
-        Fasta fasta;        /// The Fasta file to be aligned.
-        Pairwise pwise;     /// The pairwise step instance.
-
-    public:
-        /**
-         * Runs the application. This method times the execution of all steps for
-         * the multiple sequence alignment.
-         */
-        static void run()
-        {
-            Timer<> timer;
-            Application app;
-
-            report("total", timer.run([&timer, &app]() {
-                app.load(cli.get("filename"));
-                report("pairwise", timer.run([&app](){ app.pairwise(); }));
-                //report("njoining", timer.run([&app](){ njoining(app); }));
-                //report("profile-align", timer.run([&app](){ profilealign(app); }));
-            }));
-        }
-
-    protected:
-        /**
-         * Loads the Fasta file, the first step. The sequences will be loaded into
-         * the master node and broadcasted to all other nodes.
-         * @param filename Name of file to load.
-         */
-        void load(const std::string& filename)
-        {
-            this->fasta = Fasta(filename);
-            cluster::sync();
-        }
-
-        /**
-         * Runs the pairwise step. This step is responsible for calculating all
-         * alignment possibilities between two different sequences.
-         */
-        void pairwise()
-        {
-            this->pwise = Pairwise(this->fasta);
-            cluster::sync();
-        }
-
-        /**
-         * Reports the execution success of a step.
-         * @param name The name of executed step.
-         * @param bm The benchmark instance.
-         */
-        static void report(const std::string& name, double elapsed)
-        {
-            onlymaster {
-                printf(s_bold "[report] " c_green_fg "%s" s_reset " done in %.3f seconds\n", name.c_str(), elapsed);
-                fflush(stdout);
-            }
-        }
+static const std::vector<cmdline::Option> options = {
+    {"m", "multigpu",  "Try to use multiple devices in a single host."}
+,   {"x", "matrix",    "Choose the scoring matrix to use.", true}
 };
+
+/*
+ * Cluster communicator responsible for monitoring whether all nodes are
+ * executing successfully.
+ */
+static mpi::Communicator monitor;
+
+/**
+ * Reports success and the execution time of a step.
+ * @param name The name of executed step.
+ * @param duration The execution time duration.
+ */
+void report(const std::string& name, const stopwatch::duration::Seconds& duration)
+{
+    onlymaster
+        std::cout << s_bold "[report] " c_green_fg << name << " done in " << duration << " seconds" << std::endl;
+}
+
+/**
+ * Runs the application. This function measures the application's total
+ * execution time as well as all its steps.
+ */
+void run()
+{
+    Database db;
+    Pairwise pairwise;
+
+    try {
+        report("total", stopwatch::run([&db, &pairwise]() {
+            report("parsing", stopwatch::run([&db]() { db.addMany(parser::parseMany(cmdline::getPositional())); }));
+            //report("pairwise", stopwatch::run([&db, &pairwise]() { pairwise.run(db); mpi::barrier(); }));
+            //report("njoining", timer.run([&app](){ njoining(app); }));
+            //report("profile-align", timer.run([&app](){ profilealign(app); }));
+        }));
+    }
+
+    catch(Exception e) {
+        error(e.what());
+    }
+
+    halt(0);
+}
+
+/**
+ * Observes and monitors worker processes and quits in case of failure.
+ * @return The error code obtained from processes.
+ */
+int observer()
+{
+    int code = 0;
+
+    monitor = mpi::communicator::clone();
+
+    onlymaster for(int i = 0; i < node::size; ++i) {
+        mpi::receive(code, mpi::any, 0xff01, monitor);
+        if(code) break;
+    }
+
+    mpi::broadcast(code, node::master, monitor);
+    mpi::communicator::free(monitor);
+}
 
 /**
  * Starts, manages and finishes the software's execution.
@@ -88,46 +97,43 @@ class Application final
  */
 int main(int argc, char **argv)
 {
-    cluster::init(argc, argv);
+    mpi::init(argc, argv);
 
-    if(cluster::size < 2)
+    if(node::size < 2)
         error("at least 2 nodes are needed.");
 
-    onlyslaves if(!device::exists())
-        error("No compatible GPU has been found.");
+    onlyslaves if(!cuda::device::getCount())
+        error("no compatible GPU device has been found.");
 
-    cli.init({
-        {"m", "multigpu", "Try to use multiple devices in a single host."}
-    ,   {"f", "file",     "File to be processed.", "filename"}
-    ,   {"x", "matrix",   "Choose the scoring matrix to use.", "matrix"}
-    }, {"filename"});
+    cmdline::init(options);
+    cmdline::parse(argc, argv);
 
-    cli.parse(argc, argv);
+    onlyslaves if(cmdline::has("multigpu"))
+        cuda::device::setCurrent(node::rank - 1);
 
-    onlyslaves device::select();
-    cluster::sync();
+    mpi::barrier();
 
-    Application::run();    
-    cluster::finalize();
+    std::thread worker {run};
+    worker.detach();
 
-    return 0;
+    int code = observer();
+
+    mpi::finalize();
+
+    return code;
 }
 
 /**
- * Quits the software execution with a code.
+ * Halts the software execution in all nodes with a code.
  * @param code The exit code.
+ * @return The code to operational system.
  */
-void quit [[noreturn]] (uint8_t code)
+void halt(uint8_t code)
 {
-    cluster::finalize();
-    exit(code);
-}
+    if(monitor == mpi::communicator::null) {
+        mpi::finalize();
+        exit(code);
+    }
 
-/**
- * Prints the software version and quits execution.
- */
-void version [[noreturn]] ()
-{
-    printf("[version] %s\n", msa_version);
-    quit();
+    mpi::send(code, node::master, 0xff01, monitor);
 }
