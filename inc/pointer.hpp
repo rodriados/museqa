@@ -20,7 +20,7 @@
  * @since 0.1.1
  */
 template <typename T>
-using Deleter = Functor<void, Pointer<T>>;
+using Deleter = Functor<void(Pointer<T>)>;
 
 namespace pointer
 {

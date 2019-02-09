@@ -38,12 +38,11 @@ template <typename T>
 using Pointer = Pure<T> *;
 
 /**
- * Represents a function carrying type.
- * @tparam R The function return type.
- * @tparam P The function parameter types.
+ * Represents a function pointer type.
+ * @tparam F The function signature type.
  * @since 0.1.1
  */
-template <typename R, typename... P>
-using Functor = R (*)(P...);
+template <typename F>
+using Functor = typename std::enable_if<std::is_function<F>::value, F*>::type;
 
 #endif
