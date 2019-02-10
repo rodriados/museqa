@@ -41,12 +41,12 @@ void cmdline::Parser::parse(int argc, char **argv)
             if(i + 1 >= argc)
                 error("unknown option '%s'", option.getLname().data());
 
-            args[option.getLname()] = argv[++i];
+            values[option.getLname()] = argv[++i];
             continue;
         }
 
         if(!option.isUnknown()) {
-            args[option.getLname()] = option.getLname();
+            values[option.getLname()] = option.getLname();
             continue;
         }
 

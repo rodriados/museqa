@@ -34,7 +34,7 @@ class Sequence : public Buffer<char>
          * @param string The string containing this sequence's data.
          */
         inline Sequence(const std::string& string)
-        :   Buffer<char>(string.c_str(), string.size())
+        :   Buffer<char> {string.c_str(), string.size()}
         {}
 
         Sequence& operator=(const Sequence&) = default;
@@ -60,14 +60,11 @@ class Sequence : public Buffer<char>
 };
 
 /**
- * This function allows buffers to be directly printed into a ostream instance.
- * @tparam T A BaseBuffer<char> derived type.
- * @param os The output stream object.
+ * This function allows buffers to be directly printed into an ostream instance.
+ * @param os The output stream instance.
  * @param sequence The sequence to print.
  */
-template <typename T>
-inline auto operator<<(std::ostream& os, const T& sequence)
--> typename std::enable_if<std::is_base_of<BaseBuffer<char>, T>::value, std::ostream&>::type
+inline std::ostream& operator<<(std::ostream& os, const Buffer<char>& sequence)
 {
     os << std::string(sequence.getBuffer(), sequence.getSize());
     return os;
