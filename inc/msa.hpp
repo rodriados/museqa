@@ -43,6 +43,7 @@
 
 #include "colors.h"
 #include "node.hpp"
+#include "utils.hpp"
 #include "exception.hpp"
 
 #ifndef msa_compile_cython

@@ -9,6 +9,10 @@
 #define CUDA_CUH_INCLUDED
 
 #ifdef __CUDACC__
+  #define msa_compile_cuda 1
+#endif
+
+#ifdef msa_compile_cuda
   /*
    * Checks whether a compatible device is available. If not, compilation
    * fails and informs the error.
@@ -44,7 +48,7 @@ namespace cuda
      */
     using Status = NativeWord;
 
-#ifdef __CUDACC__
+#ifdef msa_compile_cuda
     namespace status
     {
         /**
@@ -206,7 +210,7 @@ namespace cuda
         }
     };
 
-#ifdef __CUDACC__
+#ifdef msa_compile_cuda
     /**
      * Checks whether a CUDA has been successful and throws error if not.
      * @tparam P The format string parameter types.
@@ -233,7 +237,7 @@ namespace cuda
 
     namespace device
     {
-#ifdef __CUDACC__
+#ifdef msa_compile_cuda
         /**
          * Besides attributes, every CUDA device also has properties. This is the type
          * for device properties, aliasing {@ref cudaDeviceProp}.
@@ -252,7 +256,7 @@ namespace cuda
         extern int getCount();
         extern Device getCurrent();
         extern void setCurrent(const Device& = original);
-#ifdef __CUDACC__
+#ifdef msa_compile_cuda
         extern Properties getProperties(const Device& = original);
 #endif
     };
@@ -265,7 +269,7 @@ namespace cuda
     template <typename ...P>
     using Kernel = void (*)(P...);
 
-#ifdef __CUDACC__
+#ifdef msa_compile_cuda
     namespace cache
     {
         /**

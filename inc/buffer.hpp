@@ -84,7 +84,7 @@ class Buffer
          * @param offset The requested buffer offset.
          * @return The buffer's position pointer.
          */
-        cudadecl inline Pure<T>& operator[](ptrdiff_t offset) const
+        __host__ __device__ inline Pure<T>& operator[](ptrdiff_t offset) const
         {
 #ifdef msa_compile_cython
             if(offset >= (signed) getSize())
@@ -97,7 +97,7 @@ class Buffer
          * Gives access to buffer's data.
          * @return The buffer's internal pointer.
          */
-        cudadecl inline Pointer<const T> getBuffer() const
+        __host__ __device__ inline Pointer<const T> getBuffer() const
         {
             return ptr.get();
         }
@@ -106,7 +106,7 @@ class Buffer
          * Gives access to buffer's pointer.
          * @return The buffer's smart pointer.
          */
-        cudadecl inline const AutoPointer<T[]>& getPointer() const
+        __host__ __device__ inline const AutoPointer<T[]>& getPointer() const
         {
             return ptr;
         }
@@ -115,7 +115,7 @@ class Buffer
          * Informs the buffer's number of blocks.
          * @return The number of buffer blocks.
          */
-        cudadecl inline size_t getSize() const
+        __host__ __device__ inline size_t getSize() const
         {
             return size;
         }
