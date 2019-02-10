@@ -17,6 +17,7 @@
 #include <cstdint>
 #include <numeric>
 #include <cstdlib>
+#include <algorithm>
 
 #include "node.hpp"
 #include "utils.hpp"
@@ -152,6 +153,7 @@ namespace mpi
          * types automatically and, thus, can be used directly.
          * @since 0.1.1
          */
+        template <> inline MPI_Datatype get<bool>()     { return MPI_C_BOOL; };
         template <> inline MPI_Datatype get<float>()    { return MPI_FLOAT; };
         template <> inline MPI_Datatype get<double>()   { return MPI_DOUBLE; };
         template <> inline MPI_Datatype get<int8_t>()   { return MPI_INT8_T; };
@@ -404,7 +406,7 @@ namespace mpi
              * @param ptr The payload's buffer pointer.
              * @param size The payload's buffer size.
              */
-            inline BasePayload(const Pointer<T> ptr, size_t size = 1)
+            inline BasePayload(Pointer<T> ptr, size_t size = 1)
             :   target {ptr}
             ,   size {size}
             {}
@@ -435,7 +437,7 @@ namespace mpi
              * successfully received.
              * @param (ignored) The new payload capacity.
              */
-            virtual inline void resize(size_t)
+            inline void resize(size_t)
             {}
         };
 
@@ -464,7 +466,7 @@ namespace mpi
              * @param ptr The payload's buffer pointer.
              * @param size The payload's buffer size.
              */
-            inline Payload(const Pointer<T> ptr, size_t size = 1)
+            inline Payload(Pointer<T> ptr, size_t size = 1)
             :   BasePayload<T> {ptr, size}
             {}
         };
@@ -493,10 +495,9 @@ namespace mpi
              * successfully received.
              * @param size The new payload capacity.
              */
-            virtual inline void resize(size_t size) override
+            inline void resize(size_t size)
             {
-                if(this->size < size)
-                    object.resize(size);
+                if(this->size < size) object.resize(size);
 
                 this->target = object.data();
                 this->size = size;
@@ -509,15 +510,15 @@ namespace mpi
          * @since 0.1.1
          */
         template <typename T>
-        struct Payload<BaseBuffer<T>> : public BaseBuffer<T>
+        struct Payload<Buffer<T>> : public BasePayload<T>
         {
-            BaseBuffer<T>& object;      /// The original buffer.
+            Buffer<T>& object;          /// The original buffer.
 
             /**
              * Creates a new payload from buffer.
              * @param buffer The buffer to use as payload.
              */
-            inline Payload(BaseBuffer<T>& buffer)
+            inline Payload(Buffer<T>& buffer)
             :   BasePayload<T> {buffer.getBuffer(), buffer.getSize()}
             ,   object {buffer}
             {}
@@ -527,10 +528,9 @@ namespace mpi
              * successfully received.
              * @param size The new payload capacity.
              */
-            virtual inline void resize(size_t size) override
+            inline void resize(size_t size)
             {
-                if(this->size < size)
-                    object = {new T[size], size};
+                if(this->size < size) object = Buffer<T> {size};
 
                 this->target = object.getBuffer();
                 this->size = size;
@@ -616,6 +616,7 @@ namespace mpi
         int _;
         call(MPI_Init_thread(&argc, &argv, MPI_THREAD_SERIALIZED, &_));
         world = communicator::detail::build(MPI_COMM_WORLD);
+        
         node::rank = world.rank;
         node::size = world.size;
     }
@@ -645,11 +646,12 @@ namespace mpi
         ,   const Node& root = node::master
         ,   const Communicator& comm = world    )
     {
-        detail::Payload<T> payload {buffer};
+        detail::Payload<T> payload {buffer};        
         int size = payload.getSize();
-        broadcast(&size, 1, root, comm);
 
+        broadcast(&size, 1, root, comm);
         payload.resize(size);
+
         broadcast(payload.getBuffer(), payload.getSize(), root, comm);
     }
     /**#@-*/
@@ -788,14 +790,16 @@ namespace mpi
 
         static_assert(std::is_same<P, Q>::value, "Cannot gather with different types!");
 
-        std::vector<int> sizeList(comm.size), displList(comm.size);
         detail::Payload<T> out {send};
         detail::Payload<U> in {recv};
+
+        std::vector<int> sizeList(comm.size), displList(comm.size);
 
         gather(&scount, 1, sizeList.data(), 1, root, comm);
         gather(&displ, 1, displList.data(), 1, root, comm);
 
         if(comm.rank == root) in.resize(std::accumulate(sizeList.begin(), sizeList.end(), 0));
+
         gather(out.getBuffer(), out.getSize(), in.getBuffer(), sizeList.data(), displList.data(), root, comm);
     }
 
@@ -811,19 +815,22 @@ namespace mpi
 
         static_assert(std::is_same<P, Q>::value, "Cannot gather with different types!");
 
-        std::vector<int> sizeList(comm.size), displList(comm.size);
         detail::Payload<T> out {send};
         detail::Payload<U> in {recv};
 
         int size = out.getSize();
+        std::vector<int> sizeList(comm.size), displList(comm.size + 1);
+
         gather(&size, 1, sizeList.data(), 1, root, comm);
 
-        int total = std::accumulate(sizeList.begin(), sizeList.end(), 0);
+        bool equal = std::all_of(sizeList.begin(), sizeList.end(), [&size](int i) { return i == size; });
         std::partial_sum(sizeList.begin(), sizeList.end(), displList.begin() + 1);
-        broadcast(total, root, comm);
 
-        if(comm.rank == root) in.resize(total);
-        if(total % comm.size == 0) gather(out.getBuffer(), size, in.getBuffer(), size, root, comm);
+        broadcast(equal, root, comm);
+
+        if(comm.rank == root) in.resize(displList.back());
+
+        if(equal) gather(out.getBuffer(), size, in.getBuffer(), size, root, comm);
         else gather(out.getBuffer(), size, in.getBuffer(), sizeList.data(), displList.data(), root, comm);
     }
     /**#@-*/
@@ -874,14 +881,16 @@ namespace mpi
 
         static_assert(std::is_same<P, Q>::value, "Cannot scatter with different types!");
 
-        std::vector<int> sizeList, displList;
         detail::Payload<T> out {send};
         detail::Payload<U> in {recv};
+
+        std::vector<int> sizeList, displList;
 
         gather(rcount, sizeList, root, comm);
         gather(displ, displList, root, comm);
 
         in.resize(rcount);
+
         scatter(out.getBuffer(), sizeList.data(), displList.data(), in.getBuffer(), rcount, root, comm);
     }
 
@@ -901,14 +910,16 @@ namespace mpi
         detail::Payload<U> in {recv};
 
         int size = out.getSize();
+
         broadcast(size, root, comm);
 
-        div_t d = div(size, comm.size);
-        size = d.quot + (d.rem > comm.rank);
-        in.resize(size);
+        int quo = size / comm.size;
+        int rem = size % comm.size;
 
-        if(!d.rem) scatter(out.getBuffer(), size, in.getBuffer(), size, root, comm);
-        else scatter(send, recv, size, d.quot * comm.rank + std::min(comm.rank, d.rem), root, comm);
+        in.resize(size = quo + (rem > comm.rank));
+
+        if(!rem) scatter(out.getBuffer(), size, in.getBuffer(), size, root, comm);
+        else scatter(send, recv, size, quo * comm.rank + std::min(comm.rank, rem), root, comm);
     }
     /**#@-*/
 
@@ -937,7 +948,7 @@ namespace mpi
  * @param b The second communicator to compare.
  * @return Are both communicators the same?
  */
-bool operator==(const mpi::Communicator& a, const mpi::Communicator& b)
+inline bool operator==(const mpi::Communicator& a, const mpi::Communicator& b)
 {
     return a.id == b.id;
 }
@@ -948,7 +959,7 @@ bool operator==(const mpi::Communicator& a, const mpi::Communicator& b)
  * @param b The second communicator to compare.
  * @return Are both communicators different?
  */
-bool operator!=(const mpi::Communicator& a, const mpi::Communicator& b)
+inline bool operator!=(const mpi::Communicator& a, const mpi::Communicator& b)
 {
     return a.id != b.id;
 }
