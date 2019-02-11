@@ -10,7 +10,6 @@
 
 #include <cstdint>
 #include <ostream>
-#include <utility>
 #include <string>
 
 #include "buffer.hpp"
@@ -64,7 +63,7 @@ class Sequence : public Buffer<char>
  * @param os The output stream instance.
  * @param sequence The sequence to print.
  */
-inline std::ostream& operator<<(std::ostream& os, const Buffer<char>& sequence)
+inline std::ostream& operator<<(std::ostream& os, const BaseBuffer<char>& sequence)
 {
     os << std::string(sequence.getBuffer(), sequence.getSize());
     return os;

@@ -380,24 +380,24 @@ namespace mpi
          * @tparam T The message payload types.
          * @since 0.1.1
          */
-        template <typename T>
-        struct BasePayload
+        template <typename T, typename = void>
+        struct Payload
         {
-            using type = T;                 /// Exposes the payload type.
+            using type = T;                 /// Exposes the payload's message type.
 
-            Pointer<T> target = nullptr;    /// The payload's source or destiny pointer.
+            Pointer<T> buffer = nullptr;    /// The payload's source or destiny pointer.
             size_t size = 0;                /// The payload's size.
 
-            BasePayload() = default;
-            BasePayload(const BasePayload<T>&) = delete;
-            BasePayload(BasePayload<T>&&) = delete;
+            Payload() = default;
+            Payload(const Payload<T>&) = delete;
+            Payload(Payload<T>&&) = delete;
 
             /**
              * Creates a new payload from simple object value.
              * @param value The payload's value.
              */
-            inline BasePayload(T& value)
-            :   target {&value}
+            inline Payload(T& value)
+            :   buffer {&value}
             ,   size {1}
             {}
 
@@ -406,69 +406,24 @@ namespace mpi
              * @param ptr The payload's buffer pointer.
              * @param size The payload's buffer size.
              */
-            inline BasePayload(Pointer<T> ptr, size_t size = 1)
-            :   target {ptr}
+            inline Payload(Pointer<T> ptr, size_t size = 1)
+            :   buffer {ptr}
             ,   size {size}
             {}
 
-            BasePayload<T>& operator=(const BasePayload<T>&) = delete;
-            BasePayload<T>& operator=(BasePayload<T>&&) = delete;
-
-            /**
-             * Retrieves the pointer to payload's buffer.
-             * @return The payload's buffer pointer.
-             */
-            inline Pointer<T> getBuffer() const
-            {
-                return target;
-            }
-
-            /**
-             * Retrieves the payload's buffer capacity.
-             * @return The payload's size or capacity.
-             */
-            inline size_t getSize() const
-            {
-                return size;
-            }
+            Payload<T>& operator=(const Payload<T>&) = delete;
+            Payload<T>& operator=(Payload<T>&&) = delete;
 
             /**
              * Allows the payload buffer to be resized, so a message of given size can be
              * successfully received.
              * @param (ignored) The new payload capacity.
+             * @return The resized buffer.
              */
-            inline void resize(size_t)
-            {}
-        };
-
-        /**
-         * Message payload context for built-in pointers.
-         * @tparam T The message payload type.
-         * @since 0.1.1
-         */
-        template <typename T>
-        struct Payload : public BasePayload<T>
-        {
-            // Due to compilter defect report P0136R1, the base class constructor cannot be
-            // inherited with "using", as it may inject additional constructors in the derived
-            // class. For this reason, the base constructors are explicitly overriden here.
-
-            /**
-             * Creates a new payload from simple object value.
-             * @param value The payload's value.
-             */
-            inline Payload(T& value)
-            :   BasePayload<T> {value}
-            {}
-
-            /**
-             * Creates a new payload from already existing buffer.
-             * @param ptr The payload's buffer pointer.
-             * @param size The payload's buffer size.
-             */
-            inline Payload(Pointer<T> ptr, size_t size = 1)
-            :   BasePayload<T> {ptr, size}
-            {}
+            inline Pointer<T> resize(size_t)
+            {
+                return buffer;
+            }
         };
 
         /**
@@ -477,16 +432,16 @@ namespace mpi
          * @since 0.1.1
          */
         template <typename T>
-        struct Payload<std::vector<T>> : public BasePayload<T>
+        struct Payload<std::vector<T>> : public Payload<T>
         {
-            std::vector<T>& object;     /// The original vector.
+            std::vector<T>& object;         /// The original vector.
 
             /**
              * Creates a new payload from STL vector.
              * @param vector The payload as a STL vector.
              */
             inline Payload(std::vector<T>& vector)
-            :   BasePayload<T> {vector.data(), vector.size()}
+            :   Payload<T> {vector.data(), vector.size()}
             ,   object {vector}
             {}
 
@@ -494,13 +449,14 @@ namespace mpi
              * Allows the payload buffer to be resized, so a message of given size can be
              * successfully received.
              * @param size The new payload capacity.
+             * @return The resized buffer.
              */
-            inline void resize(size_t size)
+            inline Pointer<T> resize(size_t size)
             {
                 if(this->size < size) object.resize(size);
 
-                this->target = object.data();
                 this->size = size;
+                return this->buffer = object.data();
             }
         };
 
@@ -509,17 +465,18 @@ namespace mpi
          * @tparam T The message payload type.
          * @since 0.1.1
          */
-        template <typename T>
-        struct Payload<Buffer<T>> : public BasePayload<T>
+        template <template <typename> class B, typename T>
+        struct Payload<B<T>, typename std::enable_if<std::is_base_of<BaseBuffer<T>, B<T>>::value>::type>
+            : public Payload<T>
         {
-            Buffer<T>& object;          /// The original buffer.
+            BaseBuffer<T>& object;          /// The original buffer.
 
             /**
              * Creates a new payload from buffer.
              * @param buffer The buffer to use as payload.
              */
-            inline Payload(Buffer<T>& buffer)
-            :   BasePayload<T> {buffer.getBuffer(), buffer.getSize()}
+            inline Payload(BaseBuffer<T>& buffer)
+            :   Payload<T> {buffer.getBuffer(), buffer.getSize()}
             ,   object {buffer}
             {}
 
@@ -527,13 +484,14 @@ namespace mpi
              * Allows the payload buffer to be resized, so a message of given size can be
              * successfully received.
              * @param size The new payload capacity.
+             * @return The resized buffer.
              */
-            inline void resize(size_t size)
+            inline Pointer<T> resize(size_t size)
             {
-                if(this->size < size) object = Buffer<T> {size};
+                if(this->size < size) object = BaseBuffer<T> {size};
 
-                this->target = object.getBuffer();
                 this->size = size;
+                return this->buffer = object.getBuffer();
             }
         };
     };
@@ -636,8 +594,7 @@ namespace mpi
         ,   const Node& root = node::master
         ,   const Communicator& comm = world    )
     {
-        const auto& type = datatype::get<T>();
-        call(MPI_Bcast(buffer, count, type, root, comm.id));
+        call(MPI_Bcast(buffer, count, datatype::get<T>(), root, comm.id));
     }
 
     template <typename T>
@@ -646,13 +603,11 @@ namespace mpi
         ,   const Node& root = node::master
         ,   const Communicator& comm = world    )
     {
-        detail::Payload<T> payload {buffer};        
-        int size = payload.getSize();
+        detail::Payload<T> payload {buffer};
 
-        broadcast(&size, 1, root, comm);
-        payload.resize(size);
-
-        broadcast(payload.getBuffer(), payload.getSize(), root, comm);
+        int size = payload.size;
+        broadcast(&size, 1, root, comm);        
+        broadcast(payload.resize(size), size, root, comm);
     }
     /**#@-*/
 
@@ -667,6 +622,7 @@ namespace mpi
     {
         MPI_Status status;
         call(MPI_Probe(source, tag < 0 ? MPI_TAG_UB : tag, comm.id, &status));
+
         return {status};
     }
 
@@ -688,8 +644,7 @@ namespace mpi
         ,   const Tag& tag = MPI_TAG_UB
         ,   const Communicator& comm = world    )
     {
-        const auto& type = datatype::get<T>();
-        call(MPI_Send(buffer, count, type, dest, tag < 0 ? MPI_TAG_UB : tag, comm.id));
+        call(MPI_Send(buffer, count, datatype::get<T>(), dest, tag < 0 ? MPI_TAG_UB : tag, comm.id));
     }
 
     template <typename T>
@@ -700,7 +655,7 @@ namespace mpi
         ,   const Communicator& comm = world )
     {
         detail::Payload<T> payload {buffer};
-        send(payload.getBuffer(), payload.getSize(), dest, tag, comm);
+        send(payload.buffer, payload.size, dest, tag, comm);
     }
     /**#@-*/
 
@@ -724,6 +679,7 @@ namespace mpi
     {
         MPI_Status status;
         call(MPI_Recv(buffer, count, datatype::get<T>(), source, tag, comm.id, &status));
+
         return {status};
     }
 
@@ -734,13 +690,12 @@ namespace mpi
         ,   const Tag& tag = MPI_TAG_UB
         ,   const Communicator& comm = world    )
     {
-        using P = typename detail::Payload<T>::type;
-
         detail::Payload<T> payload {buffer};
-        int size = probe(source, tag, comm).getCount<P>();
 
-        payload.resize(size);
-        return receive(payload.getBuffer(), payload.getSize(), source, tag, comm);
+        using P = typename decltype(payload)::type;
+
+        int size = probe(source, tag, comm).getCount<P>();
+        return receive(payload.resize(size), size, source, tag, comm);
     }
     /**#@-*/
 
@@ -763,8 +718,7 @@ namespace mpi
         ,   const Node& root = node::master
         ,   const Communicator& comm = world    )
     {
-        const auto& type = datatype::get<T>();
-        call(MPI_Gather(send, scount, type, recv, rcount, type, root, comm.id));
+        call(MPI_Gather(send, scount, datatype::get<T>(), recv, rcount, datatype::get<T>(), root, comm.id));
     }
 
     template <typename T>
@@ -774,8 +728,7 @@ namespace mpi
         ,   const Node& root = node::master
         ,   const Communicator& comm = world            )
     {
-        const auto& type = datatype::get<T>();
-        call(MPI_Gatherv(send, scount, type, recv, rcount, displ, type, root, comm.id));
+        call(MPI_Gatherv(send, scount, datatype::get<T>(), recv, rcount, displ, datatype::get<T>(), root, comm.id));
     }
 
     template <typename T, typename U>
@@ -785,22 +738,21 @@ namespace mpi
         ,   const Node& root = node::master
         ,   const Communicator& comm = world    )
     {
-        using P = typename detail::Payload<T>::type;
-        using Q = typename detail::Payload<U>::type;
+        detail::Payload<T> sendl {send};
+        detail::Payload<U> recvl {recv};
 
-        static_assert(std::is_same<P, Q>::value, "Cannot gather with different types!");
+        using S = typename decltype(sendl)::type;
+        using R = typename decltype(recvl)::type;
 
-        detail::Payload<T> out {send};
-        detail::Payload<U> in {recv};
+        static_assert(std::is_same<S, R>::value, "Cannot gather with different types!");
 
         std::vector<int> sizeList(comm.size), displList(comm.size);
 
         gather(&scount, 1, sizeList.data(), 1, root, comm);
         gather(&displ, 1, displList.data(), 1, root, comm);
 
-        if(comm.rank == root) in.resize(std::accumulate(sizeList.begin(), sizeList.end(), 0));
-
-        gather(out.getBuffer(), out.getSize(), in.getBuffer(), sizeList.data(), displList.data(), root, comm);
+        if(comm.rank == root) recvl.resize(std::accumulate(sizeList.begin(), sizeList.end(), 0));
+        gather(sendl.buffer, sendl.size, recvl.buffer, sizeList.data(), displList.data(), root, comm);
     }
 
     template <typename T, typename U>
@@ -810,15 +762,15 @@ namespace mpi
         ,   const Node& root = node::master
         ,   const Communicator& comm = world    )
     {
-        using P = typename detail::Payload<T>::type;
-        using Q = typename detail::Payload<U>::type;
+        detail::Payload<T> sendl {send};
+        detail::Payload<U> recvl {recv};
 
-        static_assert(std::is_same<P, Q>::value, "Cannot gather with different types!");
+        using S = typename decltype(sendl)::type;
+        using R = typename decltype(recvl)::type;
 
-        detail::Payload<T> out {send};
-        detail::Payload<U> in {recv};
+        static_assert(std::is_same<S, R>::value, "Cannot gather with different types!");
 
-        int size = out.getSize();
+        int size = sendl.size;
         std::vector<int> sizeList(comm.size), displList(comm.size + 1);
 
         gather(&size, 1, sizeList.data(), 1, root, comm);
@@ -828,10 +780,10 @@ namespace mpi
 
         broadcast(equal, root, comm);
 
-        if(comm.rank == root) in.resize(displList.back());
+        if(comm.rank == root) recvl.resize(displList.back());
 
-        if(equal) gather(out.getBuffer(), size, in.getBuffer(), size, root, comm);
-        else gather(out.getBuffer(), size, in.getBuffer(), sizeList.data(), displList.data(), root, comm);
+        if(equal) gather(sendl.buffer, size, recvl.buffer, size, root, comm);
+        else gather(sendl.buffer, size, recvl.buffer, sizeList.data(), displList.data(), root, comm);
     }
     /**#@-*/
 
@@ -854,8 +806,7 @@ namespace mpi
         ,   const Node& root = node::master
         ,   const Communicator& comm = world    )
     {
-        const auto& type = datatype::get<T>();
-        call(MPI_Scatter(send, scount, type, recv, rcount, type, root, comm.id));
+        call(MPI_Scatter(send, scount, datatype::get<T>(), recv, rcount, datatype::get<T>(), root, comm.id));
     }
 
     template <typename T>
@@ -865,8 +816,7 @@ namespace mpi
         ,   const Node& root = node::master
         ,   const Communicator& comm = world    )
     {
-        const auto& type = datatype::get<T>();
-        call(MPI_Scatterv(send, scount, displ, type, recv, rcount, type, root, comm.id));
+        call(MPI_Scatterv(send, scount, displ, datatype::get<T>(), recv, rcount, datatype::get<T>(), root, comm.id));
     }
 
     template <typename T, typename U>
@@ -876,22 +826,20 @@ namespace mpi
         ,   const Node& root = node::master
         ,   const Communicator& comm = world    )
     {
-        using P = typename detail::Payload<T>::type;
-        using Q = typename detail::Payload<U>::type;
+        detail::Payload<T> sendl {send};
+        detail::Payload<U> recvl {recv};
 
-        static_assert(std::is_same<P, Q>::value, "Cannot scatter with different types!");
+        using S = typename decltype(sendl)::type;
+        using R = typename decltype(recvl)::type;
 
-        detail::Payload<T> out {send};
-        detail::Payload<U> in {recv};
+        static_assert(std::is_same<S, R>::value, "Cannot gather with different types!");
 
         std::vector<int> sizeList, displList;
 
         gather(rcount, sizeList, root, comm);
         gather(displ, displList, root, comm);
 
-        in.resize(rcount);
-
-        scatter(out.getBuffer(), sizeList.data(), displList.data(), in.getBuffer(), rcount, root, comm);
+        scatter(sendl.buffer, sizeList.data(), displList.data(), recvl.resize(rcount), rcount, root, comm);
     }
 
     template <typename T, typename U>
@@ -901,24 +849,23 @@ namespace mpi
         ,   const Node& root = node::master
         ,   const Communicator& comm = world    )
     {
-        using P = typename detail::Payload<T>::type;
-        using Q = typename detail::Payload<U>::type;
+        detail::Payload<T> sendl {send};
+        detail::Payload<U> recvl {recv};
 
-        static_assert(std::is_same<P, Q>::value, "Cannot scatter with different types!");
+        using S = typename decltype(sendl)::type;
+        using R = typename decltype(recvl)::type;
 
-        detail::Payload<T> out {send};
-        detail::Payload<U> in {recv};
+        static_assert(std::is_same<S, R>::value, "Cannot gather with different types!");
 
-        int size = out.getSize();
-
+        int size = sendl.size;
         broadcast(size, root, comm);
 
         int quo = size / comm.size;
         int rem = size % comm.size;
 
-        in.resize(size = quo + (rem > comm.rank));
+        recvl.resize(size = quo + (rem > comm.rank));
 
-        if(!rem) scatter(out.getBuffer(), size, in.getBuffer(), size, root, comm);
+        if(!rem) scatter(sendl.buffer, size, recvl.buffer, size, root, comm);
         else scatter(send, recv, size, quo * comm.rank + std::min(comm.rank, rem), root, comm);
     }
     /**#@-*/

@@ -301,7 +301,7 @@ class BasePointer
          */
         __host__ __device__ inline const Pointer<T> get() const
         {
-            return meta->ptr;
+            return ptr;
         }
 
         /**
@@ -310,7 +310,7 @@ class BasePointer
          */
         inline Deleter<T> getDeleter() const
         {
-            return meta->delfunc;
+            return meta ? meta->delfunc : nullptr;
         }
 
         /**
@@ -319,7 +319,7 @@ class BasePointer
          */
         inline size_t useCount() const
         {
-            return meta->count;
+            return meta ? meta->count : 0;
         }
 
         /**
