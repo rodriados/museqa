@@ -12,32 +12,63 @@
 #include <ostream>
 #include <string>
 
+#include "utils.hpp"
 #include "buffer.hpp"
+#include "encoder.hpp"
 
 /**
- * Creates an sequence. This sequence is a buffer an any modification to
- * it shall be implemented by inherited methods.
- * @since 0.1.alpha
+ * Holds an enconded sequence. The encoding pattern will used throughout all
+ * steps: it saves up to a third of the required space and is easily revertable.
+ * @since 0.1.1
  */
-class Sequence : public Buffer<char>
+class Sequence : public Buffer<encoder::EncodedBlock>
 {
     public:
         Sequence() = default;
         Sequence(const Sequence&) = default;
         Sequence(Sequence&&) = default;
         
-        using Buffer<char>::Buffer;
+        using Buffer<encoder::EncodedBlock>::Buffer;
+
+        /**
+         * Initializes a new compressed sequence.
+         * @param ptr The pointer to buffer to be encoded.
+         * @param size The buffer's size.
+         */
+        inline Sequence(Pointer<const char> ptr, size_t size)
+        :   Buffer<encoder::EncodedBlock> {encoder::encode(ptr, size)}
+        {}
 
         /**
          * Instantiates a new sequence.
          * @param string The string containing this sequence's data.
          */
         inline Sequence(const std::string& string)
-        :   Buffer<char> {string.c_str(), string.size()}
+        :   Sequence {string.data(), string.size()}
         {}
 
         Sequence& operator=(const Sequence&) = default;
         Sequence& operator=(Sequence&&) = default;
+
+        /**
+         * Retrieves the element at given offset.
+         * @param offset The requested offset.
+         * @return The element in the specified offset.
+         */
+        __host__ __device__ inline uint8_t operator[](ptrdiff_t offset) const
+        {
+            return encoder::access(*this, offset);
+        }
+
+        /**
+         * Retrieves an encoded character block from sequence.
+         * @param offset The index of the requested block.
+         * @return The requested block.
+         */
+        __host__ __device__ inline encoder::EncodedBlock getBlock(ptrdiff_t offset) const
+        {
+            return Buffer<encoder::EncodedBlock>::operator[](offset);
+        }
 
         /**
          * Informs the length of the sequence.
@@ -45,7 +76,7 @@ class Sequence : public Buffer<char>
          */
         inline size_t getLength() const
         {
-            return this->getSize();
+            return this->getSize() * encoder::batchSize;
         }
 
         /**
@@ -54,19 +85,8 @@ class Sequence : public Buffer<char>
          */
         inline std::string toString() const
         {
-            return {this->getBuffer(), this->getLength()};
+            return encoder::decode(*this);
         }
 };
-
-/**
- * This function allows buffers to be directly printed into an ostream instance.
- * @param os The output stream instance.
- * @param sequence The sequence to print.
- */
-inline std::ostream& operator<<(std::ostream& os, const BaseBuffer<char>& sequence)
-{
-    os << std::string(sequence.getBuffer(), sequence.getSize());
-    return os;
-}
 
 #endif

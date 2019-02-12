@@ -3,21 +3,30 @@
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018-2019 Rodrigo Siqueira
  */
+#include <cuda.h>
 #include <string>
 
 #include "cuda.cuh"
 
-using namespace cuda;
-using namespace cuda::device;
+/**
+ * Obtain a brief textual explanation for a specified kind of CUDA Runtime API status
+ * or error code.
+ * @param status The error status obtained.
+ * @return The error description.
+ */
+std::string cuda::status::describe(cuda::Status status) noexcept
+{
+    return cudaGetErrorString(static_cast<cudaError_t>(status));
+}
 
 /**
  * Gets the number of devices available.
  * @return The number of devices or runtime error.
  */
-int getCount()
+int cuda::device::getCount()
 {
     int devices;
-    call(cudaGetDeviceCount(&devices));
+    cuda::call(cudaGetDeviceCount(&devices));
     return devices;
 }
 
@@ -25,10 +34,10 @@ int getCount()
  * Gets the current device id.
  * @return The device id or runtime error.
  */
-Device getCurrent()
+cuda::Device cuda::device::getCurrent()
 {
-    Device device;
-    call(cudaGetDevice(&device));
+    cuda::Device device;
+    cuda::call(cudaGetDevice(&device));
     return device;
 }
 
@@ -36,9 +45,9 @@ Device getCurrent()
  * Sets the current device to given id.
  * @param device The device to be used.
  */
-void setCurrent(const Device& device)
+void cuda::device::setCurrent(const cuda::Device& device)
 {
-    call(cudaSetDevice(device));
+    cuda::call(cudaSetDevice(device));
 }
 
 /**
@@ -46,9 +55,9 @@ void setCurrent(const Device& device)
  * @param device The device of which properties will be retrieved.
  * @return The device properties.
  */
-Properties getProperties(const Device& device)
+cuda::device::Properties cuda::device::getProperties(const cuda::Device& device)
 {
-    Properties props;
-    call(cudaGetDeviceProperties(&props, device));
+    cuda::device::Properties props;
+    cuda::call(cudaGetDeviceProperties(&props, device));
     return props;
 }

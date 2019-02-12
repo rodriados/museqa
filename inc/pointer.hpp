@@ -296,10 +296,10 @@ class BasePointer
         }
 
         /**
-         * Gives access to const-qualified raw pointer.
+         * Gives access to raw pointer.
          * @return The raw pointer.
          */
-        __host__ __device__ inline const Pointer<T> get() const
+        __host__ __device__ inline Pointer<T> get() const
         {
             return ptr;
         }

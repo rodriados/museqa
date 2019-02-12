@@ -16,10 +16,13 @@ cdef extern from "sequence.hpp":
         cSequence(const string&) except +
 
         cSequence& operator=(const cSequence&)
-        char& operator[](ptrdiff_t) except +IndexError
+        char operator[](ptrdiff_t) except +IndexError
 
         size_t getLength()
         string toString()
+
+cdef extern from "encoder.hpp" namespace "encoder":
+    cdef char cdecode "encoder::decode"(char)
 
 # Creates an sequence. This sequence is a buffer an any modification to
 # it shall be implemented by inherited methods.

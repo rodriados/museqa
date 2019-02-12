@@ -4,7 +4,7 @@
 # @author Rodrigo Siqueira <rodriados@gmail.com>
 # @copyright 2018-2019 Rodrigo Siqueira
 from libcpp.string cimport string
-from sequence cimport cSequence
+from sequence cimport cdecode, cSequence
 
 # Creates an sequence. This sequence is a buffer an any modification to
 # it shall be implemented by inherited methods.
@@ -20,7 +20,7 @@ cdef class Sequence:
     # @param offset The requested buffer offset.
     # @return char The buffer's position pointer.
     def __getitem__(self, int offset):
-        return str(chr(self.cRef[offset]))
+        return chr(cdecode(self.cRef[offset]))
 
     # Transforms the sequence into a string.
     # @return The sequence representation as a string.

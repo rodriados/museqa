@@ -71,8 +71,8 @@ class Database
         inline const DatabaseEntry& getEntry(ptrdiff_t offset) const
         {
 #ifdef msa_compile_cython
-            if(offset >= (signed) getCount())
-                throw Exception("database offset out of range");
+            if(static_cast<unsigned>(offset) >= getCount())
+                throw Exception("Database offset out of range");
 #endif
             return list.at(offset);
         }
@@ -150,7 +150,7 @@ class Database
         inline void remove(ptrdiff_t offset)
         {
 #ifdef msa_compile_cython
-            if(offset >= (signed) getCount())
+            if(static_cast<unsigned>(offset) >= getCount())
                 throw Exception("database offset out of range");
 #endif
             list.erase(list.begin() + offset);

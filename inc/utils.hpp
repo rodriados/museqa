@@ -15,7 +15,7 @@
  * Creation of conditional macros that allow CUDA declarations to be used
  * seamlessly throughout the code without any problems.
  */
-#ifndef __CUDA_ARCH__
+#if !defined(__host__) && !defined(__device__)
   #define __host__
   #define __device__
 #endif

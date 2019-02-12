@@ -48,9 +48,9 @@ namespace cuda
      */
     using Status = NativeWord;
 
-#ifdef msa_compile_cuda
     namespace status
     {
+#ifdef msa_compile_cuda
         /**
          * Aliases for CUDA error types and status codes enumeration.
          * @since 0.1.1
@@ -156,19 +156,10 @@ namespace cuda
         {
             return cudaPeekAtLastError();
         }
-
-        /**
-         * Obtain a brief textual explanation for a specified kind of CUDA Runtime API status
-         * or error code.
-         * @param status The error status obtained.
-         * @return The error description.
-         */
-        inline std::string describe(Status status) noexcept
-        {
-            return cudaGetErrorString(static_cast<cudaError_t>(status));
-        }
-    };
 #endif
+
+        extern std::string describe(Status) noexcept;
+    };
 
     /**
      * Holds an error message so it can be propagated through the code.

@@ -18,7 +18,7 @@
  * @param entry The destination entry for the sequence.
  * @return Could a sequence be extracted?
  */
-bool extract(std::fstream& file, DatabaseEntry& entry)
+static bool extract(std::fstream& file, DatabaseEntry& entry)
 {
     std::string line, sequence;
 
