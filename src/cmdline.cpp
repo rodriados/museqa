@@ -7,8 +7,8 @@
 #include <vector>
 #include <map>
 
-#include "msa.hpp"
 #include "cmdline.hpp"
+#include "exception.hpp"
 
 cmdline::Parser cmdline::parser;
 
@@ -39,7 +39,7 @@ void cmdline::Parser::parse(int argc, char **argv)
 
         if(!option.isUnknown() && option.isVariadic()) {
             if(i + 1 >= argc)
-                error("unknown option '%s'", option.getLname().data());
+                throw Exception("Unknown option '%s'", option.getLname().data());
 
             values[option.getLname()] = argv[++i];
             continue;
@@ -55,7 +55,7 @@ void cmdline::Parser::parse(int argc, char **argv)
 
     for(const std::string& option : required)
         if(!has(option))
-            error("missing option '%s'", option.data());
+            throw Exception("Missing option '%s'", option.data());
 
     appname = argv[0];
 }

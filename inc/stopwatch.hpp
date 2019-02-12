@@ -75,13 +75,16 @@ namespace stopwatch
 
     /**
      * Times the execution of given function.
+     * @tparam P The lambda function parameter types.
      * @param lambda The function to be executed.
+     * @param params The function parameters.
      * @return The time spent by the function.
      */
-    inline Duration run(Functor<void()> lambda)
+    template <typename ...P>
+    inline Duration run(Functor<void(P...)> lambda, P&&... params)
     {
         TimePoint start = now();
-        std::forward<decltype(lambda)>(lambda) ();
+        std::forward<decltype(lambda)>(lambda) (std::forward<decltype(params)>(params)...);
         return elapsed(start);
     }
 };
