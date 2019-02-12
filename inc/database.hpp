@@ -151,7 +151,7 @@ class Database
         {
 #ifdef msa_compile_cython
             if(static_cast<unsigned>(offset) >= getCount())
-                throw Exception("database offset out of range");
+                throw Exception("Database offset out of range");
 #endif
             list.erase(list.begin() + offset);
         }
