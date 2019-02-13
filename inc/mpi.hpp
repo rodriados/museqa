@@ -415,6 +415,24 @@ namespace mpi
             Payload<T>& operator=(Payload<T>&&) = delete;
 
             /**
+             * Retrieves the pointer to payload's buffer.
+             * @return The payload's buffer pointer.
+             */
+            inline Pointer<T> getBuffer() const
+            {
+                return buffer;
+            }
+
+             /**
+             * Retrieves the payload's buffer capacity.
+             * @return The payload's size or capacity.
+             */
+            inline size_t getSize() const
+            {
+                return size;
+            }
+
+            /**
              * Allows the payload buffer to be resized, so a message of given size can be
              * successfully received.
              * @param (ignored) The new payload capacity.
@@ -604,8 +622,8 @@ namespace mpi
         ,   const Communicator& comm = world    )
     {
         detail::Payload<T> payload {buffer};
+        int size = payload.getSize();
 
-        int size = payload.size;
         broadcast(&size, 1, root, comm);        
         broadcast(payload.resize(size), size, root, comm);
     }
@@ -655,7 +673,7 @@ namespace mpi
         ,   const Communicator& comm = world )
     {
         detail::Payload<T> payload {buffer};
-        send(payload.buffer, payload.size, dest, tag, comm);
+        send(payload.getBuffer(), payload.getSize(), dest, tag, comm);
     }
     /**#@-*/
 
@@ -752,7 +770,7 @@ namespace mpi
         gather(&displ, 1, displList.data(), 1, root, comm);
 
         if(comm.rank == root) recvl.resize(std::accumulate(sizeList.begin(), sizeList.end(), 0));
-        gather(sendl.buffer, sendl.size, recvl.buffer, sizeList.data(), displList.data(), root, comm);
+        gather(sendl.getBuffer(), sendl.getSize(), recvl.getBuffer(), sizeList.data(), displList.data(), root, comm);
     }
 
     template <typename T, typename U>
@@ -770,7 +788,7 @@ namespace mpi
 
         static_assert(std::is_same<S, R>::value, "Cannot gather with different types!");
 
-        int size = sendl.size;
+        int size = sendl.getSize();
         std::vector<int> sizeList(comm.size), displList(comm.size + 1);
 
         gather(&size, 1, sizeList.data(), 1, root, comm);
@@ -782,8 +800,8 @@ namespace mpi
 
         if(comm.rank == root) recvl.resize(displList.back());
 
-        if(equal) gather(sendl.buffer, size, recvl.buffer, size, root, comm);
-        else gather(sendl.buffer, size, recvl.buffer, sizeList.data(), displList.data(), root, comm);
+        if(equal) gather(sendl.getBuffer(), size, recvl.getBuffer(), size, root, comm);
+        else gather(sendl.getBuffer(), size, recvl.getBuffer(), sizeList.data(), displList.data(), root, comm);
     }
     /**#@-*/
 
@@ -839,7 +857,7 @@ namespace mpi
         gather(rcount, sizeList, root, comm);
         gather(displ, displList, root, comm);
 
-        scatter(sendl.buffer, sizeList.data(), displList.data(), recvl.resize(rcount), rcount, root, comm);
+        scatter(sendl.getBuffer(), sizeList.data(), displList.data(), recvl.resize(rcount), rcount, root, comm);
     }
 
     template <typename T, typename U>
@@ -857,7 +875,7 @@ namespace mpi
 
         static_assert(std::is_same<S, R>::value, "Cannot gather with different types!");
 
-        int size = sendl.size;
+        int size = sendl.getSize();
         broadcast(size, root, comm);
 
         int quo = size / comm.size;
@@ -865,7 +883,7 @@ namespace mpi
 
         recvl.resize(size = quo + (rem > comm.rank));
 
-        if(!rem) scatter(sendl.buffer, size, recvl.buffer, size, root, comm);
+        if(!rem) scatter(sendl.getBuffer(), size, recvl.getBuffer(), size, root, comm);
         else scatter(send, recv, size, quo * comm.rank + std::min(comm.rank, rem), root, comm);
     }
     /**#@-*/
