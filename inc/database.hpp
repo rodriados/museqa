@@ -144,6 +144,53 @@ class Database
         }
 
         /**
+         * Creates a copy of the current database removing some selected elements.
+         * @param excluded The elements to be removed from copy.
+         * @return The new database with selected elements removed.
+         */
+        inline Database except(const std::set<ptrdiff_t>& excluded)
+        {
+            Database db {*this};
+            db.removeMany(excluded);
+            return db;
+        }
+
+        /**
+         * Creates a copy of the current database removing some selected elements.
+         * @param excluded The elements to be removed from copy.
+         * @return The new database with selected elements removed.
+         */
+        inline Database except(const std::vector<ptrdiff_t>& excluded)
+        {
+            return except(std::set<ptrdiff_t> {excluded.begin(), excluded.end()});
+        }
+
+        /**
+         * Creates a new database only with the selected database entries.
+         * @param selected The indeces to be included in new database.
+         * @return The new database with only the selected elements.
+         */
+        inline Database only(const std::set<ptrdiff_t>& selected)
+        {
+            Database db;
+
+            for(const auto& it : selected)
+                db.add(getEntry(it));
+
+            return db;
+        }
+
+        /**
+         * Creates a new database only with the selected database entries.
+         * @param selected The indeces to be included in new database.
+         * @return The new database with only the selected elements.
+         */
+        inline Database only(const std::vector<ptrdiff_t>& selected)
+        {
+            return only(std::set<ptrdiff_t> {selected.begin(), selected.end()});
+        }
+
+        /**
          * Removes an element from database.
          * @param offset Element to be removed from database.
          */

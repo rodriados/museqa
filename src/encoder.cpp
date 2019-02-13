@@ -96,7 +96,7 @@ char encoder::decode(uint8_t element)
  * @param buffer The target buffer to decode.
  * @return The decoded string.
  */
-std::string encoder::decode(const Buffer<encoder::EncodedBlock>& buffer)
+std::string encoder::decode(const BaseBuffer<encoder::EncodedBlock>& buffer)
 {
     int size = buffer.getSize();
     std::string string;
@@ -116,7 +116,7 @@ std::string encoder::decode(const Buffer<encoder::EncodedBlock>& buffer)
  * @param buffer The sequence buffer to be printed.
  * @return The ostream instance for chaining.
  */
-std::ostream& operator<<(std::ostream& os, const Buffer<encoder::EncodedBlock>& buffer)
+std::ostream& operator<<(std::ostream& os, const BaseBuffer<encoder::EncodedBlock>& buffer)
 {
     os << encoder::decode(buffer);
     return os;

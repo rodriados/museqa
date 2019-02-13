@@ -366,8 +366,9 @@ class AutoPointer : public BasePointer<T>
          * @param offset The offset to be accessed.
          * @return The requested object instance.
          */
-        template <typename = typename std::enable_if<std::is_array<T>::value>::type>
-        __host__ __device__ inline Pure<T>& operator[](ptrdiff_t offset)
+        template <typename U = T>
+        __host__ __device__ inline auto operator[](ptrdiff_t offset)
+        -> typename std::enable_if<std::is_array<U>::value, Pure<T>&>::type
         {
             return getOffset(offset);
         }
@@ -377,8 +378,9 @@ class AutoPointer : public BasePointer<T>
          * @param offset The offset to pointer.
          * @return The offset object instance.
          */
-        template <typename = typename std::enable_if<std::is_array<T>::value>::type>
-        __host__ __device__ inline Pure<T>& getOffset(ptrdiff_t offset) const
+        template <typename U = T>
+        __host__ __device__ inline auto getOffset(ptrdiff_t offset) const
+        -> typename std::enable_if<std::is_array<U>::value, Pure<T>&>::type
         {
             return this->ptr[offset];
         }

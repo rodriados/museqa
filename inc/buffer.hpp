@@ -26,6 +26,7 @@ class BaseBuffer
 {
     protected:
         AutoPointer<T[]> ptr;       /// The pointer to the buffer being encapsulated.
+        uint32_t displ = 0;         /// The buffer displacement in relation to pointer.
         uint32_t size = 0;          /// The number of elements in the buffer.
 
     public:
@@ -49,7 +50,7 @@ class BaseBuffer
          */
         inline explicit BaseBuffer(const AutoPointer<T[]>& ptr, size_t size)
         :   ptr {ptr}
-        ,   size {size}
+        ,   size {static_cast<uint32_t>(size)}
         {}
 
         BaseBuffer<T>& operator=(const BaseBuffer<T>&) = default;
@@ -60,13 +61,13 @@ class BaseBuffer
          * @param offset The requested buffer offset.
          * @return The buffer's position pointer.
          */
-        __host__ __device__ inline Pure<T>& operator[](ptrdiff_t offset) const
+        __host__ __device__ inline Pure<T> operator[](ptrdiff_t offset) const
         {
 #ifdef msa_compile_cython
             if(static_cast<unsigned>(offset) >= getSize())
                 throw Exception("Buffer offset out of range");
 #endif
-            return ptr.getOffset(offset);
+            return ptr.getOffset(offset + displ);
         }
 
         /**
@@ -75,7 +76,7 @@ class BaseBuffer
          */
         __host__ __device__ inline Pointer<T> getBuffer() const
         {
-            return ptr.get();
+            return ptr.get() + displ;
         }
 
         /**
@@ -157,6 +158,64 @@ class Buffer : public BaseBuffer<T>
         inline void copy(Pointer<const T> ptr)
         {
             memcpy(this->ptr, ptr, sizeof(T) * this->size);
+        }
+};
+
+/**
+ * Manages a slice of a buffer. The buffer must have already been initialized
+ * and will have boundaries checked according to slice pointers.
+ * @tparam T The buffer type.
+ * @since 0.1.1
+ */
+template <typename T>
+class BufferSlice : public BaseBuffer<T>
+{
+    public:
+        BufferSlice() = default;
+        BufferSlice(const BufferSlice<T>&) = default;
+        BufferSlice(BufferSlice<T>&&) = default;
+
+        /**
+         * Instantiates a new buffer slice.
+         * @param target The target buffer to which the slice shall relate to.
+         * @param displ The initial displacement of slice.
+         * @param size The number of elements in the slice.
+         */
+        inline BufferSlice(const BaseBuffer<T>& target, ptrdiff_t displ = 0, size_t size = 0)
+        :   BaseBuffer<T> {target.getPointer(), size}
+        {
+#ifdef msa_compile_cython
+            if(static_cast<unsigned>(displ) >= target.getSize())
+                throw Exception("Slice initialized out of range");
+#endif
+            this->displ = static_cast<uint32_t>(displ);
+        }
+
+        /**
+         * Instantiates a slice by applying slice pointers into another buffer.
+         * @param target The target buffer to which the slice shall relate to.
+         * @param slice The slice data to be put into the new target.
+         */
+        inline BufferSlice(const BaseBuffer<T>& target, const BufferSlice<T>& slice)
+        :   BaseBuffer<T> {target.getPointer(), slice.getSize()}
+        {
+#ifdef msa_compile_cython
+            if(static_cast<unsigned>(slice.getDispl()) >= target.getSize())
+                throw Exception("Slice initialized out of range");
+#endif
+            this->displ = slice.getDispl();
+        }
+
+        BufferSlice<T>& operator=(const BufferSlice<T>&) = default;
+        BufferSlice<T>& operator=(BufferSlice<T>&&) = default;
+
+        /**
+         * Informs the displacement pointer in relation to original buffer.
+         * @return The buffer's slice displacement.
+         */
+        __host__ __device__ inline ptrdiff_t getDispl() const
+        {
+            return this->displ;
         }
 };
 

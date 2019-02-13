@@ -74,7 +74,7 @@ class Sequence : public Buffer<encoder::EncodedBlock>
          * Informs the length of the sequence.
          * @return The sequence's length.
          */
-        inline size_t getLength() const
+        __host__ __device__ inline size_t getLength() const
         {
             return this->getSize() * encoder::batchSize;
         }

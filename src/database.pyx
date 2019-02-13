@@ -74,6 +74,24 @@ cdef class Database:
             else:
                 raise ValueError("Unknown sequence type.")
 
+    # Creates a copy of database removing selected elements.
+    # @param int offsets The element(s) to be removed from copy.
+    # @return The new database.
+    def excluding(self, *offsets):
+        db = Database()
+        cdef set[ptrdiff_t] indeces = [int(i) for i in offsets]
+        db.cRef = self.cRef.excluding(indeces)
+        return db
+
+    # Creates a new database only with the selected elements.
+    # @param int offsets The element(s) to be in the new database.
+    # @return The new database.
+    def only(self, *offsets):
+        db = Database()
+        cdef set[ptrdiff_t] indeces = [int(i) for i in offsets]
+        db.cRef = self.cRef.only(indeces)
+        return db
+
     # Removes sequence(s) from database.
     # @param int offsets The sequence(s) offset(s) to remove.
     def remove(self, *offsets):

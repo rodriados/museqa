@@ -52,17 +52,17 @@ namespace encoder
      * @param offset The requested offset.
      * @return The stored value in given offset.
      */
-    __host__ __device__ inline uint8_t access(const Buffer<EncodedBlock>& buffer, uint8_t offset)
+    __host__ __device__ inline uint8_t access(const BaseBuffer<EncodedBlock>& buffer, uint8_t offset)
     {
         return access(buffer[offset / batchSize], offset % batchSize);
     }
 
-    extern Buffer<EncodedBlock> encode(Pointer<const char>, size_t);
-
     extern char decode(uint8_t);
-    extern std::string decode(const Buffer<EncodedBlock>&);
+    extern std::string decode(const BaseBuffer<EncodedBlock>&);
+
+    extern Buffer<EncodedBlock> encode(Pointer<const char>, size_t);
 };
 
-extern std::ostream& operator<<(std::ostream&, const Buffer<encoder::EncodedBlock>&);
+extern std::ostream& operator<<(std::ostream&, const BaseBuffer<encoder::EncodedBlock>&);
 
 #endif

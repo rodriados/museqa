@@ -36,6 +36,12 @@ cdef extern from "database.hpp":
         void addMany(const vector[cSequence]&)
         void addMany(const vector[cDatabaseEntry]&)
 
+        cDatabase excluding "except"(const set[ptrdiff_t]&) except +IndexError
+        cDatabase excluding "except"(const vector[ptrdiff_t]&) except +IndexError
+
+        cDatabase only(const set[ptrdiff_t]&) except +IndexError
+        cDatabase only(const vector[ptrdiff_t]&) except +IndexError
+
         void remove(ptrdiff_t) except +IndexError
         void removeMany(const set[ptrdiff_t]&) except +IndexError
         void removeMany(const vector[ptrdiff_t]&) except +IndexError
