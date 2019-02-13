@@ -31,6 +31,10 @@ namespace cmdline
             bool required;                  /// Is the option required?
 
         public:
+            Option() noexcept = default;
+            Option(const Option&) = default;
+            Option(Option&&) = default;
+
             /**
              * Builds an option from its names and description.
              * @param sname The option's short name.
@@ -48,11 +52,8 @@ namespace cmdline
             :   sname(sname)
             ,   lname(lname)
             ,   variadic(variadic)
-            ,   required(required) {}
-
-            Option() noexcept = default;
-            Option(const Option&) = default;
-            Option(Option&&) = default;
+            ,   required(required)
+            {}
 
             Option& operator=(const Option&) = default;
             Option& operator=(Option&&) = default;
@@ -132,6 +133,10 @@ namespace cmdline
             std::map<std::string, std::string> values;  /// The map of parsed option arguments values.
 
         public:
+            Parser() noexcept = default;
+            Parser(const Parser&) = default;
+            Parser(Parser&&) = default;
+
             /**
              * Creates a new parser instance and sets the available options it may parse.
              * @param options The list of available options.
@@ -140,10 +145,6 @@ namespace cmdline
             {
                 init(options);
             }
-
-            Parser() noexcept = default;
-            Parser(const Parser&) = default;
-            Parser(Parser&&) = default;
 
             Parser& operator=(const Parser&) = default;
             Parser& operator=(Parser&&) = default;
@@ -156,12 +157,10 @@ namespace cmdline
              * @return The value of requested argument.
              */
             template <typename T = std::string>
-            inline typename std::enable_if<!std::is_arithmetic<T>::value, T>::type get
-                (   const std::string& name
-                ,   const T& fallback = {}      ) const
+            inline auto get(const std::string& name, const T& fallback = {}) const
+            -> typename std::enable_if<!std::is_arithmetic<T>::value, T>::type
             {                
                 static_assert(std::is_convertible<std::string, T>::value, "Cannot convert to requested type");
-                
                 const auto& pair = values.find(name);
 
                 return pair != values.end()
@@ -170,9 +169,8 @@ namespace cmdline
             }
 
             template <typename T>
-            inline typename std::enable_if<std::is_integral<T>::value && std::is_signed<T>::value, T>::type get
-                (   const std::string& name
-                ,   const T& fallback = {}  ) const
+            inline auto get(const std::string& name, const T& fallback = {}) const
+            -> typename std::enable_if<std::is_integral<T>::value && std::is_signed<T>::value, T>::type
             {
                 return has(name)
                     ? static_cast<T>(strtoll(get(name).c_str(), nullptr, 0))
@@ -180,9 +178,8 @@ namespace cmdline
             }
 
             template <typename T>
-            inline typename std::enable_if<std::is_integral<T>::value && std::is_unsigned<T>::value, T>::type get
-                (   const std::string& name
-                ,   const T& fallback = {}  ) const
+            inline auto get(const std::string& name, const T& fallback = {}) const
+            -> typename std::enable_if<std::is_integral<T>::value && std::is_unsigned<T>::value, T>::type
             {
                 return has(name)
                     ? static_cast<T>(strtoull(get(name).c_str(), nullptr, 0))
@@ -190,9 +187,8 @@ namespace cmdline
             }
 
             template <typename T>
-            inline typename std::enable_if<std::is_floating_point<T>::value, T>::type get
-                (   const std::string& name
-                ,   const T& fallback = {}  ) const
+            inline auto get(const std::string& name, const T& fallback = {}) const
+            -> typename std::enable_if<std::is_floating_point<T>::value, T>::type
             {
                 return has(name)
                     ? static_cast<T>(strtold(get(name).c_str(), nullptr))
