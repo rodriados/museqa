@@ -33,7 +33,7 @@ std::vector<DatabaseEntry> parser::parse(const std::string& filename, const std:
     const auto& pair = dispatcher.find(extension);
 
     if(pair == dispatcher.end())
-        throw Exception("Unknown parser for file '" + extension + "'");
+        throw Exception("unknown parser for extension: " + extension);
 
     return pair->second(filename);
 }

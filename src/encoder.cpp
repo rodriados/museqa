@@ -86,7 +86,7 @@ char encoder::decode(uint8_t element)
 {
 #ifdef msa_compile_cython
     if(element >= 26)
-        throw Exception("Cannot convert invalid sequence element");
+        throw Exception("cannot convert invalid sequence element: " + static_cast<int>(element));
 #endif
     return decodeTable[element];
 }

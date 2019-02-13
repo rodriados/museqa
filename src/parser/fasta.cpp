@@ -53,7 +53,7 @@ std::vector<DatabaseEntry> parser::fasta(const std::string& filename)
     DatabaseEntry entry;
 
     if(file.fail())
-        throw Exception("'" + filename + "' is not a file or does not exist");
+        throw Exception("file does not exist or cannot be read: " + filename);
 
     while(!file.eof() && !file.fail())
         if(extract(file, entry))

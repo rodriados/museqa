@@ -65,7 +65,7 @@ class BaseBuffer
         {
 #ifdef msa_compile_cython
             if(static_cast<unsigned>(offset) >= getSize())
-                throw Exception("Buffer offset out of range");
+                throw Exception("buffer offset out of range");
 #endif
             return ptr.getOffset(offset + displ);
         }
@@ -186,7 +186,7 @@ class BufferSlice : public BaseBuffer<T>
         {
 #ifdef msa_compile_cython
             if(static_cast<unsigned>(displ) >= target.getSize())
-                throw Exception("Slice initialized out of range");
+                throw Exception("slice initialized out of range");
 #endif
             this->displ = static_cast<uint32_t>(displ);
         }
@@ -201,7 +201,7 @@ class BufferSlice : public BaseBuffer<T>
         {
 #ifdef msa_compile_cython
             if(static_cast<unsigned>(slice.getDispl()) >= target.getSize())
-                throw Exception("Slice initialized out of range");
+                throw Exception("slice initialized out of range");
 #endif
             this->displ = slice.getDispl();
         }

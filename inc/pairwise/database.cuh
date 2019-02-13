@@ -110,7 +110,7 @@ namespace pairwise
             {
 #ifdef msa_compile_cython
                 if(static_cast<unsigned>(offset) >= getCount())
-                    throw Exception("Database index out of range");
+                    throw Exception("database index out of range");
 #endif
                 return slice[offset];
             }
