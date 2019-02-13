@@ -50,7 +50,6 @@ TDEPFILES := $(shell find $(TESTDIR)/$(NAME) -name '*.d')                   \
 SRCINTERNAL = $(sort $(dir $(wildcard $(SRCDIR)/*/. $(SRCDIR)/*/*/.)))
 OBJINTERNAL = $(SRCINTERNAL:$(SRCDIR)/%=$(OBJDIR)/%)                        \
               $(SRCINTERNAL:$(SRCDIR)/%=$(OBJDIR)/$(TESTDIR)/%)
-TSTINTERNAL = $(SRCINTERNAL:$(SRCDIR)/%=$(TESTDIR)/$(NAME)/%)
 
 ODEPS = $(MPCCFILES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)                            \
         $(MPPPFILES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)                          \
@@ -63,7 +62,6 @@ all: production
 
 install:
 	@mkdir -p $(OBJINTERNAL)
-	@mkdir -p $(TSTINTERNAL)
 
 production: install $(OBJDIR)/$(NAME)
 	@chmod +x src/watchdog.sh

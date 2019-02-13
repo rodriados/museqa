@@ -61,7 +61,7 @@ class BaseBuffer
          * @param offset The requested buffer offset.
          * @return The buffer's position pointer.
          */
-        __host__ __device__ inline Pure<T> operator[](ptrdiff_t offset) const
+        __host__ __device__ inline Pure<T>& operator[](ptrdiff_t offset) const
         {
 #ifdef msa_compile_cython
             if(static_cast<unsigned>(offset) >= getSize())
