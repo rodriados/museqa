@@ -317,7 +317,7 @@ namespace cuda
         Pure<T> *ptr = nullptr;
         call(cudaMalloc(&ptr, sizeof(S) * elems));
 
-        return {rawptr, free<T>};
+        return {ptr, free<T>};
     }
 
     /**
@@ -331,7 +331,7 @@ namespace cuda
      * @param elems The number of elements to copy from source to destination.
      */
     template <typename T>
-    inline void copy(const T *destination, const T *source, size_t elems = 1)
+    inline void copy(T *destination, const T *source, size_t elems = 1)
     {
         call(cudaMemcpy(destination, source, sizeof(T) * elems, cudaMemcpyDefault));
     }
@@ -344,7 +344,7 @@ namespace cuda
      * @param bytes The number of bytes to set.
      */
     template <typename T>
-    inline void set(const T *ptr, unsigned value, size_t elems = 1)
+    inline void set(T *ptr, unsigned value, size_t elems = 1)
     {
         call(cudaMemset(ptr, value, sizeof(T) * elems));
     }
@@ -356,7 +356,7 @@ namespace cuda
      * @param bytes Size of the memory region in bytes.
      */
     template <typename T>
-    inline void zero(const T *ptr, size_t elems = 1)
+    inline void zero(T *ptr, size_t elems = 1)
     {
         set(ptr, 0, elems);
     }

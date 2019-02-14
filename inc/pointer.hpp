@@ -58,8 +58,8 @@ struct RawPointer
     static_assert(!std::is_reference<T>::value, "Cannot create pointer to a reference.");
     static_assert(!std::is_function<T>::value, "Cannot create pointer to a function.");
     
-    Pure<T> * const ptr = nullptr;                      /// The pointer itself.
-    const Deleter<T> delfunc = pointer::deleter<T>;     /// The pointer deleter function.
+    Pure<T> *ptr = nullptr;                         /// The pointer itself.
+    Deleter<T> delfunc = pointer::deleter<T>;       /// The pointer deleter function.
 
     RawPointer() = default;
     RawPointer(const RawPointer<T>&) = default;
@@ -368,7 +368,7 @@ class AutoPointer : public BasePointer<T>
          */
         template <typename U = T>
         __host__ __device__ inline auto operator[](ptrdiff_t offset)
-        -> typename std::enable_if<!std::is_same<Pure<T>, T>::value, Pure<T>&>::type
+        -> typename std::enable_if<!std::is_same<Pure<U>, U>::value, Pure<T>&>::type
         {
             return getOffset(offset);
         }
@@ -380,7 +380,7 @@ class AutoPointer : public BasePointer<T>
          */
         template <typename U = T>
         __host__ __device__ inline auto getOffset(ptrdiff_t offset) const
-        -> typename std::enable_if<!std::is_same<Pure<T>, T>::value, Pure<T>&>::type
+        -> typename std::enable_if<!std::is_same<Pure<U>, U>::value, Pure<T>&>::type
         {
             return this->ptr[offset];
         }

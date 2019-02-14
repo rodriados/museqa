@@ -1,22 +1,23 @@
 /**
- * Multiple Sequence Alignment blosum file.
+ * Multiple Sequence Alignment pairwise scoring tables file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018 Rodrigo Siqueira
+ * @copyright 2018-2019 Rodrigo Siqueira
  */
-#include <cstdint>
-#include <cstring>
 #include <map>
+#include <string>
+#include <cstdint>
 
-#include "cli.hpp"
-#include "device.cuh"
-#include "pairwise/pairwise.hpp"
+#include "msa.hpp"
+#include "cuda.cuh"
+#include "pointer.hpp"
 
-/*
- * The names of scoring tables. This will be used as available parameters available
- * when choosing a scoring table.
+#include "pairwise/pairwise.cuh"
+
+/**
+ * Aliasing the scoring table type to avoid excessive verbosity.
+ * @since 0.1.1
  */
-static const std::vector<std::string> tablenames =
-    {"blosum62", "blosum45", "blosum50", "blosum80", "blosum90", "pam250"};
+using Table = pairwise::ScoringTable;
 
 /*
  * The scoring tables data. One of these tables will be transfered to device memory
@@ -24,8 +25,8 @@ static const std::vector<std::string> tablenames =
  * used as the default, when no valid parameter is found to indicate which table
  * should be used instead.
  */
-static const int8_t tabledata[][25][25] = {
-    {   /* blosum62 */
+static Table tabledata[] = {
+    {   /* [0] blosum62 */
         /*A  C  T  G  R  N  D  Q  E  H  I  L  K  M  F  P  S  W  Y  V  B  J  Z  X  **/
         { 4, 0, 0, 0,-1,-2,-2,-1,-1,-2,-1,-1,-1,-1,-2,-1, 1,-3,-2, 0,-2,-1,-1,-1,-4}
     ,   { 0, 9,-1,-3,-3,-3,-3,-3,-4,-3,-1,-1,-3,-1,-2,-3,-1,-2,-2,-1,-3,-1,-3,-1,-4}
@@ -53,7 +54,7 @@ static const int8_t tabledata[][25][25] = {
     ,   {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-4}
     ,   {-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4, 0}
     }
-,   {   /* blosum45 */
+,   {   /* [1] blosum45 */
         /*A  C  T  G  R  N  D  Q  E  H  I  L  K  M  F  P  S  W  Y  V  B  J  Z  X  **/
         { 5,-1, 0,-1,-2,-1,-2,-1, 0,-2,-1,-1,-1,-1,-2,-1, 1,-2,-2, 0,-1,-1,-1,-1,-5}
     ,   {-1,12,-1,-3,-3,-2,-3,-3,-3,-3,-3,-2,-3,-2,-2,-4,-1,-5,-3,-1,-2,-2,-3,-1,-5}
@@ -81,7 +82,7 @@ static const int8_t tabledata[][25][25] = {
     ,   {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-5}
     ,   {-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5, 0}
     }
-,   {   /* blosum50 */
+,   {   /* [2] blosum50 */
         /*A  C  T  G  R  N  D  Q  E  H  I  L  K  M  F  P  S  W  Y  V  B  J  Z  X  **/
         { 5,-1,-3,-2,-2,-1,-2,-1,-1, 0,-1,-2,-1,-1,-3,-1, 1, 0,-2, 0,-2,-2,-1,-1,-5}
     ,   {-1,13,-5,-3,-4,-2,-4,-3,-3,-3,-2,-2,-3,-2,-2,-4,-1,-1,-3,-1,-3,-2,-3,-1,-5}
@@ -109,7 +110,7 @@ static const int8_t tabledata[][25][25] = {
     ,   {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-5}
     ,   {-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5, 0}
     }
-,   {   /* blosum80 */
+,   {   /* [3] blosum80 */
         /*A  C  T  G  R  N  D  Q  E  H  I  L  K  M  F  P  S  W  Y  V  B  J  Z  X  **/
         { 5,-1, 0,-1,-2,-2,-2,-1, 0,-2,-2,-2,-1,-1,-3,-1, 1,-3,-2, 0,-2,-2,-1,-1,-6}
     ,   {-1, 9,-1,-5,-4,-3,-4,-4,-4,-4,-2,-2,-4,-2,-3,-4,-2,-3,-3,-1,-4,-2,-4,-1,-6}
@@ -137,7 +138,7 @@ static const int8_t tabledata[][25][25] = {
     ,   {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-6}
     ,   {-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6, 0}
     }
-,   {   /* blosum90 */
+,   {   /* [4] blosum90 */
         /*A  C  T  G  R  N  D  Q  E  H  I  L  K  M  F  P  S  W  Y  V  B  J  Z  X  **/
         { 5,-1, 0,-1,-2,-2,-3,-1, 0,-2,-2,-2,-1,-2,-3,-1, 1,-4,-3,-1,-2,-2,-1,-1,-6}
     ,   {-1, 9,-2,-6,-5,-4,-5,-4,-4,-5,-2,-2,-4,-2,-3,-4,-2,-4,-4,-2,-4,-2,-5,-1,-6}
@@ -165,7 +166,7 @@ static const int8_t tabledata[][25][25] = {
     ,   {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-6}
     ,   {-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6, 0}
     }
-,   {   /* pam250 */
+,   {   /* [5] pam250 */
         /*A  C  T  G  R  N  D  Q  E  H  I  L  K  M  F  P  S  W  Y  V  B  J  Z  X  **/
         { 2,-2, 1, 0,-2, 0, 0, 0, 1,-1,-1,-2,-1,-1,-3, 1, 1,-6,-3, 0, 0,-1, 0,-1,-8}
     ,   {-2,12,-2,-5,-4,-4,-5,-5,-3,-3,-2,-6,-5,-5,-4,-3, 0,-8, 0,-2,-4,-5,-5,-1,-8}
@@ -196,42 +197,62 @@ static const int8_t tabledata[][25][25] = {
 };
 
 /*
- * Maps the table string name to its respective table index. This will be needed
- * to translate the table name from string to its integer.
+ * Maps the tables' string names to its respective list index. This will be
+ * needed to translate the table name from string to its integer.
  */
-static std::map<std::string, int> tablemap = {
-    {tablenames[0], 0}
-,   {tablenames[1], 1}
-,   {tablenames[2], 2}
-,   {tablenames[3], 3}
-,   {tablenames[4], 4}
-,   {tablenames[5], 5}
+static const std::map<std::string, Table *> dispatcher = {
+    {"blosum62", &tabledata[0]}
+,   {"blosum45", &tabledata[1]}
+,   {"blosum50", &tabledata[2]}
+,   {"blosum80", &tabledata[3]}
+,   {"blosum90", &tabledata[4]}
+,   {"pam250",   &tabledata[5]}
 };
 
-/*
- * Aliases a table line to a single symbol. This allows an easier memory
- * allocation and usage for the scoring table.
- * @since 0.1.alpha
+/**
+ * Selects a scoring table from its name.
+ * @param name The name of selected scoring table.
+ * @return The pointer to selected table.
  */
-using Line = int8_t[25];
-
-/** 
- * Loads a scoring table into the device. The table will be automatically freed
- * when algorithm is destructed.
- */
-void pairwise::Algorithm::loadBlosum()
+static Table *getTable(const std::string& name)
 {
-    int index = tablemap[cli.get("matrix")];
+    const auto& pair = dispatcher.find(name);
+
+    if(pair == dispatcher.end())
+        throw Exception("could not find scoring table: " + name);
+
+    onlymaster info("using pairwise scoring table: %s", name.data());
+
+    return pair->second;
+}
+
+/**
+ * Gets the pointer to scoring table selected by name.
+ * @param name The name of selected scoring table.
+ * @return The pointer to selected table.
+ */
+AutoPointer<Table> pairwise::scoring::get(const std::string& name)
+{
+    return {
+        getTable(name)
+    ,   [](Table *) { /* You don't touch my table! */; }
+    };
+}
+
+/**
+ * Loads up the selected scoring table into device memory.
+ * @param name The name of selected scoring table.
+ * @return The pointer to selected table.
+ */
+AutoPointer<Table> pairwise::scoring::toDevice(const std::string& name)
+{
+    RawPointer<Table> ptr;
+    Table *selected = getTable(name);
 
     onlyslaves {
-        Line *table;
-        
-        device::malloc(table, sizeof(Line) * 25);
-        device::memcpy(table, &tabledata[index], sizeof(Line) * 25);
-
-        this->table = {table, device::free<Line>};
-        this->penalty = abs(tabledata[index][24][0]);
+        ptr = cuda::allocate<Table>();
+        cuda::copy<Table>(ptr, selected);
     }
 
-    onlymaster info("using scoring table %s", tablenames[index].c_str());
+    return {ptr};
 }
