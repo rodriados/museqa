@@ -112,7 +112,7 @@ inline void watchdog(const std::string& task, uint32_t done, uint32_t total, con
 {
 #ifndef msa_compile_cython
     printf("[watchdog] ");
-    printf("%s %u %u %u %u ", task.data(), cluster::rank, cluster::size, done, total);
+    printf("%s %u %u %u %u ", task.data(), node::rank, node::size, done, total);
     printf(fmt.data(), args...);
     putchar('\n');
 #endif

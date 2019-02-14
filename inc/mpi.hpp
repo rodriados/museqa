@@ -383,9 +383,9 @@ namespace mpi
         template <typename T, typename = void>
         struct Payload
         {
-            using type = T;                 /// Exposes the payload's message type.
+            using type = Pure<T>;           /// Exposes the payload's message type.
 
-            Pointer<T> buffer = nullptr;    /// The payload's source or destiny pointer.
+            Pure<T> *buffer = nullptr;      /// The payload's source or destiny pointer.
             size_t size = 0;                /// The payload's size.
 
             Payload() = default;
@@ -406,7 +406,7 @@ namespace mpi
              * @param ptr The payload's buffer pointer.
              * @param size The payload's buffer size.
              */
-            inline Payload(Pointer<T> ptr, size_t size = 1)
+            inline Payload(Pure<T> *ptr, size_t size = 1)
             :   buffer {ptr}
             ,   size {size}
             {}
@@ -418,7 +418,7 @@ namespace mpi
              * Retrieves the pointer to payload's buffer.
              * @return The payload's buffer pointer.
              */
-            inline Pointer<T> getBuffer() const
+            inline Pure<T> *getBuffer() const
             {
                 return buffer;
             }
@@ -438,7 +438,7 @@ namespace mpi
              * @param (ignored) The new payload capacity.
              * @return The resized buffer.
              */
-            inline Pointer<T> resize(size_t)
+            inline Pure<T> *resize(size_t)
             {
                 return buffer;
             }
@@ -469,7 +469,7 @@ namespace mpi
              * @param size The new payload capacity.
              * @return The resized buffer.
              */
-            inline Pointer<T> resize(size_t size)
+            inline Pure<T> *resize(size_t size)
             {
                 if(this->size < size) object.resize(size);
 
@@ -504,7 +504,7 @@ namespace mpi
              * @param size The new payload capacity.
              * @return The resized buffer.
              */
-            inline Pointer<T> resize(size_t size)
+            inline Pure<T> *resize(size_t size)
             {
                 if(this->size < size) object = BaseBuffer<T> {size};
 

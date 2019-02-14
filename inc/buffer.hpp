@@ -61,7 +61,7 @@ class BaseBuffer
          * @param offset The requested buffer offset.
          * @return The buffer's position pointer.
          */
-        __host__ __device__ inline Pure<T>& operator[](ptrdiff_t offset) const
+        __host__ __device__ inline T& operator[](ptrdiff_t offset) const
         {
 #ifdef msa_compile_cython
             if(static_cast<unsigned>(offset) >= getSize())
@@ -74,7 +74,7 @@ class BaseBuffer
          * Gives access to buffer's data.
          * @return The buffer's internal pointer.
          */
-        __host__ __device__ inline Pointer<T> getBuffer() const
+        __host__ __device__ inline T *getBuffer() const
         {
             return ptr.get() + displ;
         }
@@ -131,7 +131,7 @@ class Buffer : public BaseBuffer<T>
          * @param ptr The pointer of buffer to be copied.
          * @param size The size of buffer to encapsulate.
          */
-        inline Buffer(Pointer<const T> ptr, size_t size)
+        inline Buffer(const T *ptr, size_t size)
         :   BaseBuffer<T> {size}
         {
             copy(ptr);
@@ -155,7 +155,7 @@ class Buffer : public BaseBuffer<T>
          * Copies an existing buffer's data.
          * @param ptr The pointer of buffer to be copied.
          */
-        inline void copy(Pointer<const T> ptr)
+        inline void copy(const T *ptr)
         {
             memcpy(this->ptr, ptr, sizeof(T) * this->size);
         }

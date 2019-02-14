@@ -125,7 +125,7 @@ namespace reflection
         template <size_t N, typename ...T>
         constexpr decltype(auto) get(const Tuple<T...>& tuple) noexcept
         {
-            static_assert(N < Tuple<T...>::size, "Requested tuple index is out of bounds!");
+            static_assert(N < Tuple<T...>::size, "requested tuple index is out of bounds!");
             return retrieve<N>(tuple);
         }
     };
@@ -302,7 +302,7 @@ namespace reflection
      */
     template <typename T>
     using LoopholeTuple = typename detail::LoopholeTypeList<
-            Pure<T>, std::make_index_sequence<detail::count<Pure<T>>(0)>
+            T, std::make_index_sequence<detail::count<T>(0)>
         >::type;
 };
 
@@ -319,11 +319,11 @@ struct Reflection
      * The tuple aligned to reflected type.
      * @since 0.1.1
      */
-    using Tuple = reflection::LoopholeTuple<Pure<T>>;
+    using Tuple = reflection::LoopholeTuple<Base<T>>;
 
-    static_assert(!std::is_union<T>::value, "It is forbidden to reflect unions!");
-    static_assert(sizeof(Pure<T>) == sizeof(Tuple), "Member sequence is not compatible!");
-    static_assert(alignof(Pure<T>) == alignof(Tuple), "Member sequence is not compatible!");
+    static_assert(!std::is_union<T>::value, "it is forbidden to reflect unions!");
+    static_assert(sizeof(Base<T>) == sizeof(Tuple), "member sequence is not compatible!");
+    static_assert(alignof(Base<T>) == alignof(Tuple), "member sequence is not compatible!");
 
     /**
      * Retrieves the offset of a member in the data structure by its index.
@@ -343,7 +343,7 @@ struct Reflection
      */
     static constexpr size_t getSize() noexcept
     {
-        return reflection::detail::count<Pure<T>>(0);
+        return reflection::detail::count<Base<T>>(0);
     }
 
     /**

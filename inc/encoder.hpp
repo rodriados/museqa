@@ -60,7 +60,7 @@ namespace encoder
     extern char decode(uint8_t);
     extern std::string decode(const BaseBuffer<EncodedBlock>&);
 
-    extern Buffer<EncodedBlock> encode(Pointer<const char>, size_t);
+    extern Buffer<EncodedBlock> encode(const char *, size_t);
 };
 
 extern std::ostream& operator<<(std::ostream&, const BaseBuffer<encoder::EncodedBlock>&);

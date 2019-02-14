@@ -20,7 +20,7 @@
  * @since 0.1.1
  */
 template <typename T>
-using Deleter = Functor<void(Pointer<T>)>;
+using Deleter = Functor<void(Pure<T> *)>;
 
 namespace pointer
 {
@@ -30,7 +30,7 @@ namespace pointer
      * @param ptr The pointer to be deleted.
      */
     template <typename T>
-    inline auto deleter(Pointer<T> ptr) -> typename std::enable_if<!std::is_array<T>::value, void>::type
+    inline auto deleter(Pure<T> *ptr) -> typename std::enable_if<!std::is_array<T>::value, void>::type
     {
         delete ptr;
     }
@@ -41,7 +41,7 @@ namespace pointer
      * @param ptr The array pointer to be deleted.
      */
     template <typename T>
-    inline auto deleter(Pointer<T> ptr) -> typename std::enable_if<std::is_array<T>::value, void>::type
+    inline auto deleter(Pure<T> *ptr) -> typename std::enable_if<std::is_array<T>::value, void>::type
     {
         delete[] ptr;
     }
@@ -58,7 +58,7 @@ struct RawPointer
     static_assert(!std::is_reference<T>::value, "Cannot create pointer to a reference.");
     static_assert(!std::is_function<T>::value, "Cannot create pointer to a function.");
     
-    const Pointer<T> ptr = nullptr;                     /// The pointer itself.
+    Pure<T> * const ptr = nullptr;                      /// The pointer itself.
     const Deleter<T> delfunc = pointer::deleter<T>;     /// The pointer deleter function.
 
     RawPointer() = default;
@@ -70,7 +70,7 @@ struct RawPointer
      * @param ptr The raw pointer to be held.
      * @param delfunc The deleter function for pointer.
      */
-    inline RawPointer(Pointer<T> ptr, Deleter<T> delfunc = nullptr)
+    inline RawPointer(Pure<T> *ptr, Deleter<T> delfunc = nullptr)
     :   ptr {ptr}
     ,   delfunc {delfunc ? delfunc : pointer::deleter<T>}
     {}
@@ -82,7 +82,7 @@ struct RawPointer
      * Converts to universal pointer type.
      * @return The pointer converted to universal type.
      */
-    inline operator Pointer<T>() const
+    inline operator Pure<T> *() const
     {
         return ptr;
     }
@@ -105,7 +105,7 @@ namespace pointer
          * @param ptr The raw pointer to be held.
          * @param delfunc The deleter function for pointer.
          */
-        inline MetaPointer(Pointer<T> ptr, Deleter<T> delfunc)
+        inline MetaPointer(Pure<T> *ptr, Deleter<T> delfunc)
         :   RawPointer<T> {ptr, delfunc}
         ,   count {1}
         {}
@@ -128,7 +128,7 @@ namespace pointer
      * @return New instance.
      */
     template <typename T>
-    inline MetaPointer<T> *acquire(Pointer<T> ptr, Deleter<T> delfunc = nullptr)
+    inline MetaPointer<T> *acquire(Pure<T> *ptr, Deleter<T> delfunc = nullptr)
     {
         return new MetaPointer<T> {ptr, delfunc};
     }
@@ -174,7 +174,7 @@ class BasePointer
 
     protected:
         pointer::MetaPointer<T> *meta = nullptr;    /// The pointer metadata.
-        Pointer<T> ptr = nullptr;                   /// The encapsulated pointer.
+        Pure<T> *ptr = nullptr;                     /// The encapsulated pointer.
 
     public:
         inline BasePointer() = default;
@@ -184,7 +184,7 @@ class BasePointer
          * @param ptr The pointer to be encapsulated.
          * @param delfunc The delete functor.
          */
-        inline BasePointer(Pointer<T> ptr, Deleter<T> delfunc = nullptr)
+        inline BasePointer(Pure<T> *ptr, Deleter<T> delfunc = nullptr)
         :   meta {pointer::acquire<T>(ptr, delfunc)}
         ,   ptr {ptr}
         {}
@@ -272,7 +272,7 @@ class BasePointer
          * Gives access to the raw pointer.
          * @return The raw pointer.
          */
-        __host__ __device__ inline Pointer<T> operator&() const
+        __host__ __device__ inline Pure<T> *operator&() const
         {
             return ptr;
         }
@@ -281,7 +281,7 @@ class BasePointer
          * Gives access to raw pointer using the dereference operator.
          * @return The raw pointer.
          */
-        __host__ __device__ inline Pointer<T> operator->() const
+        __host__ __device__ inline Pure<T> *operator->() const
         {
             return ptr;
         }
@@ -299,7 +299,7 @@ class BasePointer
          * Gives access to raw pointer.
          * @return The raw pointer.
          */
-        __host__ __device__ inline Pointer<T> get() const
+        __host__ __device__ inline Pure<T> *get() const
         {
             return ptr;
         }
@@ -356,7 +356,7 @@ class AutoPointer : public BasePointer<T>
          * Converts to universal pointer type.
          * @return The pointer converted to universal type.
          */
-        __host__ __device__ inline operator Pointer<T>() const
+        __host__ __device__ inline operator Pure<T> *() const
         {
             return this->ptr;
         }
@@ -368,7 +368,7 @@ class AutoPointer : public BasePointer<T>
          */
         template <typename U = T>
         __host__ __device__ inline auto operator[](ptrdiff_t offset)
-        -> typename std::enable_if<std::is_array<U>::value, Pure<T>&>::type
+        -> typename std::enable_if<!std::is_same<Pure<T>, T>::value, Pure<T>&>::type
         {
             return getOffset(offset);
         }
@@ -380,7 +380,7 @@ class AutoPointer : public BasePointer<T>
          */
         template <typename U = T>
         __host__ __device__ inline auto getOffset(ptrdiff_t offset) const
-        -> typename std::enable_if<std::is_array<U>::value, Pure<T>&>::type
+        -> typename std::enable_if<!std::is_same<Pure<T>, T>::value, Pure<T>&>::type
         {
             return this->ptr[offset];
         }

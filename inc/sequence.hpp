@@ -35,7 +35,7 @@ class Sequence : public Buffer<encoder::EncodedBlock>
          * @param ptr The pointer to buffer to be encoded.
          * @param size The buffer's size.
          */
-        inline Sequence(Pointer<const char> ptr, size_t size)
+        inline Sequence(const char *ptr, size_t size)
         :   Buffer<encoder::EncodedBlock> {encoder::encode(ptr, size)}
         {}
 

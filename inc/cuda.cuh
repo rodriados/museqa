@@ -301,7 +301,7 @@ namespace cuda
     inline RawPointer<T> allocate(size_t = 1);
 
     template <typename T = void>
-    inline void free(Pointer<T>);
+    inline void free(Pure<T> *);
 
     /**
      * Allocates device-side memory on the current device.
@@ -312,9 +312,10 @@ namespace cuda
     template <typename T>
     inline RawPointer<T> allocate(size_t elems)
     {
-        Pointer<T> rawptr = nullptr;
         using S = typename std::conditional<std::is_void<T>::value, char, Pure<T>>::type;
-        call(cudaMalloc(&rawptr, sizeof(S) * elems));
+
+        Pure<T> *ptr = nullptr;
+        call(cudaMalloc(&ptr, sizeof(S) * elems));
 
         return {rawptr, free<T>};
     }
@@ -330,7 +331,7 @@ namespace cuda
      * @param elems The number of elements to copy from source to destination.
      */
     template <typename T>
-    inline void copy(const Pointer<T> destination, const Pointer<T> source, size_t elems = 1)
+    inline void copy(const T *destination, const T *source, size_t elems = 1)
     {
         call(cudaMemcpy(destination, source, sizeof(T) * elems, cudaMemcpyDefault));
     }
@@ -343,7 +344,7 @@ namespace cuda
      * @param bytes The number of bytes to set.
      */
     template <typename T>
-    inline void set(const Pointer<T> ptr, unsigned value, size_t elems = 1)
+    inline void set(const T *ptr, unsigned value, size_t elems = 1)
     {
         call(cudaMemset(ptr, value, sizeof(T) * elems));
     }
@@ -355,9 +356,9 @@ namespace cuda
      * @param bytes Size of the memory region in bytes.
      */
     template <typename T>
-    inline void zero(const Pointer<T> ptr, size_t elems = 1)
+    inline void zero(const T *ptr, size_t elems = 1)
     {
-        set<T>(ptr, 0, elems);
+        set(ptr, 0, elems);
     }
 
     /**
@@ -366,7 +367,7 @@ namespace cuda
      * @param ptr The pointer to be freed.
      */
     template <typename T>
-    inline void free(Pointer<T> ptr)
+    inline void free(Pure<T> *ptr)
     {
         call(cudaFree(ptr));
     }
@@ -377,7 +378,7 @@ namespace cuda
         inline RawPointer<T> allocate(size_t = 1);
 
         template <typename T = void>
-        inline void free(Pointer<T>);
+        inline void free(Pure<T> *);
 
         /**
          * Allocates pinned host-side memory so copies to and from device are faster.
@@ -388,8 +389,9 @@ namespace cuda
         template <typename T>
         inline RawPointer<T> allocate(size_t elems)
         {
-            Pointer<T> ptr = nullptr;
             using S = typename std::conditional<std::is_void<T>::value, char, Pure<T>>::type;
+
+            Pure<T> *ptr = nullptr;
             call(cudaMallocHost(&ptr, sizeof(S) * elems));
 
             return {ptr, free<T>};
@@ -401,7 +403,7 @@ namespace cuda
          * @param ptr The pointer to be freed.
          */
         template <typename T>
-        inline void free(Pointer<T> ptr)
+        inline void free(Pure<T> *ptr)
         {
             call(cudaFreeHost(ptr));
         }

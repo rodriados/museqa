@@ -61,7 +61,7 @@ inline uint8_t translate(uint8_t letter)
  * @param size The size of given string.
  * @return The buffer of enconded blocks.
  */
-Buffer<encoder::EncodedBlock> encoder::encode(Pointer<const char> ptr, size_t size)
+Buffer<encoder::EncodedBlock> encoder::encode(const char *ptr, size_t size)
 {
     std::vector<encoder::EncodedBlock> vector;
 
