@@ -340,17 +340,17 @@ class BasePointer
  * @since 0.1.1
  */
 template <typename T>
-class AutoPointer : public BasePointer<T>
+class Pointer : public BasePointer<T>
 {
     public:
-        inline AutoPointer() = default;
-        inline AutoPointer(const AutoPointer<T>&) = default;
-        inline AutoPointer(AutoPointer<T>&&) = default;
+        inline Pointer() = default;
+        inline Pointer(const Pointer<T>&) = default;
+        inline Pointer(Pointer<T>&&) = default;
 
         using BasePointer<T>::BasePointer;
 
-        AutoPointer<T>& operator=(const AutoPointer<T>&) = default;
-        AutoPointer<T>& operator=(AutoPointer<T>&&) = default;
+        Pointer<T>& operator=(const Pointer<T>&) = default;
+        Pointer<T>& operator=(Pointer<T>&&) = default;
 
         /**
          * Converts to universal pointer type.

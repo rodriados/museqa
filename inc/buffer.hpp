@@ -25,7 +25,7 @@ template <typename T>
 class BaseBuffer
 {
     protected:
-        AutoPointer<T[]> ptr;       /// The pointer to the buffer being encapsulated.
+        Pointer<T[]> ptr;           /// The pointer to the buffer being encapsulated.
         uint32_t displ = 0;         /// The buffer displacement in relation to pointer.
         uint32_t size = 0;          /// The number of elements in the buffer.
 
@@ -48,7 +48,7 @@ class BaseBuffer
          * @param ptr The buffer pointer to encapsulate.
          * @param size The size of buffer to encapsulate.
          */
-        inline explicit BaseBuffer(const AutoPointer<T[]>& ptr, size_t size)
+        inline explicit BaseBuffer(const Pointer<T[]>& ptr, size_t size)
         :   ptr {ptr}
         ,   size {static_cast<uint32_t>(size)}
         {}
@@ -83,7 +83,7 @@ class BaseBuffer
          * Gives access to buffer's pointer.
          * @return The buffer's smart pointer.
          */
-        __host__ __device__ inline const AutoPointer<T[]>& getPointer() const
+        __host__ __device__ inline const Pointer<T[]>& getPointer() const
         {
             return ptr;
         }

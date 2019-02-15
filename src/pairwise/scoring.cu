@@ -231,7 +231,7 @@ static Table *getTable(const std::string& name)
  * @param name The name of selected scoring table.
  * @return The pointer to selected table.
  */
-AutoPointer<Table> pairwise::scoring::get(const std::string& name)
+Pointer<Table> pairwise::scoring::retrieve(const std::string& name)
 {
     return {
         getTable(name)
@@ -244,7 +244,7 @@ AutoPointer<Table> pairwise::scoring::get(const std::string& name)
  * @param name The name of selected scoring table.
  * @return The pointer to selected table.
  */
-AutoPointer<Table> pairwise::scoring::toDevice(const std::string& name)
+Pointer<Table> pairwise::scoring::toDevice(const std::string& name)
 {
     RawPointer<Table> ptr;
     Table *selected = getTable(name);

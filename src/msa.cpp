@@ -152,10 +152,10 @@ int main(int argc, char **argv)
     mpi::init(argc, argv);
 
     if(node::size < 2)
-        error("At least 2 nodes are needed.");
+        error("at least 2 nodes are needed.");
 
     onlyslaves if(!cuda::device::getCount())
-        error("No compatible GPU device has been found.");
+        error("no compatible GPU device has been found.");
 
     cmdline::init(options);
     cmdline::parse(argc, argv);
