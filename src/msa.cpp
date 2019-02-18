@@ -3,9 +3,7 @@
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018-2019 Rodrigo Siqueira
  */
-#include <cstdio>
 #include <string>
-#include <thread>
 #include <vector>
 
 #include "msa.hpp"
@@ -26,17 +24,11 @@
  * @since 0.1.1
  */
 static const std::vector<cmdline::Option> options = {
-    {"m", "multigpu",  "Try to use multiple devices in a single host."}
-,   {"x", "matrix",    "Choose the scoring matrix to use in pairwise.", true}
-,   {"1", "pw-alg",    "Choose the algorithm to use in pairwise.", true}
+    {"m", "multigpu",   "Try to use multiple devices in a single host."}
+,   {"s", "sequential", "Executes in sequential mode, that is, without all parallel machinery."}
+,   {"x", "matrix",     "Choose the scoring matrix to use in pairwise.", true}
+,   {"1", "pw-alg",     "Choose the algorithm to use in pairwise.", true}
 };
-
-/**
- * Cluster communicator responsible for monitoring whether all nodes are
- * executing successfully.
- * @since 0.1.1
- */
-static mpi::Communicator monitor;
 
 namespace msa
 {
@@ -76,12 +68,12 @@ namespace msa
      * @param db The database of sequences to be aligned.
      * @return 0.1.1
      */
-    static void pwrun(Pairwise& pw, const Database& db)
+    static void pwrun(Pairwise& pw, Database& db)
     {
         pw.run({
             db
-        ,   cmdline::get("pw-alg", "needleman")
-        ,   cmdline::get("matrix", "blosum62")
+        ,   cmdline::get<std::string>("pw-alg", "needleman")
+        ,   cmdline::get<std::string>("matrix", "blosum62")
         });
     }
 
@@ -92,9 +84,7 @@ namespace msa
      */
     inline void report(const std::string& name, const stopwatch::duration::Seconds& duration)
     {
-        onlymaster {
-            std::cout << s_bold "[report] " c_green_fg << name << " done in " << duration << " seconds" << std::endl;
-        }
+        onlymaster msa::log(std::cout, s_bold "[report]" c_green_fg, name, s_reset, duration, "seconds");
     }
 
     /**
@@ -113,31 +103,18 @@ namespace msa
 
         catch(Exception e) {
             error(e.what());
-            halt(1);
         }
-
-        halt(0);
     }
 
     /**
-     * Observes and monitors worker processes and quits in case of failure.
-     * @return The error code obtained from processes.
+     * Halts the software execution in all nodes with a code.
+     * @param code The exit code.
+     * @return The code to operational system.
      */
-    static int watch()
+    void halt(uint8_t code)
     {
-        int code = 0;
-
-        monitor = mpi::communicator::clone();
-
-        onlymaster for(int i = 0; i < node::size; ++i) {
-            mpi::receive(code, mpi::any, 0xff01, monitor);
-            if(code) break;
-        }
-
-        mpi::broadcast(code, node::master, monitor);
-        mpi::communicator::free(monitor);
-
-        return code;
+        mpi::finalize();
+        exit(code);
     }
 };
 
@@ -151,41 +128,20 @@ int main(int argc, char **argv)
 {
     mpi::init(argc, argv);
 
-    if(node::size < 2)
+    cmdline::init(options);
+    cmdline::parse(argc, argv);
+
+    if(!cmdline::has("sequential") && node::size < 2)
         error("at least 2 nodes are needed.");
 
     onlyslaves if(!cuda::device::getCount())
         error("no compatible GPU device has been found.");
 
-    cmdline::init(options);
-    cmdline::parse(argc, argv);
-
     onlyslaves if(cmdline::has("multigpu"))
         cuda::device::setCurrent(node::rank - 1);
 
-    mpi::barrier();
-
-    std::thread worker {msa::run};
-    worker.detach();
-
-    int code = msa::watch();
-
+    msa::run();
     mpi::finalize();
 
-    return code;
-}
-
-/**
- * Halts the software execution in all nodes with a code.
- * @param code The exit code.
- * @return The code to operational system.
- */
-void halt(uint8_t code)
-{
-    if(monitor == mpi::communicator::null) {
-        mpi::finalize();
-        exit(code);
-    }
-
-    mpi::send(code, node::master, 0xff01, monitor);
+    return 0;
 }

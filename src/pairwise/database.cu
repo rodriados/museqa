@@ -62,11 +62,8 @@ pairwise::Database pairwise::Database::toDevice() const
     using Block = encoder::EncodedBlock;
     using Slice = SequenceSlice;
 
-    Pointer<Block[]> blockmem = cuda::allocate<Block>(this->getSize());
-    Pointer<Slice[]> slicemem = cuda::allocate<Slice>(getCount());
-
-    Buffer<Block> blocks = Buffer<Block> {blockmem, this->getSize()};
-    Buffer<Slice> slices = Buffer<Slice> {slicemem, getCount()};
+    Buffer<Block> blocks = Buffer<Block> {cuda::allocate<Block>(this->getSize()), this->getSize()};
+    Buffer<Slice> slices = Buffer<Slice> {cuda::allocate<Slice>(getCount()), getCount()};
 
     Buffer<Slice> adapt {getCount()};
 

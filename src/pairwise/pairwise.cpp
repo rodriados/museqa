@@ -15,8 +15,9 @@
 /*
  * Keeps the list of available algorithms and their respective factories.
  */
-static const std::map<std::string, pairwise::AlgorithmFactory> dispatcher = {
-    {"needleman", pairwise::needleman::factory}
+static const std::map<std::string, pairwise::Algorithm> dispatcher = {
+    {"needleman",           pairwise::needleman::run}
+,   {"needleman-hybrid",    pairwise::needleman::hybrid}
 };
 
 /**
@@ -30,12 +31,9 @@ void pairwise::Pairwise::run(const pairwise::Configuration& config)
     const auto& pair = dispatcher.find(config.algorithm);
 
     if(pair == dispatcher.end())
-        throw Exception("unknown pairwise algorithm: " + config.algorithm);
+        throw Exception("unknown pairwise algorithm:", config.algorithm);
 
-    onlymaster info("chosen pairwise algorithm: " + config.algorithm);
+    onlymaster info("chosen pairwise algorithm:" s_bold, config.algorithm, s_reset);
 
-    pairwise::Algorithm *algorithm = pair->second(config);
-    score = algorithm->run();
-
-    delete algorithm;
+    score = pair->second(config);
 }

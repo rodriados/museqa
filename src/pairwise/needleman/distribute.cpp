@@ -1,46 +1,56 @@
 /**
- * Multiple Sequence Alignment pairwise parallelization distribution file.
+ * Multiple Sequence Alignment parallel needleman distribution file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018 Rodrigo Siqueira
+ * @copyright 2018-2019 Rodrigo Siqueira
  */
-#include <cstdint>
-#include <vector>
+#include <algorithm>
 
-#include "msa.hpp"
+#include "mpi.hpp"
 #include "buffer.hpp"
-#include "cluster.hpp"
+
+#include "pairwise/pairwise.cuh"
 #include "pairwise/needleman.cuh"
 
+using namespace pairwise;
+
 /**
- * Scatters the workload through the working nodes.
+ * Scatters generated workpairs from master to all other processes.
+ * @param origin All pairs to be scatter. Significant only at master.
+ * @return The pairs the current node is responsible for processing.
  */
-void pairwise::Needleman::scatter()
+Buffer<Pair> pairwise::needleman::scatter(Buffer<Pair>& origin)
 {
-    std::vector<int> sendcount(cluster::size, 0);
-    std::vector<int> senddispl(cluster::size, 0);
+    Buffer<Pair> destiny;
 
-    int total = this->pair.size();
-    cluster::broadcast(total);
+    size_t count = 0;
+    size_t displ = 0;
 
-    int each = total / (cluster::size - 1);
-    int addt = total % (cluster::size - 1);
+    size_t npair = origin.getSize();
+    mpi::broadcast(npair);
 
-    for(uint16_t i = 1; i < cluster::size; ++i) {
-        sendcount[i] = each + (addt >= i);
-        senddispl[i] = senddispl[i - 1] + sendcount[i - 1];
+    onlyslaves {
+        const size_t quo = npair / (node::size - 1);
+        const size_t rem = npair % (node::size - 1);
+
+        const size_t rank = node::rank - 1;
+
+        count = quo + (rem > rank);
+        displ = quo * rank + std::min(rank, rem);
     }
 
-    std::vector<Workpair> buffer;    
-    cluster::scatter(this->pair, buffer, sendcount, senddispl);
-    
-    onlyslaves this->pair = buffer;
-    this->score = {new Score[this->pair.size()], this->pair.size()};
+    mpi::scatter(origin, destiny, count, displ);
+
+    return destiny;
 }
 
 /**
- * Gathers the resulting data of all working nodes.
+ * Gathers all calculated scores from all processes to master.
+ * @param origin The scores to be sent from current process to master.
+ * @return The gathered score from all processes.
  */
-void pairwise::Needleman::gather()
+Buffer<Score> pairwise::needleman::gather(Buffer<Score>& origin)
 {
-    cluster::sync();
+    Buffer<Score> destiny;
+    mpi::gather(origin, destiny);
+    return destiny;
 }

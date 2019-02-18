@@ -9,7 +9,10 @@
 #define EXCEPTION_HPP_INCLUDED
 
 #include <string>
+#include <sstream>
 #include <exception>
+
+#include "msa.hpp"
 
 /**
  * Holds an error message so it can be propagated through the code.
@@ -17,7 +20,7 @@
  */
 struct Exception : public std::exception
 {
-    std::string msg;       /// The exception message.
+    std::string msg;        /// The exception message.
 
     /**
      * Builds a new exception instance.
@@ -29,17 +32,14 @@ struct Exception : public std::exception
 
     /**
      * Builds a new exception instance.
-     * @tparam T The format parameters' types.
-     * @param fmt The message format.
-     * @param args The format's parameters.
+     * @param args The exception message's parts.
      */
     template <typename ...T>
-    explicit Exception(const std::string& fmt, T... args)
+    explicit Exception(const T&... args)
     {
-        char buffer[128];
-        
-        sprintf(buffer, fmt.data(), args...);
-        msg = buffer;
+        std::stringstream ss;
+        msa::log(ss, args...);
+        msg = ss.str();
     }
 
     Exception(const Exception&) = default;

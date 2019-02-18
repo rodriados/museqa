@@ -72,7 +72,7 @@ namespace mpi
         inline std::string describe(int code)
         {
             int length;
-            char buffer[128];
+            char buffer[2048];
 
             return MPI_Error_string(code, buffer, &length) != MPI_SUCCESS
                 ? "error while probing MPI error"
@@ -93,7 +93,7 @@ namespace mpi
          * @param code The result code reported by MPI.
          */
         inline Exception(int code)
-        :   ::Exception {"MPI Exception: " + error::describe(code)}
+        :   ::Exception {"MPI Exception:", error::describe(code)}
         ,   code {code}
         {}
 
@@ -106,7 +106,7 @@ namespace mpi
          */
         template <typename ...P>
         inline Exception(int code, const std::string& fmt, P... args)
-        :   ::Exception {"MPI Exception: " + error::describe(code) + ": " + fmt, args...}
+        :   ::Exception {"MPI Exception:", error::describe(code), args...}
         ,   code {code}
         {}
 
@@ -240,6 +240,12 @@ namespace mpi
         };
 
         /**
+         * Keeps track of all generated datatypes throughout execution.
+         * @since 0.1.1
+         */
+        extern std::vector<MPI_Datatype> dtypes;
+
+        /**
          * Generates a new datatype for a user defined type.
          * @tparam T The type to which datatype must be created.
          * @since 0.1.1
@@ -268,15 +274,8 @@ namespace mpi
 
                 MPI_Type_create_struct(size, blockList, offsetList, typeList, &typeId);
                 MPI_Type_commit(&typeId);
-            }
 
-            /**
-             * Frees up MPI resources used by type identifiers.
-             * @see Generator::Generator
-             */
-            inline ~Generator() noexcept
-            {
-                MPI_Type_free(&typeId);
+                dtypes.push_back(typeId);
             }
 
             /**
@@ -554,7 +553,7 @@ namespace mpi
         /**#@+
          * Splits nodes into different communicators according to selected color.
          * @param comm The original communicator to be split.
-         * @param colot The color selected by current node.
+         * @param color The color selected by current node.
          * @param key The key used to assigned a node id in new communicator.
          * @return The obtained communicator from split operation.
          */
@@ -589,8 +588,7 @@ namespace mpi
      */
     inline void init(int& argc, char **& argv)
     {
-        int _;
-        call(MPI_Init_thread(&argc, &argv, MPI_THREAD_SERIALIZED, &_));
+        call(MPI_Init(&argc, &argv));
         world = communicator::detail::build(MPI_COMM_WORLD);
         
         node::rank = world.rank;
@@ -850,7 +848,7 @@ namespace mpi
         using S = typename decltype(sendl)::type;
         using R = typename decltype(recvl)::type;
 
-        static_assert(std::is_same<S, R>::value, "Cannot gather with different types!");
+        static_assert(std::is_same<S, R>::value, "Cannot scatter with different types!");
 
         std::vector<int> sizeList, displList;
 
@@ -903,6 +901,8 @@ namespace mpi
      */
     inline void finalize()
     {
+        for(MPI_Datatype& dtype : datatype::dtypes)
+            call(MPI_Type_free(&dtype));
         call(MPI_Finalize());
     }
 };

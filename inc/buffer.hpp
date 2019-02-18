@@ -53,6 +53,16 @@ class BaseBuffer
         ,   size {static_cast<uint32_t>(size)}
         {}
 
+        /**
+         * Acquires the ownership of a buffer pointer.
+         * @param ptr The raw pointer instance to encapsulate.
+         * @param size The size of buffer to encapsulate.
+         */
+        inline explicit BaseBuffer(const RawPointer<T>& ptr, size_t size)
+        :   ptr {ptr}
+        ,   size {static_cast<uint32_t>(size)}
+        {}
+
         BaseBuffer<T>& operator=(const BaseBuffer<T>&) = default;
         BaseBuffer<T>& operator=(BaseBuffer<T>&&) = default;
 

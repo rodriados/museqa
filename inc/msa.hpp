@@ -37,7 +37,36 @@
   #define msa_windows
 #endif
 
+#include <iostream>
 #include <cstdint>
+
+namespace msa
+{
+    /**#@+
+     * Formats a log message, split in the arguments to an output stream.
+     * @param os The output stream to put the message into.
+     * @param obj The object to be currently formatted to output.
+     * @param rest The other objects in queue to be formatted to output.
+     */
+    template <typename T>
+    inline void log(std::ostream& stream, const T& obj)
+    {
+        stream << (obj) << std::endl;
+    }
+
+    template <typename T, typename ...U>
+    inline void log(std::ostream& stream, const T& obj, const U&... rest)
+    {
+        stream << (obj) << ' ';
+        log(stream, rest...);
+    }
+    /**#@-*/
+
+#ifndef msa_compile_cython
+    extern void halt(uint8_t = 0);
+#endif
+};
+
 #include <cstddef>
 #include <string>
 
@@ -46,75 +75,58 @@
 #include "utils.hpp"
 #include "exception.hpp"
 
-#ifndef msa_compile_cython
-extern void halt(uint8_t = 0);
-#endif
-
 /**
  * Prints an informative log message.
  * @tparam T The types of message arguments.
- * @param fmt The message format.
- * @param args The format values.
+ * @param args The message parts to be printed.
  */
 template <typename ...T>
-inline void info(const std::string& fmt, T... args)
+inline void info(const T&... args)
 {
 #ifndef msa_compile_cython
-    printf(s_bold "[info]" s_reset " ");
-    printf(fmt.data(), args...);
-    putchar('\n');
+    msa::log(std::cout, s_bold "[info]" s_reset, args...);
 #endif
 }
 
 /**
  * Prints an error log message and halts execution.
  * @tparam T The types of message arguments.
- * @param fmt The message format.
- * @param args The format values.
+ * @param args The message parts to be printed.
  */
 template <typename ...T>
-inline void error(const std::string& fmt, T... args)
+inline void error(const T&... args)
 {
 #ifndef msa_compile_cython
-    printf("[error] ");
-    printf(fmt.data(), args...);
-    putchar('\n');
-    halt(1);
+    msa::log(std::cout, "[error]", args...);
+    msa::halt(1);
 #else
-    throw Exception(fmt, args...);
+    throw Exception(args...);
 #endif
 }
 
 /**
  * Prints a warning log message.
  * @tparam T The types of message arguments.
- * @param fmt The message format.
- * @param args The format values.
+ * @param args The message parts to be printed.
  */
 template <typename ...T>
-inline void warning(const std::string& fmt, T... args)
+inline void warning(const T&... args)
 {
 #ifndef msa_compile_cython
-    printf(s_bold "[warning]" s_reset " ");
-    printf(fmt.data(), args...);
-    putchar('\n');
+    msa::log(std::cout, s_bold "[warning]" s_reset, args...);
 #endif
 }
 
 /**
  * Prints a watchdog progress log message.
  * @tparam T The types of message arguments.
- * @param fmt The message format.
- * @param args The format values.
+ * @param args The message parts to be printed.
  */
 template <typename ...T>
-inline void watchdog(const std::string& task, uint32_t done, uint32_t total, const std::string& fmt, T... args)
+inline void watchdog(const char *task, size_t done, size_t total, const T&... args)
 {
 #ifndef msa_compile_cython
-    printf("[watchdog] ");
-    printf("%s %u %u %u %u ", task.data(), node::rank, node::size, done, total);
-    printf(fmt.data(), args...);
-    putchar('\n');
+    msa::log(std::cout, "[watchdog]", task, node::rank, node::size - 1, done, total, args...);
 #endif
 }
 

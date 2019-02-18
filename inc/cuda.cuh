@@ -244,6 +244,19 @@ namespace cuda
          */
         enum : Device { original = 0 };
 
+#ifdef msa_compile_cuda
+        /**
+         * Returns the free amount of memory available for allocation by the device.
+         * @return The amount of free memory in bytes.
+         */
+        inline size_t freeMemory()
+        {
+            size_t free, _;
+            call(cudaMemGetInfo(&free, &_));
+            return free;
+        }
+#endif
+
         extern int getCount();
         extern Device getCurrent();
         extern void setCurrent(const Device& = original);

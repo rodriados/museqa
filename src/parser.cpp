@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "msa.hpp"
 #include "parser.hpp"
 #include "database.hpp"
 #include "exception.hpp"
@@ -33,7 +34,9 @@ std::vector<DatabaseEntry> parser::parse(const std::string& filename, const std:
     const auto& pair = dispatcher.find(extension);
 
     if(pair == dispatcher.end())
-        throw Exception("unknown parser for extension: " + extension);
+        throw Exception("unknown parser for extension:", extension);
+
+    info("parsing sequence file:" s_bold, filename, s_reset);
 
     return pair->second(filename);
 }

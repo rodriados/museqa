@@ -221,7 +221,7 @@ static Table *getTable(const std::string& name)
     if(pair == dispatcher.end())
         throw Exception("could not find scoring table: " + name);
 
-    onlymaster info("using pairwise scoring table: %s", name.data());
+    onlymaster info("using pairwise scoring table:" s_bold, name, s_reset);
 
     return pair->second;
 }

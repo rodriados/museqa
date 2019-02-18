@@ -11,29 +11,23 @@
 #include <string>
 #include <cstdint>
 
+#include "cuda.cuh"
 #include "utils.hpp"
 #include "buffer.hpp"
 #include "pointer.hpp"
 #include "database.hpp"
 
-#include "pairwise/database.cuh"
-
-/*
- * Configuration macros. These values interfere directly into the algorithm's
- * exection, and should be modified with certain caution.
- */
-#define pw_threads_per_block 32 
-#define pw_prefer_shared_memory 1
-
 namespace pairwise
 {
     /**
-     * Stores the indeces of a pair of sequences to be aligned.
+     * Manages and encapsulates all configurable aspects of the pairwise module.
      * @since 0.1.1
      */
-    struct Workpair
+    struct Configuration
     {
-        uint16_t id[2];
+        const ::Database& db;           /// The database of sequences to align.
+        std::string algorithm;          /// The chosen pairwise algorithm.
+        std::string table;              /// The chosen scoring table.
     };
 
     /**
@@ -43,65 +37,27 @@ namespace pairwise
     using Score = int32_t;
 
     /**
-     * Manages and encapsulates all configurable aspects of the pairwise module.
-     * @since 0.1.1
-     */
-    struct Configuration
-    {
-        const ::Database& db;           /// The database of sequences to align.
-        std::string algorithm;          /// The chosen pairwise algorithm.
-        std::string scoringTable;       /// The chosen scoring table.
-    };
-
-    /**
-     * An abstract pairwise algorithm class.
-     * @since 0.1.1
-     */
-    class Algorithm
-    {
-        private:
-            const Configuration& config;    /// The module configuration.
-
-        protected:
-            Buffer<Score> score;            /// The buffer of calculated workpair scores.
-            Buffer<Workpair> pair;          /// The list of pairs to align.
-            pairwise::Database db;          /// The compressed database of sequences.
-
-        public:
-            Algorithm() = default;
-            Algorithm(const Algorithm&) = default;
-            Algorithm(Algorithm&&) = default;
-
-            /**
-             * Instantiates a new algorithm instance.
-             * @param config The module configuration.
-             */
-            inline Algorithm(const Configuration& config)
-            :   config {config}
-            {}
-
-            virtual ~Algorithm() noexcept = default;
-
-            Algorithm& operator=(const Algorithm&) = default;
-            Algorithm& operator=(Algorithm&&) = default;
-
-            virtual Buffer<Workpair> generate() = 0;
-            virtual Buffer<Score> run() = 0;
-    };
-
-    /**
-     * Functor responsible for building a new algorithm instance.
-     * @see Pairwise::run
-     * @since 0.1.1
-     */
-    using AlgorithmFactory = Functor<Algorithm *(const Configuration&)>;
-
-    /**
      * The aminoacid matches scoring tables are stored contiguously. Thus,
      * we explicitly declare their sizes.
      * @since 0.1.1
      */
     using ScoringTable = int8_t[25][25];
+
+    /**
+     * Functor responsible for representing an algorithm.
+     * @see Pairwise::run
+     * @since 0.1.1
+     */
+    using Algorithm = Functor<Buffer<Score>(const Configuration&)>;
+
+    /**
+     * Stores the indeces of a pair of sequences to be aligned.
+     * @since 0.1.1
+     */
+    struct Pair
+    {
+        uint16_t id[2];
+    };
 
     /**
      * Manages all data and execution of the pairwise module.
@@ -113,7 +69,7 @@ namespace pairwise
             Buffer<Score> score;        /// The buffer of all workpairs' scores.
 
         public:
-            Pairwise();
+            Pairwise() = default;
             Pairwise(const Pairwise&) = default;
             Pairwise(Pairwise&&) = default;
 
@@ -153,8 +109,8 @@ namespace pairwise
 
     namespace scoring
     {
-        extern AutoPointer<ScoringTable> get(const std::string&);
-        extern AutoPointer<ScoringTable> toDevice(const std::string&);
+        extern Pointer<ScoringTable> retrieve(const std::string&);
+        extern Pointer<ScoringTable> toDevice(const std::string&);
     };
 };
 

@@ -1,69 +1,49 @@
 /**
  * Multiple Sequence Alignment needleman header file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018 Rodrigo Siqueira
+ * @copyright 2018-2019 Rodrigo Siqueira
  */
+#pragma once
+
 #ifndef PW_NEEDLEMAN_CUH_INCLUDED
 #define PW_NEEDLEMAN_CUH_INCLUDED
 
-#pragma once
-
-#include <set>
-#include <vector>
-
 #include "buffer.hpp"
-#include "pointer.hpp"
-
-#include "pairwise/sequence.cuh"
-#include "pairwise/pairwise.hpp"
+#include "pairwise/pairwise.cuh"
 
 namespace pairwise
 {
-    /**
-     * Implements the needleman algorithm for pairwise step.
-     * @since 0.1.alpha
-     */
-    class Needleman : public Algorithm
-    {
-        public:
-            /**
-             * Creates a new algorithm instance.
-             * @param list The sequence list to process.
-             * @param score The score array reference to store results.
-             */
-            explicit Needleman(const SequenceList& list, Buffer<Score>& score)
-            :   Algorithm(list, score) {}
-
-            void run() override;
-
-        protected:
-            void scatter() override;
-            void gather() override;
-
-        private:
-            size_t select(std::vector<Workpair>&, std::set<ptrdiff_t>&) const;
-            //void recover(std::vector<ptrdiff_t>&, Buffer<Score>&);
-    };
-
-#ifdef __CUDACC__
     namespace needleman
     {
         /**
-         * Holds all data to be sent to device for execution.
-         * @since 0.1.alpha
+         * Module general functions.
          */
-        struct Input
-        {
-            const int8_t penalty;                   // The gap penalty.
-            SharedPointer<int8_t[25][25]> table;    // The scoring table to be used.
-            dSequenceList sequence;                 // The list of sequences to process.
-            Buffer<Workpair> pair;                  // The list of workpairs to process.
-            Buffer<Score> glcache;                  // Memory allocated for execution.
-        };
+        extern Buffer<Pair> generate(size_t);
+        
+        /*
+         * Module distribution functions.
+         */
+        extern Buffer<Pair> scatter(Buffer<Pair>&);
+        extern Buffer<Score> gather(Buffer<Score>&);
 
-        extern __global__ void run(Input, Buffer<Score>);
+        /*
+         * Module algorithms.
+         */
+        //extern Buffer<Score> sequential(const Configuration&);
+        //extern Buffer<Score> parallel(const Configuration&);
+        //extern Buffer<Score> distributed(cosnt Configuration&);
+        extern Buffer<Score> hybrid(const Configuration&);
+
+        /**
+         * Calls the default algorithm for the current module.
+         * @param config The module configuration parameters.
+         * @return The algorithm execution result.
+         */
+        inline Buffer<Score> run(const Configuration& config)
+        {
+            return hybrid(config);
+        }
     };
-#endif
 };
 
 #endif

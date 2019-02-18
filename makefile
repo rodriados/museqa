@@ -1,6 +1,6 @@
 # Multiple Sequence Alignment makefile.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
-# @copyright 2018 Rodrigo Siqueira
+# @copyright 2018-2019 Rodrigo Siqueira
 NAME = msa
 
 INCDIR = inc
@@ -33,7 +33,7 @@ DEFS ?=
 
 MPCCFLAGS = -std=$(STDC) -I$(INCDIR) -g -Wall -lm -fPIC $(DEFS)
 MPPPFLAGS = -std=$(STDCPP) -I$(INCDIR) -g -Wall -fPIC $(DEFS)
-NVCCFLAGS = -std=$(STDCU) -I$(INCDIR) -g -arch $(NVARCH) -lmpi -lcuda -lcudart -w $(DEFS)
+NVCCFLAGS = -std=$(STDCU) -I$(INCDIR) -g -arch $(NVARCH) -lmpi -lcuda -lcudart -w -D_MWAITXINTRIN_H_INCLUDED $(DEFS)
 PYCCFLAGS = -std=$(STDCPP) -I$(INCDIR) -I$(PY2INCDIR) -shared -pthread -fPIC -fwrapv -O2 -Wall -fno-strict-aliasing $(DEFS)
 PYXCFLAGS = --cplus -I$(INCDIR)
 LINKFLAGS = -L$(MPILIBDIR) -lmpi_cxx -lmpi -g
