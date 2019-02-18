@@ -20,17 +20,6 @@
 namespace pairwise
 {
     /**
-     * Manages and encapsulates all configurable aspects of the pairwise module.
-     * @since 0.1.1
-     */
-    struct Configuration
-    {
-        const ::Database& db;           /// The database of sequences to align.
-        std::string algorithm;          /// The chosen pairwise algorithm.
-        std::string table;              /// The chosen scoring table.
-    };
-
-    /**
      * The score of the alignment of a sequence pair.
      * @since 0.1.1
      */
@@ -44,13 +33,6 @@ namespace pairwise
     using ScoringTable = int8_t[25][25];
 
     /**
-     * Functor responsible for representing an algorithm.
-     * @see Pairwise::run
-     * @since 0.1.1
-     */
-    using Algorithm = Functor<Buffer<Score>(const Configuration&)>;
-
-    /**
      * Stores the indeces of a pair of sequences to be aligned.
      * @since 0.1.1
      */
@@ -58,6 +40,24 @@ namespace pairwise
     {
         uint16_t id[2];
     };
+
+    /**
+     * Manages and encapsulates all configurable aspects of the pairwise module.
+     * @since 0.1.1
+     */
+    struct Configuration
+    {
+        const ::Database& db;           /// The database of sequences to align.
+        std::string algorithm;          /// The chosen pairwise algorithm.
+        std::string table;              /// The chosen scoring table.
+    };
+    
+    /**
+     * Functor responsible for representing an algorithm.
+     * @see Pairwise::run
+     * @since 0.1.1
+     */
+    using Algorithm = Functor<Buffer<Score>(const Configuration&)>;
 
     /**
      * Manages all data and execution of the pairwise module.

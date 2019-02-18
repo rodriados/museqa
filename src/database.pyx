@@ -42,8 +42,8 @@ cdef class DatabaseEntry:
 cdef class Database:
 
     # Instantiates a new sequence database.
-    # @param list args Positional arguments.
-    def __cinit__(self, *args):
+    # @param list args The sequences to compose the database.
+    def __cinit__(self, list args):
         self.add(*args)
 
     # Gives access to a specific sequence of the database.

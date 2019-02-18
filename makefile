@@ -31,8 +31,8 @@ PY2INCDIR ?= /usr/include/python2.7
 # or disable certain marked features on code.
 DEFS ?= 
 
-MPCCFLAGS = -std=$(STDC) -I$(INCDIR) -g -Wall -lm -fPIC $(DEFS)
-MPPPFLAGS = -std=$(STDCPP) -I$(INCDIR) -g -Wall -fPIC $(DEFS)
+MPCCFLAGS = -std=$(STDC) -I$(INCDIR) -g -Wall -lm -fPIC -O3 $(DEFS)
+MPPPFLAGS = -std=$(STDCPP) -I$(INCDIR) -g -Wall -fPIC -O3 $(DEFS)
 NVCCFLAGS = -std=$(STDCU) -I$(INCDIR) -g -arch $(NVARCH) -lmpi -lcuda -lcudart -w -D_MWAITXINTRIN_H_INCLUDED $(DEFS)
 PYCCFLAGS = -std=$(STDCPP) -I$(INCDIR) -I$(PY2INCDIR) -shared -pthread -fPIC -fwrapv -O2 -Wall -fno-strict-aliasing $(DEFS)
 PYXCFLAGS = --cplus -I$(INCDIR)
