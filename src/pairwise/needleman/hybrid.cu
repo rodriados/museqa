@@ -135,12 +135,12 @@ __device__ Score alignComplete
     // The 0-th column and line of the alignment matrix must be initialized by using
     // successive gap penalties. As the columns will not be recalculated each iteration,
     // we must then manually calculate its initial state.
-    for(size_t lineOffset = threadIdx.x, n = one.getLength(); lineOffset < n; lineOffset += blockSize)
+    for(size_t lineOffset = threadIdx.x, l1 = one.getLength(); lineOffset < l1; lineOffset += blockSize)
         column[lineOffset] = - penalty * (lineOffset + 1);
 
     __syncthreads();
 
-    for(size_t columnOffset = 0; columnOffset < two.getLength(); columnOffset += batchSize) {
+    for(size_t columnOffset = 0, l2 = two.getLength(); columnOffset < l2; columnOffset += batchSize) {
         // For each slice, we need to set up the 0-th line of the alignment matrix. We
         // achieve this by calculating the penalties represented in the line. Also, as
         // we are already iterating over the line, we decode the slice of the sequence
@@ -158,10 +158,11 @@ __device__ Score alignComplete
         // We will align each slice of the first sequence with the entirety of the second
         // sequence. The 0-th column of each slice will be obtained from the last column
         // of the previous slice. For the first slice, the 0-th column was previously calculated.
-        for(size_t lineOffset = threadIdx.x, n = one.getLength(); lineOffset < n; lineOffset += blockSize) {
-            Score done = lineOffset > 0
-                ? column[lineOffset - 1]
-                : - penalty * columnOffset;
+        for(size_t lineOffset = threadIdx.x, l1 = one.getLength(); lineOffset < l1; lineOffset += blockSize) {
+            Score done = columnOffset > 0
+                ? (lineOffset > 0 ? column[lineOffset - 1] : - penalty * columnOffset)
+                : - penalty * lineOffset;
+
             Score left = column[lineOffset];
             uint8_t letter = one[lineOffset];
 
