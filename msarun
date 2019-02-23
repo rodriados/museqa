@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # Multiple Sequence Alignment controller script.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
-# @copyright 2018 Rodrigo Siqueira
+# @copyright 2018-2019 Rodrigo Siqueira
+
+# Declaring software version
+readonly version="msa 0.1.1"
 
 # Creates a new named pipe and returns its name. The pipe allows to stablish
 # communication to and from an external process.
@@ -20,32 +23,29 @@ createpipe()
 # letting the user know what is the use of this script.
 showhelp()
 {
-    echo "Usage: msarun [options] file"
+    echo "Usage: msarun [options] files..."
     echo "Options:"
     echo "  -h, --help                  Prints this information."
     echo "  -v, --version               Prints the software version."
-    echo "  -f, --file      <file>      The FASTA file to align."
     echo "  -m, --multigpu              Try to use multiple devices in a single host."
     echo "  -x, --matrix    <matrix>    The scoring matrix to use for alignment."
     echo "  -H, --hostfile  <hostfile>  The cluster configuration file."
+    echo "  -1, --pairwise  <algorithm> The algorithm to use in pairwise module."
+    echo "  -2, --phylotree <algorithm> The algorithm to use in phylogenetic tree module."
 }
 
 # Initializing command line variables and flags
-file=false
-matrix="blosum62"
 hostfile=
-msaflags=()
+msaargs=()
 
 # Parses the command line options and sets all respective variables. Any positional
 # value unlinked to any option sent will also be captured.
 while [ $# -gt 0 ]; do
     case $1 in
-        -h | --help     ) showhelp;             exit 0  ;;
-        -f | --file     ) file="$2";            shift 2 ;;
-        -x | --matrix   ) matrix="$2";          shift 2 ;;
-        -v | --version  ) obj/msa -v;           exit 0  ;;
+        -h | --help     ) showhelp;             exit  0 ;;
+        -v | --version  ) echo "$version";      exit  0 ;;
         -H | --hostfile ) hostfile="$2";        shift 2 ;;
-        *               ) msaflags+=("$1");     shift   ;;
+        *               ) msaargs+=("$1");      shift   ;;
     esac
 done
 
@@ -53,12 +53,6 @@ done
 # the name is defaulted to "hostfile".
 if [[ -z "$hostfile" || (-e "$hostfile" && ! -f "$hostfile") ]]; then
     hostfile="hostfile"
-fi
-
-# If no file option has been sent, we can get it from positional values.
-if [ -z "$file" ]; then
-    file="${msaflags[0]}"
-    msaflags=("${msaflags[@]:1}")
 fi
 
 #Creates the pipe to communicate with watchdog process.
@@ -72,5 +66,8 @@ if [[ ! -f "$hostfile" ]]; then
 fi
 
 # Run the main project software.
-mpirun -q --hostfile $hostfile obj/msa -f $file -x $matrix ${msaflags[@]} > $pipe &
+mpirun -q --hostfile $hostfile obj/msa ${msaargs[@]} > $pipe &
 src/watchdog.sh $! <$pipe
+
+# Waits for any undesired "killed" message and throws it away.
+wait $! 2>/dev/null

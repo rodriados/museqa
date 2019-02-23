@@ -114,8 +114,7 @@ createpipe()
 watchdog()
 {
     local args=($@)
-    printf "[watchdog] hostfinder 1 1 %d %d %s\n" \
-        $1 $2 "${args[*]:2}"
+    printf "[watchdog] hostfinder 1 1 %d %d %s\n" $1 $2 "${args[*]:2}"
 }
 
 # Lists all available command line options and shows information about them,
@@ -133,8 +132,7 @@ showhelp()
 # allows the user to know that one of the options they requested do not exist.
 invalid_arg()
 {
-    printf "[error] unrecognized command line option '%s'\n" \
-        $1
+    printf "[error] unrecognized command line option '%s'\n" $1
 }
 
 # Initializing command line variables and flags
@@ -173,6 +171,7 @@ if [ "$watchdog" = false ]; then
     # automatically deleted.
     findhosts $file ${positional[@]} >$pipe &
     src/watchdog.sh $! <$pipe
+    wait $! 2>/dev/null
 else
     # If the script has been invoked in watchdog mode, than it shall show watchdog
     # messages while scanning for hosts.

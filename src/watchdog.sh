@@ -83,14 +83,14 @@ parseline()
 
     # If the process has reported an error, then it shall be killed.
     elif [ "${line_contents[0]}" == "[error]" ]; then
-        kill -9 $target_pid > /dev/null 2>&1
         error "${line_contents[@]:1}"
+        kill -2 -$target_pid > /dev/null 2>&1;      sleep 1
+        kill -9 $target_pid > /dev/null 2>&1
         exit 1
 
     # If the line is not targeted to the watchdog, simply print it.
     else
-        printf "${e_clearline}\r   %s\n" \
-            "${line_contents[*]}"
+        printf "${e_clearline}\r   %s\n" "${line_contents[*]}"
     fi
 }
 
@@ -111,6 +111,20 @@ error()
     printf "${e_clearline}\r   ${c_red_fg}${s_bold}[error] ${c_blue_fg}%s${s_reset} %s\n" \
         $bar_process "${args[*]}"
 }
+
+# Aborts the script execution and imediately halts the watched process execution.
+# First, a SIGINT will be sent to process, and then SIGKILL if still alive.
+abort()
+{
+    printf "${e_clearline}\r   ${c_red_fg}${s_bold}[abort]${s_reset} aborted by the user\n"
+
+    kill -2 -$target_pid > /dev/null 2>&1;          sleep 1
+    kill -9 $target_pid > /dev/null 2>&1
+    exit 2
+}
+
+# Catch a Ctrl-C and perform abort routine.
+trap "abort" 2
 
 # Analyze all input coming in the standard input channel while the target process
 # is active. Keep printing progress bar while process is calculating.

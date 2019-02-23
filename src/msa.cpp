@@ -25,9 +25,9 @@
  */
 static const std::vector<cmdline::Option> options = {
     {"m", "multigpu",   "Try to use multiple devices in a single host."}
-,   {"s", "sequential", "Executes in sequential mode, that is, without all parallel machinery."}
 ,   {"x", "matrix",     "Choose the scoring matrix to use in pairwise.", true}
-,   {"1", "pw-alg",     "Choose the algorithm to use in pairwise.", true}
+,   {"1", "pairwise",   "Choose the algorithm to use in pairwise module.", true}
+,   {"2", "phylotree",  "Choose the algorithm to use in phylogenetic tree module.", true}
 };
 
 namespace msa
@@ -72,7 +72,7 @@ namespace msa
     {
         pw.run({
             db
-        ,   cmdline::get<std::string>("pw-alg", "needleman")
+        ,   cmdline::get<std::string>("pairwise", "needleman")
         ,   cmdline::get<std::string>("matrix", "blosum62")
         });
     }
@@ -98,6 +98,7 @@ namespace msa
             report("total", stopwatch::run([]() {
                 report("loading", stopwatch::run(load, db));
                 report("pairwise", stopwatch::run(pwrun, pw, db));
+                //report("njoining", stopwatch::run(njrun, nj, pw));
             }));
         }
 
@@ -131,7 +132,7 @@ int main(int argc, char **argv)
     cmdline::init(options);
     cmdline::parse(argc, argv);
 
-    if(!cmdline::has("sequential") && node::size < 2)
+    if(node::size < 2)
         error("at least 2 nodes are needed.");
 
     onlyslaves if(!cuda::device::getCount())
