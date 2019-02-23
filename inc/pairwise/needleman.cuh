@@ -16,33 +16,24 @@ namespace pairwise
     namespace needleman
     {
         /**
-         * Module general functions.
+         * Represents a general needleman algorithm.
+         * @since 0.1.1
          */
-        extern Buffer<Pair> generate(size_t);
-        
-        /*
-         * Module distribution functions.
-         */
-        extern Buffer<Pair> scatter(Buffer<Pair>&);
-        extern Buffer<Score> gather(Buffer<Score>&);
-
-        /*
-         * Module algorithms.
-         */
-        //extern Buffer<Score> sequential(const Configuration&);
-        //extern Buffer<Score> parallel(const Configuration&);
-        //extern Buffer<Score> distributed(cosnt Configuration&);
-        extern Buffer<Score> hybrid(const Configuration&);
-
-        /**
-         * Calls the default algorithm for the current module.
-         * @param config The module configuration parameters.
-         * @return The algorithm execution result.
-         */
-        inline Buffer<Score> run(const Configuration& config)
+        class Needleman : public Algorithm
         {
-            return hybrid(config);
-        }
+            protected:
+                Buffer<Score> score;            /// The algorithm result.
+
+            public:
+                virtual Buffer<Score> run(const Configuration&) = 0;
+
+            protected:
+                Buffer<Pair> scatter();
+                Buffer<Score> gather();
+
+        };
+
+        extern Algorithm *factory();
     };
 };
 

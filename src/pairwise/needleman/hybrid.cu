@@ -21,6 +21,7 @@
 #include "pairwise/database.cuh"
 #include "pairwise/pairwise.cuh"
 #include "pairwise/needleman.cuh"
+#include "pairwise/needleman/hybrid.cuh"
 
 using namespace pairwise;
 
@@ -56,7 +57,7 @@ struct Input
 {
     pairwise::Database db;      /// The database of sequences available for alignment.
     Buffer<Workpair> jobs;      /// The work units to process.
-    Buffer<Score> cache;        /// The allocated cache for all current work units.
+    Buffer<int32_t> cache;        /// The allocated cache for all current work units.
 };
 
 // TODO: Whenever a thread finishes a line calculation, make it execute the first not
@@ -66,7 +67,7 @@ struct Input
  * Dynamically allocated shared memory pointer. This variable has its contents
  * allocated dynamic at kernel call runtime.
  */
-extern __shared__ Score line[];
+extern __shared__ int32_t line[];
 
 /**
  * Aligns a slice of a sequence.
@@ -78,16 +79,16 @@ extern __shared__ Score line[];
  * @param letter The letter to update the LCS line with.
  * @return The value calculated in the last column.
  */
-__device__ Score alignSlice
+__device__ int32_t alignSlice
     (   const uint8_t *decoded
     ,   const Pointer<ScoringTable>& table
     ,   const int8_t penalty
-    ,   Score done
-    ,   Score left
+    ,   int32_t done
+    ,   int32_t left
     ,   const uint8_t letter                )
 {
     uint8_t actual;
-    Score val = left;
+    int32_t val = left;
 
     // To align the slice with a block of the other sequence, we use the whole thread block
     // to calculate part of its line. The threads work in a diagonal fashion upon the line.
@@ -123,10 +124,10 @@ __device__ Score alignSlice
  * @param penalty The gap penalty.
  * @return The score between sequences.
  */
-__device__ Score alignComplete
+__device__ int32_t alignComplete
     (   const SequenceSlice& one
     ,   const SequenceSlice& two
-    ,   Score * const column
+    ,   int32_t * const column
     ,   const Pointer<ScoringTable>& table
     ,   const int8_t penalty                )
 {
@@ -153,21 +154,30 @@ __device__ Score alignComplete
             line[i] = - penalty * (columnOffset + i + 1);
         }
 
+        size_t lastLine = threadIdx.x;
+        int32_t lastValue = column[lastLine];
+
         __syncthreads();
 
         // We will align each slice of the first sequence with the entirety of the second
         // sequence. The 0-th column of each slice will be obtained from the last column
         // of the previous slice. For the first slice, the 0-th column was previously calculated.
         for(size_t lineOffset = threadIdx.x, l1 = one.getLength(); lineOffset < l1; lineOffset += blockSize) {
-            Score done = columnOffset > 0
+            int32_t done = columnOffset > 0
+                /// Rank 0 is getting from line already changed!
                 ? (lineOffset > 0 ? column[lineOffset - 1] : - penalty * columnOffset)
                 : - penalty * lineOffset;
 
-            Score left = column[lineOffset];
+            int32_t left = column[lineOffset];
             uint8_t letter = one[lineOffset];
 
-            column[lineOffset] = alignSlice(decoded, table, penalty, done, left, letter);
+            column[lastLine] = lastValue;
+
+            lastValue = alignSlice(decoded, table, penalty, done, left, letter);
+            lastLine = lineOffset;
         }
+
+        column[lastLine] = lastValue;
 
         __syncthreads();
     }
@@ -183,7 +193,7 @@ __device__ Score alignComplete
  * @param in The input data requested by the algorithm.
  * @param out The output data produced by the algorithm.
  */
-__launch_bounds__(nw_threads_block, 4)
+__launch_bounds__(nw_threads_block, 8)
 __global__ void kernel(const Pointer<ScoringTable> table, Input in, Buffer<Score> out)
 {
     if(blockIdx.x < in.jobs.getSize()) {
@@ -193,7 +203,7 @@ __global__ void kernel(const Pointer<ScoringTable> table, Input in, Buffer<Score
         const SequenceSlice& seq1 = in.db[in.jobs[blockIdx.x].pair.id[0]];
         const SequenceSlice& seq2 = in.db[in.jobs[blockIdx.x].pair.id[1]];
 
-        Score result = alignComplete(
+        int32_t result = alignComplete(
             seq1.getSize() > seq2.getSize() ? seq1 : seq2
         ,   seq1.getSize() > seq2.getSize() ? seq2 : seq1
         ,   &in.cache[in.jobs[blockIdx.x].cacheOffset]
@@ -201,8 +211,7 @@ __global__ void kernel(const Pointer<ScoringTable> table, Input in, Buffer<Score
         ,   -(*table)[24][0]
         );
 
-        if(!threadIdx.x)
-            out[blockIdx.x] = result;
+        if(!threadIdx.x)    out[blockIdx.x] = result;
     }
 }
 
@@ -238,7 +247,7 @@ static void upload
 
     in.db = pairwise::Database{db, used}.toDevice();
     in.jobs = Buffer<Workpair> {cuda::allocate<Workpair>(batch), batch};
-    in.cache = Buffer<Score> {cuda::allocate<Score>(cacheSize), cacheSize};
+    in.cache = Buffer<int32_t> {cuda::allocate<int32_t>(cacheSize), cacheSize};
 
     cuda::copy<Workpair>(in.jobs.getBuffer(), workpairs.getBuffer(), batch);
 }
@@ -258,7 +267,7 @@ inline size_t calcMemUsage(const ::Database& db, const std::vector<bool> used, c
     return 2 * sizeof(SequenceSlice) + sizeof(encoder::EncodedBlock) * (
             (used[pair.id[0]] ? 0 : db[pair.id[0]].getSize())
         +   (used[pair.id[1]] ? 0 : db[pair.id[1]].getSize())
-        ) + sizeof(Workpair) + sizeof(Score) * (*cachesz + 1);
+        ) + sizeof(Workpair) + sizeof(int32_t) * (*cachesz) + sizeof(Score);
 }
 
 /**
@@ -328,14 +337,14 @@ static Buffer<Score> run(const ::Database& db, const Buffer<Pair>& pairs, const 
         batch = prepare(db, pairs, done, in);
         out = Buffer<Score> {cuda::allocate<Score>(batch), batch};
 
-        if(!batch) throw Exception("not all pairs fit in device memory.");
+        if(!batch) throw Exception("no pair fit in device memory.");
 
         // Here, we call our kernel and allocate our Needleman-Wunsch line buffer in shared memory.
         // We recommend that the batch size be exactly 480 a multiple of both the number of characters
         // in an encoded sequence block and the number of threads in a warp. We also recommend that
         // the block size must not be higher than a warp, but you can change this by tweaking the
         // *nw_threads_block* configuration value.
-        kernel<<<batch, blockSize, sizeof(Score) * batchSize>>>(table, in, out);
+        kernel<<<batch, blockSize, sizeof(int32_t) * batchSize>>>(table, in, out);
         cuda::copy<Score>(&score[done], out.getBuffer(), batch);
         done += batch;
 
@@ -346,20 +355,19 @@ static Buffer<Score> run(const ::Database& db, const Buffer<Pair>& pairs, const 
 }
 
 /**
- * Executes the needleman algorithm for the pairwise step. This method
- * is responsible for distributing and gathering workload from different
- * cluster nodes.
+ * Executes the hybrid needleman algorithm for the pairwise step. This method is
+ * responsible for distributing and gathering workload from different cluster nodes.
+ * @param config The module's configuration.
+ * @return The module's result value.
  */
-Buffer<Score> needleman::hybrid(const Configuration& config)
+Buffer<Score> needleman::Hybrid::run(const Configuration& config)
 {
-    Buffer<Score> score;
-    Buffer<Pair> pairs;
+    onlymaster this->generate(config.db.getCount());
+    this->scatter();
+ 
+    Pointer<ScoringTable> scoring = table::toDevice(config.table);
 
-    onlymaster pairs = needleman::generate(config.db.getCount());
-               pairs = needleman::scatter(pairs);
+    onlyslaves this->score = ::run(config.db, this->pair, scoring);
 
-    Pointer<ScoringTable> table = scoring::toDevice(config.table);
-    onlyslaves score = ::run(config.db, pairs, table);
-
-    return needleman::gather(score);
+    return this->gather();
 }

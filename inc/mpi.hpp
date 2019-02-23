@@ -716,6 +716,87 @@ namespace mpi
     /**#@-*/
 
     /**#@+
+     * Gathers data from all nodes and deliver combined data to all nodes
+     * @tparam T The type of buffer data to gather.
+     * @tparam U The type of buffer data to gather.
+     * @param send The outgoing buffer.
+     * @param recv The incoming buffer.
+     * @param scount The outgoing buffer size.
+     * @param rcount The size of incoming buffer from each node.
+     * @param displ The data displacement of each node.
+     * @param comm The communicator this operation applies to.
+     */
+    template <typename T>
+    inline void allgather
+        (   T *send, int scount
+        ,   T *recv, int rcount
+        ,   const Communicator& comm = world    )
+    {
+        call(MPI_Allgather(send, scount, datatype::get<T>(), recv, rcount, datatype::get<T>(), comm.id));
+    }
+
+    template <typename T>
+    inline void allgather
+        (   T *send, int scount
+        ,   T *recv, int *rcount, int *displ
+        ,   const Communicator& comm = world    )
+    {
+        call(MPI_Allgatherv(send, scount, datatype::get<T>(), recv, rcount, displ, datatype::get<T>(), comm.id));
+    }
+
+    template <typename T, typename U>
+    inline void allgather
+        (   T& send, int scount, int displ
+        ,   U& recv
+        ,   const Communicator& comm = world    )
+    {
+        detail::Payload<T> sendl {send};
+        detail::Payload<U> recvl {recv};
+
+        using S = typename decltype(sendl)::type;
+        using R = typename decltype(recvl)::type;
+
+        static_assert(std::is_same<S, R>::value, "Cannot gather with different types!");
+
+        std::vector<int> sizeList(comm.size), displList(comm.size);
+
+        allgather(&scount, 1, sizeList.data(), 1, comm);
+        allgather(&displ, 1, displList.data(), 1, comm);
+
+        recvl.resize(std::accumulate(sizeList.begin(), sizeList.end(), 0));
+        allgather(sendl.getBuffer(), sendl.getSize(), recvl.getBuffer(), sizeList.data(), displList.data(), comm);
+    }
+
+    template <typename T, typename U>
+    inline void allgather
+        (   T& send
+        ,   U& recv
+        ,   const Communicator& comm = world    )
+    {
+        detail::Payload<T> sendl {send};
+        detail::Payload<U> recvl {recv};
+
+        using S = typename decltype(sendl)::type;
+        using R = typename decltype(recvl)::type;
+
+        static_assert(std::is_same<S, R>::value, "Cannot gather with different types!");
+
+        int size = sendl.getSize();
+        std::vector<int> sizeList(comm.size), displList(comm.size + 1);
+
+        allgather(&size, 1, sizeList.data(), 1, comm);
+
+        bool equal = std::all_of(sizeList.begin(), sizeList.end(), [&size](int i) { return i == size; });
+        std::partial_sum(sizeList.begin(), sizeList.end(), displList.begin() + 1);
+
+        recvl.resize(displList.back());
+
+        if(equal) allgather(sendl.getBuffer(), size, recvl.getBuffer(), size, comm);
+        else allgather(sendl.getBuffer(), size, recvl.getBuffer(), sizeList.data(), displList.data(), comm);
+    }
+    /**#@-*/
+
+    /**#@+
      * Gather data from nodes according to given distribution.
      * @tparam T The type of buffer data to gather.
      * @tparam U The type of buffer data to gather.
@@ -789,12 +870,10 @@ namespace mpi
         int size = sendl.getSize();
         std::vector<int> sizeList(comm.size), displList(comm.size + 1);
 
-        gather(&size, 1, sizeList.data(), 1, root, comm);
+        allgather(&size, 1, sizeList.data(), 1, comm);
 
         bool equal = std::all_of(sizeList.begin(), sizeList.end(), [&size](int i) { return i == size; });
         std::partial_sum(sizeList.begin(), sizeList.end(), displList.begin() + 1);
-
-        broadcast(equal, root, comm);
 
         if(comm.rank == root) recvl.resize(displList.back());
 

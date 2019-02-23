@@ -51,13 +51,36 @@ namespace pairwise
         std::string algorithm;          /// The chosen pairwise algorithm.
         std::string table;              /// The chosen scoring table.
     };
-    
+
+    /**
+     * Represents a pairwise module algorithm.
+     * @since 0.1.1
+     */    
+    class Algorithm
+    {
+        protected:
+            Buffer<Pair> pair;              /// The sequence pairs to be aligned.
+
+        public:
+            Algorithm() = default;
+            Algorithm(const Algorithm&) = default;
+            Algorithm(Algorithm&&) = default;
+
+            virtual ~Algorithm() = default;
+
+            Algorithm& operator=(const Algorithm&) = default;
+            Algorithm& operator=(Algorithm&&) = default;
+
+            virtual Buffer<Pair> generate(size_t);
+            virtual Buffer<Score> run(const Configuration&) = 0;
+    };
+
     /**
      * Functor responsible for representing an algorithm.
      * @see Pairwise::run
      * @since 0.1.1
      */
-    using Algorithm = Functor<Buffer<Score>(const Configuration&)>;
+    using Factory = Functor<Algorithm *()>;
 
     /**
      * Manages all data and execution of the pairwise module.
@@ -107,7 +130,7 @@ namespace pairwise
             void run(const Configuration&);
     };
 
-    namespace scoring
+    namespace table
     {
         extern Pointer<ScoringTable> retrieve(const std::string&);
         extern Pointer<ScoringTable> toDevice(const std::string&);

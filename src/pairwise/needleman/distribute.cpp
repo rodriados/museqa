@@ -15,17 +15,16 @@ using namespace pairwise;
 
 /**
  * Scatters generated workpairs from master to all other processes.
- * @param origin All pairs to be scatter. Significant only at master.
  * @return The pairs the current node is responsible for processing.
  */
-Buffer<Pair> pairwise::needleman::scatter(Buffer<Pair>& origin)
+Buffer<Pair> needleman::Needleman::scatter()
 {
-    Buffer<Pair> destiny;
+    Buffer<Pair> origin = this->pair;
 
     size_t count = 0;
     size_t displ = 0;
+    size_t npair = origin.getSize();        
 
-    size_t npair = origin.getSize();
     mpi::broadcast(npair);
 
     onlyslaves {
@@ -38,19 +37,19 @@ Buffer<Pair> pairwise::needleman::scatter(Buffer<Pair>& origin)
         displ = quo * rank + std::min(rank, rem);
     }
 
-    mpi::scatter(origin, destiny, count, displ);
+    mpi::scatter(origin, this->pair, count, displ);
 
-    return destiny;
+    return this->pair;
 }
 
 /**
  * Gathers all calculated scores from all processes to master.
- * @param origin The scores to be sent from current process to master.
  * @return The gathered score from all processes.
  */
-Buffer<Score> pairwise::needleman::gather(Buffer<Score>& origin)
+Buffer<Score> needleman::Needleman::gather()
 {
-    Buffer<Score> destiny;
-    mpi::gather(origin, destiny);
-    return destiny;
+    Buffer<Score> origin = this->score;
+    mpi::allgather(origin, this->score);
+
+    return this->score;
 }
