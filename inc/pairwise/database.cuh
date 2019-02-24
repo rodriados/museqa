@@ -108,7 +108,7 @@ namespace pairwise
              */
             __host__ __device__ inline const SequenceSlice& operator[](ptrdiff_t offset) const
             {
-#ifdef msa_compile_cython
+#if defined(msa_compile_cython) && !defined(msa_compile_cuda)
                 if(static_cast<unsigned>(offset) >= getCount())
                     throw Exception("database index out of range");
 #endif

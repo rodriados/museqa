@@ -57,17 +57,8 @@ struct Input
 {
     pairwise::Database db;      /// The database of sequences available for alignment.
     Buffer<Workpair> jobs;      /// The work units to process.
-    Buffer<int32_t> cache;        /// The allocated cache for all current work units.
+    Buffer<int32_t> cache;      /// The allocated cache for all current work units.
 };
-
-// TODO: Whenever a thread finishes a line calculation, make it execute the first not
-// yet calculated line.
-
-/*
- * Dynamically allocated shared memory pointer. This variable has its contents
- * allocated dynamic at kernel call runtime.
- */
-extern __shared__ int32_t line[];
 
 /**
  * Aligns a slice of a sequence.
@@ -79,8 +70,9 @@ extern __shared__ int32_t line[];
  * @param letter The letter to update the LCS line with.
  * @return The value calculated in the last column.
  */
-__device__ int32_t alignSlice
-    (   const uint8_t *decoded
+__device__ int32_t sliceAlignment
+    (   int32_t *line
+    ,   const uint8_t *decoded
     ,   const Pointer<ScoringTable>& table
     ,   const int8_t penalty
     ,   int32_t done
@@ -124,67 +116,72 @@ __device__ int32_t alignSlice
  * @param penalty The gap penalty.
  * @return The score between sequences.
  */
-__device__ int32_t alignComplete
+__device__ int32_t globalAlignment
     (   const SequenceSlice& one
     ,   const SequenceSlice& two
-    ,   int32_t * const column
     ,   const Pointer<ScoringTable>& table
-    ,   const int8_t penalty                )
+    ,   const int8_t penalty
+    ,   int32_t *column
+    ,   int32_t *line                       )
 {
+    const int32_t lengthOne = static_cast<int32_t>(one.getLength());
+    const int32_t lengthTwo = static_cast<int32_t>(two.getLength());
+
     __shared__ uint8_t decoded[batchSize];
 
     // The 0-th column and line of the alignment matrix must be initialized by using
     // successive gap penalties. As the columns will not be recalculated each iteration,
     // we must then manually calculate its initial state.
-    for(size_t lineOffset = threadIdx.x, l1 = one.getLength(); lineOffset < l1; lineOffset += blockSize)
-        column[lineOffset] = - penalty * (lineOffset + 1);
+    for(int32_t lineOffset = threadIdx.x; lineOffset < lengthOne; lineOffset += blockDim.x)
+        column[lineOffset] = - static_cast<int32_t>(penalty) * (lineOffset + 1);
 
     __syncthreads();
 
-    for(size_t columnOffset = 0, l2 = two.getLength(); columnOffset < l2; columnOffset += batchSize) {
+    for(int32_t columnOffset = 0; columnOffset < lengthTwo; columnOffset += batchSize) {
+        int32_t z0thcol = - static_cast<int32_t>(penalty) * columnOffset;
+
         // For each slice, we need to set up the 0-th line of the alignment matrix. We
         // achieve this by calculating the penalties represented in the line. Also, as
         // we are already iterating over the line, we decode the slice of the sequence
-        // taht will be processed in this iteration.
+        // that will be processed in this iteration.
         #pragma unroll
-        for(size_t i = threadIdx.x; i < batchSize; i += blockSize) {
-            decoded[i] = columnOffset + i < two.getLength()
+        for(int32_t i = threadIdx.x; i < batchSize; i += blockDim.x) {
+            decoded[i] = (columnOffset + i) < lengthTwo
                 ? two[columnOffset + i]
                 : encoder::end;
-            line[i] = - penalty * (columnOffset + i + 1);
+            line[i] = - static_cast<int32_t>(penalty) * (columnOffset + i + 1);
         }
-
-        size_t lastLine = threadIdx.x;
-        int32_t lastValue = column[lastLine];
 
         __syncthreads();
 
+        // We need to save the current state of the line we will be modifying. This is
+        // needed so the next iteration has the correct data it needs.
+        int32_t saveLine = threadIdx.x;
+        int32_t saveValue = column[saveLine];
+
         // We will align each slice of the first sequence with the entirety of the second
         // sequence. The 0-th column of each slice will be obtained from the last column
-        // of the previous slice. For the first slice, the 0-th column was previously calculated.
-        for(size_t lineOffset = threadIdx.x, l1 = one.getLength(); lineOffset < l1; lineOffset += blockSize) {
+        // of the previous slice. For the first slice, the 0-th column was previously calculated.        
+        for(int32_t lineOffset = threadIdx.x; lineOffset < lengthOne; lineOffset += blockDim.x) {
             int32_t done = columnOffset > 0
-                /// Rank 0 is getting from line already changed!
-                ? (lineOffset > 0 ? column[lineOffset - 1] : - penalty * columnOffset)
-                : - penalty * lineOffset;
-
+                ? (lineOffset > 0 ? column[lineOffset - 1] : z0thcol)
+                : - static_cast<int32_t>(penalty) * lineOffset;
             int32_t left = column[lineOffset];
             uint8_t letter = one[lineOffset];
 
-            column[lastLine] = lastValue;
+            column[saveLine] = saveValue;
 
-            lastValue = alignSlice(decoded, table, penalty, done, left, letter);
-            lastLine = lineOffset;
+            saveLine = lineOffset;
+            saveValue = sliceAlignment(line, decoded, table, penalty, done, left, letter);
         }
 
-        column[lastLine] = lastValue;
-
+        if(saveLine < lengthOne) column[saveLine] = saveValue;
         __syncthreads();
     }
 
     // The final result is the result obtained by the last column of the last line in the
     // alignment matrix. As the algorithm stops at sequence end, no extra penalties are needed.
-    return column[one.getLength() - 1];
+    return column[lengthOne - 1];
 }
 
 /** 
@@ -193,9 +190,11 @@ __device__ int32_t alignComplete
  * @param in The input data requested by the algorithm.
  * @param out The output data produced by the algorithm.
  */
-__launch_bounds__(nw_threads_block, 8)
+__launch_bounds__(nw_threads_block, 4)
 __global__ void kernel(const Pointer<ScoringTable> table, Input in, Buffer<Score> out)
 {
+    extern __shared__ int32_t line[];
+
     if(blockIdx.x < in.jobs.getSize()) {
         // We must make sure that, if the sequences have different lengths, the first
         // sequence is bigger than the second. This will allow the alignment method to
@@ -203,16 +202,16 @@ __global__ void kernel(const Pointer<ScoringTable> table, Input in, Buffer<Score
         const SequenceSlice& seq1 = in.db[in.jobs[blockIdx.x].pair.id[0]];
         const SequenceSlice& seq2 = in.db[in.jobs[blockIdx.x].pair.id[1]];
 
-        int32_t result = alignComplete(
+        out[blockIdx.x] = globalAlignment(
             seq1.getSize() > seq2.getSize() ? seq1 : seq2
         ,   seq1.getSize() > seq2.getSize() ? seq2 : seq1
+        ,   table, -(*table)[24][0]
         ,   &in.cache[in.jobs[blockIdx.x].cacheOffset]
-        ,   table
-        ,   -(*table)[24][0]
+        ,   line
         );
-
-        if(!threadIdx.x)    out[blockIdx.x] = result;
     }
+
+    __syncthreads();
 }
 
 /**
@@ -295,7 +294,7 @@ static size_t prepare
     std::vector<bool> usedSequence(db.getCount(), false);
     std::set<ptrdiff_t> selectedSequence;
 
-    jobs.reserve(100);
+    jobs.reserve(std::min(pairs.getSize(), maxbatch));
 
     for(size_t i = done, n = pairs.getSize(); i < n && batch < maxbatch; ++i, ++batch) {
         if((pairmem = calcMemUsage(db, usedSequence, pairs[i], &cachesz)) > memory)
@@ -362,10 +361,9 @@ static Buffer<Score> run(const ::Database& db, const Buffer<Pair>& pairs, const 
  */
 Buffer<Score> needleman::Hybrid::run(const Configuration& config)
 {
+    Pointer<ScoringTable> scoring = table::toDevice(config.table);
     onlymaster this->generate(config.db.getCount());
     this->scatter();
- 
-    Pointer<ScoringTable> scoring = table::toDevice(config.table);
 
     onlyslaves this->score = ::run(config.db, this->pair, scoring);
 

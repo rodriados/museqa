@@ -16,6 +16,7 @@
 #include "buffer.hpp"
 #include "pointer.hpp"
 #include "database.hpp"
+#include "exception.hpp"
 
 namespace pairwise
 {
@@ -106,6 +107,10 @@ namespace pairwise
              */
             inline const Score& operator[](ptrdiff_t offset) const
             {
+#if defined(msa_compile_cython)
+                if(static_cast<unsigned>(offset) >= getCount())
+                    throw Exception("score offset out of range");
+#endif
                 return score[offset];
             }
 
@@ -127,11 +132,23 @@ namespace pairwise
                 return score.getSize();
             }
 
+            /**
+             * Runs the module with given configuration.
+             * @param db The database of sequences to align.
+             * @param algorithm The chosen algorithm to run the module.
+             * @param table The selected scoring table to use.
+             */
+            inline void run(const ::Database& db, const std::string& algorithm, const std::string& table)
+            {
+                return run({db, algorithm, table});
+            }
+
             void run(const Configuration&);
     };
 
     namespace table
     {
+        extern ScoringTable *get(const std::string&);
         extern Pointer<ScoringTable> retrieve(const std::string&);
         extern Pointer<ScoringTable> toDevice(const std::string&);
     };

@@ -214,7 +214,7 @@ static const std::map<std::string, Table *> dispatcher = {
  * @param name The name of selected scoring table.
  * @return The pointer to selected table.
  */
-static Table *getTable(const std::string& name)
+Table *pairwise::table::get(const std::string& name)
 {
     const auto& pair = dispatcher.find(name);
 
@@ -234,7 +234,7 @@ static Table *getTable(const std::string& name)
 Pointer<Table> pairwise::table::retrieve(const std::string& name)
 {
     return {
-        getTable(name)
+        pairwise::table::get(name)
     ,   [](Table *) { /* You don't touch my table! */; }
     };
 }
@@ -247,7 +247,7 @@ Pointer<Table> pairwise::table::retrieve(const std::string& name)
 Pointer<Table> pairwise::table::toDevice(const std::string& name)
 {
     RawPointer<Table> ptr;
-    Table *selected = getTable(name);
+    Table *selected = pairwise::table::get(name);
 
     onlyslaves {
         ptr = cuda::allocate<Table>();

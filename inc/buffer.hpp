@@ -73,7 +73,7 @@ class BaseBuffer
          */
         __host__ __device__ inline T& operator[](ptrdiff_t offset) const
         {
-#ifdef msa_compile_cython
+#if defined(msa_compile_cython) && !defined(msa_compile_cuda)
             if(static_cast<unsigned>(offset) >= getSize())
                 throw Exception("buffer offset out of range");
 #endif
@@ -194,7 +194,7 @@ class BufferSlice : public BaseBuffer<T>
         inline BufferSlice(const BaseBuffer<T>& target, ptrdiff_t displ = 0, size_t size = 0)
         :   BaseBuffer<T> {target.getPointer(), size}
         {
-#ifdef msa_compile_cython
+#if defined(msa_compile_cython)
             if(static_cast<unsigned>(displ) >= target.getSize())
                 throw Exception("slice initialized out of range");
 #endif
@@ -209,7 +209,7 @@ class BufferSlice : public BaseBuffer<T>
         inline BufferSlice(const BaseBuffer<T>& target, const BufferSlice<T>& slice)
         :   BaseBuffer<T> {target.getPointer(), slice.getSize()}
         {
-#ifdef msa_compile_cython
+#if defined(msa_compile_cython)
             if(static_cast<unsigned>(slice.getDispl()) >= target.getSize())
                 throw Exception("slice initialized out of range");
 #endif

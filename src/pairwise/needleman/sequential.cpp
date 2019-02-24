@@ -1,5 +1,5 @@
 /**
- * Multiple Sequence Alignment parallel needleman file.
+ * Multiple Sequence Alignment sequential needleman file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018 Rodrigo Siqueira
  */
@@ -15,7 +15,7 @@
 
 #include "pairwise/pairwise.cuh"
 #include "pairwise/needleman.cuh"
-#include "pairwise/needleman/parallel.hpp"
+#include "pairwise/needleman/sequential.hpp"
 
 using namespace pairwise;
 
@@ -27,7 +27,11 @@ using namespace pairwise;
  * @param two The second sequence to align.
  * @return The alignment score.
  */
-static Score align(const Pointer<ScoringTable>& table, const int8_t penalty, const Sequence& one, const Sequence& two)
+static int32_t align
+    (   const Pointer<ScoringTable>& table
+    ,   const int8_t penalty
+    ,   const Sequence& one
+    ,   const Sequence& two                     )
 {
     const size_t len1 = one.getLength();
     const size_t len2 = two.getLength();
@@ -67,7 +71,7 @@ static Score align(const Pointer<ScoringTable>& table, const int8_t penalty, con
 }
 
 /**
- * Executes the parallel Needleman-Wunsch algorithm for the pairwise step.
+ * Executes the sequential Needleman-Wunsch algorithm for the pairwise step.
  * @param db The sequences available for alignment.
  * @param pairs The workpairs to align.
  * @param table The scoring table to use.
@@ -98,18 +102,17 @@ static Buffer<Score> run(const ::Database& db, const Buffer<Pair>& pairs, const 
 }
 
 /**
- * Executes the parallel needleman algorithm for the pairwise step. This method is
+ * Executes the sequential needleman algorithm for the pairwise step. This method is
  * responsible for distributing and gathering workload from different cluster nodes.
  * @param config The module's configuration.
  * @return The module's result value.
  */
-Buffer<Score> needleman::Parallel::run(const Configuration& config)
+Buffer<Score> needleman::Sequential::run(const Configuration& config)
 {
+    Pointer<ScoringTable> scoring = table::retrieve(config.table);
     onlymaster this->generate(config.db.getCount());
     this->scatter();
  
-    Pointer<ScoringTable> scoring = table::retrieve(config.table);
-
     onlyslaves this->score = ::run(config.db, this->pair, scoring);
 
     return this->gather();

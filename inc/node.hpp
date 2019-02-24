@@ -34,7 +34,7 @@ namespace node
   #define onlynode(i)  if((i) == node::rank)
 #else
   #define onlymaster   if(1)
-  #define onlyslaves   if(0)
+  #define onlyslaves   if(1)
   #define onlynode(i)  if((i) == node::master)
 #endif
 

@@ -33,8 +33,10 @@ DEFS ?=
 
 MPCCFLAGS = -std=$(STDC) -I$(INCDIR) -g -Wall -lm -fPIC -O3 $(DEFS)
 MPPPFLAGS = -std=$(STDCPP) -I$(INCDIR) -g -Wall -fPIC -O3 $(DEFS)
-NVCCFLAGS = -std=$(STDCU) -I$(INCDIR) -g -arch $(NVARCH) -lmpi -lcuda -lcudart -w -D_MWAITXINTRIN_H_INCLUDED $(DEFS)
-PYCCFLAGS = -std=$(STDCPP) -I$(INCDIR) -I$(PY2INCDIR) -shared -pthread -fPIC -fwrapv -O2 -Wall -fno-strict-aliasing $(DEFS)
+NVCCFLAGS = -std=$(STDCU) -I$(INCDIR) -g -arch $(NVARCH) -lmpi -lcuda -lcudart -w                   \
+		-D_MWAITXINTRIN_H_INCLUDED $(DEFS)
+PYCCFLAGS = -std=$(STDCPP) -I$(INCDIR) -I$(PY2INCDIR) -shared -pthread -fPIC -fwrapv -O2 -Wall      \
+		-fno-strict-aliasing $(DEFS)
 PYXCFLAGS = --cplus -I$(INCDIR)
 LINKFLAGS = -L$(MPILIBDIR) -lmpi_cxx -lmpi -g
 
@@ -44,17 +46,17 @@ MPCCFILES := $(shell find $(SRCDIR) -name '*.c')
 MPPPFILES := $(shell find $(SRCDIR) -name '*.cpp')
 NVCCFILES := $(shell find $(SRCDIR) -name '*.cu')
 PYXCFILES := $(shell find $(SRCDIR) -name '*.pyx')
-TDEPFILES := $(shell find $(TESTDIR)/$(NAME) -name '*.d')                   \
+TDEPFILES := $(shell find $(TESTDIR)/$(NAME) -name '*.d')                                           \
              $(shell find $(OBJDIR)/$(TESTDIR) -name '*.d' 2>/dev/null)
 
 SRCINTERNAL = $(sort $(dir $(wildcard $(SRCDIR)/*/. $(SRCDIR)/*/*/.)))
-OBJINTERNAL = $(SRCINTERNAL:$(SRCDIR)/%=$(OBJDIR)/%)                        \
+OBJINTERNAL = $(SRCINTERNAL:$(SRCDIR)/%=$(OBJDIR)/%)                                                \
               $(SRCINTERNAL:$(SRCDIR)/%=$(OBJDIR)/$(TESTDIR)/%)
 
-ODEPS = $(MPCCFILES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)                            \
-        $(MPPPFILES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)                          \
+ODEPS = $(MPCCFILES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)                                                    \
+        $(MPPPFILES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)                                                  \
         $(NVCCFILES:$(SRCDIR)/%.cu=$(OBJDIR)/%.o)
-TDEPS = $(PYXCFILES:$(SRCDIR)/%.pyx=$(OBJDIR)/$(TESTDIR)/%.so)              \
+TDEPS = $(PYXCFILES:$(SRCDIR)/%.pyx=$(OBJDIR)/$(TESTDIR)/%.so)                                      \
         $(PYXCFILES:$(SRCDIR)/%.pyx=$(TESTDIR)/$(NAME)/%.so)
 HDEPS = $(ODEPS:$(OBJDIR)/%.o=$(OBJDIR)/%.d)
 
@@ -70,6 +72,8 @@ production: install $(OBJDIR)/$(NAME)
 
 testing: override MPPP = $(PYCC)
 testing: override DEFS = -Dmsa_compile_cython
+testing: override NVCCFLAGS = -std=$(STDCU) -I$(INCDIR) -g -arch $(NVARCH) -lcuda -lcudart -w       \
+							-D_MWAITXINTRIN_H_INCLUDED $(DEFS) --compiler-options -fPIC
 testing: install $(TDEPS)
 
 clean:

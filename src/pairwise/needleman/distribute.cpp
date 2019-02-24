@@ -19,6 +19,7 @@ using namespace pairwise;
  */
 Buffer<Pair> needleman::Needleman::scatter()
 {
+#if !defined(msa_compile_cython)
     Buffer<Pair> origin = this->pair;
 
     size_t count = 0;
@@ -38,6 +39,7 @@ Buffer<Pair> needleman::Needleman::scatter()
     }
 
     mpi::scatter(origin, this->pair, count, displ);
+#endif
 
     return this->pair;
 }
@@ -48,8 +50,10 @@ Buffer<Pair> needleman::Needleman::scatter()
  */
 Buffer<Score> needleman::Needleman::gather()
 {
+#if !defined(msa_compile_cython)
     Buffer<Score> origin = this->score;
     mpi::allgather(origin, this->score);
+#endif
 
     return this->score;
 }

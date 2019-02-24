@@ -52,7 +52,7 @@ namespace encoder
      * @param offset The requested offset.
      * @return The stored value in given offset.
      */
-    __host__ __device__ inline uint8_t access(const BaseBuffer<EncodedBlock>& buffer, uint8_t offset)
+    __host__ __device__ inline uint8_t access(const BaseBuffer<EncodedBlock>& buffer, ptrdiff_t offset)
     {
         return access(buffer[offset / batchSize], offset % batchSize);
     }
