@@ -22,6 +22,7 @@ cdef extern from "sequence.hpp":
         string toString()
 
 cdef extern from "encoder.hpp" namespace "encoder":
+    cdef char cencode "encoder::encode"(char)
     cdef char cdecode "encoder::decode"(char)
 
 # Creates an sequence. This sequence is a buffer an any modification to

@@ -1,0 +1,10 @@
+test/msa/pairwise.so:                               \
+    obj/test/cuda.so                                \
+    obj/test/encoder.so                             \
+    obj/test/pairwise/table.so                      \
+    obj/test/pairwise/database.so                   \
+    obj/test/pairwise/pairwise.so                   \
+    obj/test/pairwise/needleman.so                  \
+    obj/test/pairwise/needleman/hybrid.so           \
+    obj/test/pairwise/needleman/sequential.so       \
+    obj/test/pairwise/needleman/distribute.so       \

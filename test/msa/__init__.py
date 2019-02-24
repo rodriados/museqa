@@ -16,6 +16,9 @@ for fname in os.listdir(path):
 
 # Now that we have told Python about all modules available in the directory,
 # it can import all of them at once without any other concerns.
+from .database import Database
+from .sequence import Sequence
+from .pairwise import Pairwise
 from . import *
 
 # Parses a list of files and produces a list of database entries.

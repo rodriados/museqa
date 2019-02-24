@@ -1,1 +1,2 @@
-test/msa/database.so: obj/test/encoder.so
+test/msa/database.so:                               \
+    obj/test/encoder.so

@@ -197,16 +197,28 @@ static Table tabledata[] = {
 };
 
 /*
+ * The list of names of every scoring tables available.
+ */
+static const std::vector<std::string> available = {
+    "blosum62"
+,   "blosum45"
+,   "blosum50"
+,   "blosum80"
+,   "blosum90"
+,   "pam250"
+};
+
+/*
  * Maps the tables' string names to its respective list index. This will be
  * needed to translate the table name from string to its integer.
  */
 static const std::map<std::string, Table *> dispatcher = {
-    {"blosum62", &tabledata[0]}
-,   {"blosum45", &tabledata[1]}
-,   {"blosum50", &tabledata[2]}
-,   {"blosum80", &tabledata[3]}
-,   {"blosum90", &tabledata[4]}
-,   {"pam250",   &tabledata[5]}
+    {available[0], &tabledata[0]}
+,   {available[1], &tabledata[1]}
+,   {available[2], &tabledata[2]}
+,   {available[3], &tabledata[3]}
+,   {available[4], &tabledata[4]}
+,   {available[5], &tabledata[5]}
 };
 
 /**
@@ -224,6 +236,15 @@ Table *pairwise::table::get(const std::string& name)
     onlymaster info("using pairwise scoring table:" s_bold, name, s_reset);
 
     return pair->second;
+}
+
+/**
+ * Informs the names of all available scoring tables.
+ * @return The list of available scoring tables.
+ */
+const std::vector<std::string>& pairwise::table::getList()
+{
+    return available;
 }
 
 /**

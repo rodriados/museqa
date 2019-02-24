@@ -149,6 +149,7 @@ namespace pairwise
     namespace table
     {
         extern ScoringTable *get(const std::string&);
+        extern const std::vector<std::string>& getList();
         extern Pointer<ScoringTable> retrieve(const std::string&);
         extern Pointer<ScoringTable> toDevice(const std::string&);
     };

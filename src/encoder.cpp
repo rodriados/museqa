@@ -46,7 +46,7 @@ static constexpr uint8_t shift[6] = {1, 6, 11, 17, 22, 27};
  * @param letter The character to encode.
  * @return The encoded character.
  */
-inline uint8_t translate(uint8_t letter)
+uint8_t encoder::encode(uint8_t letter)
 {
     letter = toupper(letter);
 
@@ -69,7 +69,7 @@ Buffer<encoder::EncodedBlock> encoder::encode(const char *ptr, size_t size)
         encoder::EncodedBlock block = 0;
 
         for(uint8_t j = 0; j < encoder::batchSize; ++j, ++n)
-            block |= (n < size ? translate(ptr[n]) : encoder::end) << shift[j];
+            block |= (n < size ? encoder::encode(ptr[n]) : encoder::end) << shift[j];
 
         vector.push_back(block | (n >= size));
     }
