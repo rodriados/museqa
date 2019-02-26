@@ -15,7 +15,6 @@
 
 #include "pairwise/pairwise.cuh"
 #include "pairwise/needleman.cuh"
-#include "pairwise/needleman/sequential.hpp"
 
 using namespace pairwise;
 
@@ -82,7 +81,7 @@ static Buffer<Score> run(const ::Database& db, const Buffer<Pair>& pairs, const 
     const size_t total = pairs.getSize();
     Buffer<Score> score {total};
 
-    watchdog("pairwise", 0, total, "aligning pairs");
+    watchdog("pairwise", 0, total, node::size - 1, "aligning pairs");
 
     for(size_t i = 0; i < total; ) {
         const Sequence& seq1 = db[pairs[i].id[0]];
@@ -95,25 +94,43 @@ static Buffer<Score> run(const ::Database& db, const Buffer<Pair>& pairs, const 
         ,   seq1.getSize() > seq2.getSize() ? seq2 : seq1
         );
 
-        watchdog("pairwise", ++i, total, "aligning pairs");
+        watchdog("pairwise", ++i, total, node::size - 1, "aligning pairs");
     }
 
     return score;
 }
 
 /**
- * Executes the sequential needleman algorithm for the pairwise step. This method is
- * responsible for distributing and gathering workload from different cluster nodes.
- * @param config The module's configuration.
- * @return The module's result value.
+ * The sequential needleman algorithm object. This algorithm uses no
+ * parallelism, besides pairs distribution to run the Needleman-Wunsch
+ * algorithm.
+ * @since 0.1.1
  */
-Buffer<Score> needleman::Sequential::run(const Configuration& config)
+struct Sequential : public Needleman
 {
-    Pointer<ScoringTable> scoring = table::retrieve(config.table);
-    onlymaster this->generate(config.db.getCount());
-    this->scatter();
- 
-    onlyslaves this->score = ::run(config.db, this->pair, scoring);
+    /**
+     * Executes the sequential needleman algorithm for the pairwise step. This method is
+     * responsible for distributing and gathering workload from different cluster nodes.
+     * @param config The module's configuration.
+     * @return The module's result value.
+     */
+    Buffer<Score> run(const Configuration& config) override
+    {
+        Pointer<ScoringTable> scoring = table::retrieve(config.table);
+        onlymaster this->generate(config.db.getCount());
+        this->scatter();
+     
+        onlyslaves this->score = ::run(config.db, this->pair, scoring);
 
-    return this->gather();
+        return this->gather();
+    }
+};
+
+/**
+ * Instantiates a new sequential needleman instance.
+ * @return The new algorithm instance.
+ */
+extern Algorithm *needleman::sequential()
+{
+    return new Sequential;
 }

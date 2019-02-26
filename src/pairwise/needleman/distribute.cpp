@@ -17,7 +17,7 @@ using namespace pairwise;
  * Scatters generated workpairs from master to all other processes.
  * @return The pairs the current node is responsible for processing.
  */
-Buffer<Pair> needleman::Needleman::scatter()
+Buffer<Pair> Needleman::scatter()
 {
 #if !defined(msa_compile_cython)
     Buffer<Pair> origin = this->pair;
@@ -48,7 +48,7 @@ Buffer<Pair> needleman::Needleman::scatter()
  * Gathers all calculated scores from all processes to master.
  * @return The gathered score from all processes.
  */
-Buffer<Score> needleman::Needleman::gather()
+Buffer<Score> Needleman::gather()
 {
 #if !defined(msa_compile_cython)
     Buffer<Score> origin = this->score;

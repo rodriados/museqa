@@ -62,7 +62,7 @@ namespace msa
     }
     /**#@-*/
 
-#ifndef msa_compile_cython
+#if !defined(msa_compile_cython)
     extern void halt(uint8_t = 0);
 #endif
 };
@@ -83,7 +83,7 @@ namespace msa
 template <typename ...T>
 inline void info(const T&... args)
 {
-#ifndef msa_compile_cython
+#if !defined(msa_compile_cython)
     msa::log(std::cout, s_bold "[info]" s_reset, args...);
 #endif
 }
@@ -96,7 +96,7 @@ inline void info(const T&... args)
 template <typename ...T>
 inline void error(const T&... args)
 {
-#ifndef msa_compile_cython
+#if !defined(msa_compile_cython)
     msa::log(std::cout, "[error]", args...);
     msa::halt(1);
 #else
@@ -112,7 +112,7 @@ inline void error(const T&... args)
 template <typename ...T>
 inline void warning(const T&... args)
 {
-#ifndef msa_compile_cython
+#if !defined(msa_compile_cython)
     msa::log(std::cout, s_bold "[warning]" s_reset, args...);
 #endif
 }
@@ -120,13 +120,17 @@ inline void warning(const T&... args)
 /**
  * Prints a watchdog progress log message.
  * @tparam T The types of message arguments.
+ * @param task The task being currently processed.
+ * @param done The number of subtasks already processed.
+ * @param total The total number of subtasks to process.
+ * @param nodes The number of nodes working on the process.
  * @param args The message parts to be printed.
  */
 template <typename ...T>
-inline void watchdog(const char *task, size_t done, size_t total, const T&... args)
+inline void watchdog(const char *task, size_t done, size_t total, int nodes, const T&... args)
 {
-#ifndef msa_compile_cython
-    msa::log(std::cout, "[watchdog]", task, node::rank, node::size - 1, done, total, args...);
+#if !defined(msa_compile_cython)
+    msa::log(std::cout, "[watchdog]", task, node::rank, nodes, done, total, args...);
 #endif
 }
 

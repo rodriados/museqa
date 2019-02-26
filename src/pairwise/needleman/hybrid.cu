@@ -21,7 +21,6 @@
 #include "pairwise/database.cuh"
 #include "pairwise/pairwise.cuh"
 #include "pairwise/needleman.cuh"
-#include "pairwise/needleman/hybrid.cuh"
 
 using namespace pairwise;
 
@@ -330,7 +329,7 @@ static Buffer<Score> run(const ::Database& db, const Buffer<Pair>& pairs, const 
     Input in;
     Buffer<Score> score {total}, out;
 
-    watchdog("pairwise", 0, total, "aligning pairs");
+    watchdog("pairwise", 0, total, node::size - 1, "aligning pairs");
     cuda::kernel::preference(kernel, nw_prefer_shared ? cuda::cache::shared : cuda::cache::l1);
     
     while(done < total) {
@@ -348,25 +347,42 @@ static Buffer<Score> run(const ::Database& db, const Buffer<Pair>& pairs, const 
         cuda::copy<Score>(&score[done], out.getBuffer(), batch);
         done += batch;
 
-        watchdog("pairwise", done, total, "aligning pairs");
+        watchdog("pairwise", done, total, node::size - 1, "aligning pairs");
     }
 
     return score;
 }
 
 /**
- * Executes the hybrid needleman algorithm for the pairwise step. This method is
- * responsible for distributing and gathering workload from different cluster nodes.
- * @param config The module's configuration.
- * @return The module's result value.
+ * The hybrid needleman algorithm object. This algorithm uses hybrid
+ * parallelism to run the Needleman-Wunsch algorithm.
+ * @since 0.1.1
  */
-Buffer<Score> needleman::Hybrid::run(const Configuration& config)
+struct Hybrid : public Needleman
 {
-    Pointer<ScoringTable> scoring = table::toDevice(config.table);
-    onlymaster this->generate(config.db.getCount());
-    this->scatter();
+    /**
+     * Executes the hybrid needleman algorithm for the pairwise step. This method is
+     * responsible for distributing and gathering workload from different cluster nodes.
+     * @param config The module's configuration.
+     * @return The module's result value.
+     */
+    Buffer<Score> run(const Configuration& config) override
+    {
+        Pointer<ScoringTable> scoring = table::toDevice(config.table);
+        onlymaster this->generate(config.db.getCount());
+        this->scatter();
 
-    onlyslaves this->score = ::run(config.db, this->pair, scoring);
+        onlyslaves this->score = ::run(config.db, this->pair, scoring);
 
-    return this->gather();
+        return this->gather();
+    }
+};
+
+/**
+ * Instantiates a new hybrid needleman instance.
+ * @return The new algorithm instance.
+ */
+extern Algorithm *needleman::hybrid()
+{
+    return new Hybrid;
 }

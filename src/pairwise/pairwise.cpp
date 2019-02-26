@@ -12,17 +12,15 @@
 
 #include "pairwise/pairwise.cuh"
 #include "pairwise/needleman.cuh"
-#include "pairwise/needleman/hybrid.cuh"
-#include "pairwise/needleman/sequential.hpp"
 
 /*
  * Keeps the list of available algorithms and their respective factories.
  */
 static const std::map<std::string, pairwise::Factory> dispatcher = {
-    {"needleman",               pairwise::needleman::factory}
+    {"needleman",               pairwise::needleman::hybrid}
+,   {"needleman-hybrid",        pairwise::needleman::hybrid}
 ,   {"needleman-sequential",    pairwise::needleman::sequential}
 ,   {"needleman-distributed",   pairwise::needleman::sequential}
-,   {"needleman-hybrid",        pairwise::needleman::hybrid}
 };
 
 /**

@@ -57,23 +57,21 @@ namespace pairwise
      * Represents a pairwise module algorithm.
      * @since 0.1.1
      */    
-    class Algorithm
+    struct Algorithm
     {
-        protected:
-            Buffer<Pair> pair;              /// The sequence pairs to be aligned.
+        Buffer<Pair> pair;              /// The sequence pairs to be aligned.
 
-        public:
-            Algorithm() = default;
-            Algorithm(const Algorithm&) = default;
-            Algorithm(Algorithm&&) = default;
+        Algorithm() = default;
+        Algorithm(const Algorithm&) = default;
+        Algorithm(Algorithm&&) = default;
 
-            virtual ~Algorithm() = default;
+        virtual ~Algorithm() = default;
 
-            Algorithm& operator=(const Algorithm&) = default;
-            Algorithm& operator=(Algorithm&&) = default;
+        Algorithm& operator=(const Algorithm&) = default;
+        Algorithm& operator=(Algorithm&&) = default;
 
-            virtual Buffer<Pair> generate(size_t);
-            virtual Buffer<Score> run(const Configuration&) = 0;
+        virtual Buffer<Pair> generate(size_t);
+        virtual Buffer<Score> run(const Configuration&) = 0;
     };
 
     /**

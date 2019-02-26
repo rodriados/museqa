@@ -13,27 +13,24 @@
 
 namespace pairwise
 {
+    /**
+     * Represents a general needleman algorithm.
+     * @since 0.1.1
+     */
+    struct Needleman : public Algorithm
+    {
+        Buffer<Score> score;            /// The algorithm result.
+
+        virtual Buffer<Score> run(const Configuration&) = 0;
+
+        Buffer<Pair> scatter();
+        Buffer<Score> gather();
+    };
+
     namespace needleman
     {
-        /**
-         * Represents a general needleman algorithm.
-         * @since 0.1.1
-         */
-        class Needleman : public Algorithm
-        {
-            protected:
-                Buffer<Score> score;            /// The algorithm result.
-
-            public:
-                virtual Buffer<Score> run(const Configuration&) = 0;
-
-            protected:
-                Buffer<Pair> scatter();
-                Buffer<Score> gather();
-
-        };
-
-        extern Algorithm *factory();
+        extern Algorithm *hybrid();
+        extern Algorithm *sequential();
     };
 };
 
