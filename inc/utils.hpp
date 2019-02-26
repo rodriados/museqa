@@ -24,7 +24,6 @@
   #define msa_compile_cuda 1
 #endif
 
-
 /**
  * Purifies the type to its base, removing all extents it might have.
  * @tparam T The type to have its base extracted.

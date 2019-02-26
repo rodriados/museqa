@@ -21,6 +21,7 @@
 static const std::map<std::string, pairwise::Factory> dispatcher = {
     {"needleman",               pairwise::needleman::factory}
 ,   {"needleman-sequential",    pairwise::needleman::sequential}
+,   {"needleman-distributed",   pairwise::needleman::sequential}
 ,   {"needleman-hybrid",        pairwise::needleman::hybrid}
 };
 
@@ -55,7 +56,7 @@ void pairwise::Pairwise::run(const pairwise::Configuration& config)
     onlymaster info("chosen pairwise algorithm:" s_bold, config.algorithm, s_reset);
 
     pairwise::Algorithm *algorithm = pair->second();
-    score = algorithm->run(config);
+    *this = algorithm->run(config);
 
     delete algorithm;
 }

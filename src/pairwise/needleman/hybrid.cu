@@ -1,7 +1,7 @@
 /**
  * Multiple Sequence Alignment hybrid needleman file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018 Rodrigo Siqueira
+ * @copyright 2018-2019 Rodrigo Siqueira
  */
 #include <set>
 #include <vector>
@@ -60,6 +60,12 @@ struct Input
     Buffer<int32_t> cache;      /// The allocated cache for all current work units.
 };
 
+/*
+ * Dynamically allocated shared memory pointer. This variable has its contents
+ * allocated dynamic at kernel call runtime.
+ */
+extern __shared__ volatile int32_t line[];
+
 /**
  * Aligns a slice of a sequence.
  * @param decoded The decoded target sequence slice to align.
@@ -71,8 +77,7 @@ struct Input
  * @return The value calculated in the last column.
  */
 __device__ int32_t sliceAlignment
-    (   int32_t *line
-    ,   const uint8_t *decoded
+    (   const uint8_t *decoded
     ,   const Pointer<ScoringTable>& table
     ,   const int8_t penalty
     ,   int32_t done
@@ -121,8 +126,7 @@ __device__ int32_t globalAlignment
     ,   const SequenceSlice& two
     ,   const Pointer<ScoringTable>& table
     ,   const int8_t penalty
-    ,   int32_t *column
-    ,   int32_t *line                       )
+    ,   int32_t *column                     )
 {
     const int32_t lengthOne = static_cast<int32_t>(one.getLength());
     const int32_t lengthTwo = static_cast<int32_t>(two.getLength());
@@ -172,7 +176,7 @@ __device__ int32_t globalAlignment
             column[saveLine] = saveValue;
 
             saveLine = lineOffset;
-            saveValue = sliceAlignment(line, decoded, table, penalty, done, left, letter);
+            saveValue = sliceAlignment(decoded, table, penalty, done, left, letter);
         }
 
         if(saveLine < lengthOne) column[saveLine] = saveValue;
@@ -193,8 +197,6 @@ __device__ int32_t globalAlignment
 __launch_bounds__(nw_threads_block, 4)
 __global__ void kernel(const Pointer<ScoringTable> table, Input in, Buffer<Score> out)
 {
-    extern __shared__ int32_t line[];
-
     if(blockIdx.x < in.jobs.getSize()) {
         // We must make sure that, if the sequences have different lengths, the first
         // sequence is bigger than the second. This will allow the alignment method to
@@ -207,7 +209,6 @@ __global__ void kernel(const Pointer<ScoringTable> table, Input in, Buffer<Score
         ,   seq1.getSize() > seq2.getSize() ? seq2 : seq1
         ,   table, -(*table)[24][0]
         ,   &in.cache[in.jobs[blockIdx.x].cacheOffset]
-        ,   line
         );
     }
 

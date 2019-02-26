@@ -17,6 +17,7 @@
 #include "stopwatch.hpp"
 
 #include "pairwise.hpp"
+#include "phylogen.hpp"
 
 /**
  * The list of command line options available. This list might be increased
@@ -27,13 +28,14 @@ static const std::vector<cmdline::Option> options = {
     {"m", "multigpu",   "Try to use multiple devices in a single host."}
 ,   {"x", "matrix",     "Choose the scoring matrix to use in pairwise.", true}
 ,   {"1", "pairwise",   "Choose the algorithm to use in pairwise module.", true}
-,   {"2", "phylotree",  "Choose the algorithm to use in phylogenetic tree module.", true}
+,   {"2", "phylogen",  "Choose the algorithm to use in phylogenetic tree module.", true}
 };
 
 namespace msa
 {
     static Database db;         /// The database of sequences to align.
     static Pairwise pw;         /// The pairwise step manager.
+    static Phylogen pg;         /// The phylogenetics step manager.
 
     /**
      * Parses all files given via command line and shares with all nodes.
@@ -58,6 +60,8 @@ namespace msa
             db.add({&blockList[j], sizeList[i]});
             j += sizeList[i];
         }
+
+        onlymaster info("loaded a total of", db.getCount(), "sequences");
     }
 
     /**
@@ -66,7 +70,6 @@ namespace msa
      * and give a score to each of these pairs.
      * @param pw The pairwise manager instance.
      * @param db The database of sequences to be aligned.
-     * @return 0.1.1
      */
     static void pwrun(Pairwise& pw, Database& db)
     {
@@ -74,6 +77,21 @@ namespace msa
             db
         ,   cmdline::get<std::string>("pairwise", "needleman")
         ,   cmdline::get<std::string>("matrix", "blosum62")
+        });
+    }
+
+    /**
+     * Runs the second step in the multiple sequence alignment heuristic: the
+     * pseudo-phylogenetic tree construction. This step will group sequences in
+     * ways that they can later be definitively aligned.
+     * @param pg The phylogenetic-tree module instance.
+     * @param pw The pairwise step instance.
+     */
+    static void pgrun(Phylogen& pg, Pairwise& pw)
+    {
+        pg.run({
+            pw
+        ,   cmdline::get<std::string>("phylogen", "njoining")
         });
     }
 
@@ -98,7 +116,7 @@ namespace msa
             report("total", stopwatch::run([]() {
                 report("loading", stopwatch::run(load, db));
                 report("pairwise", stopwatch::run(pwrun, pw, db));
-                //report("njoining", stopwatch::run(njrun, nj, pw));
+                report("phylogen", stopwatch::run(pgrun, pg, pw));
             }));
         }
 

@@ -21,7 +21,7 @@
 namespace pairwise
 {
     /**
-     * The score of the alignment of a sequence pair.
+     * The score of a sequence pair alignment.
      * @since 0.1.1
      */
     using Score = int32_t;
@@ -77,7 +77,7 @@ namespace pairwise
     };
 
     /**
-     * Functor responsible for representing an algorithm.
+     * Functor responsible for instantiating an algorithm.
      * @see Pairwise::run
      * @since 0.1.1
      */
@@ -87,11 +87,8 @@ namespace pairwise
      * Manages all data and execution of the pairwise module.
      * @since 0.1.1
      */
-    class Pairwise final
+    class Pairwise final : public Buffer<Score>
     {
-        protected:
-            Buffer<Score> score;        /// The buffer of all workpairs' scores.
-
         public:
             Pairwise() = default;
             Pairwise(const Pairwise&) = default;
@@ -99,38 +96,7 @@ namespace pairwise
 
             Pairwise& operator=(const Pairwise&) = default;
             Pairwise& operator=(Pairwise&&) = default;
-
-            /**
-             * Gives access to a specific workpair score.
-             * @param offset The requested workpair score.
-             * @return The retrieved score.
-             */
-            inline const Score& operator[](ptrdiff_t offset) const
-            {
-#if defined(msa_compile_cython)
-                if(static_cast<unsigned>(offset) >= getCount())
-                    throw Exception("score offset out of range");
-#endif
-                return score[offset];
-            }
-
-            /**
-             * Gives access to all workpairs' scores.
-             * @return The score buffer's internal pointer.
-             */
-            inline Score *getBuffer() const
-            {
-                return score.getBuffer();
-            }
-
-            /**
-             * Informs the number of processed pairs or to process.
-             * @return The number of pairs this instance shall process.
-             */
-            inline size_t getCount() const
-            {
-                return score.getSize();
-            }
+            using Buffer<Score>::operator=;
 
             /**
              * Runs the module with given configuration.
