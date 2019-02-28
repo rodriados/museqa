@@ -1,6 +1,7 @@
+#!/usr/bin/env python
 # Multiple Sequence Alignment test package file.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
-# @copyright 2018 Rodrigo Siqueira
+# @copyright 2018-2019 Rodrigo Siqueira
 import sys
 import os
 

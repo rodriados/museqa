@@ -11,6 +11,12 @@
 #include "pairwise/pairwise.cuh"
 
 /**
+ * A pair of sequence identifiers.
+ * @since 0.1.1
+ */
+typedef pairwise::Pair Pair;
+
+/**
  * The score of a sequence pair alignment.
  * @since 0.1.1
  */
