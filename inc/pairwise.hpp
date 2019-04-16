@@ -1,5 +1,5 @@
 /**
- * Multiple Sequence Alignment pairwise interface header file.
+ * Multiple Sequence Alignment pairwise module interface header file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018-2019 Rodrigo Siqueira
  */

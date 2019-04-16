@@ -121,8 +121,8 @@ namespace
      * @return The score between sequences.
      */
     __device__ int32_t globalAlignment
-        (   const SequenceSlice& one
-        ,   const SequenceSlice& two
+        (   const SequenceView& one
+        ,   const SequenceView& two
         ,   const Pointer<ScoringTable>& table
         ,   const int8_t penalty
         ,   int32_t *column                     )
@@ -200,8 +200,8 @@ namespace
             // We must make sure that, if the sequences have different lengths, the first
             // sequence is bigger than the second. This will allow the alignment method to
             // fully use its allocated cache.
-            const SequenceSlice& seq1 = in.db[in.jobs[blockIdx.x].pair.id[0]];
-            const SequenceSlice& seq2 = in.db[in.jobs[blockIdx.x].pair.id[1]];
+            const SequenceView& seq1 = in.db[in.jobs[blockIdx.x].pair.id[0]];
+            const SequenceView& seq2 = in.db[in.jobs[blockIdx.x].pair.id[1]];
 
             out[blockIdx.x] = globalAlignment(
                 seq1.getSize() > seq2.getSize() ? seq1 : seq2
@@ -263,7 +263,7 @@ namespace
     {
         *cachesz = std::max(db[pair.id[0]].getLength(), db[pair.id[1]].getLength());
 
-        return 2 * sizeof(SequenceSlice) + sizeof(encoder::EncodedBlock) * (
+        return 2 * sizeof(SequenceView) + sizeof(encoder::EncodedBlock) * (
                 (used[pair.id[0]] ? 0 : db[pair.id[0]].getSize())
             +   (used[pair.id[1]] ? 0 : db[pair.id[1]].getSize())
             ) + sizeof(Workpair) + sizeof(int32_t) * (*cachesz) + sizeof(Score);
@@ -329,7 +329,9 @@ namespace
         Input in;
         Buffer<Score> score {total}, out;
 
+#if !defined(msa_compile_cython)
         watchdog("pairwise", 0, total, node::size - 1, "aligning pairs");
+#endif
         cuda::kernel::preference(kernel, nw_prefer_shared ? cuda::cache::shared : cuda::cache::l1);
         
         while(done < total) {
@@ -347,7 +349,9 @@ namespace
             cuda::copy<Score>(&score[done], out.getBuffer(), batch);
             done += batch;
 
+#if !defined(msa_compile_cython)
             watchdog("pairwise", done, total, node::size - 1, "aligning pairs");
+#endif
         }
 
         return score;

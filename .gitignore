@@ -6,3 +6,4 @@ tex/
 *.pyc
 *.pyo
 hostfile
+todo.*

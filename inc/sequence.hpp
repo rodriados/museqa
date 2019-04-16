@@ -9,7 +9,6 @@
 #define SEQUENCE_HPP_INCLUDED
 
 #include <cstdint>
-#include <ostream>
 #include <string>
 
 #include "utils.hpp"
@@ -23,12 +22,14 @@
  */
 class Sequence : public Buffer<encoder::EncodedBlock>
 {
+    using EncodedBuffer = Buffer<encoder::EncodedBlock>;
+
     public:
         Sequence() = default;
         Sequence(const Sequence&) = default;
         Sequence(Sequence&&) = default;
         
-        using Buffer<encoder::EncodedBlock>::Buffer;
+        using EncodedBuffer::Buffer;
 
         /**
          * Initializes a new compressed sequence.
@@ -36,7 +37,7 @@ class Sequence : public Buffer<encoder::EncodedBlock>
          * @param size The buffer's size.
          */
         inline Sequence(const char *ptr, size_t size)
-        :   Buffer<encoder::EncodedBlock> {encoder::encode(ptr, size)}
+        :   EncodedBuffer {encoder::encode(ptr, size)}
         {}
 
         /**
@@ -67,7 +68,65 @@ class Sequence : public Buffer<encoder::EncodedBlock>
          */
         __host__ __device__ inline encoder::EncodedBlock getBlock(ptrdiff_t offset) const
         {
-            return Buffer<encoder::EncodedBlock>::operator[](offset);
+            return EncodedBuffer::operator[](offset);
+        }
+
+        /**
+         * Informs the length of the sequence.
+         * @return The sequence's length.
+         */
+        __host__ __device__ inline size_t getLength() const
+        {
+            return this->getSize() * encoder::batchSize;
+        }
+
+        /**
+         * Transforms the sequence into a string.
+         * @return The sequence representation as a string.
+         */
+        inline std::string toString() const
+        {
+            return encoder::decode(*this);
+        }
+};
+
+/**
+ * Manages a slice of a sequence. The sequence must have already been
+ * initialized and will have boundaries checked according to view pointers.
+ * @since 0.1.1
+ */
+class SequenceView : public BufferSlice<encoder::EncodedBlock>
+{
+    using EncodedSlice = BufferSlice<encoder::EncodedBlock>;
+
+    public:
+        SequenceView() = default;
+        SequenceView(const SequenceView&) = default;
+        SequenceView(SequenceView&&) = default;
+
+        using EncodedSlice::BufferSlice;
+
+        SequenceView& operator=(const SequenceView&) = default;
+        SequenceView& operator=(SequenceView&&) = default;
+
+                /**
+         * Retrieves the element at given offset.
+         * @param offset The requested offset.
+         * @return The element in the specified offset.
+         */
+        __host__ __device__ inline uint8_t operator[](ptrdiff_t offset) const
+        {
+            return encoder::access(*this, offset);
+        }
+
+        /**
+         * Retrieves an encoded character block from sequence.
+         * @param offset The index of the requested block.
+         * @return The requested block.
+         */
+        __host__ __device__ inline encoder::EncodedBlock getBlock(ptrdiff_t offset) const
+        {
+            return EncodedSlice::operator[](offset);
         }
 
         /**

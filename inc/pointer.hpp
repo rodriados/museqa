@@ -384,6 +384,21 @@ class Pointer : public BasePointer<T>
         {
             return this->ptr[offset];
         }
+
+        /**
+         * Gets an instance to an offset pointer.
+         * @param offset The requested offset.
+         * @return The offset pointer instance.
+         */
+        template <typename U = T>
+        inline auto getOffsetPointer(ptrdiff_t offset) const
+        -> typename std::enable_if<!std::is_same<Pure<U>, U>::value, Pointer<T>>::type
+        {
+            Pointer<T> newptr {*this};
+            newptr.ptr += offset;
+
+            return newptr;
+        }
 };
 
 #endif

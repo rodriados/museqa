@@ -94,18 +94,8 @@ namespace pairwise
 
             Pairwise& operator=(const Pairwise&) = default;
             Pairwise& operator=(Pairwise&&) = default;
-            using Buffer<Score>::operator=;
 
-            /**
-             * Runs the module with given configuration.
-             * @param db The database of sequences to align.
-             * @param algorithm The chosen algorithm to run the module.
-             * @param table The selected scoring table to use.
-             */
-            inline void run(const ::Database& db, const std::string& algorithm, const std::string& table)
-            {
-                return run({db, algorithm, table});
-            }
+            using Buffer<Score>::operator=;
 
             void run(const Configuration&);
     };

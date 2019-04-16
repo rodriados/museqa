@@ -17,7 +17,8 @@
 #include "exception.hpp"
 
 /**
- * The base of a general-purpose buffer.
+ * The base of a general-purpose buffer. The buffer's idea is to store all of
+ * its data contiguously in memory.
  * @tparam T The buffer type.
  * @since 0.1.1
  */
@@ -25,9 +26,8 @@ template <typename T>
 class BaseBuffer
 {
     protected:
-        Pointer<T[]> ptr;           /// The pointer to the buffer being encapsulated.
-        uint32_t displ = 0;         /// The buffer displacement in relation to pointer.
-        uint32_t size = 0;          /// The number of elements in the buffer.
+        Pointer<T[]> ptr;       /// The pointer to the buffer being encapsulated.
+        size_t size = 0;        /// The number of elements in buffer.
 
     public:
         BaseBuffer() = default;
@@ -40,7 +40,7 @@ class BaseBuffer
          */
         inline explicit BaseBuffer(size_t size)
         :   ptr {new T[size]}
-        ,   size {static_cast<uint32_t>(size)}
+        ,   size {size}
         {}
 
         /**
@@ -50,7 +50,7 @@ class BaseBuffer
          */
         inline explicit BaseBuffer(const Pointer<T[]>& ptr, size_t size)
         :   ptr {ptr}
-        ,   size {static_cast<uint32_t>(size)}
+        ,   size {size}
         {}
 
         /**
@@ -60,7 +60,7 @@ class BaseBuffer
          */
         inline explicit BaseBuffer(const RawPointer<T>& ptr, size_t size)
         :   ptr {ptr}
-        ,   size {static_cast<uint32_t>(size)}
+        ,   size {size}
         {}
 
         BaseBuffer<T>& operator=(const BaseBuffer<T>&) = default;
@@ -74,10 +74,10 @@ class BaseBuffer
         __host__ __device__ inline T& operator[](ptrdiff_t offset) const
         {
 #if defined(msa_compile_cython) && !defined(msa_compile_cuda)
-            if(static_cast<unsigned>(offset) >= getSize())
+            if(offset < 0 || static_cast<unsigned>(offset) > getSize())
                 throw Exception("buffer offset out of range");
 #endif
-            return ptr.getOffset(offset + displ);
+            return ptr.getOffset(offset);
         }
 
         /**
@@ -86,7 +86,7 @@ class BaseBuffer
          */
         __host__ __device__ inline T *getBuffer() const
         {
-            return ptr.get() + displ;
+            return ptr.get();
         }
 
         /**
@@ -96,6 +96,16 @@ class BaseBuffer
         __host__ __device__ inline const Pointer<T[]>& getPointer() const
         {
             return ptr;
+        }
+
+        /**
+         * Gives access to an offset pointer.
+         * @param offset The offset to apply to pointer.
+         * @return The buffer's offset pointer.
+         */
+        inline const Pointer<T[]> getOffsetPointer(ptrdiff_t offset) const
+        {
+            return ptr.getOffsetPointer(offset);
         }
 
         /**
@@ -109,8 +119,7 @@ class BaseBuffer
 };
 
 /**
- * Creates a general-purpose buffer. The buffer created is constant and
- * cannot be changed. For mutable buffers, please use strings or vectors.
+ * Creates a general-purpose contiguous buffer.
  * @tparam T The buffer type.
  * @see std::string
  * @see std::vector
@@ -137,7 +146,7 @@ class Buffer : public BaseBuffer<T>
         }
 
         /**
-         * Copies the contents of a not-owning already existing buffer.
+         * Copies the contents of a not-ownable already existing buffer.
          * @param ptr The pointer of buffer to be copied.
          * @param size The size of buffer to encapsulate.
          */
@@ -167,7 +176,7 @@ class Buffer : public BaseBuffer<T>
          */
         inline void copy(const T *ptr)
         {
-            memcpy(this->ptr, ptr, sizeof(T) * this->size);
+            memcpy(this->getBuffer(), ptr, sizeof(T) * this->getSize());
         }
 };
 
@@ -180,6 +189,9 @@ class Buffer : public BaseBuffer<T>
 template <typename T>
 class BufferSlice : public BaseBuffer<T>
 {
+    protected:
+        ptrdiff_t displ = 0;    /// The slice displacement in relation to original buffer.
+
     public:
         BufferSlice() = default;
         BufferSlice(const BufferSlice<T>&) = default;
@@ -192,28 +204,28 @@ class BufferSlice : public BaseBuffer<T>
          * @param size The number of elements in the slice.
          */
         inline BufferSlice(const BaseBuffer<T>& target, ptrdiff_t displ = 0, size_t size = 0)
-        :   BaseBuffer<T> {target.getPointer(), size}
+        :   BaseBuffer<T> {target.getOffsetPointer(displ), size}
+        ,   displ {displ}
         {
 #if defined(msa_compile_cython)
-            if(static_cast<unsigned>(displ) >= target.getSize())
+            if(size + displ < 0 || static_cast<unsigned>(size + displ) >= target.getSize())
                 throw Exception("slice initialized out of range");
 #endif
-            this->displ = static_cast<uint32_t>(displ);
         }
 
         /**
-         * Instantiates a slice by applying slice pointers into another buffer.
+         * Instantiates a slice by copying slice pointers into another buffer.
          * @param target The target buffer to which the slice shall relate to.
          * @param slice The slice data to be put into the new target.
          */
         inline BufferSlice(const BaseBuffer<T>& target, const BufferSlice<T>& slice)
-        :   BaseBuffer<T> {target.getPointer(), slice.getSize()}
+        :   BaseBuffer<T> {target.getOffsetPointer(slice.getDispl()), slice.getSize()}
+        ,   displ {slice.getDispl()}
         {
 #if defined(msa_compile_cython)
-            if(static_cast<unsigned>(slice.getDispl()) >= target.getSize())
+            if(static_cast<unsigned>(slice.getSize() + slice.getDispl()) >= target.getSize())
                 throw Exception("slice initialized out of range");
 #endif
-            this->displ = slice.getDispl();
         }
 
         BufferSlice<T>& operator=(const BufferSlice<T>&) = default;
@@ -225,7 +237,7 @@ class BufferSlice : public BaseBuffer<T>
          */
         __host__ __device__ inline ptrdiff_t getDispl() const
         {
-            return this->displ;
+            return displ;
         }
 };
 

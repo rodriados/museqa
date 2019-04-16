@@ -22,61 +22,6 @@
 namespace pairwise
 {
     /**
-     * Manages a slice of a compressed database sequence.
-     * @since 0.1.1
-     */
-    class SequenceSlice : public BufferSlice<encoder::EncodedBlock>
-    {
-        public:
-            SequenceSlice() = default;
-            SequenceSlice(const SequenceSlice&) = default;
-            SequenceSlice(SequenceSlice&&) = default;
-
-            using BufferSlice<encoder::EncodedBlock>::BufferSlice;
-
-            SequenceSlice& operator=(const SequenceSlice&) = default;
-            SequenceSlice& operator=(SequenceSlice&&) = default;
-
-            /**
-             * Retrieves the element at given offset.
-             * @param offset The requested offset.
-             * @return The element in the specified offset.
-             */
-            __host__ __device__ inline uint8_t operator[](ptrdiff_t offset) const
-            {
-                return encoder::access(*this, offset);
-            }
-
-            /**
-             * Retrieves an encoded character block from sequence slice.
-             * @param offset The index of the requested block.
-             * @return The requested block.
-             */
-            __host__ __device__ inline encoder::EncodedBlock getBlock(ptrdiff_t offset) const
-            {
-                return BufferSlice<encoder::EncodedBlock>::operator[](offset);
-            }
-
-            /**
-             * Informs the length of the sequence slice.
-             * @return The sequence slice's length.
-             */
-            __host__ __device__ inline size_t getLength() const
-            {
-                return this->getSize() * encoder::batchSize;
-            }
-
-            /**
-             * Transforms the sequence slice into a string.
-             * @return The sequence slice representation as a string.
-             */
-            inline std::string toString() const
-            {
-                return encoder::decode(*this);
-            }
-    };
-
-    /**
      * Stores a list of sequences from a database as a single contiguous sequence.
      * No description nor any other metadata will be stored alongside the sequences,
      * which will all solely be identified by their indexes. These indeces will be
@@ -86,7 +31,7 @@ namespace pairwise
     class Database : public Sequence
     {
         protected:
-            Buffer<SequenceSlice> slice;            /// The buffer of sequence slices.
+            Buffer<SequenceView> view;          /// The buffer of sequence views.
 
         public:
             Database() = default;
@@ -106,13 +51,13 @@ namespace pairwise
              * @param offset The offset of requested sequence.
              * @return The requested sequence.
              */
-            __host__ __device__ inline const SequenceSlice& operator[](ptrdiff_t offset) const
+            __host__ __device__ inline const SequenceView& operator[](ptrdiff_t offset) const
             {
 #if defined(msa_compile_cython) && !defined(msa_compile_cuda)
-                if(static_cast<unsigned>(offset) >= getCount())
+                if(offset < 0 || static_cast<unsigned>(offset) >= getCount())
                     throw Exception("database index out of range");
 #endif
-                return slice[offset];
+                return view[offset];
             }
 
             /**
@@ -121,20 +66,20 @@ namespace pairwise
              */
             __host__ __device__ inline size_t getCount() const
             {
-                return slice.getSize();
+                return view.getSize();
             }
 
             Database toDevice() const;
 
         private:
             /**
-             * Initializes a new database from already compressed sequences and their respective slices.
+             * Initializes a new database from already compressed sequences and their respective views.
              * @param blocks The encoded blocks of compressed database sequences.
-             * @param slices The sequence slices upon the compressed sequences.
+             * @param views The sequence views upon the compressed sequences.
              */
-            inline Database(const BaseBuffer<encoder::EncodedBlock>& blocks, const BaseBuffer<SequenceSlice>& slices)
+            inline Database(const BaseBuffer<encoder::EncodedBlock>& blocks, const BaseBuffer<SequenceView>& views)
             {
-                slice.BaseBuffer<SequenceSlice>::operator=(slices);
+                view.BaseBuffer<SequenceView>::operator=(views);
                 BaseBuffer<encoder::EncodedBlock>::operator=(blocks);
             }
 

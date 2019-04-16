@@ -20,7 +20,7 @@
  */
 pairwise::Database::Database(const ::Database& db)
 :   Sequence {merge(db)}
-,   slice {db.getCount()}
+,   view {db.getCount()}
 {
     init(db);
 }
@@ -31,7 +31,7 @@ pairwise::Database::Database(const ::Database& db)
  * @param selected The subset of elements to be in new database.
  */
 pairwise::Database::Database(const ::Database& db, const std::set<ptrdiff_t>& selected)
-:   slice {selected.size()}
+:   view {selected.size()}
 {
     ::Database selectdb = db.only(selected);
     Sequence::operator=(merge(selectdb));
@@ -45,7 +45,7 @@ pairwise::Database::Database(const ::Database& db, const std::set<ptrdiff_t>& se
  * @param selected The subset of elements to be in new database.
  */
 pairwise::Database::Database(const ::Database& db, const std::vector<ptrdiff_t>& selected)
-:   slice {selected.size()}
+:   view {selected.size()}
 {
     ::Database selectdb = db.only(selected);
     Sequence::operator=(merge(selectdb));
@@ -59,31 +59,34 @@ pairwise::Database::Database(const ::Database& db, const std::vector<ptrdiff_t>&
  */
 pairwise::Database pairwise::Database::toDevice() const
 {
+    const size_t dbsize = this->getSize();
+    const size_t dbcount = this->getCount();
+
     using Block = encoder::EncodedBlock;
-    using Slice = SequenceSlice;
+    using View = SequenceView;
 
-    Buffer<Block> blocks = Buffer<Block> {cuda::allocate<Block>(this->getSize()), this->getSize()};
-    Buffer<Slice> slices = Buffer<Slice> {cuda::allocate<Slice>(getCount()), getCount()};
+    Buffer<Block> device_seq = Buffer<Block> {cuda::allocate<Block>(dbsize), dbsize};
+    Buffer<View> device_view = Buffer<View> {cuda::allocate<View>(dbcount), dbcount};
 
-    Buffer<Slice> adapt {getCount()};
+    Buffer<View> transformed {dbcount};
 
-    for(size_t i = 0, n = getCount(); i < n; ++i)
-        adapt[i] = {blocks, slice[i]};
+    for(size_t i = 0; i < dbcount; ++i)
+        transformed[i] = {device_seq, view[i]};
 
-    cuda::copy<Block>(blocks.getBuffer(), this->getBuffer(), this->getSize());
-    cuda::copy<Slice>(slices.getBuffer(), adapt.getBuffer(), getCount());
+    cuda::copy<Block>(device_seq.getBuffer(), this->getBuffer(), dbsize);
+    cuda::copy<View>(device_view.getBuffer(), transformed.getBuffer(), dbcount);
 
-    return {blocks, slices};
+    return {device_seq, device_view};
 }
 
 /**
- * Sets up the slice pointers responsible for keeping track of internal sequences.
+ * Sets up the view pointers responsible for keeping track of internal sequences.
  * @param db The database to have its sequences mapped.
  */
 void pairwise::Database::init(const ::Database& db)
 {
     for(size_t i = 0, j = 0, n = getCount(); i < n; ++i) {
-        slice[i] = {*this, j, db[i].getSize()};
+        view[i] = {*this, static_cast<ptrdiff_t>(j), db[i].getSize()};
         j += db[i].getSize();
     }
 }

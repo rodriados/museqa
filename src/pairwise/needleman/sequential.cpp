@@ -83,7 +83,9 @@ namespace
         const size_t total = pairs.getSize();
         Buffer<Score> score {total};
 
+#if !defined(msa_compile_cython)
         watchdog("pairwise", 0, total, node::size - 1, "aligning pairs");
+#endif
 
         for(size_t i = 0; i < total; ) {
             const Sequence& seq1 = db[pairs[i].id[0]];
@@ -96,7 +98,9 @@ namespace
             ,   seq1.getSize() > seq2.getSize() ? seq2 : seq1
             );
 
+#if !defined(msa_compile_cython)
             watchdog("pairwise", ++i, total, node::size - 1, "aligning pairs");
+#endif
         }
 
         return score;

@@ -83,7 +83,8 @@ namespace reflection
          * @param value The list of values for members.
          */
         constexpr BaseTuple(T... value) noexcept
-        :   BaseMember<I, T> {value}... {}
+        :   BaseMember<I, T> {value}...
+        {}
     };
 
     template <>
@@ -321,7 +322,7 @@ struct Reflection
      */
     using Tuple = reflection::LoopholeTuple<Base<T>>;
 
-    static_assert(!std::is_union<T>::value, "it is forbidden to reflect unions!");
+    static_assert(!std::is_union<T>::value, "it is forbidden to reflect over unions!");
     static_assert(sizeof(Base<T>) == sizeof(Tuple), "member sequence is not compatible!");
     static_assert(alignof(Base<T>) == alignof(Tuple), "member sequence is not compatible!");
 
