@@ -25,7 +25,7 @@ STDCPP ?= c++14
 STDCU  ?= c++11
 
 MPILIBDIR ?= /usr/lib/openmpi/lib
-PY2INCDIR ?= /usr/include/python2.7
+PY2INCDIR ?= /usr/include/python3.5
 
 # Defining macros inside code at compile time. This can be used to enable
 # or disable certain marked features on code.

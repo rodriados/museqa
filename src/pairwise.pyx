@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# cython: language_level = 2
+# cython: language_level = 3
 # Multiple Sequence Alignment pairwise wrapper file.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
 # @copyright 2018-2019 Rodrigo Siqueira
@@ -28,13 +28,13 @@ cdef class Pairwise:
         cdef string algorithm = kwargs.pop("algorithm", "needleman")
         cdef string table = kwargs.pop("table", "blosum62")
 
-        self.cRef.run(db.cRef, algorithm, table)
+        self.cRef.run(configure(db.cRef, algorithm, table))
 
     @property
     # Informs the number of processed pairs or to process.
     # @return The number of pairs this instance shall process.
-    def count(self):
-        return self.cRef.getCount()
+    def size(self):
+        return self.cRef.getSize()
 
 # Exposes a scoring table to Python world.
 # @since 0.1.1

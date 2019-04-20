@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# cython: language_level = 2
+# cython: language_level = 3
 # Multiple Sequence Alignment sequence database wrapper file.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
 # @copyright 2018-2019 Rodrigo Siqueira

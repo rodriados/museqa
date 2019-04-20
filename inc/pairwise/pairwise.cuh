@@ -107,6 +107,21 @@ namespace pairwise
         extern Pointer<ScoringTable> retrieve(const std::string&);
         extern Pointer<ScoringTable> toDevice(const std::string&);
     };
+
+    /**
+     * Creates a module's configuration instance.
+     * @param db The database of sequences to align.
+     * @param algorithm The chosen pairwise algorithm.
+     * @param table The chosen scoring table.
+     * @return The module's configuration instance.
+     */
+    inline Configuration configure
+        (   const ::Database& db
+        ,   const std::string& algorithm = ""
+        ,   const std::string& table     = ""   )
+    {
+        return {db, algorithm, table};
+    }
 };
 
 #endif

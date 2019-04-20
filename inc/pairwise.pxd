@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# cython: language_level = 2
+# cython: language_level = 3
 # Multiple Sequence Alignment pairwise export file.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
 # @copyright 2018-2019 Rodrigo Siqueira
@@ -19,6 +19,13 @@ cdef extern from "pairwise/pairwise.cuh":
     # @since 0.1.1
     ctypedef int8_t cScoringTable "pairwise::ScoringTable"[25][25]
 
+    # Manages and encapsulates all configurable aspects of the pairwise module.
+    # @since 0.1.1
+    cdef struct cConfiguration "pairwise::Configuration":
+        const cDatabase& db
+        string algorithm
+        string table
+
     # Manages all data and execution of the pairwise module.
     # @since 0.1.1
     cdef cppclass cPairwise "pairwise::Pairwise":
@@ -29,12 +36,14 @@ cdef extern from "pairwise/pairwise.cuh":
         cScore& operator[](ptrdiff_t) except +IndexError
 
         const cScore *getBuffer()
-        size_t getCount()
+        size_t getSize()
 
-        void run(const cDatabase&, const string&, const string&) except +RuntimeError
+        void run(const cConfiguration&) except +RuntimeError
 
     cdef cScoringTable *cgetTable "pairwise::table::get"(const string&) except +RuntimeError
     cdef const vector[string]& cgetTableList "pairwise::table::getList"()
+
+    cdef cConfiguration configure "pairwise::configure"(const cDatabase&, const string&, const string&)
 
 # Manages all data and execution of the pairwise module.
 # @since 0.1.1
