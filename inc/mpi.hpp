@@ -20,6 +20,7 @@
 #include <algorithm>
 
 #include "node.hpp"
+#include "tuple.hpp"
 #include "utils.hpp"
 #include "buffer.hpp"
 #include "exception.hpp"
@@ -194,7 +195,7 @@ namespace mpi
              * @since 0.1.1
              */
             template <typename T>
-            struct Builder<reflection::Tuple<T>>
+            struct Builder<Tuple<T>>
             {
                 /**
                  * Terminates the recursion through the original type's reflection tuple.
@@ -220,7 +221,7 @@ namespace mpi
              * @since 0.1.1
              */
             template <typename T, typename ...U>
-            struct Builder<reflection::Tuple<T, U...>>
+            struct Builder<Tuple<T, U...>>
             {
                 /**
                  * Processes a step of the recursion through the original type's reflection tuple.
@@ -233,8 +234,8 @@ namespace mpi
                 template <typename O, size_t N = 0>
                 inline static void generate(int *blockList, MPI_Aint *offsetList, MPI_Datatype *typeList)
                 {
-                    Builder<reflection::Tuple<T>>::template generate<O, N>(blockList, offsetList, typeList);
-                    Builder<reflection::Tuple<U...>>::template generate<O, N+1>(blockList, offsetList, typeList);
+                    Builder<Tuple<T>>::template generate<O, N>(blockList, offsetList, typeList);
+                    Builder<Tuple<U...>>::template generate<O, N+1>(blockList, offsetList, typeList);
                 }
             };
         };

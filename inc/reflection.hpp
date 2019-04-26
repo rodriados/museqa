@@ -28,6 +28,7 @@
 #include <cstdint>
 
 #include "utils.hpp"
+#include "tuple.hpp"
 
 #if defined(__GNUC__)
   #pragma GCC diagnostic push
@@ -36,132 +37,6 @@
 
 namespace reflection
 {
-    /**
-     * A memory aligned storage container.
-     * @tparam S The number of elements in storage.
-     * @tparam A The alignment the storage should use.
-     * @since 0.1.1
-     */
-    template <size_t S, size_t A>
-    struct AlignedStorage
-    {
-        alignas(A) char storage[S]; /// The aligned storage container.
-    };
-
-    /**
-     * Base for representing a tuple member and holding its value.
-     * @tparam N The index of the member of the tuple.
-     * @tparam T The type of the member of the tuple.
-     * @since 0.1.1
-     */
-    template <size_t N, typename T>
-    struct BaseMember
-    {
-        T value;    /// The value held by this tuple member.
-    };
-
-    /**#@+
-     * The base struct for a type tuple.
-     * @tparam I The indeces for the tuple members.
-     * @tparam T The types of the tuple members.
-     * @since 0.1.1
-     */
-    template <typename I, typename ...T>
-    struct BaseTuple;
-
-    template <size_t ...I, typename ...T>
-    struct BaseTuple<std::index_sequence<I...>, T...> : BaseMember<I, T>...
-    {
-        static constexpr size_t size = sizeof...(I);    /// The size of the tuple.
-
-        constexpr BaseTuple() noexcept = default;
-        constexpr BaseTuple(BaseTuple&&) noexcept = default;
-        constexpr BaseTuple(const BaseTuple&) noexcept = default;
-
-        /**
-         * This constructor sets every member with its corresponding value.
-         * @param value The list of values for members.
-         */
-        constexpr BaseTuple(T... value) noexcept
-        :   BaseMember<I, T> {value}...
-        {}
-    };
-
-    template <>
-    struct BaseTuple<std::index_sequence<>>
-    {
-        static constexpr size_t size = 0;   /// The size of the tuple.
-    };
-    /**#@-*/
-
-    /*
-     * Forward declaration of Tuple, so it can be used as a type for the
-     * namespace's internal getter functions.
-     */
-    template <typename ...T>
-    struct Tuple;
-
-    namespace detail
-    {
-        /**
-         * Retrieves the requested member base and returns its value.
-         * @param base The selected tuple member base.
-         * @tparam N The requested member index.
-         * @tparam T The member type to be matched.
-         * @return The member's value.
-         */
-        template <size_t N, typename T>
-        constexpr const T& retrieve(const BaseMember<N, T>& base) noexcept
-        {
-            return base.value;
-        }
-
-        /**
-         * Retrieves the value held by a member base.
-         * @param tuple The tuple in which value will be retrieved from.
-         * @tparam N The requested member index.
-         * @tparam T The member type to be matched.
-         * @return The requested member's value.
-         */
-        template <size_t N, typename ...T>
-        constexpr decltype(auto) get(const Tuple<T...>& tuple) noexcept
-        {
-            static_assert(N < Tuple<T...>::size, "requested tuple index is out of bounds!");
-            return retrieve<N>(tuple);
-        }
-    };
-
-    /**
-     * Tuple responsible for representing a struct to be translated.
-     * @tparam T The tuple's list of member types.
-     * @since 0.1.1
-     */
-    template <typename ...T>
-    struct Tuple : BaseTuple<std::make_index_sequence<sizeof...(T)>, T...>
-    {
-        using BaseTuple<std::make_index_sequence<sizeof...(T)>, T...>::BaseTuple;
-
-        /**
-         * Gets value from member by index.
-         * @tparam N The index of requested member.
-         * @return The member's value.
-         */
-        template <size_t N>
-        constexpr decltype(auto) get() noexcept
-        {
-            return detail::get<N>(*this);
-        }
-    };
-
-    /**
-     * The type of a tuple element.
-     * @tparam I The index of tuple element.
-     * @tparam T The target tuple.
-     * @since 0.1.1
-     */
-    template <size_t I, typename T>
-    using TupleElement = typename std::remove_reference<decltype(detail::get<I>(std::declval<T>()))>::type;
-
     namespace detail
     {
         /**
@@ -335,7 +210,7 @@ struct Reflection
     static constexpr ptrdiff_t getOffset() noexcept
     {
         constexpr reflection::AlignedTuple<Tuple> t {};
-        return &reflection::detail::get<N>(t).storage[0] - &reflection::detail::get<0>(t).storage[0];
+        return &t.template get<N>().storage[0] - &t.template get<0>().storage[0];
     }
 
     /**
@@ -356,7 +231,7 @@ struct Reflection
     template <typename ...U>
     static constexpr Tuple newInstance(U... values)
     {
-        return Tuple(values...);
+        return Tuple {values...};
     }
 };
 
