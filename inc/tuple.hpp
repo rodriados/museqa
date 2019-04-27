@@ -48,7 +48,7 @@ namespace tupled
      * @return The member's value.
      */
     template <size_t I, typename T>
-    __host__ __device__ inline constexpr const T& retrieve(const BaseMember<I, T>& base) noexcept
+    inline constexpr const T& retrieve(const BaseMember<I, T>& base) noexcept
     {
         return base.value;
     }
@@ -61,7 +61,7 @@ namespace tupled
      * @return The requested member's value.
      */
     template <size_t I, typename ...T>
-    __host__ __device__ inline constexpr decltype(auto) get(const Tuple<T...>& tuple) noexcept
+    inline constexpr decltype(auto) get(const Tuple<T...>& tuple) noexcept
     {
         static_assert(I < sizeof...(T), "requested tuple index is out of bounds!");
         return retrieve<I>(tuple);
@@ -77,15 +77,15 @@ namespace tupled
 template <size_t ...I, typename ...T>
 struct BaseTuple<std::index_sequence<I...>, T...> : public tupled::BaseMember<I, T>...
 {
-    __host__ __device__ constexpr BaseTuple() noexcept = default;
-    __host__ __device__ constexpr BaseTuple(const BaseTuple&) noexcept = default;
-    __host__ __device__ constexpr BaseTuple(BaseTuple&&) noexcept = default;
+    constexpr BaseTuple() noexcept = default;
+    constexpr BaseTuple(const BaseTuple&) noexcept = default;
+    constexpr BaseTuple(BaseTuple&&) noexcept = default;
 
     /**
      * This constructor sets every base member with its corresponding value.
      * @param value The list of values for members.
      */
-    __host__ __device__ inline constexpr BaseTuple(T... value) noexcept
+    inline constexpr BaseTuple(T... value) noexcept
     :   tupled::BaseMember<I, T> {value}...
     {}
 
@@ -114,7 +114,7 @@ struct Tuple : public BaseTuple<std::make_index_sequence<sizeof...(T)>, T...>
      * @return The member's value.
      */
     template <size_t I>
-    __host__ __device__ constexpr decltype(auto) get() const noexcept
+    constexpr decltype(auto) get() const noexcept
     {
         return tupled::get<I>(*this);
     }
