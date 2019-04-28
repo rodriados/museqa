@@ -26,7 +26,7 @@ struct BaseTuple;
 template <typename ...T>
 struct Tuple;
 
-namespace tupled
+namespace tuple
 {
     /**
      * Base for representing a tuple member and holding its value.
@@ -75,7 +75,7 @@ namespace tupled
  * @since 0.1.1
  */
 template <size_t ...I, typename ...T>
-struct BaseTuple<std::index_sequence<I...>, T...> : public tupled::BaseMember<I, T>...
+struct BaseTuple<std::index_sequence<I...>, T...> : public tuple::BaseMember<I, T>...
 {
     constexpr BaseTuple() noexcept = default;
     constexpr BaseTuple(const BaseTuple&) noexcept = default;
@@ -86,7 +86,7 @@ struct BaseTuple<std::index_sequence<I...>, T...> : public tupled::BaseMember<I,
      * @param value The list of values for members.
      */
     inline constexpr BaseTuple(T... value) noexcept
-    :   tupled::BaseMember<I, T> {value}...
+    :   tuple::BaseMember<I, T> {value}...
     {}
 
     static constexpr size_t size = sizeof...(I);    /// The size of the tuple.
@@ -116,13 +116,13 @@ struct Tuple : public BaseTuple<std::make_index_sequence<sizeof...(T)>, T...>
     template <size_t I>
     constexpr decltype(auto) get() const noexcept
     {
-        return tupled::get<I>(*this);
+        return tuple::get<I>(*this);
     }
 
     using BaseTuple<std::make_index_sequence<sizeof...(T)>, T...>::BaseTuple;
 };
 
-namespace tupled
+namespace tuple
 {
     /**#@+
      * Repeats a type so it's easier to create tuples with repeated types.
@@ -148,7 +148,7 @@ namespace tupled
  * @since 0.1.1
  */
 template <typename T, size_t N>
-using TupleN = typename tupled::Repeater<std::make_index_sequence<N>, T>::type;
+using TupleN = typename tuple::Repeater<std::make_index_sequence<N>, T>::type;
 
 /**
  * The type of a tuple element.
@@ -157,6 +157,6 @@ using TupleN = typename tupled::Repeater<std::make_index_sequence<N>, T>::type;
  * @since 0.1.1
  */
 template <size_t I, typename T>
-using TupleElement = typename std::remove_reference<decltype(tupled::get<I>(T{}))>::type;
+using TupleElement = typename std::remove_reference<decltype(tuple::get<I>(T{}))>::type;
 
 #endif
