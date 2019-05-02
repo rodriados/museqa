@@ -161,6 +161,7 @@ namespace cmdline
             -> typename std::enable_if<!std::is_arithmetic<T>::value, T>::type
             {                
                 static_assert(std::is_convertible<std::string, T>::value, "Cannot convert to requested type");
+
                 const auto& pair = values.find(name);
 
                 return pair != values.end()

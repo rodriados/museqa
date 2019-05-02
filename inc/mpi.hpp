@@ -155,6 +155,7 @@ namespace mpi
          * @since 0.1.1
          */
         template <> inline MPI_Datatype get<bool>()     { return MPI_C_BOOL; };
+        template <> inline MPI_Datatype get<char>()     { return MPI_CHAR; };
         template <> inline MPI_Datatype get<float>()    { return MPI_FLOAT; };
         template <> inline MPI_Datatype get<double>()   { return MPI_DOUBLE; };
         template <> inline MPI_Datatype get<int8_t>()   { return MPI_INT8_T; };
@@ -185,7 +186,7 @@ namespace mpi
                  */
                 inline static void generate(int *blockList, MPI_Aint *offsetList, MPI_Datatype *typeList)
                 {
-                    Builder<typename Reflection<T>::Tuple>::template generate<T>(blockList, offsetList, typeList);
+                    Builder<ReflectionTuple<T>>::template generate<T>(blockList, offsetList, typeList);
                 }
             };
 
@@ -208,9 +209,9 @@ namespace mpi
                 template <typename O, size_t N = 0>
                 inline static void generate(int *blockList, MPI_Aint *offsetList, MPI_Datatype *typeList)
                 {
-                    blockList[N] = 1;
-                    typeList[N] = get<T>();
+                    blockList[N] = std::max(std::extent<T>::value, (long unsigned)1);
                     offsetList[N] = Reflection<O>::template getOffset<N>();
+                    typeList[N] = get<typename std::remove_extent<T>::type>();
                 }
             };
 
@@ -485,7 +486,7 @@ namespace mpi
          */
         template <template <typename> class B, typename T>
         struct Payload<B<T>, typename std::enable_if<std::is_base_of<BaseBuffer<T>, B<T>>::value>::type>
-            : public Payload<T>
+            :   public Payload<T>
         {
             BaseBuffer<T>& object;          /// The original buffer.
 
@@ -756,7 +757,6 @@ namespace mpi
 
         using S = typename decltype(sendl)::type;
         using R = typename decltype(recvl)::type;
-
         static_assert(std::is_same<S, R>::value, "Cannot gather with different types!");
 
         std::vector<int> sizeList(comm.size), displList(comm.size);
@@ -779,7 +779,6 @@ namespace mpi
 
         using S = typename decltype(sendl)::type;
         using R = typename decltype(recvl)::type;
-
         static_assert(std::is_same<S, R>::value, "Cannot gather with different types!");
 
         int size = sendl.getSize();
@@ -841,7 +840,6 @@ namespace mpi
 
         using S = typename decltype(sendl)::type;
         using R = typename decltype(recvl)::type;
-
         static_assert(std::is_same<S, R>::value, "Cannot gather with different types!");
 
         std::vector<int> sizeList(comm.size), displList(comm.size);
@@ -865,7 +863,6 @@ namespace mpi
 
         using S = typename decltype(sendl)::type;
         using R = typename decltype(recvl)::type;
-
         static_assert(std::is_same<S, R>::value, "Cannot gather with different types!");
 
         int size = sendl.getSize();
@@ -927,7 +924,6 @@ namespace mpi
 
         using S = typename decltype(sendl)::type;
         using R = typename decltype(recvl)::type;
-
         static_assert(std::is_same<S, R>::value, "Cannot scatter with different types!");
 
         std::vector<int> sizeList, displList;
@@ -950,7 +946,6 @@ namespace mpi
 
         using S = typename decltype(sendl)::type;
         using R = typename decltype(recvl)::type;
-
         static_assert(std::is_same<S, R>::value, "Cannot gather with different types!");
 
         int size = sendl.getSize();

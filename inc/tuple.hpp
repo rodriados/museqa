@@ -8,94 +8,88 @@
 #ifndef TUPLE_HPP_INCLUDED
 #define TUPLE_HPP_INCLUDED
 
+#include <cstdint>
 #include <utility>
 
 #include "utils.hpp"
 
-/*
- * Forward declaration of base tuple struct, so it can be used as a type
- * before its actual definition.
- */
-template <typename I, typename ...T>
-struct BaseTuple;
-
-/*
- * Forward declaration of a tuple, so it can be used as a type in the
- * namespace's internal getter functions.
- */
-template <typename ...T>
-struct Tuple;
-
 namespace tuple
 {
     /**
-     * Base for representing a tuple member and holding its value.
-     * @tparam I The index of the member of the tuple.
-     * @tparam T The type of the member of the tuple.
+     * Represents a tuple leaf, which holds a value.
+     * @tparam I The index of the tuple's leaf.
+     * @tparam T The type of the tuple's leaf member.
      * @since 0.1.1
      */
     template <size_t I, typename T>
-    struct BaseMember
+    struct TupleLeaf
     {
-        T value = {};   /// The value held by this tuple member.
+        T value;        /// The value held by this tuple leaf.
+
+        __host__ __device__ inline constexpr TupleLeaf() noexcept = default;
+        __host__ __device__ inline constexpr TupleLeaf(const TupleLeaf&) noexcept = default;
+        __host__ __device__ inline constexpr TupleLeaf(TupleLeaf&&) noexcept = default;
+
+        /**
+         * Constructs a new tuple leaf.
+         * @param value The value to be held by the leaf.
+         */
+        __host__ __device__ inline constexpr TupleLeaf(const T& value) noexcept
+        :   value {value}
+        {}
+
+        __host__ __device__ inline TupleLeaf& operator=(const TupleLeaf&) noexcept = default;
+        __host__ __device__ inline TupleLeaf& operator=(TupleLeaf&&) noexcept = default;
     };
 
     /**
-     * Retrieves the requested member base and returns its value.
-     * @param base The selected tuple member base.
-     * @tparam I The requested member index.
-     * @tparam T The member type to be matched.
-     * @return The member's value.
+     * Retrieves the requested tuple leaf and returns its value.
+     * @param leaf The selected tuple leaf member.
+     * @tparam I The requested leaf index.
+     * @tparam T The type of requested leaf member.
+     * @return The leaf's value.
      */
     template <size_t I, typename T>
-    inline constexpr const T& retrieve(const BaseMember<I, T>& base) noexcept
+    __host__ __device__ inline constexpr const T& get(const TupleLeaf<I, T>& leaf) noexcept
     {
-        return base.value;
-    }
-
-    /**
-     * Retrieves the value held by a member base.
-     * @param tuple The tuple in which value will be retrieved from.
-     * @tparam IN The requested member index.
-     * @tparam T The member type to be matched.
-     * @return The requested member's value.
-     */
-    template <size_t I, typename ...T>
-    inline constexpr decltype(auto) get(const Tuple<T...>& tuple) noexcept
-    {
-        static_assert(I < sizeof...(T), "requested tuple index is out of bounds!");
-        return retrieve<I>(tuple);
+        return leaf.value;
     }
 };
 
 /**#@+
- * The base struct for a type tuple.
+ * The base for a type tuple.
  * @tparam I The indeces for the tuple members.
  * @tparam T The types of the tuple members.
  * @since 0.1.1
  */
+template <typename I, typename ...T>
+struct BaseTuple;
+
 template <size_t ...I, typename ...T>
-struct BaseTuple<std::index_sequence<I...>, T...> : public tuple::BaseMember<I, T>...
+struct BaseTuple<Index<I...>, T...> : public tuple::TupleLeaf<I, T>...
 {
-    constexpr BaseTuple() noexcept = default;
-    constexpr BaseTuple(const BaseTuple&) noexcept = default;
-    constexpr BaseTuple(BaseTuple&&) noexcept = default;
+    static constexpr size_t count = sizeof...(I);   /// The size of the tuple.
+
+    __host__ __device__ inline constexpr BaseTuple() noexcept = default;
+    __host__ __device__ inline constexpr BaseTuple(const BaseTuple&) noexcept = default;
+    __host__ __device__ inline constexpr BaseTuple(BaseTuple&&) noexcept = default;
 
     /**
      * This constructor sets every base member with its corresponding value.
      * @param value The list of values for members.
      */
-    inline constexpr BaseTuple(T... value) noexcept
-    :   tuple::BaseMember<I, T> {value}...
+    __host__ __device__ inline constexpr BaseTuple(const T&... value) noexcept
+    :   tuple::TupleLeaf<I, T> {value}...
     {}
 
-    static constexpr size_t size = sizeof...(I);    /// The size of the tuple.
+    __host__ __device__ inline BaseTuple& operator=(const BaseTuple&) noexcept = default;
+    __host__ __device__ inline BaseTuple& operator=(BaseTuple&&) noexcept = default;
 };
 
 template <>
-struct BaseTuple<std::index_sequence<>>
+struct BaseTuple<Index<>>
 {
-    static constexpr size_t size = 0;   /// The size of the tuple.
+    static constexpr size_t count = 0;      /// The size of the tuple.
 };
 /**#@-*/
 
@@ -106,49 +100,29 @@ struct BaseTuple<std::index_sequence<>>
  * @since 0.1.1
  */
 template <typename ...T>
-struct Tuple : public BaseTuple<std::make_index_sequence<sizeof...(T)>, T...>
+struct Tuple : public BaseTuple<typename IndexGen<sizeof...(T)>::type, T...>
 {
+    __host__ __device__ inline constexpr Tuple() noexcept = default;
+    __host__ __device__ inline constexpr Tuple(const Tuple&) noexcept = default;
+    __host__ __device__ inline constexpr Tuple(Tuple&&) noexcept = default;
+
+    using BaseTuple<typename IndexGen<sizeof...(T)>::type, T...>::BaseTuple;
+
+    __host__ __device__ inline Tuple& operator=(const Tuple&) noexcept = default;
+    __host__ __device__ inline Tuple& operator=(Tuple&&) noexcept = default;
+
     /**
      * Gets value from member by index.
      * @tparam I The index of requested member.
      * @return The member's value.
      */
     template <size_t I>
-    constexpr decltype(auto) get() const noexcept
+    __host__ __device__ inline constexpr auto get() const noexcept
+    -> decltype(tuple::get<I>(std::declval<Tuple>()))
     {
         return tuple::get<I>(*this);
     }
-
-    using BaseTuple<std::make_index_sequence<sizeof...(T)>, T...>::BaseTuple;
 };
-
-namespace tuple
-{
-    /**#@+
-     * Repeats a type so it's easier to create tuples with repeated types.
-     * @tparam I The number of times the type shall repeat.
-     * @tparam T The type to be repeated.
-     * @since 0.1.1
-     */
-    template <typename I, typename T>
-    struct Repeater;
-
-    template <size_t ...I, typename T>
-    struct Repeater<std::index_sequence<I...>, T>
-    {
-        using type = Tuple<Identity<T, I>...>;
-    };
-    /**#@-*/
-};
-
-/**
- * Creates a tuple with many instances of a single type.
- * @tparam T The type to create tuple from.
- * @tparam N The number of types the type shall repeat.
- * @since 0.1.1
- */
-template <typename T, size_t N>
-using TupleN = typename tuple::Repeater<std::make_index_sequence<N>, T>::type;
 
 /**
  * The type of a tuple element.
@@ -157,6 +131,8 @@ using TupleN = typename tuple::Repeater<std::make_index_sequence<N>, T>::type;
  * @since 0.1.1
  */
 template <size_t I, typename T>
-using TupleElement = typename std::remove_reference<decltype(tuple::get<I>(T{}))>::type;
+using TupleElement = typename std::remove_reference<
+        decltype(tuple::get<I>(std::declval<T>()))
+    >::type;
 
 #endif

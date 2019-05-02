@@ -74,4 +74,51 @@ using Functor = typename std::enable_if<std::is_function<F>::value, F*>::type;
 template <typename T, size_t N>
 using Identity = T;
 
+/**
+ * Represents an index sequence in its type.
+ * @tparam I The index sequence.
+ * @since 0.1.1
+ */
+template <size_t ...I>
+struct Index
+{
+    using type = Index;
+    static constexpr size_t size = sizeof...(I);
+};
+
+namespace utils
+{
+    /**
+     * Concatenates two index sequences into one.
+     * @tparam I The first sequence to be concatenated.
+     * @tparam J The second sequence to be concatenated.
+     * @return The type of concatenated sequences.
+     */
+    template <size_t ...I, size_t ...J>
+    __host__ __device__ static constexpr auto concat(Index<I...>, Index<J...>) noexcept
+    -> Index<I..., sizeof...(I) + J...>;
+};
+
+/**#@+
+ * Generates a tuple type index sequence.
+ * @tparam N The size of sequence to generate.
+ * @since 0.1.1
+ */
+template <size_t N>
+struct IndexGen : public decltype(utils::concat(
+        typename IndexGen<N / 2>::type ()
+    ,   typename IndexGen<N - N / 2>::type ()
+    ))
+{};
+
+template <>
+struct IndexGen<0> : public Index<>
+{};
+
+template <>
+struct IndexGen<1> : public Index<0>
+{};
+/**#@-*/
+
+
 #endif
