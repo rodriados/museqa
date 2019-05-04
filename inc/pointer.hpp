@@ -62,8 +62,8 @@ struct RawPointer
     Deleter<T> delfunc = pointer::deleter<T>;       /// The pointer deleter function.
 
     RawPointer() = default;
-    RawPointer(const RawPointer<T>&) = default;
-    RawPointer(RawPointer<T>&&) = default;
+    RawPointer(const RawPointer&) = default;
+    RawPointer(RawPointer&&) = default;
 
     /**
      * Initializes a new pointer storage object.
@@ -75,8 +75,8 @@ struct RawPointer
     ,   delfunc {delfunc ? delfunc : pointer::deleter<T>}
     {}
 
-    RawPointer<T>& operator=(const RawPointer<T>&) = default;
-    RawPointer<T>& operator=(RawPointer<T>&&) = default;
+    RawPointer& operator=(const RawPointer&) = default;
+    RawPointer& operator=(RawPointer&&) = default;
 
     /**
      * Converts to universal pointer type.
@@ -193,7 +193,7 @@ class BasePointer
          * Gets reference to an already existing pointer.
          * @param other The reference to be acquired.
          */
-        inline BasePointer(const BasePointer<T>& other)
+        inline BasePointer(const BasePointer& other)
         :   meta {pointer::acquire(other.meta)}
         ,   ptr {other.ptr}
         {}
@@ -202,7 +202,7 @@ class BasePointer
          * Acquires a moved reference to an already existing pointer.
          * @param other The reference to be moved.
          */
-        inline BasePointer(BasePointer<T>&& other)
+        inline BasePointer(BasePointer&& other)
         :   meta {other.meta}
         ,   ptr {other.ptr}
         {
@@ -233,7 +233,7 @@ class BasePointer
          * @param other The reference to be acquired.
          * @return This pointer object.
          */
-        inline BasePointer<T>& operator=(const BasePointer<T>& other)
+        inline BasePointer& operator=(const BasePointer& other)
         {
             pointer::release(meta);
 
@@ -248,7 +248,7 @@ class BasePointer
          * @param other The reference to be acquired.
          * @return This pointer object.
          */
-        inline BasePointer<T>& operator=(BasePointer<T>&& other) noexcept
+        inline BasePointer& operator=(BasePointer&& other) noexcept
         {
             pointer::release(meta);
 
@@ -344,13 +344,13 @@ class Pointer : public BasePointer<T>
 {
     public:
         inline Pointer() = default;
-        inline Pointer(const Pointer<T>&) = default;
-        inline Pointer(Pointer<T>&&) = default;
+        inline Pointer(const Pointer&) = default;
+        inline Pointer(Pointer&&) = default;
 
         using BasePointer<T>::BasePointer;
 
-        Pointer<T>& operator=(const Pointer<T>&) = default;
-        Pointer<T>& operator=(Pointer<T>&&) = default;
+        Pointer& operator=(const Pointer&) = default;
+        Pointer& operator=(Pointer&&) = default;
 
         /**
          * Converts to universal pointer type.
@@ -392,9 +392,9 @@ class Pointer : public BasePointer<T>
          */
         template <typename U = T>
         inline auto getOffsetPointer(ptrdiff_t offset) const
-        -> typename std::enable_if<!std::is_same<Pure<U>, U>::value, Pointer<T>>::type
+        -> typename std::enable_if<!std::is_same<Pure<U>, U>::value, Pointer>::type
         {
-            Pointer<T> newptr {*this};
+            Pointer newptr {*this};
             newptr.ptr += offset;
 
             return newptr;

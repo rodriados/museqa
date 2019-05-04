@@ -31,8 +31,8 @@ class BaseBuffer
 
     public:
         BaseBuffer() = default;
-        BaseBuffer(const BaseBuffer<T>&) = default;
-        BaseBuffer(BaseBuffer<T>&&) = default;
+        BaseBuffer(const BaseBuffer&) = default;
+        BaseBuffer(BaseBuffer&&) = default;
 
         /**
          * Creates a new buffer by allocating memory.
@@ -63,8 +63,8 @@ class BaseBuffer
         ,   size {size}
         {}
 
-        BaseBuffer<T>& operator=(const BaseBuffer<T>&) = default;
-        BaseBuffer<T>& operator=(BaseBuffer<T>&&) = default;
+        BaseBuffer& operator=(const BaseBuffer&) = default;
+        BaseBuffer& operator=(BaseBuffer&&) = default;
 
         /**
          * Gives access to a specific location in buffer's data.
@@ -130,8 +130,8 @@ class Buffer : public BaseBuffer<T>
 {
     public:
         Buffer() = default;
-        Buffer(const Buffer<T>&) = default;
-        Buffer(Buffer<T>&&) = default;
+        Buffer(const Buffer&) = default;
+        Buffer(Buffer&&) = default;
 
         using BaseBuffer<T>::BaseBuffer;
 
@@ -166,8 +166,8 @@ class Buffer : public BaseBuffer<T>
             copy(vector.data());
         }
 
-        Buffer<T>& operator=(const Buffer<T>&) = default;
-        Buffer<T>& operator=(Buffer<T>&&) = default;
+        Buffer& operator=(const Buffer&) = default;
+        Buffer& operator=(Buffer&&) = default;
 
     protected:
         /**
@@ -194,8 +194,8 @@ class BufferSlice : public BaseBuffer<T>
 
     public:
         BufferSlice() = default;
-        BufferSlice(const BufferSlice<T>&) = default;
-        BufferSlice(BufferSlice<T>&&) = default;
+        BufferSlice(const BufferSlice&) = default;
+        BufferSlice(BufferSlice&&) = default;
 
         /**
          * Instantiates a new buffer slice.
@@ -218,7 +218,7 @@ class BufferSlice : public BaseBuffer<T>
          * @param target The target buffer to which the slice shall relate to.
          * @param slice The slice data to be put into the new target.
          */
-        inline BufferSlice(const BaseBuffer<T>& target, const BufferSlice<T>& slice)
+        inline BufferSlice(const BaseBuffer<T>& target, const BufferSlice& slice)
         :   BaseBuffer<T> {target.getOffsetPointer(slice.getDispl()), slice.getSize()}
         ,   displ {slice.getDispl()}
         {
@@ -228,8 +228,8 @@ class BufferSlice : public BaseBuffer<T>
 #endif
         }
 
-        BufferSlice<T>& operator=(const BufferSlice<T>&) = default;
-        BufferSlice<T>& operator=(BufferSlice<T>&&) = default;
+        BufferSlice& operator=(const BufferSlice&) = default;
+        BufferSlice& operator=(BufferSlice&&) = default;
 
         /**
          * Informs the displacement pointer in relation to original buffer.

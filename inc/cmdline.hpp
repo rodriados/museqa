@@ -241,6 +241,10 @@ namespace cmdline
             const Option& find(const std::string&) const;
     };
 
+    /**
+     * The global command line parser instance.
+     * @since 0.1.1
+     */
     extern Parser parser;
 
     /**

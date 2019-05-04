@@ -286,7 +286,7 @@ namespace mpi
              */
             inline static MPI_Datatype get()
             {
-                static Generator<T> instance;
+                static Generator instance;
                 return instance.typeId;
             }
         };
@@ -390,8 +390,8 @@ namespace mpi
             size_t size = 0;                /// The payload's size.
 
             Payload() = default;
-            Payload(const Payload<T>&) = delete;
-            Payload(Payload<T>&&) = delete;
+            Payload(const Payload&) = delete;
+            Payload(Payload&&) = delete;
 
             /**
              * Creates a new payload from simple object value.
@@ -412,8 +412,8 @@ namespace mpi
             ,   size {size}
             {}
 
-            Payload<T>& operator=(const Payload<T>&) = delete;
-            Payload<T>& operator=(Payload<T>&&) = delete;
+            Payload& operator=(const Payload&) = delete;
+            Payload& operator=(Payload&&) = delete;
 
             /**
              * Retrieves the pointer to payload's buffer.
