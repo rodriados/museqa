@@ -126,7 +126,7 @@ namespace reflection
         struct LoopholeInvoker;
 
         template <size_t ...I, typename T>
-        struct LoopholeInvoker<Index<I...>, T> : Tuple<decltype(T{Loophole<T, I>{}...}, 0)>
+        struct LoopholeInvoker<Indexer<I...>, T> : Tuple<decltype(T{Loophole<T, I>{}...}, 0)>
         {
             using type = Tuple<decltype(loophole(Tag<T, I>{}))...>;
         };
@@ -162,7 +162,7 @@ namespace reflection
      */
     template <typename T>
     using LoopholeTuple = typename detail::LoopholeInvoker<
-            typename IndexGen<detail::count<T>(0)>::type, T
+            IndexerG<detail::count<T>(0)>, T
         >::type;
 #else
     /**
@@ -294,11 +294,10 @@ class Reflection : public ReferenceTuple<T>
          * @param obj The object instance to get references from.
          */
         __host__ __device__ inline Reflection(T& obj) noexcept
-        :   ReferenceTuple<T> {getReference(ReflectionTuple<T> {}, IndexGen<getSize()> {}, obj)}
+        :   ReferenceTuple<T> {getReference(ReflectionTuple<T> {}, IndexerG<getSize()> {}, obj)}
         {}
 
-        Reflection& operator=(const Reflection&) = delete;
-        Reflection& operator=(Reflection&&) = delete;
+        using ReferenceTuple<T>::operator=;
 
         /**
          * Retrieves the offset of a member in the data object by its index.
@@ -306,7 +305,7 @@ class Reflection : public ReferenceTuple<T>
          * @return The member offset.
          */
         template <size_t N>
-        static constexpr ptrdiff_t getOffset() noexcept
+        __host__ __device__ inline static constexpr ptrdiff_t getOffset() noexcept
         {
             return getOffset<N>(AlignedTuple<T> {});
         }
@@ -315,7 +314,7 @@ class Reflection : public ReferenceTuple<T>
          * Retrieves the number of members of the given data object.
          * @return The number of object's members.
          */
-        static constexpr size_t getSize() noexcept
+        __host__ __device__ inline static constexpr size_t getSize() noexcept
         {
             return ReflectionTuple<T>::count;
         }
@@ -328,7 +327,7 @@ class Reflection : public ReferenceTuple<T>
          * @return The member offset.
          */
         template <size_t N>
-        static constexpr ptrdiff_t getOffset(AlignedTuple<T> t) noexcept
+        __host__ __device__ inline static constexpr ptrdiff_t getOffset(AlignedTuple<T> t) noexcept
         {
             return &t.template get<N>().storage[0] - &t.template get<0>().storage[0];
         }
@@ -341,7 +340,8 @@ class Reflection : public ReferenceTuple<T>
          * @return The new reference tuple instance.
          */
         template <typename ...U, size_t ...I>
-        __host__ __device__ inline static ReferenceTuple<T> getReference(Tuple<U...>, Index<I...>, T& obj)
+        __host__ __device__ inline static auto getReference(Tuple<U...>, Indexer<I...>, T& obj) noexcept
+        -> ReferenceTuple<T>
         {
             return {*reinterpret_cast<U*>(reinterpret_cast<char *>(&obj) + getOffset<I>())...};
         }

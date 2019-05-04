@@ -24,10 +24,46 @@
   #define msa_compile_cuda 1
 #endif
 
+/**#@+
+ * Forms the logical conjunction of the given type traits, effectively performing
+ * a logical AND in the sequence of traits.
+ * @since 0.1.1
+ */
+template <typename ...T>
+struct AllOf : std::true_type
+{};
+
+template <typename T>
+struct AllOf<T> : T
+{};
+
+template <typename T, typename ...U>
+struct AllOf<T, U...> : std::conditional<bool(T::value), AllOf<U...>, T>::type
+{};
+/**#@-*/
+
+/**#@+
+ * Forms the logical disjunction of the given type traits, effectively performing
+ * a logical OR in the sequence of traits.
+ * @since 0.1.1
+ */
+template <typename ...T>
+struct OneOf : std::false_type
+{};
+
+template <typename T>
+struct OneOf<T> : T
+{};
+
+template <typename T, typename ...U>
+struct OneOf<T, U...> : std::conditional<bool(T::value), T, OneOf<U...>>::type
+{};
+/**#@-*/
+
 /**
  * A memory aligned storage container.
- * @tparam S The number of elements in storage.
- * @tparam A The alignment the storage should use.
+ * @tparam S The number of bytes in storage.
+ * @tparam A The byte alignment the storage should use.
  * @since 0.1.1
  */
 template <size_t S, size_t A>
@@ -35,6 +71,58 @@ struct AlignedStorage
 {
     alignas(A) char storage[S]; /// The aligned storage container.
 };
+
+/**#@+
+ * Represents and generates a type index sequence.
+ * @tparam I The index sequence.
+ * @tparam N The sequence size.
+ * @since 0.1.1
+ */
+template <size_t ...I>
+struct Indexer
+{
+    using type = Indexer;
+};
+
+template <>
+struct Indexer<0>
+{
+    using type = Indexer<>;
+};
+
+template <>
+struct Indexer<1>
+{
+    using type = Indexer<0>;
+};
+
+template <size_t N>
+struct Indexer<N>
+{
+    /**
+     * Concatenates two type index sequences into one.
+     * @tparam I The first index sequence to merge.
+     * @tparam J The second index sequence to merge.
+     * @return The concatenated index sequence.
+     */
+    template <size_t ...I, size_t ...J>
+    static constexpr auto concat(Indexer<I...>, Indexer<J...>) noexcept
+    -> typename Indexer<I..., sizeof...(I) + J...>::type;
+
+    using type = decltype(concat(
+            typename Indexer<N / 2>::type {}
+        ,   typename Indexer<N - N / 2>::type {}
+        ));
+};
+/**#@-*/
+
+/**
+ * The type index sequence generator of given size.
+ * @tparam N The index sequence size.
+ * @since 0.1.1
+ */
+template <size_t N>
+using IndexerG = typename Indexer<N>::type;
 
 /**
  * Purifies the type to its base, removing all extents it might have.
@@ -73,52 +161,5 @@ using Functor = typename std::enable_if<std::is_function<F>::value, F*>::type;
  */
 template <typename T, size_t N>
 using Identity = T;
-
-/**
- * Represents an index sequence in its type.
- * @tparam I The index sequence.
- * @since 0.1.1
- */
-template <size_t ...I>
-struct Index
-{
-    using type = Index;
-    static constexpr size_t size = sizeof...(I);
-};
-
-namespace utils
-{
-    /**
-     * Concatenates two index sequences into one.
-     * @tparam I The first sequence to be concatenated.
-     * @tparam J The second sequence to be concatenated.
-     * @return The type of concatenated sequences.
-     */
-    template <size_t ...I, size_t ...J>
-    __host__ __device__ static constexpr auto concat(Index<I...>, Index<J...>) noexcept
-    -> Index<I..., sizeof...(I) + J...>;
-};
-
-/**#@+
- * Generates a tuple type index sequence.
- * @tparam N The size of sequence to generate.
- * @since 0.1.1
- */
-template <size_t N>
-struct IndexGen : public decltype(utils::concat(
-        typename IndexGen<N / 2>::type ()
-    ,   typename IndexGen<N - N / 2>::type ()
-    ))
-{};
-
-template <>
-struct IndexGen<0> : public Index<>
-{};
-
-template <>
-struct IndexGen<1> : public Index<0>
-{};
-/**#@-*/
-
 
 #endif
