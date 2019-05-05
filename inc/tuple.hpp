@@ -111,11 +111,10 @@ struct BaseTuple<Indexer<I...>, T...> : public TupleLeaf<I, T>...
      * @tparam U A list of convertible types for every base member.
      * @param value The list of values for members.
      */
-    template <
-            typename ...U
-        ,   typename std::enable_if<AllOf<std::is_convertible<U, T>...>::value, int>::type = 0
-        >
-    __host__ __device__ inline constexpr BaseTuple(const U&... value) noexcept
+    template <typename ...U, typename = typename std::enable_if<
+            utils::all<std::is_convertible<U, T>...>()
+        >::type >
+    __host__ __device__ inline BaseTuple(const U&... value) noexcept
     :   TupleLeaf<I, T> {static_cast<T>(value)}...
     {}
 
@@ -124,11 +123,10 @@ struct BaseTuple<Indexer<I...>, T...> : public TupleLeaf<I, T>...
      * @tparam U A list of convertible types for every base member.
      * @param value The list of values for members.
      */
-    template <
-            typename ...U
-        ,   typename std::enable_if<AllOf<std::is_convertible<U, T>...>::value, int>::type = 0
-        >
-    __host__ __device__ inline constexpr BaseTuple(U&&... value) noexcept
+    template <typename ...U, typename = typename std::enable_if<
+            utils::all<std::is_convertible<U, T>...>()
+        >::type >
+    __host__ __device__ inline BaseTuple(U&&... value) noexcept
     :   TupleLeaf<I, T> {static_cast<T&&>(std::move(value))}...
     {}
 

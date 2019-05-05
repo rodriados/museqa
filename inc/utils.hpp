@@ -24,41 +24,89 @@
   #define msa_compile_cuda 1
 #endif
 
-/**#@+
- * Forms the logical conjunction of the given type traits, effectively performing
- * a logical AND in the sequence of traits.
- * @since 0.1.1
- */
-template <typename ...T>
-struct AllOf : std::true_type
-{};
+#include "operator.hpp"
 
-template <typename T>
-struct AllOf<T> : T
-{};
+namespace utils
+{
+    using namespace op;
 
-template <typename T, typename ...U>
-struct AllOf<T, U...> : std::conditional<bool(T::value), AllOf<U...>, T>::type
-{};
-/**#@-*/
+    /**#@+
+     * Performs a left fold, or reduction in given values.
+     * @tparam F The combining operator.
+     * @tparam B The base fold value type.
+     * @tparam T The fold values type.
+     * @tparam U The following value types.
+     * @return The final value.
+     */
+    template <typename F, typename B>
+    inline constexpr const B& foldl(F, const B& base) noexcept
+    {
+        return base;
+    }
 
-/**#@+
- * Forms the logical disjunction of the given type traits, effectively performing
- * a logical OR in the sequence of traits.
- * @since 0.1.1
- */
-template <typename ...T>
-struct OneOf : std::false_type
-{};
+    template <typename F, typename B, typename T, typename ...U>
+    inline constexpr auto foldl(F func, const B& base, const T& value, const U&... rest) noexcept
+    -> decltype(func(std::declval<B>(), std::declval<T>()))
+    {
+        return foldl(func, func(base, value), rest...);
+    }
+    /**#@-*/
 
-template <typename T>
-struct OneOf<T> : T
-{};
+    /**#@+
+     * Performs a right fold, or reduction in given values.
+     * @tparam F The combining operator.
+     * @tparam B The base fold value type.
+     * @tparam T The fold values type.
+     * @tparam U The following value types.
+     * @return The final value.
+     */
+    template <typename F, typename B>
+    inline constexpr const B& foldr(F, const B& base) noexcept
+    {
+        return base;
+    }
 
-template <typename T, typename ...U>
-struct OneOf<T, U...> : std::conditional<bool(T::value), T, OneOf<U...>>::type
-{};
-/**#@-*/
+    template <typename F, typename B, typename T, typename ...U>
+    inline constexpr auto foldr(F func, const B& base, const T& value, const U&... rest) noexcept
+    -> decltype(func(std::declval<T>(), std::declval<B>()))
+    {
+        return func(value, foldr(func, base, rest...));
+    }
+    /**#@-*/
+
+    /**
+     * Checks whether all given type traits are true.
+     * @tparam T Type traits to test.
+     * @since 0.1.1
+     */
+    template <typename ...T>
+    inline constexpr bool all() noexcept
+    {
+        return foldl(andl<bool, bool>, true, T{}...);
+    }
+
+    /**
+     * Checks whether at least one of given type traits are true.
+     * @tparam T Type traits to test.
+     * @since 0.1.1
+     */
+    template <typename ...T>
+    inline constexpr bool any() noexcept
+    {
+        return foldl(orl<bool, bool>, false, T{}...);
+    }
+
+    /**
+     * Checks whether none of given type traits are true.
+     * @tparam T Type traits to test.
+     * @since 0.1.1
+     */
+    template <typename ...T>
+    inline constexpr bool none() noexcept
+    {
+        return !any<T...>();
+    }
+};
 
 /**
  * A memory aligned storage container.
@@ -99,20 +147,11 @@ struct Indexer<1>
 template <size_t N>
 struct Indexer<N>
 {
-    /**
-     * Concatenates two type index sequences into one.
-     * @tparam I The first index sequence to merge.
-     * @tparam J The second index sequence to merge.
-     * @return The concatenated index sequence.
-     */
     template <size_t ...I, size_t ...J>
     static constexpr auto concat(Indexer<I...>, Indexer<J...>) noexcept
     -> typename Indexer<I..., sizeof...(I) + J...>::type;
 
-    using type = decltype(concat(
-            typename Indexer<N / 2>::type {}
-        ,   typename Indexer<N - N / 2>::type {}
-        ));
+    using type = decltype(concat(typename Indexer<N/2>::type{}, typename Indexer<N-N/2>::type{}));
 };
 /**#@-*/
 
@@ -150,16 +189,15 @@ using Pure = typename std::conditional<
  * @since 0.1.1
  */
 template <typename F>
-using Functor = typename std::enable_if<std::is_function<F>::value, F*>::type;
+using Functor = typename std::enable_if<std::is_function<F>::value, F>::type *;
 
 /**
  * Returns the first type unchanged. This is useful to produce a repeating list
  * of the given type.
  * @tpatam T The type to return.
- * @tparam N Unused.
  * @since 0.1.1
  */
-template <typename T, size_t N>
+template <typename T>
 using Identity = T;
 
 #endif
