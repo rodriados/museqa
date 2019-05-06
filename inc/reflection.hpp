@@ -210,7 +210,7 @@ namespace reflection
      */
     template <typename ...T>
     static constexpr auto aligned(Tuple<T...>) noexcept
-    -> Tuple<AlignedStorage<sizeof(T), alignof(T)>...>;
+    -> Tuple<Storage<sizeof(T), alignof(T)>...>;
 
     /**
      * Helper for creating a tuple with references to object values.

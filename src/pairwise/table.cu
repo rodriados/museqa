@@ -256,7 +256,7 @@ Pointer<Table> pairwise::table::retrieve(const std::string& name)
 {
     return {
         pairwise::table::get(name)
-    ,   [](Table *) { /* You don't touch my table! */; }
+    ,   Deleter<Table> {[](Table *) { /* You don't touch my table! */; }}
     };
 }
 

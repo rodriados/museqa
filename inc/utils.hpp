@@ -24,6 +24,142 @@
   #define msa_compile_cuda 1
 #endif
 
+/**#@+
+ * Wraps a function pointer into a functor.
+ * @tparam F The full function signature type.
+ * @tparam R The function return type.
+ * @tparam P The function parameter types.
+ * @since 0.1.1
+ */
+template <typename F>
+class Functor;
+
+template <typename R, typename ...P>
+class Functor<R(P...)>
+{
+    protected:
+        using Funcptr = R (*)(P...);   /// The function pointer type.
+        Funcptr func = nullptr;        /// The function represented by the functor.
+
+    public:
+        __host__ __device__ inline constexpr Functor() noexcept = default;
+        __host__ __device__ inline constexpr Functor(const Functor&) noexcept = default;
+        __host__ __device__ inline constexpr Functor(Functor&&) noexcept = default;
+
+        /**
+         * Constructs a new functor.
+         * @param funcptr The function pointer to be carried by functor.
+         */
+        __host__ __device__ inline constexpr Functor(Funcptr funcptr) noexcept
+        :   func {funcptr}
+        {}
+
+        __host__ __device__ inline Functor& operator=(const Functor&) noexcept = default;
+        __host__ __device__ inline Functor& operator=(Functor&&) noexcept = default;
+
+        /**
+         * The functor call operator.
+         * @tparam T The given parameter types.
+         * @param param The given functor parameters.
+         * @return The functor return value.
+         */
+        template <typename ...T>
+        __host__ __device__ inline constexpr R operator()(T&&... param) const
+        {
+            return func(std::forward<decltype(param)>(param)...);
+        }
+
+        /**
+         * Checks whether the functor is empty or not.
+         * @return Is the functor empty?
+         */
+        __host__ __device__ inline constexpr bool isEmpty() const noexcept
+        {
+            return func == nullptr;
+        }
+};
+/**#@-*/
+
+/**
+ * A general memory storage container.
+ * @tparam S The number of bytes in storage.
+ * @tparam A The byte alignment the storage should use.
+ * @since 0.1.1
+ */
+template <size_t S, size_t A = S>
+struct Storage
+{
+    alignas(A) char storage[S];     /// The storage container.
+};
+
+/**#@+
+ * Represents and generates a type index sequence.
+ * @tparam I The index sequence.
+ * @tparam L The length of sequence to generate.
+ * @since 0.1.1
+ */
+template <size_t ...I>
+struct Indexer
+{
+    /**
+     * The indexer sequence type.
+     * @since 0.1.1
+     */
+    using type = Indexer;
+};
+
+template <>
+struct Indexer<0>
+{
+    /**
+     * The indexer base generator type.
+     * @since 0.1.1
+     */
+    using type = Indexer<>;
+};
+
+template <>
+struct Indexer<1>
+{
+    /**
+     * The indexer base generator type.
+     * @since 0.1.1
+     */
+    using type = Indexer<0>;
+};
+
+template <size_t L>
+struct Indexer<L>
+{
+    /**
+     * Concatenates two type index sequences into one.
+     * @tparam I The first index sequence to merge.
+     * @tparam J The second index sequence to merge.
+     * @return The concatenated index sequence.
+     */
+    template <size_t ...I, size_t ...J>
+    static constexpr auto concat(Indexer<I...>, Indexer<J...>) noexcept
+    -> typename Indexer<I..., sizeof...(I) + J...>::type;
+
+    /**
+     * The indexer generator type.
+     * @since 0.1.1
+     */
+    using type = decltype(concat(
+            typename Indexer<L / 2>::type {}
+        ,   typename Indexer<L - L / 2> ::type {}
+        ));
+};
+/**#@-*/
+
+/**
+ * The type index sequence generator of given size.
+ * @tparam N The index sequence size.
+ * @since 0.1.1
+ */
+template <size_t N>
+using IndexerG = typename Indexer<N>::type;
+
 #include "operator.hpp"
 
 namespace utils
@@ -82,7 +218,7 @@ namespace utils
     template <typename ...T>
     inline constexpr bool all() noexcept
     {
-        return foldl(andl<bool, bool>, true, T{}...);
+        return foldl(And{}, true, T{}...);
     }
 
     /**
@@ -93,7 +229,7 @@ namespace utils
     template <typename ...T>
     inline constexpr bool any() noexcept
     {
-        return foldl(orl<bool, bool>, false, T{}...);
+        return foldl(Or{}, false, T{}...);
     }
 
     /**
@@ -107,61 +243,6 @@ namespace utils
         return !any<T...>();
     }
 };
-
-/**
- * A memory aligned storage container.
- * @tparam S The number of bytes in storage.
- * @tparam A The byte alignment the storage should use.
- * @since 0.1.1
- */
-template <size_t S, size_t A>
-struct AlignedStorage
-{
-    alignas(A) char storage[S]; /// The aligned storage container.
-};
-
-/**#@+
- * Represents and generates a type index sequence.
- * @tparam I The index sequence.
- * @tparam N The sequence size.
- * @since 0.1.1
- */
-template <size_t ...I>
-struct Indexer
-{
-    using type = Indexer;
-};
-
-template <>
-struct Indexer<0>
-{
-    using type = Indexer<>;
-};
-
-template <>
-struct Indexer<1>
-{
-    using type = Indexer<0>;
-};
-
-template <size_t N>
-struct Indexer<N>
-{
-    template <size_t ...I, size_t ...J>
-    static constexpr auto concat(Indexer<I...>, Indexer<J...>) noexcept
-    -> typename Indexer<I..., sizeof...(I) + J...>::type;
-
-    using type = decltype(concat(typename Indexer<N/2>::type{}, typename Indexer<N-N/2>::type{}));
-};
-/**#@-*/
-
-/**
- * The type index sequence generator of given size.
- * @tparam N The index sequence size.
- * @since 0.1.1
- */
-template <size_t N>
-using IndexerG = typename Indexer<N>::type;
 
 /**
  * Purifies the type to its base, removing all extents it might have.
@@ -182,14 +263,6 @@ using Pure = typename std::conditional<
     ,   Base<T>
     ,   T
     >::type;
-
-/**
- * Represents a function pointer type.
- * @tparam F The function signature type.
- * @since 0.1.1
- */
-template <typename F>
-using Functor = typename std::enable_if<std::is_function<F>::value, F>::type *;
 
 /**
  * Returns the first type unchanged. This is useful to produce a repeating list

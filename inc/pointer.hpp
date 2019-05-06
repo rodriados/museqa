@@ -72,7 +72,7 @@ struct RawPointer
      */
     inline RawPointer(Pure<T> *ptr, Deleter<T> delfunc = nullptr)
     :   ptr {ptr}
-    ,   delfunc {delfunc ? delfunc : pointer::deleter<T>}
+    ,   delfunc {!delfunc.isEmpty() ? delfunc : pointer::deleter<T>}
     {}
 
     RawPointer& operator=(const RawPointer&) = default;
