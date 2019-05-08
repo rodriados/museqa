@@ -41,6 +41,12 @@ namespace mpi
     using Tag = int32_t;
 
     /**
+     * A MPI operator for collective operations.
+     * @since 0.1.1
+     */
+    using Operator = MPI_Op;
+
+    /**
      * Permits communication and synchronization among a set of nodes and processes.
      * @since 0.1.1
      */
@@ -209,7 +215,7 @@ namespace mpi
                 template <typename O, size_t N = 0>
                 inline static void generate(int *blockList, MPI_Aint *offsetList, MPI_Datatype *typeList)
                 {
-                    blockList[N] = std::max(std::extent<T>::value, (long unsigned)1);
+                    blockList[N] = utils::max(std::extent<T>::value, 1UL);
                     offsetList[N] = Reflection<O>::template getOffset<N>();
                     typeList[N] = get<typename std::remove_extent<T>::type>();
                 }
@@ -266,7 +272,7 @@ namespace mpi
              */
             inline Generator() noexcept
             {
-                constexpr const int size = Reflection<T>::getSize();
+                constexpr int size = Reflection<T>::getSize();
 
                 int blockList[size];
                 MPI_Aint offsetList[size];
@@ -298,7 +304,7 @@ namespace mpi
      */
     struct Status
     {
-        mutable MPI_Status status;
+        mutable MPI_Status status;  /// The raw MPI status.
 
         Status() = default;
         Status(const Status&) = default;
@@ -472,7 +478,8 @@ namespace mpi
              */
             inline Pure<T> *resize(size_t size)
             {
-                if(this->size < size) object.resize(size);
+                if(this->size < size)
+                    object.resize(size);
 
                 this->size = size;
                 return this->buffer = object.data();
@@ -507,12 +514,75 @@ namespace mpi
              */
             inline Pure<T> *resize(size_t size)
             {
-                if(this->size < size) object = BaseBuffer<T> {size};
+                if(this->size < size)
+                    object = BaseBuffer<T> {size};
 
                 this->size = size;
                 return this->buffer = object.getBuffer();
             }
         };
+    };
+
+    namespace op
+    {
+        namespace detail
+        {
+            /**
+             * Wraps an operator transforming it into an MPI operator.
+             * @tparam T The type the operator works onto.
+             * @tparam F The operator to be wrapped.
+             */
+            template <typename T, T (*F)(const T&, const T&)>
+            void wrap(void *a, void *b, int *len, MPI_Datatype *)
+            {
+                static constexpr utils::Operator<T> f {F};
+
+                for(int i = 0; i < *len; ++i)
+                    static_cast<T*>(b)[i] = f(static_cast<T*>(a)[i], static_cast<T*>(b)[i]);
+            }
+        };
+
+        /**
+         * Keeps track of all user defined operators created during execution.
+         * @since 0.1.1
+         */
+        extern std::vector<MPI_Op> udefops;
+
+        /**
+         * Creates a new MPI operator from user function.
+         * @tparam T The type the operator works onto.
+         * @tparam F The operator to be wrapped.
+         * @param commutative Is the operator commutative?
+         * @return The identifier for operator created.
+         */
+        template <typename T, T (*F)(const T&, const T&)>
+        inline Operator create(bool commutative = true) noexcept
+        {
+            MPI_Op created;
+            call(MPI_Op_create(detail::wrap<T, F>, commutative, &created));
+            udefops.push_back(created);
+            return created;
+        }
+
+        /**#@+
+         * Listing of built-in operators. The use of these instead of creating
+         * new operators is highly recommended.
+         * @since 0.1.1
+         */
+        static constexpr Operator const& max     = MPI_MAX;
+        static constexpr Operator const& min     = MPI_MIN;
+        static constexpr Operator const& sum     = MPI_SUM;
+        static constexpr Operator const& mul     = MPI_PROD;
+        static constexpr Operator const& andl    = MPI_LAND;
+        static constexpr Operator const& andb    = MPI_BAND;
+        static constexpr Operator const& orl     = MPI_LOR;
+        static constexpr Operator const& orb     = MPI_BOR;
+        static constexpr Operator const& xorl    = MPI_LXOR;
+        static constexpr Operator const& xorb    = MPI_BXOR;
+        static constexpr Operator const& minloc  = MPI_MINLOC;
+        static constexpr Operator const& maxloc  = MPI_MAXLOC;
+        static constexpr Operator const& replace = MPI_REPLACE;
+        /**#@-*/
     };
 
     namespace communicator
@@ -523,21 +593,18 @@ namespace mpi
          */
         static constexpr Communicator null;
 
-        namespace detail
+        /**
+         * Builds up a new communicator instance from built-in type.
+         * @param comm Built-in communicator instance.
+         * @return The new communicator instance.
+         */
+        inline Communicator build(MPI_Comm comm)
         {
-            /**
-             * Builds up a new communicator instance from built-in type.
-             * @param comm Built-in communicator instance.
-             * @return The new communicator instance.
-             */
-            inline Communicator build(MPI_Comm comm)
-            {
-                int rank, size;
-                call(MPI_Comm_rank(comm, &rank));
-                call(MPI_Comm_size(comm, &size));
-                return {rank, size, comm};
-            }
-        };
+            int rank, size;
+            call(MPI_Comm_rank(comm, &rank));
+            call(MPI_Comm_size(comm, &size));
+            return {rank, size, comm};
+        }
 
         /**
          * Clones the communicator, creating a new communicator as a copy.
@@ -549,7 +616,7 @@ namespace mpi
             MPI_Comm newcomm;
             call(MPI_Comm_dup(comm.id, &newcomm));
             call(MPI_Comm_set_errhandler(newcomm, MPI_ERRORS_RETURN));
-            return detail::build(newcomm);
+            return build(newcomm);
         }
 
         /**#@+
@@ -563,7 +630,7 @@ namespace mpi
         {
             MPI_Comm newcomm;
             call(MPI_Comm_split(comm.id, color, key, &newcomm));
-            return detail::build(newcomm);
+            return build(newcomm);
         }
 
         inline Communicator split(const Communicator& comm, int color)
@@ -583,19 +650,11 @@ namespace mpi
         }
     };
 
-    /**
-     * Initializes the cluster's communication and identifies the node in the cluster.
-     * @param argc The number of arguments sent from terminal.
-     * @param argv The arguments sent from terminal.
+    /*
+     * Global MPI initialization and finalization routines.
      */
-    inline void init(int& argc, char **& argv)
-    {
-        call(MPI_Init(&argc, &argv));
-        world = communicator::detail::build(MPI_COMM_WORLD);
-        
-        node::rank = world.rank;
-        node::size = world.size;
-    }
+    void init(int&, char **&);
+    void finalize();
 
     /**#@+
      * Broadcasts data to all nodes in given communicator.
@@ -957,7 +1016,7 @@ namespace mpi
         recvl.resize(size = quo + (rem > comm.rank));
 
         if(!rem) scatter(sendl.getBuffer(), size, recvl.getBuffer(), size, root, comm);
-        else scatter(send, recv, size, quo * comm.rank + std::min(comm.rank, rem), root, comm);
+        else scatter(send, recv, size, quo * comm.rank + utils::min(comm.rank, rem), root, comm);
     }
     /**#@-*/
 
@@ -968,17 +1027,6 @@ namespace mpi
     inline void barrier(const Communicator& comm = world)
     {
         call(MPI_Barrier(comm.id));
-    }
-
-    /**
-     * Finalizes all cluster communication operations between nodes.
-     * @see mpi::init
-     */
-    inline void finalize()
-    {
-        for(MPI_Datatype& dtype : datatype::dtypes)
-            call(MPI_Type_free(&dtype));
-        call(MPI_Finalize());
     }
 };
 

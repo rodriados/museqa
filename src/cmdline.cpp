@@ -10,6 +10,10 @@
 #include "cmdline.hpp"
 #include "exception.hpp"
 
+/**
+ * The global command line parser instance.
+ * @since 0.1.1
+ */
 cmdline::Parser cmdline::parser;
 
 /**

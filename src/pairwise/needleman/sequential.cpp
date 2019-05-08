@@ -4,7 +4,6 @@
  * @copyright 2018 Rodrigo Siqueira
  */
 #include <cstdint>
-#include <algorithm>
 
 #include "msa.hpp"
 #include "node.hpp"
@@ -60,7 +59,10 @@ namespace
             // for each of its characters.
             for(size_t j = 1, m = two.getLength(); j <= m; ++j) {
                 val = two[j - 1] != encoder::end
-                    ? std::max(done + (*table)[one[i]][two[j - 1]], std::max(line[j - 1] - penalty, line[j] - penalty))
+                    ? utils::max(
+                            done + (*table)[one[i]][two[j - 1]]
+                        ,   utils::max(line[j - 1] - penalty, line[j] - penalty)
+                        )
                     : line[j - 1];
 
                 done = line[j];

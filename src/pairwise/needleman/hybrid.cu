@@ -6,7 +6,6 @@
 #include <set>
 #include <vector>
 #include <cstdint>
-#include <algorithm>
 #include <unordered_map>
 
 #include "msa.hpp"
@@ -75,7 +74,7 @@ namespace
      * @param letter The letter to update the LCS line with.
      * @return The value calculated in the last column.
      */
-    __device__ int32_t sliceAlignment
+    __device__ int32_t alignSlice
         (   const uint8_t *decoded
         ,   const Pointer<ScoringTable>& table
         ,   const int8_t penalty
@@ -120,7 +119,7 @@ namespace
      * @param penalty The gap penalty.
      * @return The score between sequences.
      */
-    __device__ int32_t globalAlignment
+    __device__ int32_t alignGlobally
         (   const SequenceView& one
         ,   const SequenceView& two
         ,   const Pointer<ScoringTable>& table
@@ -175,7 +174,7 @@ namespace
                 column[saveLine] = saveValue;
 
                 saveLine = lineOffset;
-                saveValue = sliceAlignment(decoded, table, penalty, done, left, letter);
+                saveValue = alignSlice(decoded, table, penalty, done, left, letter);
             }
 
             if(saveLine < lengthOne) column[saveLine] = saveValue;
@@ -203,7 +202,7 @@ namespace
             const SequenceView& seq1 = in.db[in.jobs[blockIdx.x].pair.id[0]];
             const SequenceView& seq2 = in.db[in.jobs[blockIdx.x].pair.id[1]];
 
-            out[blockIdx.x] = globalAlignment(
+            out[blockIdx.x] = alignGlobally(
                 seq1.getSize() > seq2.getSize() ? seq1 : seq2
             ,   seq1.getSize() > seq2.getSize() ? seq2 : seq1
             ,   table, -(*table)[24][0]
@@ -222,7 +221,7 @@ namespace
      * @param cacheSize The total size of cache this case requires.
      * @param in The target input instance to load.
      */
-    static void upload
+    static void loadToDevice
         (   const ::Database& db
         ,   const std::set<ptrdiff_t>& used
         ,   const std::vector<Workpair>& jobs
@@ -259,9 +258,12 @@ namespace
      * @param cachesz The size of cache this case requires.
      * @return The total memory requested for this case execution.
      */
-    inline size_t calcMemUsage(const ::Database& db, const std::vector<bool> used, const Pair& pair, size_t *cachesz)
+    inline size_t calculateMemoryUsage
+        (   const ::Database& db
+        ,   const std::vector<bool> used
+        ,   const Pair& pair, size_t *cachesz   )
     {
-        *cachesz = std::max(db[pair.id[0]].getLength(), db[pair.id[1]].getLength());
+        *cachesz = utils::max(db[pair.id[0]].getLength(), db[pair.id[1]].getLength());
 
         return 2 * sizeof(SequenceView) + sizeof(encoder::EncodedBlock) * (
                 (used[pair.id[0]] ? 0 : db[pair.id[0]].getSize())
@@ -277,7 +279,7 @@ namespace
      * @param in The target input instance for loading.
      * @return The number of workpairs loaded to device.
      */
-    static size_t prepare
+    static size_t selectPairs
         (   const ::Database& db
         ,   const Buffer<Pair>& pairs
         ,   const size_t done
@@ -294,10 +296,10 @@ namespace
         std::vector<bool> usedSequence(db.getCount(), false);
         std::set<ptrdiff_t> selectedSequence;
 
-        jobs.reserve(std::min(pairs.getSize(), maxbatch));
+        jobs.reserve(utils::min(pairs.getSize(), maxbatch));
 
         for(size_t i = done, n = pairs.getSize(); i < n && batch < maxbatch; ++i, ++batch) {
-            if((pairmem = calcMemUsage(db, usedSequence, pairs[i], &cachesz)) > memory)
+            if((pairmem = calculateMemoryUsage(db, usedSequence, pairs[i], &cachesz)) > memory)
                 break;
 
             jobs.push_back({pairs[i], cacheDispl});
@@ -309,7 +311,7 @@ namespace
             cacheDispl += cachesz;
         }
 
-        upload(db, selectedSequence, jobs, cacheDispl, in);
+        loadToDevice(db, selectedSequence, jobs, cacheDispl, in);
 
         return batch;
     }
@@ -335,7 +337,7 @@ namespace
         cuda::kernel::preference(kernel, nw_prefer_shared ? cuda::cache::shared : cuda::cache::l1);
         
         while(done < total) {
-            batch = prepare(db, pairs, done, in);
+            batch = selectPairs(db, pairs, done, in);
             out = Buffer<Score> {cuda::allocate<Score>(batch), batch};
 
             if(!batch) throw Exception("no pair fit in device memory.");

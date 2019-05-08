@@ -13,8 +13,13 @@
 namespace node
 {
 #ifndef msa_compile_cython
+    /**#@+
+     * Node identification values in cluster.
+     * @see mpi::init
+     */
     extern uint16_t size;
     extern uint16_t rank;
+    /**#@-*/
 #endif
 
     /*

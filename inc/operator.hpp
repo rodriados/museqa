@@ -10,21 +10,21 @@
 
 #include "utils.hpp"
 
-/**
- * Wraps an operator function. An operator always transforms two elements
- * of the same type into a single new value.
- * @tparam T The type upon which the operator works.
- * @since 0.1.1
- */
-template <typename T>
-struct Operator : public Functor<T(const T&, const T&)>
-{
-    using Functor<T(const T&, const T&)>::Functor;
-    using Functor<T(const T&, const T&)>::operator=;
-};
-
 namespace op
 {
+    /**
+     * Wraps an operator function. An operator always transforms two elements
+     * of the same type into a single new value.
+     * @tparam T The type upon which the operator works.
+     * @since 0.1.1
+     */
+    template <typename T>
+    struct Operator : public Functor<T(const T&, const T&)>
+    {
+        using Functor<T(const T&, const T&)>::Functor;
+        using Functor<T(const T&, const T&)>::operator=;
+    };
+
     /**
      * The logical AND operator.
      * @return The logical AND result between operands.

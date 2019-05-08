@@ -3,9 +3,8 @@
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018-2019 Rodrigo Siqueira
  */
-#include <algorithm>
-
 #include "mpi.hpp"
+#include "utils.hpp"
 #include "buffer.hpp"
 
 #include "pairwise/pairwise.cuh"
@@ -35,7 +34,7 @@ Buffer<Pair> Needleman::scatter()
         const size_t rank = node::rank - 1;
 
         count = quo + (rem > rank);
-        displ = quo * rank + std::min(rank, rem);
+        displ = quo * rank + utils::min(rank, rem);
     }
 
     mpi::scatter(origin, this->pair, count, displ);
