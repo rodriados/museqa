@@ -76,8 +76,8 @@ struct TupleLeaf
     :   value {static_cast<T&&>(std::move(leaf.value))}
     {}
 
-    __host__ __device__ inline TupleLeaf& operator=(const TupleLeaf&) noexcept = default;
-    __host__ __device__ inline TupleLeaf& operator=(TupleLeaf&&) noexcept = default;
+    __host__ __device__ inline TupleLeaf& operator=(const TupleLeaf&) = default;
+    __host__ __device__ inline TupleLeaf& operator=(TupleLeaf&&) = default;
 };
 
 /**#@+
@@ -130,8 +130,8 @@ struct BaseTuple<Indexer<I...>, T...> : public TupleLeaf<I, T>...
     :   TupleLeaf<I, T> {static_cast<T&&>(std::move(value))}...
     {}
 
-    __host__ __device__ inline BaseTuple& operator=(const BaseTuple&) noexcept = default;
-    __host__ __device__ inline BaseTuple& operator=(BaseTuple&&) noexcept = default;
+    __host__ __device__ inline BaseTuple& operator=(const BaseTuple&) = default;
+    __host__ __device__ inline BaseTuple& operator=(BaseTuple&&) = default;
 };
 
 template <>
@@ -228,7 +228,7 @@ class Tuple : public BaseTuple<IndexerG<sizeof...(T)>, T...>
          * @param other The tuple the values must be copied from.
          * @return This object instance.
          */
-        __host__ __device__ inline Tuple& operator=(const Tuple& other) noexcept
+        __host__ __device__ inline Tuple& operator=(const Tuple& other)
         {
             return copy(IndexerG<sizeof...(T)> {}, other);
         }
@@ -240,7 +240,7 @@ class Tuple : public BaseTuple<IndexerG<sizeof...(T)>, T...>
          * @return This object instance.
          */
         template <typename ...U>
-        __host__ __device__ inline Tuple& operator=(const Tuple<U...>& other) noexcept
+        __host__ __device__ inline Tuple& operator=(const Tuple<U...>& other)
         {
             return copy(IndexerG<sizeof...(T)> {}, other);
         }
@@ -250,7 +250,7 @@ class Tuple : public BaseTuple<IndexerG<sizeof...(T)>, T...>
          * @param other The tuple the values must be moved from.
          * @return This object instance.
          */
-        __host__ __device__ inline Tuple& operator=(Tuple&& other) noexcept
+        __host__ __device__ inline Tuple& operator=(Tuple&& other)
         {
             return copy(IndexerG<sizeof...(T)> {}, std::move(other));
         }
@@ -262,7 +262,7 @@ class Tuple : public BaseTuple<IndexerG<sizeof...(T)>, T...>
          * @return This object instance.
          */
         template <typename ...U>
-        __host__ __device__ inline Tuple& operator=(Tuple<U...>&& other) noexcept
+        __host__ __device__ inline Tuple& operator=(Tuple<U...>&& other)
         {
             return copy(IndexerG<sizeof...(T)> {}, std::move(other));
         }
@@ -342,6 +342,77 @@ class Tuple : public BaseTuple<IndexerG<sizeof...(T)>, T...>
         }
 };
 
+namespace tuple
+{
+    /**
+     * Creates a tuple with repeated types.
+     * @tparam T The type to repeat.
+     * @tparam I The number of times to repeat the type.
+     */
+    template <typename T, size_t ...I>
+    constexpr auto repeater(Indexer<I...>) noexcept
+    -> Tuple<Identity<T, I>...>;
+
+    template <typename T, size_t N>
+    using Repeated = decltype(repeater<T>(IndexerG<N> {}));
+};
+
+/**
+ * Creates a tuple with repeated types.
+ * @tparam T The type to be repeated.
+ * @tparam N The number of times the type shall repeat.
+ * @since 0.1.1
+ */
+template <typename T, size_t N>
+class TupleN : public tuple::Repeated<T, N>
+{
+    public:
+        using Tuple = tuple::Repeated<T, N>;
+
+        __host__ __device__ inline constexpr TupleN() noexcept = default;
+        __host__ __device__ inline constexpr TupleN(const TupleN&) noexcept = default;
+        __host__ __device__ inline constexpr TupleN(TupleN&&) noexcept = default;
+
+        using Tuple::Tuple;
+
+        /**
+         * Initializes a new tuple from an array.
+         * @param arr The array to initialize tuple.
+         */
+        __host__ __device__ inline TupleN(Pure<T> *arr) noexcept
+        :   Tuple {getElements(IndexerG<N>{}, arr)}
+        {}
+
+        /**
+         * Initializes a new tuple from a const array.
+         * @param arr The array to initialize tuple.
+         */
+        template <typename U = T, typename = typename std::enable_if<
+                !std::is_reference<U>::value
+            >::type >
+        __host__ __device__ inline TupleN(const Pure<T> *arr) noexcept
+        :   Tuple {getElements(IndexerG<N>{}, arr)}
+        {}
+
+        __host__ __device__ inline TupleN& operator=(const TupleN&) = default;
+        __host__ __device__ inline TupleN& operator=(TupleN&&) = default;
+
+        using Tuple::operator=;
+
+    protected:
+        /**
+         * A helper function to map array values to the underlying tuple.
+         * @param arr The array to inline.
+         * @return The created tuple.
+         */
+        template <size_t ...I, typename U>
+        __host__ __device__ inline static auto getElements(Indexer<I...>, U *arr) noexcept
+        -> Tuple
+        {
+            return {arr[I]...};
+        }
+};
+
 /**
  * The type of a tuple element.
  * @tparam T The target tuple.
@@ -353,18 +424,26 @@ using TupleElement = decltype(tuple::get<I>(std::declval<T>()));
 
 namespace tuple
 {
-    /**
-     * Gathers variable references into a tuple, allowing them to capture
-     * values directly from tuples.
+    /**#@+
+     * Gathers variable or array references into a tuple, allowing them to
+     * capture values directly from value tuples.
      * @tparam T The gathered variables types.
-     * @param args The gathered variables references.
+     * @tparam N When an array, the size must be fixed.
+     * @param arg The gathered variables references.
      * @return The new tuple of references.
      */
     template <typename ...T>
-    inline auto tie(T&... args) noexcept -> Tuple<T&...>
+    __host__ __device__ inline auto tie(T&... arg) noexcept -> Tuple<T&...>
     {
-        return {args...};
+        return {arg...};
     }
+
+    template <typename T, size_t N>
+    __host__ __device__ inline auto tie(T (&arg)[N]) noexcept -> TupleN<T&, N>
+    {
+        return {arg};
+    }
+    /**#@-*/
 };
 
 #endif

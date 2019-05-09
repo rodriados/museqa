@@ -87,7 +87,7 @@ class Functor<R(P...)>
  * @since 0.1.1
  */
 template <size_t S, size_t A = S>
-struct Storage
+struct alignas(A) Storage
 {
     alignas(A) char storage[S];     /// The storage container.
 };
@@ -138,7 +138,7 @@ struct Indexer<L>
      * @return The concatenated index sequence.
      */
     template <size_t ...I, size_t ...J>
-    static constexpr auto concat(Indexer<I...>, Indexer<J...>) noexcept
+    __host__ __device__ static constexpr auto concat(Indexer<I...>, Indexer<J...>) noexcept
     -> typename Indexer<I..., sizeof...(I) + J...>::type;
 
     /**
@@ -175,13 +175,13 @@ namespace utils
      * @return The final value.
      */
     template <typename F, typename B>
-    inline constexpr const B& foldl(F, const B& base) noexcept
+    __host__ __device__ inline constexpr B foldl(F, B&& base) noexcept
     {
         return base;
     }
 
     template <typename F, typename B, typename T, typename ...U>
-    inline constexpr auto foldl(F func, const B& base, const T& value, const U&... rest) noexcept
+    __host__ __device__ inline constexpr auto foldl(F func, B&& base, T&& value, U&&... rest) noexcept
     -> decltype(func(std::declval<B>(), std::declval<T>()))
     {
         return foldl(func, func(base, value), rest...);
@@ -197,13 +197,13 @@ namespace utils
      * @return The final value.
      */
     template <typename F, typename B>
-    inline constexpr const B& foldr(F, const B& base) noexcept
+    __host__ __device__ inline constexpr B foldr(F, B&& base) noexcept
     {
         return base;
     }
 
     template <typename F, typename B, typename T, typename ...U>
-    inline constexpr auto foldr(F func, const B& base, const T& value, const U&... rest) noexcept
+    __host__ __device__ inline constexpr auto foldr(F func, B&& base, T&& value, U&&... rest) noexcept
     -> decltype(func(std::declval<T>(), std::declval<B>()))
     {
         return func(value, foldr(func, base, rest...));
@@ -216,7 +216,7 @@ namespace utils
      * @since 0.1.1
      */
     template <typename ...T>
-    inline constexpr bool all() noexcept
+    __host__ __device__ inline constexpr bool all() noexcept
     {
         return foldl(And{}, true, T{}...);
     }
@@ -227,7 +227,7 @@ namespace utils
      * @since 0.1.1
      */
     template <typename ...T>
-    inline constexpr bool any() noexcept
+    __host__ __device__ inline constexpr bool any() noexcept
     {
         return foldl(Or{}, false, T{}...);
     }
@@ -238,7 +238,7 @@ namespace utils
      * @since 0.1.1
      */
     template <typename ...T>
-    inline constexpr bool none() noexcept
+    __host__ __device__ inline constexpr bool none() noexcept
     {
         return !any<T...>();
     }
@@ -261,7 +261,7 @@ template <typename T>
 using Pure = typename std::conditional<
         std::is_array<T>::value && !std::extent<T>::value
     ,   Base<T>
-    ,   T
+    ,   typename std::remove_reference<T>::type
     >::type;
 
 /**
@@ -270,7 +270,7 @@ using Pure = typename std::conditional<
  * @tpatam T The type to return.
  * @since 0.1.1
  */
-template <typename T>
+template <typename T, size_t>
 using Identity = T;
 
 #endif

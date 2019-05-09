@@ -244,7 +244,7 @@ class Reflector
          * @return The reflection tuple.
          */
         template <typename ...T>
-        static constexpr auto reflect(const T&...) noexcept
+        static constexpr auto reflect(T&...) noexcept
         -> Tuple<typename std::remove_cv<T>::type...>;
 };
 
