@@ -245,7 +245,10 @@ class Reflector
          */
         template <typename ...T>
         static constexpr auto reflect(T&...) noexcept
-        -> Tuple<typename std::remove_cv<T>::type...>;
+        -> decltype(tuple::concat(std::declval<TupleN<
+                typename std::remove_all_extents<T>::type
+            ,   utils::max(std::extent<T>::value, 1ul)
+            >>()...));
 };
 
 /**
@@ -265,7 +268,7 @@ using ReflectionTuple = typename reflection::ReflectionTuple<
  * @since 0.1.1
  */
 template <typename T>
-using AlignedTuple = decltype(reflection::aligned(ReflectionTuple<T>{}));
+using AlignedTuple = decltype(reflection::aligned(std::declval<ReflectionTuple<T>>()));
 
 /**
  * This type creates a tuple with references to the object's properties.
@@ -273,7 +276,7 @@ using AlignedTuple = decltype(reflection::aligned(ReflectionTuple<T>{}));
  * @since 0.1.1
  */
 template <typename T>
-using ReferenceTuple = decltype(reflection::reference(ReflectionTuple<T>{}));
+using ReferenceTuple = decltype(reflection::reference(std::declval<ReflectionTuple<T>>()));
 
 /**
  * Applies reflection over a data object, thus allowing us to automagically get
@@ -294,7 +297,7 @@ class Reflection : public ReferenceTuple<T>
          * @param obj The object instance to get references from.
          */
         __host__ __device__ inline Reflection(T& obj) noexcept
-        :   ReferenceTuple<T> {getReference(ReflectionTuple<T> {}, IndexerG<getSize()> {}, obj)}
+        :   ReferenceTuple<T> {getReference(*this, IndexerG<getSize()> {}, obj)}
         {}
 
         using ReferenceTuple<T>::operator=;
@@ -340,10 +343,10 @@ class Reflection : public ReferenceTuple<T>
          * @return The new reference tuple instance.
          */
         template <typename ...U, size_t ...I>
-        __host__ __device__ inline static auto getReference(Tuple<U...>, Indexer<I...>, T& obj) noexcept
+        __host__ __device__ inline static auto getReference(Tuple<U...>&, Indexer<I...>, T& obj) noexcept
         -> ReferenceTuple<T>
         {
-            return {*reinterpret_cast<U*>(reinterpret_cast<char *>(&obj) + getOffset<I>())...};
+            return {reinterpret_cast<U>(*(reinterpret_cast<char *>(&obj) + getOffset<I>()))...};
         }
 
     static_assert(!std::is_union<T>::value, "it is forbidden to reflect over unions!");

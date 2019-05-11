@@ -27,7 +27,7 @@ struct Cartesian : public Reflector
     static_assert(D > 0, "cartesian spaces are at least 1-dimensional!");
     static_assert(std::is_integral<T>::value, "the cartesian dimensions must be integers!");
 
-    const T dim[D] = {};                            /// The cartesian dimension values.
+    T dim[D] = {};                                  /// The cartesian dimension values.
     static constexpr size_t dimensionality = D;     /// The cartesian dimensionality.
 
     __host__ __device__ inline constexpr Cartesian() noexcept = default;
@@ -38,7 +38,9 @@ struct Cartesian : public Reflector
      * Constructs a new cartesian space instance.
      * @param value The space's dimensional limits.
      */
-    template <typename ...U>
+    template <typename ...U, typename = typename std::enable_if<
+            utils::all(std::is_convertible<U, T>{}...)
+        >::type >
     __host__ __device__ inline constexpr Cartesian(U&&... value) noexcept
     :   dim {static_cast<T>(value)...}
     {}
@@ -88,9 +90,8 @@ struct Cartesian : public Reflector
     __host__ __device__ inline constexpr T collapseTo(const Cartesian& point) const noexcept
     {
         using namespace tuple;
-        using namespace utils;
         using P = TupleN<T, D>;
-        return foldl(add, 0, zipWith(mul, P {point.dim}, scanr(mul, 1, tail(P {dim}))));
+        return foldl(utils::add, 0, zipWith(utils::mul, P {point.dim}, scanr(utils::mul, 1, tail(P {dim}))));
     }
 
     /**
@@ -101,9 +102,8 @@ struct Cartesian : public Reflector
     __host__ __device__ inline constexpr bool contains(const Cartesian& point) const noexcept
     {
         using namespace tuple;
-        using namespace utils;
         using P = TupleN<T, D>;
-        return foldl(andl, true, zipWith(lt, P {point.dim}, P {dim}));
+        return foldl(utils::andl, true, zipWith(utils::lt, P {point.dim}, P {dim}));
     }
 
     using reflex = decltype(reflect(dim));
