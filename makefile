@@ -26,6 +26,7 @@ STDCU  ?= c++11
 
 MPILIBDIR ?= /usr/lib/openmpi/lib
 PY2INCDIR ?= /usr/include/python3.5
+MPILKFLAG ?= -lmpi_cxx -lmpi
 
 # Defining macros inside code at compile time. This can be used to enable
 # or disable certain marked features on code.
@@ -38,7 +39,7 @@ NVCCFLAGS = -std=$(STDCU) -I$(INCDIR) -g -arch $(NVARCH) -lmpi -lcuda -lcudart -
 PYCCFLAGS = -std=$(STDCPP) -I$(INCDIR) -I$(PY2INCDIR) -shared -pthread -fPIC -fwrapv -O2 -Wall      \
 		-fno-strict-aliasing $(DEFS)
 PYXCFLAGS = --cplus -I$(INCDIR)
-LINKFLAGS = -L$(MPILIBDIR) -lmpi_cxx -lmpi -g
+LINKFLAGS = -L$(MPILIBDIR) $(MPILKFLAG) -g
 
 # Lists all files to be compiled and separates them according to their
 # corresponding compilers.

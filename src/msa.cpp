@@ -17,7 +17,7 @@
 #include "stopwatch.hpp"
 
 #include "pairwise.hpp"
-#include "phylogen.hpp"
+//#include "phylogeny.hpp"
 
 /**
  * The list of command line options available. This list might be increased
@@ -28,14 +28,14 @@ static const std::vector<cmdline::Option> options = {
     {"m", "multigpu",   "Try to use multiple devices in a single host."}
 ,   {"x", "matrix",     "Choose the scoring matrix to use in pairwise.", true}
 ,   {"1", "pairwise",   "Choose the algorithm to use in pairwise module.", true}
-,   {"2", "phylogen",  "Choose the algorithm to use in phylogenetic tree module.", true}
+,   {"2", "phylogeny",  "Choose the algorithm to use in phylogeny module.", true}
 };
 
 namespace msa
 {
     static Database db;         /// The database of sequences to align.
     static Pairwise pw;         /// The pairwise step manager.
-    static Phylogen pg;         /// The phylogenetics step manager.
+    //static Phylogeny pg;         /// The phylogenetics step manager.
 
     /**
      * Parses all files given via command line and shares with all nodes.
@@ -84,16 +84,16 @@ namespace msa
      * Runs the second step in the multiple sequence alignment heuristic: the
      * pseudo-phylogenetic tree construction. This step will group sequences in
      * ways that they can later be definitively aligned.
-     * @param pg The phylogenetic-tree module instance.
+     * @param pg The phylogeny module instance.
      * @param pw The pairwise step instance.
      */
-    static void pgrun(Phylogen& pg, Pairwise& pw)
+    /*static void pgrun(Phylogeny& pg, Pairwise& pw)
     {
         pg.run({
             pw
-        ,   cmdline::get<std::string>("phylogen", "njoining")
+        ,   cmdline::get<std::string>("phylogeny", "njoining")
         });
-    }
+    }*/
 
     /**
      * Reports success and the execution time of a step.
@@ -116,7 +116,7 @@ namespace msa
             report("total", stopwatch::run([]() {
                 report("loading", stopwatch::run(load, db));
                 report("pairwise", stopwatch::run(pwrun, pw, db));
-                report("phylogen", stopwatch::run(pgrun, pg, pw));
+//                report("phylogeny", stopwatch::run(pgrun, pg, pw));
             }));
         }
 
