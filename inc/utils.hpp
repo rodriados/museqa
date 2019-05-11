@@ -24,6 +24,8 @@
   #define msa_compile_cuda 1
 #endif
 
+#include "operator.hpp"
+
 /**#@+
  * Wraps a function pointer into a functor.
  * @tparam F The full function signature type.
@@ -154,93 +156,61 @@ struct Indexer<L>
 
 /**
  * The type index sequence generator of given size.
- * @tparam N The index sequence size.
+ * @tparam L The length of index sequence to generate.
  * @since 0.1.1
  */
-template <size_t N>
-using IndexerG = typename Indexer<N>::type;
-
-#include "operator.hpp"
+template <size_t L>
+using IndexerG = typename Indexer<L>::type;
 
 namespace utils
 {
     using namespace op;
 
     /**#@+
-     * Performs a left fold, or reduction in given values.
-     * @tparam F The combining operator.
-     * @tparam B The base fold value type.
-     * @tparam T The fold values type.
-     * @tparam U The following value types.
-     * @return The final value.
+     * Checks whether all given values are true.
+     * @param head The first value to test.
+     * @param tail The following values to test.
+     * @return Are all values true?
      */
-    template <typename F, typename B>
-    __host__ __device__ inline constexpr B foldl(F, B&& base) noexcept
+    __host__ __device__ inline constexpr bool all() noexcept
     {
-        return base;
+        return true;
     }
 
-    template <typename F, typename B, typename T, typename ...U>
-    __host__ __device__ inline constexpr auto foldl(F func, B&& base, T&& value, U&&... rest) noexcept
-    -> decltype(func(std::declval<B>(), std::declval<T>()))
+    template <typename T, typename ...U>
+    __host__ __device__ inline constexpr bool all(T&& head, U&&... tail) noexcept
     {
-        return foldl(func, func(base, value), rest...);
+        return op::andl(bool(head), all(tail...));
     }
     /**#@-*/
 
     /**#@+
-     * Performs a right fold, or reduction in given values.
-     * @tparam F The combining operator.
-     * @tparam B The base fold value type.
-     * @tparam T The fold values type.
-     * @tparam U The following value types.
-     * @return The final value.
+     * Checks whether at least one given value is true.
+     * @param head The first value to test.
+     * @param tail The following values to test.
+     * @return Is at least one value true?
      */
-    template <typename F, typename B>
-    __host__ __device__ inline constexpr B foldr(F, B&& base) noexcept
+    __host__ __device__ inline constexpr bool any() noexcept
     {
-        return base;
+        return false;
     }
 
-    template <typename F, typename B, typename T, typename ...U>
-    __host__ __device__ inline constexpr auto foldr(F func, B&& base, T&& value, U&&... rest) noexcept
-    -> decltype(func(std::declval<T>(), std::declval<B>()))
+    template <typename T, typename ...U>
+    __host__ __device__ inline constexpr bool any(T&& head, U&&... tail) noexcept
     {
-        return func(value, foldr(func, base, rest...));
+        return op::orl(bool(head), any(tail...));
     }
     /**#@-*/
 
     /**
-     * Checks whether all given type traits are true.
-     * @tparam T Type traits to test.
-     * @since 0.1.1
+     * Checks whether none of given values is true.
+     * @param value All the values to be tested.
+     * @return Are all values false?
      */
     template <typename ...T>
-    __host__ __device__ inline constexpr bool all() noexcept
+    __host__ __device__ inline constexpr bool none(T&&... value) noexcept
     {
-        return foldl(And{}, true, T{}...);
-    }
-
-    /**
-     * Checks whether at least one of given type traits are true.
-     * @tparam T Type traits to test.
-     * @since 0.1.1
-     */
-    template <typename ...T>
-    __host__ __device__ inline constexpr bool any() noexcept
-    {
-        return foldl(Or{}, false, T{}...);
-    }
-
-    /**
-     * Checks whether none of given type traits are true.
-     * @tparam T Type traits to test.
-     * @since 0.1.1
-     */
-    template <typename ...T>
-    __host__ __device__ inline constexpr bool none() noexcept
-    {
-        return !any<T...>();
+        return !any(value...);
     }
 };
 
