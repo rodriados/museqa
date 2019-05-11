@@ -24,8 +24,6 @@
   #define msa_compile_cuda 1
 #endif
 
-#include "operator.hpp"
-
 /**#@+
  * Wraps a function pointer into a functor.
  * @tparam F The full function signature type.
@@ -161,6 +159,8 @@ struct Indexer<L>
  */
 template <size_t L>
 using IndexerG = typename Indexer<L>::type;
+
+#include "operator.hpp"
 
 namespace utils
 {
