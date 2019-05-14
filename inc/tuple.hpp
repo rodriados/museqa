@@ -34,18 +34,8 @@ namespace tuple
          * Constructs a new tuple leaf.
          * @param value The value to be held by the leaf.
          */
-        __host__ __device__ inline constexpr TupleLeaf(T& value) noexcept
+        __host__ __device__ inline constexpr TupleLeaf(const T& value) noexcept
         :   value {value}
-        {}
-
-        /**
-         * Constructs a new tuple leaf.
-         * @tparam U A convertible type for leaf.
-         * @param value The value to be held by the leaf.
-         */
-        template <typename U>
-        __host__ __device__ inline constexpr TupleLeaf(const U& value) noexcept
-        :   value {static_cast<T>(value)}
         {}
 
         /**
@@ -53,29 +43,85 @@ namespace tuple
          * @tparam U A convertible type for leaf.
          * @param value The value to be moved to the leaf.
          */
-        template <typename U>
-        __host__ __device__ inline constexpr TupleLeaf(U&& value) noexcept
-        :   value {static_cast<T>(std::move(value))}
+        __host__ __device__ inline constexpr TupleLeaf(T&& value) noexcept
+        :   value {std::forward<decltype(value)>(value)}
         {}
 
         /**
-         * Constructs a new tuple leaf by copying a foreign tuple.
-         * @tparam U A convertible foreign type for leaf.
+         * Constructs a new tuple leaf from foreign type.
+         * @tparam U A convertible type for leaf's value.
+         * @param value The value to be copied to the leaf.
+         */
+        template <typename U>
+        __host__ __device__ inline constexpr TupleLeaf(const U& value) noexcept
+        :   value {static_cast<T>(value)}
+        {}
+
+        /**
+         * Constructs a new tuple leaf by copying a foreign leaf.
+         * @tparam U A convertible foreign type for leaf's value.
          * @param leaf The leaf to copy contents from.
          */
-        template <typename U>
-        __host__ __device__ inline constexpr TupleLeaf(const TupleLeaf<I, U>& leaf) noexcept
-        :   value {static_cast<T>(leaf.value)}
+        template <size_t J, typename U>
+        __host__ __device__ inline constexpr TupleLeaf(const TupleLeaf<J, U>& leaf) noexcept
+        :   TupleLeaf {leaf.value}
         {}
 
         /**
-         * Constructs a new tuple leaf by moving a foreign tuple.
-         * @tparam U A convertible foreign type for leaf.
+         * Constructs a new tuple leaf by moving a foreign leaf.
+         * @tparam U A convertible foreign type for leaf's value.
          * @param leaf The leaf to move contents from.
          */
-        template <typename U>
-        __host__ __device__ inline constexpr TupleLeaf(TupleLeaf<I, U>&& leaf) noexcept
-        :   value {static_cast<T>(std::move(leaf.value))}
+        template <size_t J, typename U>
+        __host__ __device__ inline constexpr TupleLeaf(TupleLeaf<J, U>&& leaf) noexcept
+        :   TupleLeaf {std::forward<decltype(leaf.value)>(leaf.value)}
+        {}
+
+        __host__ __device__ inline TupleLeaf& operator=(const TupleLeaf&) = default;
+        __host__ __device__ inline TupleLeaf& operator=(TupleLeaf&&) = default;
+    };
+
+    /**
+     * Represents a tuple leaf, which holds a reference.
+     * @tparam I The index of the tuple's leaf.
+     * @tparam T The type of the tuple's leaf member.
+     * @since 0.1.1
+     */
+    template <size_t I, typename T>
+    struct TupleLeaf<I, T&>
+    {
+        T& value;           /// The value held by this tuple leaf.
+
+        __host__ __device__ inline constexpr TupleLeaf() noexcept = default;
+        __host__ __device__ inline constexpr TupleLeaf(const TupleLeaf&) noexcept = default;
+        __host__ __device__ inline constexpr TupleLeaf(TupleLeaf&&) noexcept = default;
+
+        /**
+         * Constructs a new tuple reference leaf.
+         * @param ref The reference to be held by the leaf.
+         */
+        __host__ __device__ inline constexpr TupleLeaf(T& ref) noexcept
+        :   value {ref}
+        {}
+
+        /**
+         * Constructs a new tuple leaf from foreign type.
+         * @tparam U A convertible type for leaf's reference.
+         * @param ref The reference to be held by the leaf.
+         */
+        template <typename U, typename = typename std::enable_if<std::is_convertible<U&, T&>::value>::type>
+        __host__ __device__ inline constexpr TupleLeaf(U& ref) noexcept
+        :   value {ref}
+        {}
+
+        /**
+         * Constructs a new tuple leaf by copying a foreign leaf.
+         * @tparam U A convertible foreign type for leaf's reference.
+         * @param leaf The leaf to get reference from.
+         */
+        template <size_t J, typename U>
+        __host__ __device__ inline constexpr TupleLeaf(const TupleLeaf<J, U>& leaf) noexcept
+        :   TupleLeaf {leaf.value}
         {}
 
         __host__ __device__ inline TupleLeaf& operator=(const TupleLeaf&) = default;
@@ -99,12 +145,11 @@ namespace tuple
      * Modifies the value held by a tuple leaf.
      * @tparam I The requested leaf index.
      * @tparam T The type of requested leaf member.
-     * @tparam U The type of new leaf value.
      * @param leaf The selected tuple leaf member.
      * @param value The value to copy to leaf.
      */
-    template <size_t I, typename T, typename U>
-    __host__ __device__ inline void set(TupleLeaf<I, T>& leaf, const U& value) noexcept
+    template <size_t I, typename T>
+    __host__ __device__ inline void set(TupleLeaf<I, T>& leaf, const T& value) noexcept
     {
         leaf.value = value;
     }
@@ -113,14 +158,27 @@ namespace tuple
      * Modifies the value held by a tuple leaf.
      * @tparam I The requested leaf index.
      * @tparam T The type of requested leaf member.
-     * @tparam U The type of new leaf value.
      * @param leaf The selected tuple leaf member.
      * @param value The value to move to leaf.
      */
-    template <size_t I, typename T, typename U>
-    __host__ __device__ inline void set(TupleLeaf<I, T>& leaf, U&& value) noexcept
+    template <size_t I, typename T>
+    __host__ __device__ inline void set(TupleLeaf<I, T>& leaf, T&& value) noexcept
     {
-        leaf.value = std::forward<U>(value);
+        leaf.value = std::forward<decltype(value)>(value);
+    }
+
+    /**
+     * Modifies the value held by a tuple leaf with a foreign type.
+     * @tparam I The requested leaf index.
+     * @tparam T The type of requested leaf member.
+     * @tparam U The foreign type to copy to leaf.
+     * @param leaf The selected tuple leaf member.
+     * @param value The value to copy to leaf.
+     */
+    template <size_t I, typename T, typename U>
+    __host__ __device__ inline void set(TupleLeaf<I, T>& leaf, const U& value) noexcept
+    {
+        leaf.value = value;
     }
 
     /**#@+
@@ -142,35 +200,15 @@ namespace tuple
         __host__ __device__ inline constexpr BaseTuple(BaseTuple&&) noexcept = default;
 
         /**
-         * This constructor sets every base member with its corresponding value.
-         * @param value The list of values for members.
-         */
-        __host__ __device__ inline constexpr BaseTuple(const T&... value) noexcept
-        :   TupleLeaf<I, T> {value}...
-        {}
-
-        /**
-         * This constructor sets every base member with its corresponding value.
-         * @tparam U A list of convertible types for every base member.
+         * Forwards all values to the tuple's leaves.
+         * @tparam U The list of possibly foreign types for each base member.
          * @param value The list of values for members.
          */
         template <typename ...U, typename = typename std::enable_if<
-                utils::all(std::is_convertible<U, T>{}...)
+                utils::all(std::is_convertible<U, T>::value...)
             >::type >
-        __host__ __device__ inline BaseTuple(const U&... value) noexcept
-        :   TupleLeaf<I, T> {static_cast<T>(value)}...
-        {}
-
-        /**
-         * This constructor sets every base member with its corresponding value.
-         * @tparam U A list of convertible types for every base member.
-         * @param value The list of values for members.
-         */
-        template <typename ...U, typename = typename std::enable_if<
-                utils::all(std::is_convertible<U, T>{}...)
-            >::type >
-        __host__ __device__ inline BaseTuple(U&&... value) noexcept
-        :   TupleLeaf<I, T> {std::move(value)}...
+        __host__ __device__ inline constexpr BaseTuple(U&&... value) noexcept
+        :   TupleLeaf<I, T> (std::forward<decltype(value)>(value))...
         {}
 
         __host__ __device__ inline BaseTuple& operator=(const BaseTuple&) = default;
@@ -203,7 +241,7 @@ class Tuple : public tuple::BaseTuple<IndexerG<sizeof...(T)>, T...>
 
         /**
          * Creates a new tuple from a tuple of different base types.
-         * @tparam U The types of tuple instance to copy from.
+         * @tparam U The types of foreign tuple instance to copy from.
          * @param other The tuple the values must be copied from.
          */
         template <typename ...U>
@@ -213,14 +251,14 @@ class Tuple : public tuple::BaseTuple<IndexerG<sizeof...(T)>, T...>
         }
 
         /**
-         * Creates a new tuple from moving a tuple of different base types.
-         * @tparam U The types of tuple instance to copy from.
+         * Creates a new tuple from a tuple of different base types.
+         * @tparam U The types of foreign tuple instance to copy from.
          * @param other The tuple the values must be copied from.
          */
         template <typename ...U>
         __host__ __device__ inline Tuple(Tuple<U...>&& other) noexcept
         {
-            operator=(std::move(other));
+            operator=(std::forward<decltype(other)>(other));
         }
 
         /**
@@ -234,6 +272,16 @@ class Tuple : public tuple::BaseTuple<IndexerG<sizeof...(T)>, T...>
         }
 
         /**
+         * Moves the values from another tuple instance.
+         * @param other The tuple the values must be moved from.
+         * @return This object instance.
+         */
+        __host__ __device__ inline Tuple& operator=(Tuple&& other)
+        {
+            return copy(IndexerG<sizeof...(T)> {}, std::forward<decltype(other)>(other));
+        }
+
+        /**
          * Copies the values from a foreign tuple instance.
          * @tparam U The types of tuple instance to copy from.
          * @param other The tuple the values must be copied from.
@@ -242,29 +290,21 @@ class Tuple : public tuple::BaseTuple<IndexerG<sizeof...(T)>, T...>
         template <typename ...U>
         __host__ __device__ inline Tuple& operator=(const Tuple<U...>& other)
         {
+            static_assert(sizeof...(U) == sizeof...(T), "tuples do not have same cardinality!");
             return copy(IndexerG<sizeof...(T)> {}, other);
         }
 
         /**
-         * Moves the values from another tuple instance.
-         * @param other The tuple the values must be moved from.
-         * @return This object instance.
-         */
-        __host__ __device__ inline Tuple& operator=(Tuple&& other)
-        {
-            return copy(IndexerG<sizeof...(T)> {}, std::move(other));
-        }
-
-        /**
-         * Moves the values from a foreign tuple instance.
+         * Copies the values from a foreign tuple instance.
          * @tparam U The types of tuple instance to copy from.
-         * @param other The tuple the values must be moved from.
+         * @param other The tuple the values must be copied from.
          * @return This object instance.
          */
         template <typename ...U>
         __host__ __device__ inline Tuple& operator=(Tuple<U...>&& other)
         {
-            return copy(IndexerG<sizeof...(T)> {}, std::move(other));
+            static_assert(sizeof...(U) == sizeof...(T), "tuples do not have same cardinality!");
+            return copy(IndexerG<sizeof...(T)> {}, std::forward<decltype(other)>(other));
         }
 
         /**
@@ -296,9 +336,10 @@ class Tuple : public tuple::BaseTuple<IndexerG<sizeof...(T)>, T...>
          * @tparam U The new value type.
          */
         template <size_t I, typename U>
-        __host__ __device__ inline void set(U&& value) noexcept
+        __host__ __device__ inline auto set(U&& value) noexcept
+        -> typename std::enable_if<std::is_same<decltype(std::declval<Tuple>().get<I>()), const U&>::value>::type
         {
-            tuple::set<I>(*this, std::move(value));
+            tuple::set<I>(*this, std::forward<decltype(value)>(value));
         }
 
     protected:
@@ -338,7 +379,7 @@ class Tuple : public tuple::BaseTuple<IndexerG<sizeof...(T)>, T...>
         __host__ __device__ inline Tuple& copy(Indexer<I, J...>, Tuple<U...>&& other) noexcept
         {
             set<I>(std::move(other.template get<I>()));
-            return copy(Indexer<J...> {}, std::move(other));
+            return copy(Indexer<J...> {}, std::forward<decltype(other)>(other));
         }
 };
 
@@ -387,9 +428,7 @@ class TupleN : public decltype(tuple::detail::repeater<T>(IndexerG<N>()))
          * Initializes a new tuple from a const array.
          * @param arr The array to initialize tuple.
          */
-        template <typename U = T, typename = typename std::enable_if<
-                !std::is_reference<U>::value
-            >::type >
+        template <typename U = T, typename = typename std::enable_if<!std::is_reference<U>::value>::type>
         __host__ __device__ inline constexpr TupleN(const Pure<T> *arr) noexcept
         :   Tuple {getElements(IndexerG<N>{}, arr)}
         {}
@@ -468,6 +507,24 @@ namespace tuple
         return concat(M {static_cast<T>(get<I>(a))..., static_cast<U>(get<J>(b))...}, tail...);
     }
     /**#@-*/
+
+    /**
+     * Applies an operator to all tuple's elements.
+     * @tparam F The functor type to apply.
+     * @tparam B The base and return value types.
+     * @tparam I The tuple's indeces.
+     * @tparam T The tuple's types.
+     * @param func The functor to apply to tuple.
+     * @param base The base first operator value.
+     * @param t The tuple to apply functor to.
+     * @return The new tuple.
+     */
+    template <typename F, typename B, size_t ...I, typename ...T>
+    __host__ __device__ inline constexpr auto apply(F&& func, const B& base, const BaseTuple<Indexer<I...>, T...>& t)
+    -> Tuple<Identity<B, I>...>
+    {
+        return {func(base, static_cast<B>(get<I>(t)))...};
+    }
 
     /**#@+
      * Performs a left fold, or reduction in the given tuple.
@@ -605,9 +662,12 @@ namespace tuple
         (   F&& func
         ,   const BaseTuple<Indexer<I...>, T...>& a
         ,   const BaseTuple<Indexer<I...>, U...>& b     )
-    -> Tuple<T...>
+    -> Tuple<typename std::remove_reference<T>::type...>
     {
-        return {func(static_cast<T>(get<I>(a)), static_cast<T>(get<I>(b)))...};
+        return {func(
+                static_cast<typename std::common_type<T, U>::type>(get<I>(a))
+            ,   static_cast<typename std::common_type<T, U>::type>(get<I>(b))
+            )...};
     }
 };
 

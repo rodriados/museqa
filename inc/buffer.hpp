@@ -19,7 +19,7 @@
 /**
  * The base of a general-purpose buffer. The buffer's idea is to store all of
  * its data contiguously in memory.
- * @tparam T The buffer type.
+ * @tparam T The buffer contents type.
  * @since 0.1.1
  */
 template <typename T>
@@ -74,7 +74,7 @@ class BaseBuffer
         __host__ __device__ inline T& operator[](ptrdiff_t offset) const
         {
 #if defined(msa_compile_cython) && !defined(msa_compile_cuda)
-            if(offset < 0 || static_cast<unsigned>(offset) > getSize())
+            if(offset < 0 || static_cast<unsigned>(offset) >= getSize())
                 throw Exception("buffer offset out of range");
 #endif
             return ptr.getOffset(offset);
@@ -120,7 +120,7 @@ class BaseBuffer
 
 /**
  * Creates a general-purpose contiguous buffer.
- * @tparam T The buffer type.
+ * @tparam T The buffer contents type.
  * @see std::string
  * @see std::vector
  * @since 0.1.1
@@ -183,7 +183,7 @@ class Buffer : public BaseBuffer<T>
 /**
  * Manages a slice of a buffer. The buffer must have already been initialized
  * and will have boundaries checked according to slice pointers.
- * @tparam T The buffer type.
+ * @tparam T The buffer contents type.
  * @since 0.1.1
  */
 template <typename T>
