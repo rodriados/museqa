@@ -87,6 +87,9 @@ namespace pairwise
      */
     class Pairwise final : public Buffer<Score>
     {
+        protected:
+            size_t count;           /// The total number of sequences available.
+
         public:
             Pairwise() = default;
             Pairwise(const Pairwise&) = default;
@@ -96,6 +99,15 @@ namespace pairwise
             Pairwise& operator=(Pairwise&&) = default;
 
             using Buffer<Score>::operator=;
+
+            /**
+             * Informs the total number of sequences available in the module.
+             * @return The number of processed sequences.
+             */
+            inline size_t getCount() const noexcept
+            {
+                return count;
+            }
 
             void run(const Configuration&);
     };

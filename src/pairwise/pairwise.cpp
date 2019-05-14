@@ -30,7 +30,8 @@ static const std::map<std::string, pairwise::Factory> dispatcher = {
  */
 Buffer<pairwise::Pair> pairwise::Algorithm::generate(size_t num)
 {
-    pair = Buffer<pairwise::Pair> {(num * (num - 1)) / 2};
+    const size_t combinations = num * (num - 1) >> 1;
+    pair = Buffer<pairwise::Pair> {combinations};
 
     for(size_t i = 0, c = 0; i < num - 1; ++i)
         for(size_t j = i + 1; j < num; ++j, ++c)
@@ -54,7 +55,9 @@ void pairwise::Pairwise::run(const pairwise::Configuration& config)
     onlymaster info("chosen pairwise algorithm:" s_bold, config.algorithm, s_reset);
 
     pairwise::Algorithm *algorithm = pair->second();
+
     *this = algorithm->run(config);
+    count = config.db.getCount();
 
     delete algorithm;
 }

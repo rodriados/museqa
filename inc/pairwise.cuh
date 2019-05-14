@@ -5,8 +5,8 @@
  */
 #pragma once
 
-#ifndef PAIRWISE_HPP_INCLUDED
-#define PAIRWISE_HPP_INCLUDED
+#ifndef PAIRWISE_CUH_INCLUDED
+#define PAIRWISE_CUH_INCLUDED
 
 #include "pairwise/pairwise.cuh"
 
