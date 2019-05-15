@@ -16,8 +16,8 @@
 #include "exception.hpp"
 #include "stopwatch.hpp"
 
-#include "pairwise.hpp"
-//#include "phylogeny.hpp"
+#include "pairwise.cuh"
+#include "phylogeny.cuh"
 
 /**
  * The list of command line options available. This list might be increased
@@ -34,8 +34,8 @@ static const std::vector<cmdline::Option> options = {
 namespace msa
 {
     static Database db;         /// The database of sequences to align.
-    static Pairwise pw;         /// The pairwise step manager.
-    //static Phylogeny pg;         /// The phylogenetics step manager.
+    static Pairwise pw;         /// The pairwise module manager.
+    static Phylogeny pg;        /// The phylogenetics module manager.
 
     /**
      * Parses all files given via command line and shares with all nodes.
@@ -87,13 +87,13 @@ namespace msa
      * @param pg The phylogeny module instance.
      * @param pw The pairwise step instance.
      */
-    /*static void pgrun(Phylogeny& pg, Pairwise& pw)
+    static void pgrun(Phylogeny& pg, Pairwise& pw)
     {
         pg.run({
             pw
         ,   cmdline::get<std::string>("phylogeny", "njoining")
         });
-    }*/
+    }
 
     /**
      * Reports success and the execution time of a step.
@@ -116,7 +116,7 @@ namespace msa
             report("total", stopwatch::run([]() {
                 report("loading", stopwatch::run(load, db));
                 report("pairwise", stopwatch::run(pwrun, pw, db));
-//                report("phylogeny", stopwatch::run(pgrun, pg, pw));
+                report("phylogeny", stopwatch::run(pgrun, pg, pw));
             }));
         }
 
