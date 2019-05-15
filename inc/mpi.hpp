@@ -261,7 +261,7 @@ namespace mpi
         template <typename T>
         struct Generator
         {
-            MPI_Datatype typeId;
+            MPI_Datatype typeId;    /// The raw MPI datatype reference.
 
             static_assert(!std::is_union<T>::value, "Unions should not be messaged via MPI.");
 
@@ -282,7 +282,6 @@ namespace mpi
 
                 MPI_Type_create_struct(size, blockList, offsetList, typeList, &typeId);
                 MPI_Type_commit(&typeId);
-
                 dtypes.push_back(typeId);
             }
 

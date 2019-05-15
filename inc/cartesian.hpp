@@ -123,8 +123,8 @@ struct Cartesian : public Reflector
      * Constructs a new cartesian value instance.
      * @param value The cartesian dimensional values.
      */
-    template <typename ...U, typename = typename std::enable_if<
-            utils::all(std::is_convertible<U, T>::value...)
+    template <typename ...U, typename X = T, typename = typename std::enable_if<
+            utils::all(std::is_convertible<U, X>::value...)
         >::type >
     __host__ __device__ inline constexpr Cartesian(U&&... value) noexcept
     :   dim {static_cast<T>(value)...}

@@ -12,16 +12,56 @@
  * Leave uncommented if compiling in debug mode. This may affect many aspects
  * of the software, such as error reporting.
  */
-#define msa_debug
+#define msa_debug 1
 
 /*
  * The software's information. Any of the provided information piece can be printed
  * from the command line as an argument.
  */
 #define msa_appname "msa"
-#define msa_version "0.1.1"
 #define msa_author  "Rodrigo Albuquerque de Oliveira Siqueira"
 #define msa_email   "rodriados@gmail.com"
+
+/*
+ * The software version is in the form major * 10000 + minor * 100 + patch.
+ */
+#define msa_version 00101
+
+/*
+ * Finds the version of compiler being used. Some features might change depending on
+ * the version of compiler being used.
+ */
+#if defined(__GNUC__) && !defined(__clang__)
+  #define msa_gcc_version (__GNUC__ * 100 + __GNUC_MINOR__)
+#else
+  #define msa_gcc_version 0
+#endif
+
+#ifdef __clang__
+  #define msa_clang_version (__clang_major__ * 100 + __clang_minor__)
+#else
+  #define msa_clang_version 0
+#endif
+
+#ifdef __INTEL_COMPILER
+  #define msa_icc_version __INTEL_COMPILER
+#elif defined(__ICL)
+  #define msa_icc_version __ICL
+#else
+  #define msa_icc_version 0
+#endif
+
+#ifdef _MSC_VER
+  #define msa_msc_version _MSC_VER
+#else
+  #define msa_msc_version 0
+#endif
+
+#ifdef __NVCC__
+  #define msa_cuda_version (__CUDA_VER_MAJOR__ * 100 + __CUDA_VER_MINOR__)
+#else
+  #define msa_cuda_version 0
+#endif
 
 /* 
  * Checks whether the system we are compiling in is POSIX compatible. If it

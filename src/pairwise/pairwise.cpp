@@ -1,5 +1,5 @@
 /**
- * Multiple Sequence Alignment pairwise file.
+ * Multiple Sequence Alignment pairwise module file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018-2019 Rodrigo Siqueira
  */
@@ -47,14 +47,14 @@ Buffer<pairwise::Pair> pairwise::Algorithm::generate(size_t num)
  */
 void pairwise::Pairwise::run(const pairwise::Configuration& config)
 {
-    const auto& pair = dispatcher.find(config.algorithm);
+    const auto& selection = dispatcher.find(config.algorithm);
 
-    if(pair == dispatcher.end())
+    if(selection == dispatcher.end())
         throw Exception("unknown pairwise algorithm:", config.algorithm);
 
     onlymaster info("chosen pairwise algorithm:" s_bold, config.algorithm, s_reset);
 
-    pairwise::Algorithm *algorithm = pair->second();
+    pairwise::Algorithm *algorithm = selection->second();
 
     *this = algorithm->run(config);
     count = config.db.getCount();

@@ -39,7 +39,6 @@ Buffer<Pair> Needleman::scatter()
 
     mpi::scatter(origin, this->pair, count, displ);
 #endif
-
     return this->pair;
 }
 
@@ -53,6 +52,5 @@ Buffer<Score> Needleman::gather()
     Buffer<Score> origin = this->score;
     mpi::allgather(origin, this->score);
 #endif
-
     return this->score;
 }
