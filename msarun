@@ -3,12 +3,75 @@
 # @author Rodrigo Siqueira <rodriados@gmail.com>
 # @copyright 2018-2019 Rodrigo Siqueira
 
-# Declaring software version
+# The current software version
 readonly version="msa 0.1.1"
+
+# Command to check whether a host is compute capable or not.
+readonly findgpu="lspci | grep 'VGA' | grep 'NVIDIA'"
+
+# Checks whether a host has a compute capable device. This is done by simply
+# connecting to the host and executing a command to check whether it is compute
+# capable or not.
+sshrun()
+{
+    # Access remote host in batch mode without tty allocation and runs the
+    # command to find out the number of connected GPUs.
+    ssh -o ConnectTimeout=5 -o BatchMode=yes -o StrictHostKeyChecking=no -T $1 << EOF
+        ${findgpu} | wc -l
+        exit
+EOF
+}
+
+# Automatically generates a hostfile for MPI execution. This script only
+# looks for GPU capable machines in local networks. If the user desires to
+# to use external nodes, the file shall be created manually.
+# @param $1 The hostfile to be created
+findhosts()
+{
+    echo "[task] hostfinder looking for compute capable hosts"
+
+    # Discovers how many slots we can give the local host.
+    local localgpu=$(eval "$findgpu" | wc -l)
+    local totalgpu=$localgpu
+    
+    # Checks whether this machine is CUDA compute capable and checks how many
+    # devices there are currently available.
+    echo "localhost slots=$((localgpu + 1)) max-slots=$((localgpu + 1))" >> $1
+
+    # Gets the list of hosts known by the current machine in local network.
+    local hostlist=$(getent hosts | cut -d' ' -f1 | tr "\n" " ")
+    local hostcount=$(wc -w <<< "$hostlist")
+
+    # Discovers the current network IP address of local machine.
+    local ipaddr=$(hostname -I)
+
+    # Iterating through the list of hosts to try to find hosts capable of
+    # running the software. As MPI uses ssh internally to implement communication
+    # between nodes, we use ssh here as well to look for 'em hosts.
+    for host in ${hostlist[@]}; do
+        # Checking for local hosts only. We do not want to use external nodes when
+        # executing. The user shall create the hosts file manually otherwise.
+        if [[ "$ipaddr" != *"$host"* && ("$host" == 192.168.* || "$host" == 10.*) ]]; then
+            # Accessing remote host via ssh and retrieving the number of connected
+            # compute-capable devices in the host.
+            localgpu=$(sshrun $host 2> /dev/null)
+
+            # If the number of devices found is greater than zero, than we can
+            # use this host to execute our code.
+            if [[ "$localgpu" -gt 0 ]]; then
+                echo "$host slots=$localgpu max-slots=$localgpu" >> $1
+                totalgpu=$((localgpu + totalgpu))
+            fi
+        fi
+    done
+
+    echo "[info] found $totalgpu compute-capable device(s)"
+}
 
 # Creates a new named pipe and returns its name. The pipe allows to stablish
 # communication to and from an external process.
-createpipe()
+# @return The name of created pipe.
+mkpipe()
 {
     # Creates a named pipe. The name of the pipe will simply be that of a
     # temporary file, which not forceably exists.
@@ -29,14 +92,14 @@ showhelp()
     echo "  -v, --version               Prints the software version."
     echo "  -m, --multigpu              Try to use multiple devices in a single host."
     echo "  -x, --matrix    <matrix>    The scoring matrix to use for alignment."
-    echo "  -H, --hostfile  <hostfile>  The cluster configuration file."
+    echo "  -f, --hostfile  <hostfile>  Use or generate the given cluster configuration file."
     echo "  -1, --pairwise  <algorithm> The algorithm to use in pairwise module."
-    echo "  -2, --phylotree <algorithm> The algorithm to use in phylogenetic tree module."
+    echo "  -2, --phylogeny <algorithm> The algorithm to use in phylogeny module."
 }
 
 # Initializing command line variables and flags
 hostfile=
-msaargs=()
+positional=()
 
 # Parses the command line options and sets all respective variables. Any positional
 # value unlinked to any option sent will also be captured.
@@ -44,30 +107,33 @@ while [ $# -gt 0 ]; do
     case $1 in
         -h | --help     ) showhelp;             exit  0 ;;
         -v | --version  ) echo "$version";      exit  0 ;;
-        -H | --hostfile ) hostfile="$2";        shift 2 ;;
-        *               ) msaargs+=("$1");      shift   ;;
+        -f | --hostfile ) hostfile="$2";        shift 2 ;;
+        *               ) positional+=("$1");   shift   ;;
     esac
 done
 
 # Discovers the name of hostfile to be used. If no valid file name is given,
 # the name is defaulted to "hostfile".
 if [[ -z "$hostfile" || (-e "$hostfile" && ! -f "$hostfile") ]]; then
-    hostfile="hostfile"
+    hostfile=".hostfile"
 fi
 
-#Creates the pipe to communicate with watchdog process.
-pipe=$(createpipe)
+# Creates a pipe to communicate with process watchdog.
+pipe=$(mkpipe)
 trap 'rm -f $pipe' EXIT
 
 # If the hostfile does not exist, then it shall be created.
-if [[ ! -f "$hostfile" ]]; then
-    ./hostfinder --watchdog --file $hostfile >$pipe &
-    src/watchdog.sh $! keep <$pipe
+if [[ ! -f "$hostfile" || ! -s "$hostfile" ]]; then
+    # Initializes the scan for hosts in network in backgound and redirects its
+    # output to a watchdog process. After the operation is over, the pipe will be
+    # automatically deleted.
+    findhosts $hostfile > $pipe &
+    src/watchdog $! keep < $pipe
 fi
 
-# Run the main project software.
-mpirun -q --hostfile $hostfile obj/msa ${msaargs[@]} > $pipe &
-src/watchdog.sh $! <$pipe
+# Run the main project software
+mpirun -q --hostfile $hostfile obj/msa ${positional[@]} > $pipe &
+src/watchdog $! < $pipe
 
-# Waits for any undesired "killed" message and throws it away.
-wait $! 2>/dev/null
+# Waits up for any undesired killed-process report message and throws it away.
+wait $! 2> /dev/null

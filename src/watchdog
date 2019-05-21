@@ -1,0 +1,177 @@
+#!/usr/bin/env bash
+# Multiple Sequence Alignment cluster watchdog script.
+# @author Rodrigo Siqueira <rodriados@gmail.com>
+# @copyright 2018-2019 Rodrigo Siqueira
+
+# The watchdog script requires as the first positional command line option, the PID
+# of the process it is watching. Also, the output of the target process must be
+# redirected to this script's stdin.
+
+# Declaring the spinner frames.
+declare -a spinner=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
+
+# Defining scape sequences for text styles
+readonly s_fgred="\033[31m"
+readonly s_fgblue="\033[34m"
+readonly s_fgcyan="\033[36m"
+readonly s_fgblack="\033[30m"
+readonly s_fggreen="\033[32m"
+readonly s_fgwhite="\033[37m"
+readonly s_fgnormal="\033[39m"
+readonly s_fgyellow="\033[33m"
+readonly s_fgmagenta="\033[35m"
+
+readonly s_bgred="\033[41m"
+readonly s_bgblue="\033[44m"
+readonly s_bgcyan="\033[46m"
+readonly s_bgblack="\033[40m"
+readonly s_bggreen="\033[42m"
+readonly s_bgwhite="\033[47m"
+readonly s_bgnormal="\033[49m"
+readonly s_bgyellow="\033[43m"
+readonly s_bgmagenta="\033[45m"
+
+readonly s_dim="\033[2m"
+readonly s_bold="\033[1m"
+readonly s_reset="\033[0m"
+readonly s_italic="\033[3m"
+readonly s_normal="\033[22m"
+readonly s_inverted="\033[7m"
+readonly s_underline="\033[4m"
+readonly s_blinkslow="\033[5m"
+readonly s_blinkfast="\033[6m"
+
+# Declaring the line cleaner particle
+readonly cleanline="\033[2K\r"
+
+# Applies a new style for given text.
+# @param $1 List of style names to apply
+# @param $@ The text to apply style to.
+# @return The stylized text.
+style()
+{
+    # Gathers the text to apply the style to.
+    readonly text="${@:2}"
+
+    # Applies all given named styles.
+    for stylename in $1; do
+        declare varname="s_$stylename"
+        printf "${!varname}"
+    done
+
+    # Prints up the stylized text.
+    printf "$text$s_reset"
+}
+
+# Initializing the progress bar variables.
+bartask="idle"
+barmessage="waiting"
+barcounter=0
+
+# Catch the PID of process to watch.
+readonly pid=$1
+
+# Parses a line read from the target process. The line may request a progress update
+# or a progress reset, report an error or simply be a line to be printed.
+# @param $@ The line to be parsed and analyzed.
+parseline()
+{
+    # The line contents to parse.
+    local contents=($@)
+
+    # If the line is an info, then hold information to progress bar.
+    if [ "${contents[0]}" == "[task]" ]; then
+        bartask="${contents[1]}"
+        barmessage="${contents[@]:2}"
+
+    # Checks whether the line is a common informative text.
+    elif [ "${contents[0]}" == "[info]" ]; then
+        printf "$cleanline   $(style "bold fgblue" [info]) %s\n" "${contents[*]:1}"
+
+    # If the process anyhow reported an error, then it shall be killed.
+    elif [ "${contents[0]}" == "[error]" ]; then
+        printf "$cleanline   $(style "bold fgred" [error]) %s\n" "${contents[*]:1}"
+        killproc 1
+
+    # Checks whether the line is a warning of any kind.
+    elif [ "${contents[0]}" == "[warning]" ]; then
+        printf "$cleanline   $(style "bold fgmagenta" [warning]) %s\n" "${contents[*]:1}"
+
+    # Check if the line is related to time reports.
+    elif [ "${contents[0]}" == "[report]" ]; then
+        printf "$cleanline   $(style "bold fggreen" [report]) %s\n" "${contents[*]:1}"
+
+    # If the line is not at all target to the watchdog, simply print it out.
+    else
+        printf "$cleanline   %s\n" "${contents[*]}"
+    fi
+}
+
+# Prints the progress bar based on the bar control variables. The progress bar
+# is responsible for keeping a spinner on screen while the process is active.
+progressbar()
+{
+    printf "$cleanline %s $(style 'bold fggreen' [$bartask]) %s" "${spinner[$barcounter]}" "$barmessage"
+    barcounter=$(((barcounter + 1) % ${#spinner[@]}))
+}
+
+# Aborts the script execution and imediately halts the watched process execution.
+# First, a SIGINT will be sent to process, and then SIGKILL if still alive.
+abort()
+{
+    printf "$cleanline   $(style "bold fgred" [abort]) abort requested by user\n"
+    killproc 2
+}
+
+# Kills the target process with given status number.
+# @param $1 The status number to the quit the script with.
+killproc()
+{
+    kill -2 -$pid > /dev/null 2>&1;     sleep 1
+    kill -9  $pid > /dev/null 2>&1
+    exit $1
+}
+
+# Catch a Ctrl-C and perform abort routine.
+trap "abort" 2
+
+# Checking whether the PID has been sent to watcher. If the PID is not known, the
+# script must exit as an error.
+if [ $# -lt 1 ]; then
+    echo "$(style "bold fgred" [error]) watchdog requires the PID of process it watches"
+    exit 1
+fi
+
+# Analyze all input coming in the standard input channel while the target process
+# is active. Keep printing progress bar while process is calculating.
+while kill -0 "$pid" > /dev/null 2>&1; do
+    # Reading the process output.
+    IFS= read -r -t .1 line <&0
+
+    # Check if a line has been read. If yes, parse the line and if any error has
+    # been detected, then exit the script.
+    if [[ ! -z "$line" ]] && ! parseline $line; then
+        exit 1
+    fi
+
+    # Updates the progress bar
+    progressbar
+done
+
+# When the target process has already been terminated, all remaining lines printed
+# by the process before exiting must be analyzed.
+while IFS= read -r line; do
+    # Parse the remaining lines and checks if any error has been detected. If an
+    # error happens to be detected, then exit the script.
+    if ! parseline $line; then
+        exit 1
+    fi
+
+    # Updates the progress bar
+    progressbar
+done <&0
+
+# Cleans up the remaining progress bar if so requested
+if [ "$2" != "keep" ]; then
+    printf "$cleanline"
+fi

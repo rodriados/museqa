@@ -7,3 +7,9 @@ tex/
 *.pyo
 hostfile
 todo.*
+*.aln
+*.dnd
+
+run
+test.cpp
+test.fasta
