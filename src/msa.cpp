@@ -13,8 +13,8 @@
 #include "cmdline.hpp"
 #include "encoder.hpp"
 #include "database.hpp"
+#include "benchmark.hpp"
 #include "exception.hpp"
-#include "stopwatch.hpp"
 
 #include "pairwise.cuh"
 #include "phylogeny.cuh"
@@ -61,7 +61,7 @@ namespace msa
             j += sizeList[i];
         }
 
-        onlymaster info("loaded a total of", db.getCount(), "sequences");
+        onlymaster info("loaded a total of %d sequences", db.getCount());
     }
 
     /**
@@ -96,16 +96,6 @@ namespace msa
     }
 
     /**
-     * Reports success and the execution time of a step.
-     * @param name The name of executed step.
-     * @param duration The execution time duration.
-     */
-    inline void report(const std::string& name, const stopwatch::duration::Seconds& duration)
-    {
-        onlymaster msa::log(std::cout, s_bold "[report]" c_green_fg, name, s_reset, duration, "seconds");
-    }
-
-    /**
      * Runs the application. This function measures the application's total
      * execution time as well as all its steps.
      * @see watch
@@ -113,15 +103,15 @@ namespace msa
     static void run()
     {
         try {
-            report("total", stopwatch::run([]() {
-                report("loading", stopwatch::run(load, db));
-                report("pairwise", stopwatch::run(pwrun, pw, db));
-                report("phylogeny", stopwatch::run(pgrun, pg, pw));
+            msa::report("total", benchmark::run([]() {
+                msa::report("loading", benchmark::run(load, db));
+                msa::report("pairwise", benchmark::run(pwrun, pw, db));
+                msa::report("phylogeny", benchmark::run(pgrun, pg, pw));                
             }));
         }
 
         catch(Exception e) {
-            error(e.what());
+            msa::error(e.what());
         }
     }
 
@@ -151,10 +141,10 @@ int main(int argc, char **argv)
     cmdline::parse(argc, argv);
 
     if(node::size < 2)
-        error("at least 2 nodes are needed.");
+        msa::error("at least 2 nodes are needed.");
 
     onlyslaves if(!cuda::device::getCount())
-        error("no compatible GPU device has been found.");
+        msa::error("no compatible GPU device has been found.");
 
     onlyslaves if(cmdline::has("multigpu"))
         cuda::device::setCurrent(node::rank - 1);

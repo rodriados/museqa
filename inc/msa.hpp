@@ -33,32 +33,38 @@
  */
 #if defined(__GNUC__) && !defined(__clang__)
   #define msa_gcc_version (__GNUC__ * 100 + __GNUC_MINOR__)
+  #define msa_gcc 1
 #else
   #define msa_gcc_version 0
 #endif
 
 #ifdef __clang__
   #define msa_clang_version (__clang_major__ * 100 + __clang_minor__)
+  #define msa_clang 1
 #else
   #define msa_clang_version 0
 #endif
 
 #ifdef __INTEL_COMPILER
   #define msa_icc_version __INTEL_COMPILER
+  #define msa_icc 1
 #elif defined(__ICL)
   #define msa_icc_version __ICL
+  #define msa_icc 1
 #else
   #define msa_icc_version 0
 #endif
 
 #ifdef _MSC_VER
   #define msa_msc_version _MSC_VER
+  #define msa_msc 1
 #else
   #define msa_msc_version 0
 #endif
 
 #ifdef __NVCC__
   #define msa_cuda_version (__CUDA_VER_MAJOR__ * 100 + __CUDA_VER_MINOR__)
+  #define msa_cuda 1
 #else
   #define msa_cuda_version 0
 #endif
@@ -77,101 +83,127 @@
   #define msa_windows
 #endif
 
-#include <iostream>
+/*
+ * Likeliness annotations are useful in the rare cases the author knows better
+ * than the compiler whether a branch condition is overwhelmingly likely to take
+ * a specific value. Also, it allows the author to show the compiler which code
+ * paths are designed as the fast path, so they can be optimized.
+ */
+#if defined(msa_gcc) && !defined(likely)
+  #define likely(x)   (__builtin_expect((x), 1))
+  #define unlikely(x) (__builtin_expect((x), 0))
+#else
+  #define likely(x)   (x)
+  #define unlikely(x) (x)
+#endif
+
+#include <string>
+#include <cstdarg>
+#include <cstddef>
 #include <cstdint>
+
+#include "node.hpp"
+#include "exception.hpp"
 
 namespace msa
 {
-    /**#@+
-     * Formats a log message, split in the arguments to an output stream.
-     * @param os The output stream to put the message into.
-     * @param obj The object to be currently formatted to output.
-     * @param rest The other objects in queue to be formatted to output.
-     */
-    template <typename T>
-    inline void log(std::ostream& stream, const T& obj)
-    {
-        stream << (obj) << std::endl;
-    }
-
-    template <typename T, typename ...U>
-    inline void log(std::ostream& stream, const T& obj, const U&... rest)
-    {
-        stream << (obj) << ' ';
-        log(stream, rest...);
-    }
-    /**#@-*/
-
 #if !defined(msa_compile_cython)
     extern void halt(uint8_t = 0);
 #endif
+
+    template <typename ...T>
+    inline void task(const char *, const char *, T&&...) noexcept;
+
+    template <typename ...T>
+    inline void info(const char *, T&&...) noexcept;
+
+    template <typename ...T>
+    inline void error(const char *, T&&...);
+
+    template <typename ...T>
+    inline void warning(const char *, T&&...) noexcept;
+
+    inline void report(const char *, double) noexcept;
 };
 
-#include <cstddef>
-#include <string>
+#if defined(__GNUC__)
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wformat-security"
+#endif
 
-#include "colors.h"
-#include "node.hpp"
-#include "utils.hpp"
-#include "exception.hpp"
+/**
+ * Informs the watchdog about the task we are currently processing.
+ * @param taskname The name of the task being processed.
+ * @param fstr The message formatting string.
+ * @param args The message parts to be printed.
+ */
+template <typename ...T>
+inline void msa::task(const char *taskname, const char *fstr, T&&... args) noexcept
+{
+#ifndef msa_compile_cython
+    printf("[task] %s ", taskname); printf(fstr, args...); putchar('\n');
+#endif
+}
 
 /**
  * Prints an informative log message.
  * @tparam T The types of message arguments.
+ * @param fstr The message formating string.
  * @param args The message parts to be printed.
  */
 template <typename ...T>
-inline void info(const T&... args)
+inline void msa::info(const char *fstr, T&&... args) noexcept
 {
-#if !defined(msa_compile_cython)
-    msa::log(std::cout, s_bold "[info]" s_reset, args...);
+#ifndef msa_compile_cython
+    puts("[info] "); printf(fstr, args...); putchar('\n');
 #endif
 }
 
 /**
  * Prints an error log message and halts execution.
  * @tparam T The types of message arguments.
+ * @param fstr The message formating string.
  * @param args The message parts to be printed.
  */
 template <typename ...T>
-inline void error(const T&... args)
+inline void msa::error(const char *fstr, T&&... args)
 {
-#if !defined(msa_compile_cython)
-    msa::log(std::cout, "[error]", args...);
+#ifndef msa_compile_cython
+    puts("[error] "); printf(fstr, args...); putchar('\n');
     msa::halt(1);
 #else
-    throw Exception(args...);
+    throw Exception(fstr, args...);
 #endif
 }
 
 /**
  * Prints a warning log message.
  * @tparam T The types of message arguments.
+ * @param fstr The message formating string.
  * @param args The message parts to be printed.
  */
 template <typename ...T>
-inline void warning(const T&... args)
+inline void msa::warning(const char *fstr, T&&... args) noexcept
 {
-#if !defined(msa_compile_cython)
-    msa::log(std::cout, s_bold "[warning]" s_reset, args...);
+#ifndef msa_compile_cython
+    puts("[warning] "); printf(fstr, args...); putchar('\n');
 #endif
 }
 
 /**
- * Prints a watchdog progress log message.
- * @tparam T The types of message arguments.
- * @param task The task being currently processed.
- * @param done The number of subtasks already processed.
- * @param total The total number of subtasks to process.
- * @param nodes The number of nodes working on the process.
- * @param args The message parts to be printed.
+ * Prints a time report for given task.
+ * @param taskname The name of completed task.
+ * @param seconds The duration in seconds of given task.
  */
-template <typename ...T>
-inline void watchdog(const char *task, size_t done, size_t total, int nodes, const T&... args)
+inline void msa::report(const char *taskname, double seconds) noexcept
 {
-#if !defined(msa_compile_cython)
-    msa::log(std::cout, "[watchdog]", task, node::rank, nodes, done, total, args...);
+#ifndef msa_compile_cython
+    onlymaster printf("[report] %s in %lf seconds\n", taskname, seconds);
 #endif
 }
+
+#if defined(__GNUC__)
+  #pragma GCC diagnostic pop
+#endif
 
 #endif

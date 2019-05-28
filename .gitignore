@@ -1,15 +1,16 @@
 obj/
 tex/
 .idea/
+
 *.o
 *.so
 *.pyc
 *.pyo
-hostfile
-todo.*
 *.aln
 *.dnd
+todo.*
 
 run
 test.cpp
 test.fasta
+.hostfile
