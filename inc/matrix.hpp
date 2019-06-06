@@ -66,10 +66,7 @@ class Matrix : protected Buffer<T>
          */
         __host__ __device__ inline T& at(const Cartesian<2>& point) const
         {
-#if defined(msa_compile_cython) && !defined(msa_compile_cuda)
-            if(point >= dimension)
-                throw Exception("matrix offset out of range");
-#endif
+            enforce(point >= dimension, "matrix offset out of range");
             return this->ptr[dimension.collapseTo(point)];
         }
 

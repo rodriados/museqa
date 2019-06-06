@@ -174,7 +174,7 @@ namespace cuda
          * @param status The status code.
          */
         inline Exception(Status status)
-        :   ::Exception {"CUDA Excpetion: " + status::describe(status)}
+        :   ::Exception {"CUDA Exception: %s", status::describe(status)}
         ,   status {status}
         {}
 
@@ -182,12 +182,12 @@ namespace cuda
          * Builds a new exception instance from status code.
          * @tparam P The format parameters' types.
          * @param status The status code.
-         * @param fmt The additional message's format.
+         * @param fmtstr The additional message's format.
          * @param args The format's parameters.
          */
         template <typename ...P>
-        inline Exception(Status status, const std::string& fmt, P... args)
-        :   ::Exception {"CUDA Exception: " + status::describe(status) + ": " + fmt, args...}
+        inline Exception(Status status, const char *fmtstr, P&&... args)
+        :   ::Exception {fmtstr, args...}
         ,   status {status}
         {}
 
@@ -206,15 +206,15 @@ namespace cuda
      * Checks whether a CUDA has been successful and throws error if not.
      * @tparam P The format string parameter types.
      * @param status The status code obtained from a function.
-     * @param fmt The format string to use as error message.
+     * @param fmtstr The format string to use as error message.
      * @param args The format string values.
      * @throw The error status code obtained raised to exception.
      */
     template <typename ...P>
-    inline void call(Status status, const std::string& fmt = {}, P... args)
+    inline void call(Status status, const std::string& fmtstr = {}, P&&... args)
     {
         if(status != cuda::status::success)
-            throw Exception {status, fmt, args...};
+            throw Exception {status, fmtstr.c_str(), args...};
     }
 #endif
 

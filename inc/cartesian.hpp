@@ -54,10 +54,7 @@ struct Cartesian<1, T> : public Reflector
      */
     __host__ __device__ inline constexpr T operator[](ptrdiff_t id) const
     {
-#if defined(msa_compile_cython) && !defined(msa_compile_cuda)
-        if(static_cast<unsigned>(id) >= 1)
-            throw Exception("point dimension out of range");
-#endif
+        enforce(static_cast<unsigned>(id) >= 1, "point dimension out of range");
         return dim;
     }
 
@@ -140,10 +137,7 @@ struct Cartesian : public Reflector
      */
     __host__ __device__ inline constexpr T operator[](ptrdiff_t id) const
     {
-#if defined(msa_compile_cython) && !defined(msa_compile_cuda)
-        if(static_cast<unsigned>(id) >= D)
-            throw Exception("point dimension out of range");
-#endif
+        enforce(static_cast<unsigned>(id) >= D, "point dimension out of range");
         return dim[id];
     }
 
