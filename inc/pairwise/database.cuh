@@ -53,10 +53,7 @@ namespace pairwise
              */
             __host__ __device__ inline const SequenceView& operator[](ptrdiff_t offset) const
             {
-#if defined(msa_compile_cython) && !defined(msa_compile_cuda)
-                if(offset < 0 || static_cast<unsigned>(offset) >= getCount())
-                    throw Exception("database index out of range");
-#endif
+                enforce(offset < 0 || unsigned(offset) >= getCount(), "database index out of range");
                 return view[offset];
             }
 

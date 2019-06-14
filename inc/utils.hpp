@@ -240,7 +240,7 @@ using Pure = typename std::conditional<
  * @tpatam T The type to return.
  * @since 0.1.1
  */
-template <typename T, size_t>
+template <typename T, size_t = 0>
 using Identity = T;
 
 #endif

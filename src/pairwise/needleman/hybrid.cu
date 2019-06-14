@@ -119,7 +119,7 @@ namespace
      * @param penalty The gap penalty.
      * @return The score between sequences.
      */
-    __device__ int32_t alignGlobally
+    __device__ int32_t globalAlign
         (   const SequenceView& one
         ,   const SequenceView& two
         ,   const Pointer<ScoringTable>& table
@@ -202,7 +202,7 @@ namespace
             const SequenceView& seq1 = in.db[in.jobs[blockIdx.x].pair.id[0]];
             const SequenceView& seq2 = in.db[in.jobs[blockIdx.x].pair.id[1]];
 
-            out[blockIdx.x] = alignGlobally(
+            out[blockIdx.x] = globalAlign(
                 seq1.getSize() > seq2.getSize() ? seq1 : seq2
             ,   seq1.getSize() > seq2.getSize() ? seq2 : seq1
             ,   table, -(*table)[24][0]
@@ -243,7 +243,7 @@ namespace
             ,   map[jobs[i].pair.id[1]]
             };
 
-        in.db = pairwise::Database{db, used}.toDevice();
+        in.db = pairwise::Database {db, used}.toDevice();
         in.jobs = Buffer<Workpair> {cuda::allocate<Workpair>(batch), batch};
         in.cache = Buffer<int32_t> {cuda::allocate<int32_t>(cacheSize), cacheSize};
 
@@ -317,55 +317,48 @@ namespace
     }
 
     /**
-     * Executes the hybrid Needleman-Wunsch algorithm for the pairwise step.
-     * @param db The sequences available for alignment.
-     * @param pairs The workpairs to align.
-     * @param table The scoring table to use.
-     * @return The score of aligned pairs.
-     */
-    static Buffer<Score> run(const ::Database& db, const Buffer<Pair>& pairs, const Pointer<ScoringTable>& table)
-    {
-        size_t done = 0, batch = 0;
-        const size_t total = pairs.getSize();
-
-        Input in;
-        Buffer<Score> score {total}, out;
-
-#if !defined(msa_compile_cython)
-        watchdog("pairwise", 0, total, node::size - 1, "aligning pairs");
-#endif
-        cuda::kernel::preference(kernel, nw_prefer_shared ? cuda::cache::shared : cuda::cache::l1);
-        
-        while(done < total) {
-            batch = selectPairs(db, pairs, done, in);
-            out = Buffer<Score> {cuda::allocate<Score>(batch), batch};
-
-            if(!batch) throw Exception("no pair fit in device memory.");
-
-            // Here, we call our kernel and allocate our Needleman-Wunsch line buffer in shared memory.
-            // We recommend that the batch size be exactly 480 a multiple of both the number of characters
-            // in an encoded sequence block and the number of threads in a warp. We also recommend that
-            // the block size must not be higher than a warp, but you can change this by tweaking the
-            // *nw_threads_block* configuration value.
-            kernel<<<batch, blockSize, sizeof(int32_t) * batchSize>>>(table, in, out);
-            cuda::copy<Score>(&score[done], out.getBuffer(), batch);
-            done += batch;
-
-#if !defined(msa_compile_cython)
-            watchdog("pairwise", done, total, node::size - 1, "aligning pairs");
-#endif
-        }
-
-        return score;
-    }
-
-    /**
      * The hybrid needleman algorithm object. This algorithm uses hybrid
      * parallelism to run the Needleman-Wunsch algorithm.
      * @since 0.1.1
      */
     struct Hybrid : public Needleman
     {
+        /**
+         * Executes the hybrid Needleman-Wunsch algorithm for the pairwise step.
+         * @param db The sequences available for alignment.
+         * @param table The scoring table to use.
+         * @return The score of aligned pairs.
+         */
+        Buffer<Score> alignDb(const ::Database& db, const Pointer<ScoringTable>& table)
+        {
+            size_t done = 0, batch = 0;
+            const size_t total = this->pair.getSize();
+
+            Input in;
+            Buffer<Score> score {total}, out;
+            cuda::kernel::preference(kernel, nw_prefer_shared ? cuda::cache::shared : cuda::cache::l1);
+            
+            while(done < total) {
+                batch = selectPairs(db, this->pair, done, in);
+                out = Buffer<Score> {cuda::allocate<Score>(batch), batch};
+
+                if(!batch) throw Exception("no pair fit in device memory.");
+
+                // Here, we call our kernel and allocate our Needleman-Wunsch
+                // line buffer in shared memory. We recommend that the batch size
+                // be exactly 480 a multiple of both the number of characters in
+                // an encoded sequence block and the number of threads in a warp.
+                // We also recommend that the block size must not be higher than a
+                // warp, but you can change this by tweaking the *nw_threads_block*
+                // configuration value.
+                kernel<<<batch, blockSize, sizeof(int32_t) * batchSize>>>(table, in, out);
+                cuda::copy<Score>(&score[done], out.getBuffer(), batch);
+                done += batch;
+            }
+
+            return score;
+        }
+
         /**
          * Executes the hybrid needleman algorithm for the pairwise step. This method is
          * responsible for distributing and gathering workload from different cluster nodes.
@@ -375,11 +368,12 @@ namespace
         Buffer<Score> run(const Configuration& config) override
         {
             Pointer<ScoringTable> scoring = table::toDevice(config.table);
+
             onlymaster this->generate(config.db.getCount());
+            onlymaster msa::task("pairwise", "aligning %llu pairs", this->pair.getSize());
+
             this->scatter();
-
-            onlyslaves this->score = ::run(config.db, this->pair, scoring);
-
+            onlyslaves this->score = alignDb(config.db, scoring);
             return this->gather();
         }
     };

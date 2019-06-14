@@ -54,32 +54,6 @@ pairwise::Database::Database(const ::Database& db, const std::vector<ptrdiff_t>&
 }
 
 /**
- * Transfers this database instance to the compute-capable device.
- * @return The database instance allocated in device.
- */
-pairwise::Database pairwise::Database::toDevice() const
-{
-    const size_t dbsize = this->getSize();
-    const size_t dbcount = this->getCount();
-
-    using Block = encoder::EncodedBlock;
-    using View = SequenceView;
-
-    Buffer<Block> device_seq = Buffer<Block> {cuda::allocate<Block>(dbsize), dbsize};
-    Buffer<View> device_view = Buffer<View> {cuda::allocate<View>(dbcount), dbcount};
-
-    Buffer<View> transformed {dbcount};
-
-    for(size_t i = 0; i < dbcount; ++i)
-        transformed[i] = {device_seq, view[i]};
-
-    cuda::copy<Block>(device_seq.getBuffer(), this->getBuffer(), dbsize);
-    cuda::copy<View>(device_view.getBuffer(), transformed.getBuffer(), dbcount);
-
-    return {device_seq, device_view};
-}
-
-/**
  * Sets up the view pointers responsible for keeping track of internal sequences.
  * @param db The database to have its sequences mapped.
  */
@@ -104,4 +78,30 @@ std::vector<encoder::EncodedBlock> pairwise::Database::merge(const ::Database& d
         merged.insert(merged.end(), db[i].getBuffer(), db[i].getBuffer() + db[i].getSize());
 
     return merged;
+}
+
+/**
+ * Transfers this database instance to the compute-capable device.
+ * @return The database instance allocated in device.
+ */
+pairwise::Database pairwise::Database::toDevice() const
+{
+    const size_t dbsize = this->getSize();
+    const size_t dbcount = this->getCount();
+
+    using Block = encoder::EncodedBlock;
+    using View = SequenceView;
+
+    Buffer<Block> device_seq = Buffer<Block> {cuda::allocate<Block>(dbsize), dbsize};
+    Buffer<View> device_view = Buffer<View> {cuda::allocate<View>(dbcount), dbcount};
+
+    Buffer<View> transformed {dbcount};
+
+    for(size_t i = 0; i < dbcount; ++i)
+        transformed[i] = {device_seq, view[i]};
+
+    cuda::copy<Block>(device_seq.getBuffer(), this->getBuffer(), dbsize);
+    cuda::copy<View>(device_view.getBuffer(), transformed.getBuffer(), dbcount);
+
+    return {device_seq, device_view};
 }

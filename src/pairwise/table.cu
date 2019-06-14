@@ -231,9 +231,9 @@ Table *pairwise::table::get(const std::string& name)
     const auto& pair = dispatcher.find(name);
 
     if(pair == dispatcher.end())
-        throw Exception("could not find scoring table: " + name);
+        throw Exception("could not find scoring table '%s'", name.c_str());
 
-    onlymaster info("using pairwise scoring table:" s_bold, name, s_reset);
+    onlymaster msa::info("selected pairwise scoring table '%s'", name.c_str());
 
     return pair->second;
 }

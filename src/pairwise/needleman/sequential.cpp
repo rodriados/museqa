@@ -27,7 +27,7 @@ namespace
      * @param two The second sequence to align.
      * @return The alignment score.
      */
-    static int32_t align
+    static int32_t globalAlign
         (   const Pointer<ScoringTable>& table
         ,   const int8_t penalty
         ,   const Sequence& one
@@ -74,41 +74,6 @@ namespace
     }
 
     /**
-     * Executes the sequential Needleman-Wunsch algorithm for the pairwise step.
-     * @param db The sequences available for alignment.
-     * @param pairs The workpairs to align.
-     * @param table The scoring table to use.
-     * @return The score of aligned pairs.
-     */
-    static Buffer<Score> run(const ::Database& db, const Buffer<Pair>& pairs, const Pointer<ScoringTable>& table)
-    {
-        const size_t total = pairs.getSize();
-        Buffer<Score> score {total};
-
-#if !defined(msa_compile_cython)
-        watchdog("pairwise", 0, total, node::size - 1, "aligning pairs");
-#endif
-
-        for(size_t i = 0; i < total; ) {
-            const Sequence& seq1 = db[pairs[i].id[0]];
-            const Sequence& seq2 = db[pairs[i].id[1]];
-
-            score[i] = align(
-                table
-            ,   -(*table)[24][0]
-            ,   seq1.getSize() > seq2.getSize() ? seq1 : seq2
-            ,   seq1.getSize() > seq2.getSize() ? seq2 : seq1
-            );
-
-#if !defined(msa_compile_cython)
-            watchdog("pairwise", ++i, total, node::size - 1, "aligning pairs");
-#endif
-        }
-
-        return score;
-    }
-
-    /**
      * The sequential needleman algorithm object. This algorithm uses no
      * parallelism, besides pairs distribution to run the Needleman-Wunsch
      * algorithm.
@@ -116,6 +81,33 @@ namespace
      */
     struct Sequential : public Needleman
     {
+        /**
+         * Executes the sequential Needleman-Wunsch algorithm for the pairwise step.
+         * @param db The sequences available for alignment.
+         * @param pairs The workpairs to align.
+         * @param table The scoring table to use.
+         * @return The score of aligned pairs.
+         */
+        Buffer<Score> alignDb(const ::Database& db, const Pointer<ScoringTable>& table)
+        {
+            const size_t total = this->pair.getSize();
+            Buffer<Score> score {total};
+
+            for(size_t i = 0; i < total; ) {
+                const Sequence& seq1 = db[this->pair[i].id[0]];
+                const Sequence& seq2 = db[this->pair[i].id[1]];
+
+                score[i] = globalAlign(
+                    table
+                ,   -(*table)[24][0]
+                ,   seq1.getSize() > seq2.getSize() ? seq1 : seq2
+                ,   seq1.getSize() > seq2.getSize() ? seq2 : seq1
+                );
+            }
+
+            return score;
+        }
+
         /**
          * Executes the sequential needleman algorithm for the pairwise step. This method is
          * responsible for distributing and gathering workload from different cluster nodes.
@@ -125,11 +117,12 @@ namespace
         Buffer<Score> run(const Configuration& config) override
         {
             Pointer<ScoringTable> scoring = table::retrieve(config.table);
+            
             onlymaster this->generate(config.db.getCount());
-            this->scatter();
-         
-            onlyslaves this->score = ::run(config.db, this->pair, scoring);
+            onlymaster msa::task("pairwise", "aligning %llu pairs", this->pair.getSize());
 
+            this->scatter();
+            onlyslaves this->score = alignDb(config.db, scoring);
             return this->gather();
         }
     };
