@@ -40,7 +40,7 @@ namespace encoder
      * @param offset The requested offset.
      * @return The stored value in given offset.
      */
-    __host__ __device__ inline uint8_t access(EncodedBlock block, uint8_t offset)
+    __host__ __device__ inline uint8_t access(EncodedBlock block, uint8_t offset) noexcept
     {
         constexpr uint8_t shift[6] = {1, 6, 11, 17, 22, 27};
         return (block >> shift[offset]) & 0x1F;
@@ -52,12 +52,12 @@ namespace encoder
      * @param offset The requested offset.
      * @return The stored value in given offset.
      */
-    __host__ __device__ inline uint8_t access(const BaseBuffer<EncodedBlock>& buffer, ptrdiff_t offset)
+    __host__ __device__ inline uint8_t access(const BaseBuffer<EncodedBlock>& buffer, ptrdiff_t offset) noexcept
     {
         return access(buffer[offset / batchSize], offset % batchSize);
     }
 
-    extern uint8_t encode(uint8_t);
+    extern uint8_t encode(uint8_t) noexcept;
     extern Buffer<EncodedBlock> encode(const char *, size_t);
 
     extern char decode(uint8_t);

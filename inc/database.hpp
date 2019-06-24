@@ -37,12 +37,12 @@ class Database
         std::vector<DatabaseEntry> list;    /// The list of sequence entries in database.
 
     public:
-        Database() = default;
-        Database(const Database&) = default;
-        Database(Database&&) = default;
+        inline Database() = default;
+        inline Database(const Database&) = default;
+        inline Database(Database&&) = default;
 
-        Database& operator=(const Database&) = default;
-        Database& operator=(Database&&) = default;
+        inline Database& operator=(const Database&) = default;
+        inline Database& operator=(Database&&) = default;
 
         /**
          * Gives access to a specific sequence in database.
@@ -58,7 +58,7 @@ class Database
          * Informs the number of entries in database.
          * @return The number of entries in database.
          */
-        inline size_t getCount() const
+        inline size_t getCount() const noexcept
         {
             return list.size();
         }
@@ -70,10 +70,7 @@ class Database
          */
         inline const DatabaseEntry& getEntry(ptrdiff_t offset) const
         {
-#ifdef msa_compile_cython
-            if(static_cast<unsigned>(offset) >= getCount())
-                throw Exception("database offset out of range");
-#endif
+            enforce(static_cast<size_t>(offset) < getCount(), "database offset out of range");
             return list.at(offset);
         }
 
@@ -196,10 +193,7 @@ class Database
          */
         inline void remove(ptrdiff_t offset)
         {
-#ifdef msa_compile_cython
-            if(static_cast<unsigned>(offset) >= getCount())
-                throw Exception("database offset out of range");
-#endif
+            enforce(static_cast<size_t>(offset) < getCount(), "database offset out of range");
             list.erase(list.begin() + offset);
         }
 

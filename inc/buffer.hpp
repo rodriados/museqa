@@ -30,9 +30,9 @@ class BaseBuffer
         size_t size = 0;        /// The number of elements in buffer.
 
     public:
-        BaseBuffer() = default;
-        BaseBuffer(const BaseBuffer&) = default;
-        BaseBuffer(BaseBuffer&&) = default;
+        inline BaseBuffer() noexcept = default;
+        inline BaseBuffer(const BaseBuffer&) noexcept = default;
+        inline BaseBuffer(BaseBuffer&&) noexcept = default;
 
         /**
          * Creates a new buffer by allocating memory.
@@ -41,14 +41,16 @@ class BaseBuffer
         inline explicit BaseBuffer(size_t size)
         :   ptr {new T[size]}
         ,   size {size}
-        {}
+        {
+            enforce(ptr != nullptr, "could not allocate buffer memory");
+        }
 
         /**
          * Acquires the ownership of a buffer pointer.
          * @param ptr The buffer pointer to encapsulate.
          * @param size The size of buffer to encapsulate.
          */
-        inline explicit BaseBuffer(const Pointer<T[]>& ptr, size_t size)
+        inline explicit BaseBuffer(const Pointer<T[]>& ptr, size_t size) noexcept
         :   ptr {ptr}
         ,   size {size}
         {}
@@ -58,30 +60,50 @@ class BaseBuffer
          * @param ptr The raw pointer instance to encapsulate.
          * @param size The size of buffer to encapsulate.
          */
-        inline explicit BaseBuffer(const RawPointer<T>& ptr, size_t size)
+        inline explicit BaseBuffer(const RawPointer<T>& ptr, size_t size) noexcept
         :   ptr {ptr}
         ,   size {size}
         {}
 
-        BaseBuffer& operator=(const BaseBuffer&) = default;
-        BaseBuffer& operator=(BaseBuffer&&) = default;
+        inline BaseBuffer& operator=(const BaseBuffer&) = default;
+        inline BaseBuffer& operator=(BaseBuffer&&) = default;
 
         /**
          * Gives access to a specific location in buffer's data.
          * @param offset The requested buffer offset.
          * @return The buffer's position pointer.
          */
-        __host__ __device__ inline T& operator[](ptrdiff_t offset) const
+        __host__ __device__ inline T& operator[](ptrdiff_t offset)
         {
-            enforce(offset < 0 || unsigned(offset) >= getSize(), "buffer offset out of range");
-            return ptr.getOffset(offset);
+            enforce(0 <= offset && static_cast<size_t>(offset) < getSize(), "buffer offset out of range");
+            return ptr[offset];
+        }
+
+        /**
+         * Gives constant access to a specific location in buffer's data.
+         * @param offset The requested buffer offset.
+         * @return The buffer's position constant pointer.
+         */
+        __host__ __device__ inline const T& operator[](ptrdiff_t offset) const
+        {
+            enforce(0 <= offset && static_cast<size_t>(offset) < getSize(), "buffer offset out of range");
+            return const_cast<const T&>(ptr[offset]);
         }
 
         /**
          * Gives access to buffer's data.
          * @return The buffer's internal pointer.
          */
-        __host__ __device__ inline T *getBuffer() const
+        __host__ __device__ inline T *getBuffer() noexcept
+        {
+            return &ptr;
+        }
+
+        /**
+         * Gives constant access to buffer's data.
+         * @return The buffer's internal constant pointer.
+         */
+        __host__ __device__ inline const T *getBuffer() const noexcept
         {
             return ptr.get();
         }
@@ -90,7 +112,7 @@ class BaseBuffer
          * Gives access to buffer's pointer.
          * @return The buffer's smart pointer.
          */
-        __host__ __device__ inline const Pointer<T[]>& getPointer() const
+        __host__ __device__ inline const Pointer<T[]>& getPointer() const noexcept
         {
             return ptr;
         }
@@ -100,8 +122,9 @@ class BaseBuffer
          * @param offset The offset to apply to pointer.
          * @return The buffer's offset pointer.
          */
-        inline const Pointer<T[]> getOffsetPointer(ptrdiff_t offset) const
+        inline Pointer<T[]> getOffsetPointer(ptrdiff_t offset)
         {
+            enforce(0 <= offset && static_cast<size_t>(offset) < getSize(), "buffer offset out of range");
             return ptr.getOffsetPointer(offset);
         }
 
@@ -109,7 +132,7 @@ class BaseBuffer
          * Informs the buffer's number of blocks.
          * @return The number of buffer blocks.
          */
-        __host__ __device__ inline size_t getSize() const
+        __host__ __device__ inline size_t getSize() const noexcept
         {
             return size;
         }
@@ -126,9 +149,9 @@ template <typename T>
 class Buffer : public BaseBuffer<T>
 {
     public:
-        Buffer() = default;
-        Buffer(const Buffer&) = default;
-        Buffer(Buffer&&) = default;
+        inline Buffer() noexcept = default;
+        inline Buffer(const Buffer&) noexcept = default;
+        inline Buffer(Buffer&&) noexcept = default;
 
         using BaseBuffer<T>::BaseBuffer;
 
@@ -163,15 +186,15 @@ class Buffer : public BaseBuffer<T>
             copy(vector.data());
         }
 
-        Buffer& operator=(const Buffer&) = default;
-        Buffer& operator=(Buffer&&) = default;
+        inline Buffer& operator=(const Buffer&) = default;
+        inline Buffer& operator=(Buffer&&) = default;
 
     protected:
         /**
          * Copies an existing buffer's data.
          * @param ptr The pointer of buffer to be copied.
          */
-        inline void copy(const T *ptr)
+        inline void copy(const T *ptr) noexcept
         {
             memcpy(this->getBuffer(), ptr, sizeof(T) * this->getSize());
         }
@@ -190,9 +213,9 @@ class BufferSlice : public BaseBuffer<T>
         ptrdiff_t displ = 0;    /// The slice displacement in relation to original buffer.
 
     public:
-        BufferSlice() = default;
-        BufferSlice(const BufferSlice&) = default;
-        BufferSlice(BufferSlice&&) = default;
+        inline BufferSlice() noexcept = default;
+        inline BufferSlice(const BufferSlice&) noexcept = default;
+        inline BufferSlice(BufferSlice&&) noexcept = default;
 
         /**
          * Instantiates a new buffer slice.
@@ -200,12 +223,14 @@ class BufferSlice : public BaseBuffer<T>
          * @param displ The initial displacement of slice.
          * @param size The number of elements in the slice.
          */
-        inline BufferSlice(const BaseBuffer<T>& target, ptrdiff_t displ = 0, size_t size = 0)
+        inline BufferSlice(BaseBuffer<T>& target, ptrdiff_t displ = 0, size_t size = 0)
         :   BaseBuffer<T> {target.getOffsetPointer(displ), size}
         ,   displ {displ}
         {
-            enforce(size + displ < 0 || unsigned(size + displ) >= target.getSize()
-                ,   "slice initialized out of range");
+            enforce(
+                0 <= (size + displ) && static_cast<size_t>(size + displ) < target.getSize()
+            ,   "slice initialized out of range"
+            );
         }
 
         /**
@@ -213,22 +238,24 @@ class BufferSlice : public BaseBuffer<T>
          * @param target The target buffer to which the slice shall relate to.
          * @param slice The slice data to be put into the new target.
          */
-        inline BufferSlice(const BaseBuffer<T>& target, const BufferSlice& slice)
+        inline BufferSlice(BaseBuffer<T>& target, const BufferSlice& slice)
         :   BaseBuffer<T> {target.getOffsetPointer(slice.getDispl()), slice.getSize()}
         ,   displ {slice.getDispl()}
         {
-            enforce(unsigned(slice.getSize() + slice.getDispl()) >= target.getSize()
-                ,   "slice initialized out of range");
+            enforce(
+                static_cast<size_t>(slice.getSize() + slice.getDispl()) < target.getSize()
+            ,   "slice initialized out of range"
+            );
         }
 
-        BufferSlice& operator=(const BufferSlice&) = default;
-        BufferSlice& operator=(BufferSlice&&) = default;
+        inline BufferSlice& operator=(const BufferSlice&) = default;
+        inline BufferSlice& operator=(BufferSlice&&) = default;
 
         /**
          * Informs the displacement pointer in relation to original buffer.
          * @return The buffer's slice displacement.
          */
-        __host__ __device__ inline ptrdiff_t getDispl() const
+        __host__ __device__ inline ptrdiff_t getDispl() const noexcept
         {
             return displ;
         }

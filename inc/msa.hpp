@@ -108,7 +108,7 @@
 namespace msa
 {
 #if !defined(msa_compile_cython)
-    extern void halt(uint8_t = 0);
+    extern void halt(uint8_t = 0) noexcept;
 #endif
 
     template <typename ...T>

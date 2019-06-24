@@ -46,7 +46,7 @@ static constexpr uint8_t shift[6] = {1, 6, 11, 17, 22, 27};
  * @param letter The character to encode.
  * @return The encoded character.
  */
-uint8_t encoder::encode(uint8_t letter)
+uint8_t encoder::encode(uint8_t letter) noexcept
 {
     letter = toupper(letter);
 
@@ -84,10 +84,7 @@ Buffer<encoder::EncodedBlock> encoder::encode(const char *ptr, size_t size)
  */
 char encoder::decode(uint8_t element)
 {
-#ifdef msa_compile_cython
-    if(element >= 26)
-        throw Exception("cannot convert invalid sequence element:", static_cast<int>(element));
-#endif
+    enforce(element < 26, "cannot convert invalid sequence element: %d", static_cast<int>(element));
     return decodeTable[element];
 }
 

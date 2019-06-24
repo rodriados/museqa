@@ -61,28 +61,28 @@ struct RawPointer
     Pure<T> *ptr = nullptr;                         /// The pointer itself.
     Deleter<T> delfunc = pointer::deleter<T>;       /// The pointer deleter function.
 
-    RawPointer() = default;
-    RawPointer(const RawPointer&) = default;
-    RawPointer(RawPointer&&) = default;
+    inline constexpr RawPointer() noexcept = default;
+    inline constexpr RawPointer(const RawPointer&) noexcept = default;
+    inline constexpr RawPointer(RawPointer&&) noexcept = default;
 
     /**
      * Initializes a new pointer storage object.
      * @param ptr The raw pointer to be held.
      * @param delfunc The deleter function for pointer.
      */
-    inline RawPointer(Pure<T> *ptr, Deleter<T> delfunc = nullptr)
+    inline constexpr RawPointer(Pure<T> *ptr, Deleter<T> delfunc = nullptr) noexcept
     :   ptr {ptr}
     ,   delfunc {!delfunc.isEmpty() ? delfunc : pointer::deleter<T>}
     {}
 
-    RawPointer& operator=(const RawPointer&) = default;
-    RawPointer& operator=(RawPointer&&) = default;
+    inline RawPointer& operator=(const RawPointer&) noexcept = default;
+    inline RawPointer& operator=(RawPointer&&) noexcept = default;
 
     /**
      * Converts to universal pointer type.
      * @return The pointer converted to universal type.
      */
-    inline operator Pure<T> *() const
+    inline constexpr operator Pure<T> *() const noexcept
     {
         return ptr;
     }
@@ -105,7 +105,7 @@ namespace pointer
          * @param ptr The raw pointer to be held.
          * @param delfunc The deleter function for pointer.
          */
-        inline MetaPointer(Pure<T> *ptr, Deleter<T> delfunc)
+        inline MetaPointer(Pure<T> *ptr, Deleter<T> delfunc) noexcept
         :   RawPointer<T> {ptr, delfunc}
         ,   count {1}
         {}
@@ -114,7 +114,7 @@ namespace pointer
          * Deletes the raw pointer by calling its deleter function.
          * @see MetaPointer::MetaPointer
          */
-        inline ~MetaPointer() noexcept
+        inline ~MetaPointer()
         {
             (this->delfunc)(this->ptr);
         }
@@ -128,7 +128,7 @@ namespace pointer
      * @return New instance.
      */
     template <typename T>
-    inline MetaPointer<T> *acquire(Pure<T> *ptr, Deleter<T> delfunc = nullptr)
+    inline MetaPointer<T> *acquire(Pure<T> *ptr, Deleter<T> delfunc = nullptr) noexcept
     {
         return new MetaPointer<T> {ptr, delfunc};
     }
@@ -140,7 +140,7 @@ namespace pointer
      * @return The acquired pointer.
      */
     template <typename T>
-    inline MetaPointer<T> *acquire(MetaPointer<T> *ptr)
+    inline MetaPointer<T> *acquire(MetaPointer<T> *ptr) noexcept
     {
         ptr && ++ptr->count;
         return ptr;
@@ -177,14 +177,14 @@ class BasePointer
         Pure<T> *ptr = nullptr;                     /// The encapsulated pointer.
 
     public:
-        inline BasePointer() = default;
+        inline BasePointer() noexcept = default;
 
         /**
          * Builds a new instance from a raw pointer.
          * @param ptr The pointer to be encapsulated.
          * @param delfunc The delete functor.
          */
-        inline BasePointer(Pure<T> *ptr, Deleter<T> delfunc = nullptr)
+        inline BasePointer(Pure<T> *ptr, Deleter<T> delfunc = nullptr) noexcept
         :   meta {pointer::acquire<T>(ptr, delfunc)}
         ,   ptr {ptr}
         {}
@@ -193,7 +193,7 @@ class BasePointer
          * Gets reference to an already existing pointer.
          * @param other The reference to be acquired.
          */
-        inline BasePointer(const BasePointer& other)
+        inline BasePointer(const BasePointer& other) noexcept
         :   meta {pointer::acquire(other.meta)}
         ,   ptr {other.ptr}
         {}
@@ -202,7 +202,7 @@ class BasePointer
          * Acquires a moved reference to an already existing pointer.
          * @param other The reference to be moved.
          */
-        inline BasePointer(BasePointer&& other)
+        inline BasePointer(BasePointer&& other) noexcept
         :   meta {other.meta}
         ,   ptr {other.ptr}
         {
@@ -215,7 +215,7 @@ class BasePointer
          * @param raw The raw pointer object.
          */
         template <typename U = T>
-        inline BasePointer(const RawPointer<U>& raw)
+        inline BasePointer(const RawPointer<U>& raw) noexcept
         :   BasePointer {raw.ptr, raw.delfunc}
         {}
 
@@ -223,7 +223,7 @@ class BasePointer
          * Releases the acquired pointer reference.
          * @see BasePointer::BasePointer
          */
-        inline ~BasePointer() noexcept
+        inline ~BasePointer()
         {
             pointer::release(meta);
         }
@@ -236,10 +236,8 @@ class BasePointer
         inline BasePointer& operator=(const BasePointer& other)
         {
             pointer::release(meta);
-
             meta = pointer::acquire(other.meta);
             ptr = other.ptr;
-
             return *this;
         }
 
@@ -248,14 +246,12 @@ class BasePointer
          * @param other The reference to be acquired.
          * @return This pointer object.
          */
-        inline BasePointer& operator=(BasePointer&& other) noexcept
+        inline BasePointer& operator=(BasePointer&& other)
         {
             pointer::release(meta);
-
             meta = other.meta;
             ptr = other.ptr;
             other.reset();
-
             return *this;
         }
 
@@ -263,7 +259,16 @@ class BasePointer
          * Dereferences the pointer.
          * @return The pointed object.
          */
-        __host__ __device__ inline Pure<T>& operator*() const
+        __host__ __device__ inline Pure<T>& operator*() noexcept
+        {
+            return *ptr;
+        }
+
+        /**
+         * Dereferences the constant pointer.
+         * @return The constant pointed object.
+         */
+        __host__ __device__ inline const Pure<T>& operator*() const noexcept
         {
             return *ptr;
         }
@@ -272,7 +277,16 @@ class BasePointer
          * Gives access to the raw pointer.
          * @return The raw pointer.
          */
-        __host__ __device__ inline Pure<T> *operator&() const
+        __host__ __device__ inline Pure<T> *operator&() noexcept
+        {
+            return ptr;
+        }
+
+        /**
+         * Gives access to the raw constant pointer.
+         * @return The raw constant pointer.
+         */
+        __host__ __device__ inline const Pure<T> *operator&() const noexcept
         {
             return ptr;
         }
@@ -281,7 +295,16 @@ class BasePointer
          * Gives access to raw pointer using the dereference operator.
          * @return The raw pointer.
          */
-        __host__ __device__ inline Pure<T> *operator->() const
+        __host__ __device__ inline Pure<T> *operator->() noexcept
+        {
+            return ptr;
+        }
+
+        /**
+         * Gives access to raw constant pointer using the dereference operator.
+         * @return The raw constant pointer.
+         */
+        __host__ __device__ inline const Pure<T> *operator->() const noexcept
         {
             return ptr;
         }
@@ -290,7 +313,7 @@ class BasePointer
          * Checks if the stored pointer is not null.
          * @return Is the pointer not null?
          */
-        __host__ __device__ inline operator bool() const
+        __host__ __device__ inline operator bool() const noexcept
         {
             return ptr != nullptr;
         }
@@ -299,7 +322,7 @@ class BasePointer
          * Gives access to raw pointer.
          * @return The raw pointer.
          */
-        __host__ __device__ inline Pure<T> *get() const
+        __host__ __device__ inline const Pure<T> *get() const noexcept
         {
             return ptr;
         }
@@ -308,7 +331,7 @@ class BasePointer
          * Gives access to the pointer deleter.
          * @return The pointer deleter.
          */
-        inline Deleter<T> getDeleter() const
+        inline const Deleter<T> getDeleter() const noexcept
         {
             return meta ? meta->delfunc : nullptr;
         }
@@ -317,7 +340,7 @@ class BasePointer
          * Informs the number of references created to pointer.
          * @return The number of references to pointer.
          */
-        inline size_t useCount() const
+        inline size_t useCount() const noexcept
         {
             return meta ? meta->count : 0;
         }
@@ -326,7 +349,7 @@ class BasePointer
          * Resets the pointer manager to an empty state.
          * @see BasePointer::BasePointer
          */
-        inline void reset()
+        inline void reset() noexcept
         {
             meta = nullptr;
             ptr = nullptr;
@@ -343,20 +366,29 @@ template <typename T>
 class Pointer : public BasePointer<T>
 {
     public:
-        inline Pointer() = default;
-        inline Pointer(const Pointer&) = default;
-        inline Pointer(Pointer&&) = default;
+        inline Pointer() noexcept = default;
+        inline Pointer(const Pointer&) noexcept = default;
+        inline Pointer(Pointer&&) noexcept = default;
 
         using BasePointer<T>::BasePointer;
 
-        Pointer& operator=(const Pointer&) = default;
-        Pointer& operator=(Pointer&&) = default;
+        inline Pointer& operator=(const Pointer&) = default;
+        inline Pointer& operator=(Pointer&&) = default;
 
         /**
          * Converts to universal pointer type.
          * @return The pointer converted to universal type.
          */
-        __host__ __device__ inline operator Pure<T> *() const
+        __host__ __device__ inline operator Pure<T> *() noexcept
+        {
+            return this->ptr;
+        }
+
+        /**
+         * Converts to universal constant pointer type.
+         * @return The constant pointer converted to universal type.
+         */
+        __host__ __device__ inline operator const Pure<T> *() const noexcept
         {
             return this->ptr;
         }
@@ -366,21 +398,31 @@ class Pointer : public BasePointer<T>
          * @param offset The offset to be accessed.
          * @return The requested object instance.
          */
-        template <typename U = T>
-        __host__ __device__ inline auto operator[](ptrdiff_t offset)
-        -> typename std::enable_if<!std::is_same<Pure<U>, U>::value, Pure<T>&>::type
+        __host__ __device__ inline Pure<T>& operator[](ptrdiff_t offset) noexcept
         {
-            return getOffset(offset);
+            static_assert(!std::is_same<Pure<T>, T>::value, "only array pointers have offsets");
+            return this->ptr[offset];
         }
 
         /**
-         * Gives access to a const-qualified offset object instance.
+         * Gives access to an constant object in an array pointer offset.
+         * @param offset The offset to be accessed.
+         * @return The requested constant object instance.
+         */
+        __host__ __device__ inline const Pure<T>& operator[](ptrdiff_t offset) const noexcept
+        {
+            static_assert(!std::is_same<Pure<T>, T>::value, "only array pointers have offsets");
+            return this->ptr[offset];
+        }
+
+        /**
+         * Gives access to an offset constant object instance.
          * @param offset The offset to pointer.
          * @return The offset object instance.
          */
         template <typename U = T>
-        __host__ __device__ inline auto getOffset(ptrdiff_t offset) const
-        -> typename std::enable_if<!std::is_same<Pure<U>, U>::value, Pure<T>&>::type
+        __host__ __device__ inline auto getOffset(ptrdiff_t offset) const noexcept
+        -> typename std::enable_if<!std::is_same<Pure<U>, U>::value, const Pure<T>&>::type
         {
             return this->ptr[offset];
         }
@@ -388,16 +430,15 @@ class Pointer : public BasePointer<T>
         /**
          * Gets an instance to an offset pointer.
          * @param offset The requested offset.
-         * @return The offset pointer instance.
+         * @return The new offset pointer instance.
          */
         template <typename U = T>
-        inline auto getOffsetPointer(ptrdiff_t offset) const
+        inline auto getOffsetPointer(ptrdiff_t offset) noexcept
         -> typename std::enable_if<!std::is_same<Pure<U>, U>::value, Pointer>::type
         {
-            Pointer newptr {*this};
-            newptr.ptr += offset;
-
-            return newptr;
+            Pointer instance {*this};
+            instance.ptr += offset;
+            return instance;
         }
 };
 

@@ -76,7 +76,7 @@ namespace mpi
          * @param code The error code to be explained.
          * @return The error description.
          */
-        inline std::string describe(int code)
+        inline std::string describe(int code) noexcept
         {
             int length;
             char buffer[2048];
@@ -100,7 +100,7 @@ namespace mpi
          * @param code The result code reported by MPI.
          */
         inline Exception(int code)
-        :   ::Exception {"MPI Exception:", error::describe(code)}
+        :   ::Exception {"MPI Exception: %s", error::describe(code)}
         ,   code {code}
         {}
 
@@ -112,8 +112,8 @@ namespace mpi
          * @param args The format's parameters.
          */
         template <typename ...P>
-        inline Exception(int code, const std::string& fmt, P... args)
-        :   ::Exception {"MPI Exception:", error::describe(code), args...}
+        inline Exception(int code, const char *fmtstr, P&&... args)
+        :   ::Exception {fmtstr, args...}
         ,   code {code}
         {}
 
@@ -121,7 +121,7 @@ namespace mpi
          * Retrieves the MPI error code thrown.
          * @param The error code.
          */
-        inline int getCode() const
+        inline int getCode() const noexcept
         {
             return code;
         }
@@ -131,15 +131,15 @@ namespace mpi
      * Checks whether a MPI operation has been successful and throws error if not.
      * @tparam P The format string parameter types.
      * @param code The error code obtained from the operation.
-     * @param fmt The format string to use as error message.
+     * @param fmtstr The format string to use as error message.
      * @param args The format string values.
      * @throw The error code obtained raised to exception.
      */
     template <typename ...P>
-    inline void call(int code, const std::string& fmt = {}, P... args)
+    inline void call(int code, const std::string& fmtstr = {}, P&&... args)
     {
         if(code != MPI_SUCCESS)
-            throw Exception {code, fmt, args...};
+            throw Exception {code, fmtstr.c_str(), args...};
     }
 
     namespace datatype
@@ -270,7 +270,7 @@ namespace mpi
              * This constructor shall be called only once for each type to be created.
              * @see Generator::get
              */
-            inline Generator() noexcept
+            inline Generator()
             {
                 constexpr int size = Reflection<T>::getSize();
 
@@ -280,8 +280,8 @@ namespace mpi
 
                 detail::Builder<T>::generate(blockList, offsetList, typeList);
 
-                MPI_Type_create_struct(size, blockList, offsetList, typeList, &typeId);
-                MPI_Type_commit(&typeId);
+                call(MPI_Type_create_struct(size, blockList, offsetList, typeList, &typeId));
+                call(MPI_Type_commit(&typeId));
                 dtypes.push_back(typeId);
             }
 
@@ -305,14 +305,14 @@ namespace mpi
     {
         mutable MPI_Status status;  /// The raw MPI status.
 
-        Status() = default;
-        Status(const Status&) = default;
+        inline Status() noexcept = default;
+        inline Status(const Status&) noexcept = default;
 
         /**
          * Instatiates a new status object.
          * @param status The MPI status built-in object.
          */
-        inline Status(const MPI_Status& status)
+        inline Status(const MPI_Status& status) noexcept
         :   status {status}
         {}
 
@@ -320,7 +320,7 @@ namespace mpi
          * Converts to the built-in status object.
          * @return The built-in status object.
          */
-        inline operator MPI_Status&()
+        inline operator const MPI_Status&() const noexcept
         {
             return status;
         }
@@ -329,7 +329,7 @@ namespace mpi
          * Retrieves the message error code.
          * @return The error code.
          */
-        inline int getError() const
+        inline int getError() const noexcept
         {
             return status.MPI_ERROR;
         }
@@ -338,7 +338,7 @@ namespace mpi
          * Retrieves the source of the message.
          * @return The message source node.
          */
-        inline Node getSource() const
+        inline Node getSource() const noexcept
         {
             return status.MPI_SOURCE;
         }
@@ -347,7 +347,7 @@ namespace mpi
          * Retrieves the message tag.
          * @return The retrieved message tag.
          */
-        inline Tag getTag() const
+        inline Tag getTag() const noexcept
         {
             return status.MPI_TAG;
         }
@@ -358,7 +358,7 @@ namespace mpi
          * @return The number of elements contained in the message.
          */
         template <typename T>
-        inline size_t getCount() const
+        inline size_t getCount() const noexcept
         {
             int value;
             MPI_Get_count(&status, datatype::get<T>(), &value);
@@ -370,7 +370,7 @@ namespace mpi
          * has been successfully cancelled.
          * @return Has the message been cancelled?
          */
-        inline bool isCancelled() const
+        inline bool isCancelled() const noexcept
         {
             int flag = 0;
             MPI_Test_cancelled(&status, &flag);
@@ -394,9 +394,9 @@ namespace mpi
             Pure<T> *buffer = nullptr;      /// The payload's buffer pointer.
             size_t size = 0;                /// The payload's size.
 
-            Payload() = delete;
-            Payload(const Payload&) = default;
-            Payload(Payload&&) = default;
+            inline Payload() noexcept = delete;
+            inline Payload(const Payload&) noexcept = default;
+            inline Payload(Payload&&) noexcept = default;
 
             /**
              * Creates a new payload from simple object value.
@@ -424,8 +424,8 @@ namespace mpi
             inline virtual ~Payload() noexcept
             {}
 
-            Payload& operator=(const Payload&) = default;
-            Payload& operator=(Payload&&) = default;
+            inline Payload& operator=(const Payload&) noexcept = default;
+            inline Payload& operator=(Payload&&) noexcept = default;
 
             /**
              * Retrieves the pointer to payload's buffer.

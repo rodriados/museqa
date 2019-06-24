@@ -195,7 +195,7 @@ namespace cuda
          * Informs the status code received from an operation.
          * @return The error status code.
          */
-        inline Status getCode() const
+        inline Status getCode() const noexcept
         {
             return status;
         }

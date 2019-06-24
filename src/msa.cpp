@@ -100,7 +100,7 @@ namespace msa
      * execution time as well as all its steps.
      * @see watch
      */
-    static void run()
+    static void run() noexcept
     {
         try {
             msa::report("total", benchmark::run([]() {
@@ -120,7 +120,7 @@ namespace msa
      * @param code The exit code.
      * @return The code to operational system.
      */
-    void halt(uint8_t code)
+    void halt(uint8_t code) noexcept
     {
         mpi::finalize();
         exit(code);
