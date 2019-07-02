@@ -94,9 +94,14 @@ class Exception : public std::exception
 template <typename ...T>
 __host__ __device__ inline void enforce(bool condition, const char *fmtstr, T&&... args)
 {
-#if !defined(msa_compile_cuda)
-    if(unlikely(!condition))
+#ifndef msa_compile_cuda
+  #ifdef msa_gcc
+    if(__builtin_expect(!condition, 0))
         throw Exception(fmtstr, args...);
+  #else
+    if(!condition)
+        throw Exception(fmtstr, args...);
+  #endif
 #endif
 }
 

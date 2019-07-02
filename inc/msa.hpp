@@ -83,20 +83,6 @@
   #define msa_windows
 #endif
 
-/*
- * Likeliness annotations are useful in the rare cases the author knows better
- * than the compiler whether a branch condition is overwhelmingly likely to take
- * a specific value. Also, it allows the author to show the compiler which code
- * paths are designed as the fast path, so they can be optimized.
- */
-#if defined(msa_gcc) && !defined(likely)
-  #define likely(x)   (__builtin_expect((x), 1))
-  #define unlikely(x) (__builtin_expect((x), 0))
-#else
-  #define likely(x)   (x)
-  #define unlikely(x) (x)
-#endif
-
 #include <string>
 #include <cstdarg>
 #include <cstddef>
