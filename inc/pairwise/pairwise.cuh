@@ -61,14 +61,14 @@ namespace pairwise
     {
         Buffer<Pair> pair;              /// The sequence pairs to be aligned.
 
-        Algorithm() = default;
-        Algorithm(const Algorithm&) = default;
-        Algorithm(Algorithm&&) = default;
+        inline Algorithm() noexcept = default;
+        inline Algorithm(const Algorithm&) noexcept = default;
+        inline Algorithm(Algorithm&&) noexcept = default;
 
         virtual ~Algorithm() = default;
 
-        Algorithm& operator=(const Algorithm&) = default;
-        Algorithm& operator=(Algorithm&&) = default;
+        inline Algorithm& operator=(const Algorithm&) = default;
+        inline Algorithm& operator=(Algorithm&&) = default;
 
         virtual Buffer<Pair> generate(size_t);
         virtual Buffer<Score> run(const Configuration&) = 0;
@@ -91,12 +91,12 @@ namespace pairwise
             size_t count;           /// The total number of sequences available.
 
         public:
-            Pairwise() = default;
-            Pairwise(const Pairwise&) = default;
-            Pairwise(Pairwise&&) = default;
+            inline Pairwise() noexcept = default;
+            inline Pairwise(const Pairwise&) noexcept = default;
+            inline Pairwise(Pairwise&&) noexcept = default;
 
-            Pairwise& operator=(const Pairwise&) = default;
-            Pairwise& operator=(Pairwise&&) = default;
+            inline Pairwise& operator=(const Pairwise&) = default;
+            inline Pairwise& operator=(Pairwise&&) = default;
 
             using Buffer<Score>::operator=;
 
@@ -115,7 +115,7 @@ namespace pairwise
     namespace table
     {
         extern ScoringTable *get(const std::string&);
-        extern const std::vector<std::string>& getList();
+        extern const std::vector<std::string>& getList() noexcept;
         extern Pointer<ScoringTable> retrieve(const std::string&);
         extern Pointer<ScoringTable> toDevice(const std::string&);
     };

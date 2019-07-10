@@ -49,11 +49,9 @@ std::vector<DatabaseEntry> parser::fasta(const std::string& filename)
 {
     std::fstream file(filename, std::fstream::in);
     std::vector<DatabaseEntry> result;
-
     DatabaseEntry entry;
 
-    if(file.fail())
-        throw Exception("file does not exist or cannot be read: " + filename);
+    enforce(!file.fail(), "file does not exist or cannot be read: %s", filename.c_str());
 
     while(!file.eof() && !file.fail())
         if(extract(file, entry))

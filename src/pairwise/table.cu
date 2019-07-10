@@ -10,6 +10,7 @@
 #include "msa.hpp"
 #include "cuda.cuh"
 #include "pointer.hpp"
+#include "exception.hpp"
 
 #include "pairwise/pairwise.cuh"
 
@@ -230,9 +231,7 @@ Table *pairwise::table::get(const std::string& name)
 {
     const auto& pair = dispatcher.find(name);
 
-    if(pair == dispatcher.end())
-        throw Exception("could not find scoring table '%s'", name.c_str());
-
+    enforce(pair != dispatcher.end(), "could not find scoring table: %s", name.c_str());
     onlymaster msa::info("selected pairwise scoring table '%s'", name.c_str());
 
     return pair->second;
@@ -242,7 +241,7 @@ Table *pairwise::table::get(const std::string& name)
  * Informs the names of all available scoring tables.
  * @return The list of available scoring tables.
  */
-const std::vector<std::string>& pairwise::table::getList()
+const std::vector<std::string>& pairwise::table::getList() noexcept
 {
     return available;
 }
