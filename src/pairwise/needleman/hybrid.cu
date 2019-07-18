@@ -342,7 +342,7 @@ namespace
                 batch = selectPairs(db, this->pair, done, in);
                 out = Buffer<Score> {cuda::allocate<Score>(batch), batch};
 
-                if(!batch) throw Exception("no pair fit in device memory.");
+                enforce(batch, "no pair fit in device memory");
 
                 // Here, we call our kernel and allocate our Needleman-Wunsch
                 // line buffer in shared memory. We recommend that the batch size

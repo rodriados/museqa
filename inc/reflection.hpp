@@ -245,7 +245,7 @@ class Reflector
          */
         template <typename ...T>
         static constexpr auto reflect(T&...) noexcept
-        -> decltype(tuple::concat(std::declval<TupleN<
+        -> decltype(tuple::concat(std::declval<nTuple<
                 typename std::remove_all_extents<T>::type
             ,   utils::max(std::extent<T>::value, 1ul)
             >>()...));

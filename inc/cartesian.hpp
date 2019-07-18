@@ -52,9 +52,9 @@ struct Cartesian<1, T> : public Reflector
      * @param id The requested dimension identifier.
      * @return The dimension's value.
      */
-    __host__ __device__ inline constexpr T operator[](ptrdiff_t id) const
+    __host__ __device__ inline T operator[](ptrdiff_t id) const
     {
-        enforce(static_cast<unsigned>(id) >= 1, "point dimension out of range");
+        enforce(static_cast<size_t>(id) < 1, "point dimension out of range");
         return dim;
     }
 
@@ -110,7 +110,7 @@ struct Cartesian : public Reflector
     static_assert(D > 0, "cartesian values are at least 1-dimensional!");
     static_assert(std::is_integral<T>::value, "cartesian dimensions must be integers!");
 
-    T dim[D] = {};              /// The cartesian dimension values.
+    T dim[D] = {};                  /// The cartesian dimension values.
 
     __host__ __device__ inline constexpr Cartesian() noexcept = default;
     __host__ __device__ inline constexpr Cartesian(const Cartesian&) noexcept = default;
@@ -135,9 +135,9 @@ struct Cartesian : public Reflector
      * @param id The requested dimension identifier.
      * @return The dimension's value.
      */
-    __host__ __device__ inline constexpr T operator[](ptrdiff_t id) const
+    __host__ __device__ inline T operator[](ptrdiff_t id) const
     {
-        enforce(static_cast<unsigned>(id) >= D, "point dimension out of range");
+        enforce(static_cast<size_t>(id) < D, "point dimension out of range");
         return dim[id];
     }
 

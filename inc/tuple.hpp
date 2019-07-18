@@ -405,14 +405,14 @@ namespace tuple
  * @since 0.1.1
  */
 template <typename T, size_t N>
-class TupleN : public decltype(tuple::detail::repeater<T>(IndexerG<N>()))
+class nTuple : public decltype(tuple::detail::repeater<T>(IndexerG<N>()))
 {
     public:
         using Tuple = decltype(tuple::detail::repeater<T>(IndexerG<N>()));
 
-        __host__ __device__ inline constexpr TupleN() noexcept = default;
-        __host__ __device__ inline constexpr TupleN(const TupleN&) noexcept = default;
-        __host__ __device__ inline constexpr TupleN(TupleN&&) noexcept = default;
+        __host__ __device__ inline constexpr nTuple() noexcept = default;
+        __host__ __device__ inline constexpr nTuple(const nTuple&) noexcept = default;
+        __host__ __device__ inline constexpr nTuple(nTuple&&) noexcept = default;
 
         using Tuple::Tuple;
 
@@ -420,7 +420,7 @@ class TupleN : public decltype(tuple::detail::repeater<T>(IndexerG<N>()))
          * Initializes a new tuple from an array.
          * @param arr The array to initialize tuple.
          */
-        __host__ __device__ inline constexpr TupleN(Pure<T> *arr) noexcept
+        __host__ __device__ inline constexpr nTuple(Pure<T> *arr) noexcept
         :   Tuple {getElements(IndexerG<N>{}, arr)}
         {}
 
@@ -429,12 +429,12 @@ class TupleN : public decltype(tuple::detail::repeater<T>(IndexerG<N>()))
          * @param arr The array to initialize tuple.
          */
         template <typename U = T, typename = typename std::enable_if<!std::is_reference<U>::value>::type>
-        __host__ __device__ inline constexpr TupleN(const Pure<T> *arr) noexcept
+        __host__ __device__ inline constexpr nTuple(const Pure<T> *arr) noexcept
         :   Tuple {getElements(IndexerG<N>{}, arr)}
         {}
 
-        __host__ __device__ inline TupleN& operator=(const TupleN&) = default;
-        __host__ __device__ inline TupleN& operator=(TupleN&&) = default;
+        __host__ __device__ inline nTuple& operator=(const nTuple&) = default;
+        __host__ __device__ inline nTuple& operator=(nTuple&&) = default;
 
         using Tuple::operator=;
 
@@ -639,7 +639,7 @@ namespace tuple
     }
 
     template <typename T, size_t N>
-    __host__ __device__ inline auto tie(T (&arg)[N]) noexcept -> TupleN<T&, N>
+    __host__ __device__ inline auto tie(T (&arg)[N]) noexcept -> nTuple<T&, N>
     {
         return {arg};
     }
