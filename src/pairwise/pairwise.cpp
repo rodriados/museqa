@@ -49,8 +49,8 @@ void pairwise::Pairwise::run(const pairwise::Configuration& config)
 {
     const auto& selection = dispatcher.find(config.algorithm);
 
-    enforce(selection != dispatcher.end(), "unknown pairwise algorithm '%s'", config.algorithm.c_str());
-    onlymaster msa::info("chosen pairwise algorithm '%s'", config.algorithm.c_str());
+    enforce(selection != dispatcher.end(), "unknown pairwise algorithm: %s", config.algorithm.c_str());
+    onlymaster msa::info("chosen pairwise algorithm: %s", config.algorithm.c_str());
 
     pairwise::Algorithm *algorithm = selection->second();
 

@@ -33,8 +33,8 @@ std::vector<DatabaseEntry> parser::parse(const std::string& filename, const std:
     std::string extension = ext.size() ? ext : filename.substr(filename.find_last_of('.') + 1);
     const auto& pair = dispatcher.find(extension);
 
-    enforce(pair != dispatcher.end(), "unknown parser for extension '%s'", extension.c_str());
-    msa::info("parsing sequence file '%s'", filename.c_str());
+    enforce(pair != dispatcher.end(), "unknown parser for extension: %s", extension.c_str());
+    msa::info("parsing sequence file: %s", filename.c_str());
 
     return pair->second(filename);
 }

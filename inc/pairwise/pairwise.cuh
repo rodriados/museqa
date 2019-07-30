@@ -27,13 +27,6 @@ namespace pairwise
     using Score = int32_t;
 
     /**
-     * The aminoacid matches scoring tables are stored contiguously. Thus,
-     * we explicitly declare their sizes.
-     * @since 0.1.1
-     */
-    using ScoringTable = int8_t[25][25];
-
-    /**
      * Stores the indeces of a pair of sequences to be aligned.
      * @since 0.1.1
      */
@@ -112,12 +105,33 @@ namespace pairwise
             void run(const Configuration&);
     };
 
-    namespace table
+    /**
+     * The aminoacid substitution tables. These tables are stored contiguously
+     * in memory, in order to facilitate accessing its elements.
+     * @since 0.1.1
+     */
+    struct ScoringTable
     {
-        extern ScoringTable *get(const std::string&);
-        extern const std::vector<std::string>& getList() noexcept;
-        extern Pointer<ScoringTable> retrieve(const std::string&);
-        extern Pointer<ScoringTable> toDevice(const std::string&);
+        using Element = int8_t;
+        using RawTable = Element[25][25];
+
+        const Pointer<RawTable> contents;   /// The table's contents.
+        const Element penalty;              /// The table's penalty value.
+
+        /**
+         * Gives access to the table's contents.
+         * @param offset The requested table offset.
+         * @return The required table row's reference.
+         */
+        __host__ __device__ inline auto operator[](ptrdiff_t offset) const noexcept
+        -> const Element (&)[25]
+        {
+            return (*contents)[offset];
+        }
+
+        static ScoringTable get(const std::string&);
+        static ScoringTable toDevice(const std::string&);
+        static const std::vector<std::string>& getList() noexcept;
     };
 
     /**
@@ -129,8 +143,8 @@ namespace pairwise
      */
     inline Configuration configure
         (   const ::Database& db
-        ,   const std::string& algorithm = ""
-        ,   const std::string& table     = ""   )
+        ,   const std::string& algorithm = {}
+        ,   const std::string& table     = {}   )
     {
         return {db, algorithm, table};
     }

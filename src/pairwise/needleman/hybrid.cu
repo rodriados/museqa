@@ -76,7 +76,7 @@ namespace
      */
     __device__ int32_t alignSlice
         (   const uint8_t *decoded
-        ,   const Pointer<ScoringTable>& table
+        ,   const ScoringTable& table
         ,   const int8_t penalty
         ,   int32_t done
         ,   int32_t left
@@ -100,7 +100,7 @@ namespace
                 // previous line or column plus the corresponding penalty or gain. If the line
                 // represents the end of sequence, the line will be simply copied.
                 val = letter != encoder::end
-                    ? max(done + (*table)[actual][letter], max(left - penalty, line[sliceOffset] - penalty))
+                    ? max(done + table[actual][letter], max(left - penalty, line[sliceOffset] - penalty))
                     : line[sliceOffset];
 
                 done = line[sliceOffset];
@@ -116,18 +116,17 @@ namespace
      * @param two The second sequence to align.
      * @param column A global memory cache for storing column values.
      * @param table The scoring table to use.
-     * @param penalty The gap penalty.
      * @return The score between sequences.
      */
     __device__ int32_t globalAlign
         (   const SequenceView& one
         ,   const SequenceView& two
-        ,   const Pointer<ScoringTable>& table
-        ,   const int8_t penalty
-        ,   int32_t *column                     )
+        ,   int32_t *column
+        ,   const ScoringTable& table   )
     {
-        const int32_t lengthOne = static_cast<int32_t>(one.getLength());
-        const int32_t lengthTwo = static_cast<int32_t>(two.getLength());
+        const auto lengthOne = static_cast<int32_t>(one.getLength());
+        const auto lengthTwo = static_cast<int32_t>(two.getLength());
+        const auto penalty = table.penalty;
 
         __shared__ uint8_t decoded[batchSize];
 
@@ -188,12 +187,12 @@ namespace
 
     /** 
      * Performs the needleman sequence aligment algorithm in parallel.
-     * @param table The scoring table to use in alignment.
      * @param in The input data requested by the algorithm.
      * @param out The output data produced by the algorithm.
+     * @param table The scoring table to use in alignment.
      */
     __launch_bounds__(nw_threads_block, 4)
-    __global__ void kernel(const Pointer<ScoringTable> table, Input in, Buffer<Score> out)
+    __global__ void kernel(Input in, Buffer<Score> out, const ScoringTable table)
     {
         if(blockIdx.x < in.jobs.getSize()) {
             // We must make sure that, if the sequences have different lengths, the first
@@ -205,8 +204,8 @@ namespace
             out[blockIdx.x] = globalAlign(
                 seq1.getSize() > seq2.getSize() ? seq1 : seq2
             ,   seq1.getSize() > seq2.getSize() ? seq2 : seq1
-            ,   table, -(*table)[24][0]
             ,   &in.cache[in.jobs[blockIdx.x].cacheOffset]
+            ,   table
             );
         }
 
@@ -329,7 +328,7 @@ namespace
          * @param table The scoring table to use.
          * @return The score of aligned pairs.
          */
-        Buffer<Score> alignDb(const ::Database& db, const Pointer<ScoringTable>& table)
+        Buffer<Score> alignDb(const ::Database& db, const ScoringTable& table)
         {
             size_t done = 0, batch = 0;
             const size_t total = this->pair.getSize();
@@ -351,7 +350,7 @@ namespace
                 // We also recommend that the block size must not be higher than a
                 // warp, but you can change this by tweaking the *nw_threads_block*
                 // configuration value.
-                kernel<<<batch, blockSize, sizeof(int32_t) * batchSize>>>(table, in, out);
+                kernel<<<batch, blockSize, sizeof(int32_t) * batchSize>>>(in, out, table);
                 cuda::copy<Score>(&score[done], out.getBuffer(), batch);
                 done += batch;
             }
@@ -367,13 +366,13 @@ namespace
          */
         Buffer<Score> run(const Configuration& config) override
         {
-            Pointer<ScoringTable> scoring = table::toDevice(config.table);
+            const ScoringTable table = ScoringTable::toDevice(config.table);
 
             onlymaster this->generate(config.db.getCount());
             onlymaster msa::task("pairwise", "aligning %llu pairs", this->pair.getSize());
 
             this->scatter();
-            onlyslaves this->score = alignDb(config.db, scoring);
+            onlyslaves this->score = alignDb(config.db, table);
             return this->gather();
         }
     };

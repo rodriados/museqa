@@ -21,20 +21,16 @@ namespace
 {
     /**
      * Sequentially aligns two sequences using Needleman-Wunsch algorithm.
-     * @param table The scoring table used to compare both sequences.
-     * @param penalty The penalty for sequence misalignments.
      * @param one The first sequence to align.
      * @param two The second sequence to align.
+     * @param table The scoring table used to compare both sequences.
      * @return The alignment score.
      */
-    static int32_t globalAlign
-        (   const Pointer<ScoringTable>& table
-        ,   const int8_t penalty
-        ,   const Sequence& one
-        ,   const Sequence& two                     )
+    static int32_t globalAlign(const Sequence& one, const Sequence& two, const ScoringTable& table)
     {
-        const size_t len1 = one.getLength();
-        const size_t len2 = two.getLength();
+        const auto len1 = one.getLength();
+        const auto len2 = two.getLength();
+        const auto penalty = table.penalty;
 
         Buffer<int32_t> line = {new int32_t[len2 + 1], len2 + 1};
         int32_t done, val;
@@ -60,7 +56,7 @@ namespace
             for(size_t j = 1, m = two.getLength(); j <= m; ++j) {
                 val = two[j - 1] != encoder::end
                     ? utils::max(
-                            done + (*table)[one[i]][two[j - 1]]
+                            done + table[one[i]][two[j - 1]]
                         ,   utils::max(line[j - 1] - penalty, line[j] - penalty)
                         )
                     : line[j - 1];
@@ -88,7 +84,7 @@ namespace
          * @param table The scoring table to use.
          * @return The score of aligned pairs.
          */
-        Buffer<Score> alignDb(const ::Database& db, const Pointer<ScoringTable>& table)
+        Buffer<Score> alignDb(const ::Database& db, const ScoringTable& table)
         {
             const size_t total = this->pair.getSize();
             Buffer<Score> score {total};
@@ -98,10 +94,9 @@ namespace
                 const Sequence& seq2 = db[this->pair[i].id[1]];
 
                 score[i] = globalAlign(
-                    table
-                ,   -(*table)[24][0]
-                ,   seq1.getSize() > seq2.getSize() ? seq1 : seq2
+                    seq1.getSize() > seq2.getSize() ? seq1 : seq2
                 ,   seq1.getSize() > seq2.getSize() ? seq2 : seq1
+                ,   table
                 );
             }
 
@@ -116,13 +111,13 @@ namespace
          */
         Buffer<Score> run(const Configuration& config) override
         {
-            Pointer<ScoringTable> scoring = table::retrieve(config.table);
-            
+            const ScoringTable table = ScoringTable::get(config.table);
+
             onlymaster this->generate(config.db.getCount());
             onlymaster msa::task("pairwise", "aligning %llu pairs", this->pair.getSize());
 
             this->scatter();
-            onlyslaves this->score = alignDb(config.db, scoring);
+            onlyslaves this->score = alignDb(config.db, table);
             return this->gather();
         }
     };

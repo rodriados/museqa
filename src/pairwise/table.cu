@@ -14,11 +14,19 @@
 
 #include "pairwise/pairwise.cuh"
 
+using namespace pairwise;
+
 /**
  * Aliasing the scoring table type to avoid excessive verbosity.
  * @since 0.1.1
  */
-using Table = pairwise::ScoringTable;
+using Table = ScoringTable::RawTable;
+
+/**
+ * Aliasing the scoring table's element type to avoid verbosity.
+ * @since 0.1.1
+ */
+using Element = ScoringTable::Element;
 
 /*
  * The scoring tables data. One of these tables will be transfered to device memory
@@ -26,7 +34,7 @@ using Table = pairwise::ScoringTable;
  * used as the default, when no valid parameter is found to indicate which table
  * should be used instead.
  */
-static Table tabledata[] = {
+static Table rawdata[] = {
     {   /* [0] blosum62 */
         /*A  C  T  G  R  N  D  Q  E  H  I  L  K  M  F  P  S  W  Y  V  B  J  Z  X  **/
         { 4, 0, 0, 0,-1,-2,-2,-1,-1,-2,-1,-1,-1,-1,-2,-1, 1,-3,-2, 0,-2,-1,-1,-1,-4}
@@ -197,8 +205,17 @@ static Table tabledata[] = {
     }
 };
 
-/*
- * The list of names of every scoring tables available.
+/**
+ * Represents a local and simple scoring table instance. This struct is used to
+ * link the static tables to their respective penalty values.
+ */
+typedef struct {
+    Table * const data;
+    const Element penalty;
+} LocalTable;
+
+/**
+ * The list of available scoring tables' names.
  */
 static const std::vector<std::string> available = {
     "blosum62"
@@ -209,54 +226,49 @@ static const std::vector<std::string> available = {
 ,   "pam250"
 };
 
-/*
- * Maps the tables' string names to its respective list index. This will be
- * needed to translate the table name from string to its integer.
+/**
+ * Maps the table's string names to their respective info. This will be needed when
+ * translating a table's names from a string to its contents.
  */
-static const std::map<std::string, Table *> dispatcher = {
-    {available[0], &tabledata[0]}
-,   {available[1], &tabledata[1]}
-,   {available[2], &tabledata[2]}
-,   {available[3], &tabledata[3]}
-,   {available[4], &tabledata[4]}
-,   {available[5], &tabledata[5]}
+static const std::map<std::string, const LocalTable> dispatcher = {
+    {available[0], {&rawdata[0], 4}}
+,   {available[1], {&rawdata[1], 5}}
+,   {available[2], {&rawdata[2], 5}}
+,   {available[3], {&rawdata[3], 6}}
+,   {available[4], {&rawdata[4], 6}}
+,   {available[5], {&rawdata[5], 8}}
 };
+
+/**
+ * Gets the description of a scoring table selected by name.
+ * @param name The name of selected scoring table.
+ * @return The local description of requested table.
+ */
+static const LocalTable& retrieve(const std::string& name)
+{
+    const auto& pair = dispatcher.find(name);
+
+    enforce(pair != dispatcher.end(), "could not find scoring table: %s", name.c_str());
+    onlymaster msa::info("selected pairwise scoring table: %s", name.c_str());
+
+    return pair->second;
+}
 
 /**
  * Selects a scoring table from its name.
  * @param name The name of selected scoring table.
  * @return The pointer to selected table.
  */
-Table *pairwise::table::get(const std::string& name)
+ScoringTable ScoringTable::get(const std::string& name)
 {
-    const auto& pair = dispatcher.find(name);
-
-    enforce(pair != dispatcher.end(), "could not find scoring table: %s", name.c_str());
-    onlymaster msa::info("selected pairwise scoring table '%s'", name.c_str());
-
-    return pair->second;
-}
-
-/**
- * Informs the names of all available scoring tables.
- * @return The list of available scoring tables.
- */
-const std::vector<std::string>& pairwise::table::getList() noexcept
-{
-    return available;
-}
-
-/**
- * Gets the pointer to scoring table selected by name.
- * @param name The name of selected scoring table.
- * @return The pointer to selected table.
- */
-Pointer<Table> pairwise::table::retrieve(const std::string& name)
-{
-    return {
-        pairwise::table::get(name)
+    const LocalTable& selected = retrieve(name);
+    
+    Pointer<Table> ptr = {
+        selected.data
     ,   Deleter<Table> {[](Table *) { /* You don't touch my table! */; }}
     };
+
+    return {ptr, selected.penalty};
 }
 
 /**
@@ -264,15 +276,24 @@ Pointer<Table> pairwise::table::retrieve(const std::string& name)
  * @param name The name of selected scoring table.
  * @return The pointer to selected table.
  */
-Pointer<Table> pairwise::table::toDevice(const std::string& name)
+ScoringTable ScoringTable::toDevice(const std::string& name)
 {
-    RawPointer<Table> ptr;
-    Table *selected = pairwise::table::get(name);
+    ScoringTable table = get(name);
+    Pointer<Table> ptr;
 
     onlyslaves {
         ptr = cuda::allocate<Table>();
-        cuda::copy<Table>(ptr, selected);
+        cuda::copy<Table>(ptr, &table.contents);
     }
 
-    return {ptr};
+    return {ptr, table.penalty};
+}
+
+/**
+ * Informs the names of all available scoring tables.
+ * @return The list of available scoring tables.
+ */
+const std::vector<std::string>& ScoringTable::getList() noexcept
+{
+    return available;
 }

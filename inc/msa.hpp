@@ -126,7 +126,7 @@ namespace msa
 template <typename ...T>
 inline void msa::task(const char *taskname, const char *fstr, T&&... args) noexcept
 {
-#ifndef msa_compile_cython
+#if !defined(msa_compile_cython)
     printf("[task] %s ", taskname); printf(fstr, args...); putchar('\n');
 #endif
 }
@@ -140,8 +140,8 @@ inline void msa::task(const char *taskname, const char *fstr, T&&... args) noexc
 template <typename ...T>
 inline void msa::info(const char *fstr, T&&... args) noexcept
 {
-#ifndef msa_compile_cython
-    puts("[info] "); printf(fstr, args...); putchar('\n');
+#if !defined(msa_compile_cython)
+    printf("[info] "); printf(fstr, args...); putchar('\n');
 #endif
 }
 
@@ -154,8 +154,8 @@ inline void msa::info(const char *fstr, T&&... args) noexcept
 template <typename ...T>
 inline void msa::error(const char *fstr, T&&... args)
 {
-#ifndef msa_compile_cython
-    puts("[error] "); printf(fstr, args...); putchar('\n');
+#if !defined(msa_compile_cython)
+    printf("[error] "); printf(fstr, args...); putchar('\n');
     msa::halt(1);
 #else
     throw Exception(fstr, args...);
@@ -171,8 +171,8 @@ inline void msa::error(const char *fstr, T&&... args)
 template <typename ...T>
 inline void msa::warning(const char *fstr, T&&... args) noexcept
 {
-#ifndef msa_compile_cython
-    puts("[warning] "); printf(fstr, args...); putchar('\n');
+#if !defined(msa_compile_cython)
+    printf("[warning] "); printf(fstr, args...); putchar('\n');
 #endif
 }
 
@@ -183,7 +183,7 @@ inline void msa::warning(const char *fstr, T&&... args) noexcept
  */
 inline void msa::report(const char *taskname, double seconds) noexcept
 {
-#ifndef msa_compile_cython
+#if !defined(msa_compile_cython)
     onlymaster printf("[report] %s in %lf seconds\n", taskname, seconds);
 #endif
 }
