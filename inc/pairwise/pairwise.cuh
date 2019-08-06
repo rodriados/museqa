@@ -115,8 +115,20 @@ namespace pairwise
         using Element = int8_t;
         using RawTable = Element[25][25];
 
-        const Pointer<RawTable> contents;   /// The table's contents.
-        const Element penalty;              /// The table's penalty value.
+        Pointer<RawTable> contents;     /// The table's contents.
+        Element penalty;                /// The table's penalty value.
+
+        inline ScoringTable() noexcept = default;
+        inline ScoringTable(const ScoringTable&) noexcept = default;
+        inline ScoringTable(ScoringTable&&) noexcept = default;
+
+        inline ScoringTable(const Pointer<RawTable>& ptr, Element penalty) noexcept
+        :   contents {ptr}
+        ,   penalty {penalty}
+        {}
+
+        inline ScoringTable& operator=(const ScoringTable&) = default;
+        inline ScoringTable& operator=(ScoringTable&&) = default;
 
         /**
          * Gives access to the table's contents.

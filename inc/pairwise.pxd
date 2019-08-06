@@ -14,11 +14,6 @@ cdef extern from "pairwise/pairwise.cuh":
     # @since 0.1.1
     ctypedef int32_t cScore "pairwise::Score"
 
-    # The aminoacid matches scoring tables are stored contiguously. Thus,
-    # we explicitly declare their sizes.
-    # @since 0.1.1
-    ctypedef int8_t cScoringTable "pairwise::ScoringTable"[25][25]
-
     # Manages and encapsulates all configurable aspects of the pairwise module.
     # @since 0.1.1
     cdef struct cConfiguration "pairwise::Configuration":
@@ -40,8 +35,17 @@ cdef extern from "pairwise/pairwise.cuh":
 
         void run(const cConfiguration&) except +RuntimeError
 
-    cdef cScoringTable *cgetTable "pairwise::table::get"(const string&) except +RuntimeError
-    cdef const vector[string]& cgetTableList "pairwise::table::getList"()
+    # The aminoacid substitution tables. These tables are stored contiguously
+    # in memory, in order to facilitate accessing its elements.
+    # @since 0.1.1
+    cdef cppclass cScoringTable "pairwise::ScoringTable":
+        const (int8_t&)[25] operator[](ptrdiff_t)
+
+        @staticmethod
+        cScoringTable get(const string&) except +RuntimeError
+
+        @staticmethod
+        const vector[string]& getList()
 
     cdef cConfiguration configure "pairwise::configure"(const cDatabase&, const string&, const string&)
 
@@ -53,4 +57,4 @@ cdef class Pairwise:
 # Exposes a scoring table to Python world.
 # @since 0.1.1
 cdef class ScoringTable:
-    cdef cScoringTable *cPtr;
+    cdef cScoringTable cRef;

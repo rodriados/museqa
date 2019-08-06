@@ -3,7 +3,6 @@
 # Multiple Sequence Alignment pairwise wrapper file.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
 # @copyright 2018-2019 Rodrigo Siqueira
-from cython.operator cimport dereference
 from libcpp.string cimport string
 from database cimport Database
 from sequence cimport cencode
@@ -43,7 +42,8 @@ cdef class ScoringTable:
     # Instantiates a new scoring table instance.
     # @param name The selected scoring table name.
     def __cinit__(self, str name):
-        self.cPtr = cgetTable(name)
+        cdef string value = bytes(name, encoding = 'utf-8')
+        self.cRef = cScoringTable.get(value)
 
     # Accesses a value in the scoring table.
     # @param index The tuple of requested index.
@@ -57,7 +57,13 @@ cdef class ScoringTable:
         if x >= 25 or y >= 25:
             raise RuntimeError("scoring table index out of range")
 
-        return dereference(self.cPtr)[x][y]
+        return self.cRef[x][y]
+
+    # Gets the list of every scoring table available.
+    # @return The list of all scoring tables available.
+    @staticmethod
+    def getList():
+        return cScoringTable.getList()
 
 # Aligns every sequence in given database pairwise, thus calculating a similarity
 # score for every different permutation of sequence pairs.
@@ -69,17 +75,3 @@ def run(Database db, **kwargs):
     pairwise = Pairwise()
     pairwise.run(db, **kwargs)
     return pairwise
-
-# Gets a scoring table instance.
-# @param table The name of requested scoring table.
-# @return The scoring table instance.
-def getTable(str table):
-    if table not in getTableList():
-        raise RuntimeError("could not find scoring table: " + table)
-
-    return ScoringTable(table)
-
-# Gets the list of every scoring table available.
-# @return The list of all scoring tables available.
-def getTableList():
-    return cgetTableList()
