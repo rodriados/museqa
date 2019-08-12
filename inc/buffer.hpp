@@ -91,6 +91,42 @@ class BaseBuffer
         }
 
         /**
+         * Allows the buffer to be traversed as an iterator.
+         * @return The pointer to the first element in the buffer.
+         */
+        __host__ __device__ inline T *begin() noexcept
+        {
+            return getBuffer();
+        }
+
+        /**
+         * Allows the buffer to be traversed as a const-iterator.
+         * @return The const-pointer to the first element in the buffer.
+         */
+        __host__ __device__ inline const T *begin() const noexcept
+        {
+            return getBuffer();
+        }
+
+        /**
+         * Returns the pointer to the end of buffer.
+         * @return The pointer after the last element in buffer.
+         */
+        __host__ __device__ inline T *end() noexcept
+        {
+            return begin() + size;
+        }
+
+        /**
+         * Returns the const-pointer to the end of buffer.
+         * @return The const-pointer after the last element in buffer.
+         */
+        __host__ __device__ inline const T *end() const noexcept
+        {
+            return begin() + size;
+        }
+
+        /**
          * Gives access to buffer's data.
          * @return The buffer's internal pointer.
          */

@@ -75,7 +75,7 @@ std::vector<encoder::EncodedBlock> pairwise::Database::merge(const ::Database& d
     std::vector<encoder::EncodedBlock> merged;
 
     for(size_t i = 0, n = db.getCount(); i < n; ++i)
-        merged.insert(merged.end(), db[i].getBuffer(), db[i].getBuffer() + db[i].getSize());
+        merged.insert(merged.end(), db[i].begin(), db[i].end());
 
     return merged;
 }

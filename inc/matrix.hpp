@@ -85,8 +85,8 @@ class Matrix : protected Buffer<T>
          * @param offset The first dimension offset.
          * @return The composed operator instance.
          */
-        __host__ __device__ inline const auto operator[](ptrdiff_t offset) const noexcept
-        -> decltype(std::declval<Accessor<>>()[offset])
+        __host__ __device__ inline auto operator[](ptrdiff_t offset) const noexcept
+        -> const decltype(std::declval<Accessor<>>()[offset])
         {
             return (Accessor<> {*this})[offset];
         }

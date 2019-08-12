@@ -122,7 +122,12 @@ namespace pairwise
         inline ScoringTable(const ScoringTable&) noexcept = default;
         inline ScoringTable(ScoringTable&&) noexcept = default;
 
-        inline ScoringTable(const Pointer<RawTable>& ptr, Element penalty) noexcept
+        /**
+         * Creates a new scoring table instance.
+         * @param ptr The scoring table's pointer.
+         * @param penalty The penalty applied by the scoring table.
+         */
+        inline ScoringTable(const Pointer<RawTable>& ptr, const Element& penalty) noexcept
         :   contents {ptr}
         ,   penalty {penalty}
         {}

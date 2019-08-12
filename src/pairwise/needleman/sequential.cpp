@@ -89,7 +89,7 @@ namespace
             const size_t total = this->pair.getSize();
             Buffer<Score> score {total};
 
-            for(size_t i = 0; i < total; ) {
+            for(size_t i = 0; i < total; ++i) {
                 const Sequence& seq1 = db[this->pair[i].id[0]];
                 const Sequence& seq2 = db[this->pair[i].id[1]];
 

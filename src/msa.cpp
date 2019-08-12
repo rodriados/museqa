@@ -50,7 +50,7 @@ namespace msa
 
         onlymaster for(size_t i = 0, n = db.getCount(); i < n; ++i) {
             sizeList.push_back(db[i].getSize());
-            blockList.insert(blockList.end(), db[i].getBuffer(), db[i].getBuffer() + db[i].getSize());
+            blockList.insert(blockList.end(), db[i].begin(), db[i].end());
         }
 
         mpi::broadcast(sizeList);

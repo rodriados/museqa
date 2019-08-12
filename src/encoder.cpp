@@ -63,18 +63,19 @@ uint8_t encoder::encode(uint8_t letter) noexcept
  */
 Buffer<encoder::EncodedBlock> encoder::encode(const char *ptr, size_t size)
 {
-    std::vector<encoder::EncodedBlock> vector;
+    using namespace encoder;
+    Buffer<EncodedBlock> buffer {(size / batchSize) + !!(size % batchSize)};
 
     for(size_t i = 0, n = 0; n < size; ++i) {
-        encoder::EncodedBlock block = 0;
+        EncodedBlock block = 0;
 
-        for(uint8_t j = 0; j < encoder::batchSize; ++j, ++n)
-            block |= (n < size ? encoder::encode(ptr[n]) : encoder::end) << shift[j];
+        for(uint8_t j = 0; j < batchSize; ++j, ++n)
+            block |= (n < size ? encode(ptr[n]) : end) << shift[j];
 
-        vector.push_back(block | (n >= size));
+        buffer[i] = block | (n >= size);
     }
 
-    return {vector};
+    return buffer;
 }
 
 /**
@@ -95,16 +96,15 @@ char encoder::decode(uint8_t element)
  */
 std::string encoder::decode(const BaseBuffer<encoder::EncodedBlock>& buffer)
 {
-    int size = buffer.getSize();
-    std::string string;
+    std::string str;
+    
+    str.reserve(buffer.getSize() * encoder::batchSize);
 
-    string.reserve(size * encoder::batchSize);
-
-    for(int i = 0; i < size; ++i) 
+    for(const auto& block : buffer)
         for(int j = 0; j < encoder::batchSize; ++j)
-            string.append(1, decodeTable[access(buffer[i], j)]);
+            str.append(1, decodeTable[access(block, j)]);
 
-    return string;
+    return str;
 }
 
 /**
