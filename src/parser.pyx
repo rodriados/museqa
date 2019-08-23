@@ -20,8 +20,8 @@ cdef object toList(vector[cDatabaseEntry]& entries):
 # @param str ext Parse all files using this parser.
 # @return list List containing all entries parsed from file.
 def any(*filenames, **kwargs):
-    cdef vector[string] files = filenames
-    cdef string ext = str(kwargs.get("ext", str()))
+    cdef vector[string] files = [bytes(f, encoding = 'utf-8') for f in filenames]
+    cdef string ext = bytes(kwargs.pop("ext", str()), encoding = 'utf-8')
     cdef vector[cDatabaseEntry] entries = cparseMany(files, ext)
     return toList(entries)
 

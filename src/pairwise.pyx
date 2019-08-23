@@ -24,14 +24,14 @@ cdef class Pairwise:
     # @param table The chosen scoring table.
     # @param algorithm The pairwise algorithm to use.
     def run(self, Database db, **kwargs):
-        cdef string algorithm = kwargs.pop("algorithm", "needleman")
-        cdef string table = kwargs.pop("table", "blosum62")
+        cdef string algorithm = bytes(kwargs.pop("algorithm", "needleman"), encoding = 'utf-8')
+        cdef string table = bytes(kwargs.pop("table", "blosum62"), encoding = 'utf-8')
 
         self.cRef.run(configure(db.cRef, algorithm, table))
 
-    @property
     # Informs the number of processed pairs or to process.
     # @return The number of pairs this instance shall process.
+    @property
     def size(self):
         return self.cRef.getSize()
 

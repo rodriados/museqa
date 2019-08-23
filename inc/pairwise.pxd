@@ -17,7 +17,7 @@ cdef extern from "pairwise/pairwise.cuh":
     # Manages and encapsulates all configurable aspects of the pairwise module.
     # @since 0.1.1
     cdef struct cConfiguration "pairwise::Configuration":
-        const cDatabase& db
+        const cDatabase* db
         string algorithm
         string table
 
@@ -28,7 +28,7 @@ cdef extern from "pairwise/pairwise.cuh":
         cPairwise(const cPairwise&) except +
 
         cPairwise& operator=(const cPairwise&)
-        cScore& operator[](ptrdiff_t) except +IndexError
+        cScore& operator[](ptrdiff_t) except +RuntimeError
 
         const cScore *getBuffer()
         size_t getSize()

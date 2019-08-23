@@ -28,8 +28,8 @@ cdef class Sequence:
     def __str__(self):
         return self.cRef.toString().decode()
 
-    @property
     # Informs the length of the sequence.
     # @return int The sequence's length.
+    @property
     def length(self):
         return self.cRef.getLength()

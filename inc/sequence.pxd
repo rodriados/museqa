@@ -16,7 +16,7 @@ cdef extern from "sequence.hpp":
         cSequence(const string&) except +
 
         cSequence& operator=(const cSequence&)
-        char operator[](ptrdiff_t) except +IndexError
+        char operator[](ptrdiff_t) except +RuntimeError
 
         size_t getLength()
         string toString()

@@ -106,7 +106,7 @@ namespace msa
             msa::report("total", benchmark::run([]() {
                 msa::report("loading", benchmark::run(load, db));
                 msa::report("pairwise", benchmark::run(pwrun, pw, db));
-                msa::report("phylogeny", benchmark::run(pgrun, pg, pw));                
+                msa::report("phylogeny", benchmark::run(pgrun, pg, pw));
             }));
         }
 

@@ -22,19 +22,19 @@ cdef class DatabaseEntry:
     # Transforms the entry into the sequence for exhibition.
     # @return The database entry representation as a string.
     def __str__(self):
-        return self.cRef.sequence.toString()
+        return self.cRef.sequence.toString().decode()
 
-    @property
     # Gives access to the entry description string.
     # @return The entry description.
+    @property
     def description(self):
         return self.cRef.description
 
-    @property
     # Gives access to the entry sequence.
     # @return The entry sequence.
+    @property
     def sequence(self):
-        return Sequence(self.cRef.sequence.toString())
+        return Sequence(self.cRef.sequence.toString().decode())
 
 # Stores a list of sequences read from possible different sources. The
 # sequences may be identified by description or inclusion index.
@@ -98,9 +98,9 @@ cdef class Database:
         cdef set[ptrdiff_t] indeces = [int(i) for i in offsets]
         self.cRef.removeMany(indeces)
 
-    @property
     # Informs the number of sequences in database.
     # @return int The number of sequences.
+    @property
     def count(self):
         return self.cRef.getCount()
 
