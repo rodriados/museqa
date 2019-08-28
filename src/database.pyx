@@ -28,7 +28,7 @@ cdef class DatabaseEntry:
     # @return The entry description.
     @property
     def description(self):
-        return self.cRef.description
+        return self.cRef.description.decode('utf-8')
 
     # Gives access to the entry sequence.
     # @return The entry sequence.
