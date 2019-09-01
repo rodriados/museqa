@@ -22,12 +22,12 @@ cdef object toList(vector[cDatabaseEntry]& entries):
 def any(*filenames, **kwargs):
     cdef vector[string] files = [bytes(f, encoding = 'utf-8') for f in filenames]
     cdef string ext = bytes(kwargs.pop("ext", str()), encoding = 'utf-8')
-    cdef vector[cDatabaseEntry] entries = cpMany(files, ext)
+    cdef vector[cDatabaseEntry] entries = parseMany(files, ext)
     return toList(entries)
 
 # Parses a FASTA file.
 # @param str filename The file to be parsed.
 # @return list List containing all entries parsed from file.
 def fasta(str filename):
-    cdef vector[cDatabaseEntry] entries = cfasta(filename)
+    cdef vector[cDatabaseEntry] entries = parseFasta(filename)
     return toList(entries)

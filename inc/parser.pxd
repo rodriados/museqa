@@ -8,11 +8,11 @@ from libcpp.string cimport string
 from database cimport cDatabaseEntry
 
 cdef extern from "parser.hpp" namespace "parser":
-    cdef vector[cDatabaseEntry] cparse "parser::parse"(const string&, const string&) except +RuntimeError
-    cdef vector[cDatabaseEntry] cparse "parser::parse"(const string&) except +RuntimeError
+    cdef vector[cDatabaseEntry] parse(const string&, const string&) except +RuntimeError
+    cdef vector[cDatabaseEntry] parse(const string&) except +RuntimeError
 
-    cdef vector[cDatabaseEntry] cpMany "parser::parseMany"(const vector[string]&, const string&) except +RuntimeError
-    cdef vector[cDatabaseEntry] cpMany "parser::parseMany"(const vector[string]&) except +RuntimeError
+    cdef vector[cDatabaseEntry] parseMany(const vector[string]&, const string&) except +RuntimeError
+    cdef vector[cDatabaseEntry] parseMany(const vector[string]&) except +RuntimeError 
 
 cdef extern from "parser/fasta.hpp" namespace "parser":
-    cdef vector[cDatabaseEntry] cfasta "parser::fasta"(const string&) except +RuntimeError
+    cdef vector[cDatabaseEntry] parseFasta "parser::fasta"(const string&) except +RuntimeError

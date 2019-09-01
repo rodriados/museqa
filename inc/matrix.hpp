@@ -101,6 +101,8 @@ class Matrix : protected Buffer<T>
         }
 
     protected:
+        using Buffer<T>::Buffer;
+
         /**
          * Gives direct access to elements, bypassing the matrix's organization.
          * @param offset The offset to be accessed.
@@ -143,6 +145,17 @@ class Matrix<T, D>::Accessor
         template <size_t J = I, typename = typename std::enable_if<(!J)>::type>
         __host__ __device__ inline Accessor(const Matrix& matrix) noexcept
         :   matrix {matrix}
+        {}
+
+        /**
+         * Initializes a new accessor in a level further than previously.
+         * @param matrix The target matrix to be accessed.
+         * @param offset The previous offset value.
+         */
+        template <size_t J = I, typename = typename std::enable_if<(J > 0)>::type>
+        __host__ __device__ inline Accessor(const Matrix& matrix, const nTuple<ptrdiff_t, D>& offset) noexcept
+        :   matrix {matrix}
+        ,   offset {offset}
         {}
 
         /**
@@ -194,19 +207,6 @@ class Matrix<T, D>::Accessor
             tuple::set<I>(offset, val);
             return matrix.getOffset(Cartesian<D>::fromTuple(offset));
         }
-
-    protected:
-        /**
-         * Initializes a new accessor in a level further than previously.
-         * @param matrix The target matrix to be accessed.
-         * @param offset The previous offset value.
-         */
-        __host__ __device__ inline Accessor(const Matrix& matrix, const nTuple<ptrdiff_t, D>& offset) noexcept
-        :   matrix {matrix}
-        ,   offset {offset}
-        {}
-
-    friend class Accessor<I - 1>;
 };
 
 #endif

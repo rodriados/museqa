@@ -174,7 +174,7 @@ namespace cuda
          * @param status The status code.
          */
         inline Exception(Status status)
-        :   ::Exception {"CUDA Exception: %s", status::describe(status)}
+        :   ::Exception {"CUDA Exception: %s", status::describe(status).c_str()}
         ,   status {status}
         {}
 

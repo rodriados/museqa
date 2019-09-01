@@ -204,12 +204,12 @@ namespace tuple
          * @tparam U The list of possibly foreign types for each base member.
          * @param value The list of values for members.
          */
-        template <typename ...U, typename = typename std::enable_if<
-                utils::all(std::is_convertible<U, T>::value...)
-            >::type >
+        template <typename ...U>
         __host__ __device__ inline constexpr BaseTuple(U&&... value) noexcept
         :   TupleLeaf<I, T> (std::forward<decltype(value)>(value))...
-        {}
+        {
+            static_assert(utils::all(std::is_convertible<U, T>::value...), "types must be convertible");
+        }
 
         __host__ __device__ inline BaseTuple& operator=(const BaseTuple&) = default;
         __host__ __device__ inline BaseTuple& operator=(BaseTuple&&) = default;

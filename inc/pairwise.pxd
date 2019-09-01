@@ -8,7 +8,7 @@ from libcpp.string cimport string
 from libcpp.vector cimport vector
 from database cimport cDatabase
 
-cdef extern from "pairwise/pairwise.cuh":
+cdef extern from "pairwise/pairwise.cuh" namespace "pairwise":
 
     # The score of the alignment of a sequence pair.
     # @since 0.1.1
@@ -47,7 +47,7 @@ cdef extern from "pairwise/pairwise.cuh":
         @staticmethod
         const vector[string]& getList()
 
-    cdef cConfiguration configure "pairwise::configure"(const cDatabase&, const string&, const string&)
+    cdef cConfiguration configure(const cDatabase&, const string&, const string&)
 
 # Manages all data and execution of the pairwise module.
 # @since 0.1.1
