@@ -19,6 +19,8 @@
    */
   #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ < 200)
     #error A device of compute capability 2.0 or higher is required.
+  #elif defined(__CUDA_ARCH__)
+    #define msa_gpu_code 1
   #endif
 
   #include <cuda.h>

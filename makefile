@@ -98,7 +98,7 @@ $(OBJDIR)/%.o $(OBJDIR)/$(TESTDIR)/%.so: $(SRCDIR)/%.cpp
 # Compiling CUDA files.
 $(OBJDIR)/%.o $(OBJDIR)/$(TESTDIR)/%.so: $(SRCDIR)/%.cu
 	@$(NVCC) $(NVCCFLAGS) -M $< -odir $(patsubst %/,%,$(dir $@)) > $(@:%.o=%.d)
-	$(NVCC) $(NVCCFLAGS) -c $< -o $@
+	$(NVCC) $(NVCCFLAGS) -dc $< -o $@
 
 # Converting Cython files to C++
 $(OBJDIR)/$(TESTDIR)/%.cxx: $(SRCDIR)/%.pyx

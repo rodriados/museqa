@@ -140,7 +140,7 @@ namespace pointer
      * @return The acquired pointer.
      */
     template <typename T>
-    inline MetaPointer<T> *acquire(MetaPointer<T> *ptr) noexcept
+    __host__ __device__ inline MetaPointer<T> *acquire(MetaPointer<T> *ptr) noexcept
     {
         ptr && ++ptr->count;
         return ptr;
@@ -153,10 +153,12 @@ namespace pointer
      * @see pointer::acquire
      */
     template <typename T>
-    inline void release(MetaPointer<T> *ptr)
+    __host__ __device__ inline void release(MetaPointer<T> *ptr)
     {
+#ifndef msa_compile_cuda
         if(ptr && --ptr->count <= 0)
             delete ptr;
+#endif
     }
 };
 
@@ -177,8 +179,9 @@ class BasePointer
         Pure<T> *ptr = nullptr;                     /// The encapsulated pointer.
 
     public:
-        inline BasePointer() noexcept = default;
+        __host__ __device__ inline BasePointer() noexcept = default;
 
+#ifndef msa_compile_cuda
         /**
          * Builds a new instance from a raw pointer.
          * @param ptr The pointer to be encapsulated.
@@ -188,12 +191,23 @@ class BasePointer
         :   meta {pointer::acquire<T>(ptr, delfunc)}
         ,   ptr {ptr}
         {}
+#else
+        /**
+         * Builds a new instance from a device pointer. This pointer is not, in
+         * any manner, owned by the instance. This is just so that a device pointer
+         * can successfully populate an object property securely.
+         * @param ptr The device pointer to be encapsulated.
+         */
+        __device__ inline BasePointer(Pure<T> *ptr, Deleter<T> = nullptr) noexcept
+        :   ptr {ptr}
+        {}
+#endif
 
         /**
          * Gets reference to an already existing pointer.
          * @param other The reference to be acquired.
          */
-        inline BasePointer(const BasePointer& other) noexcept
+        __host__ __device__ inline BasePointer(const BasePointer& other) noexcept
         :   meta {pointer::acquire(other.meta)}
         ,   ptr {other.ptr}
         {}
@@ -202,7 +216,7 @@ class BasePointer
          * Acquires a moved reference to an already existing pointer.
          * @param other The reference to be moved.
          */
-        inline BasePointer(BasePointer&& other) noexcept
+        __host__ __device__ inline BasePointer(BasePointer&& other) noexcept
         :   meta {other.meta}
         ,   ptr {other.ptr}
         {
@@ -223,7 +237,7 @@ class BasePointer
          * Releases the acquired pointer reference.
          * @see BasePointer::BasePointer
          */
-        inline ~BasePointer()
+        __host__ __device__ inline ~BasePointer()
         {
             pointer::release(meta);
         }
@@ -233,7 +247,7 @@ class BasePointer
          * @param other The reference to be acquired.
          * @return This pointer object.
          */
-        inline BasePointer& operator=(const BasePointer& other)
+        __host__ __device__ inline BasePointer& operator=(const BasePointer& other)
         {
             pointer::release(meta);
             meta = pointer::acquire(other.meta);
@@ -246,7 +260,7 @@ class BasePointer
          * @param other The reference to be acquired.
          * @return This pointer object.
          */
-        inline BasePointer& operator=(BasePointer&& other)
+        __host__ __device__ inline BasePointer& operator=(BasePointer&& other)
         {
             pointer::release(meta);
             meta = other.meta;
@@ -349,7 +363,7 @@ class BasePointer
          * Resets the pointer manager to an empty state.
          * @see BasePointer::BasePointer
          */
-        inline void reset() noexcept
+        __host__ __device__ inline void reset() noexcept
         {
             meta = nullptr;
             ptr = nullptr;
@@ -366,14 +380,14 @@ template <typename T>
 class Pointer : public BasePointer<T>
 {
     public:
-        inline Pointer() noexcept = default;
-        inline Pointer(const Pointer&) noexcept = default;
-        inline Pointer(Pointer&&) noexcept = default;
+        __host__ __device__ inline Pointer() noexcept = default;
+        __host__ __device__ inline Pointer(const Pointer&) noexcept = default;
+        __host__ __device__ inline Pointer(Pointer&&) noexcept = default;
 
         using BasePointer<T>::BasePointer;
 
-        inline Pointer& operator=(const Pointer&) = default;
-        inline Pointer& operator=(Pointer&&) = default;
+        __host__ __device__ inline Pointer& operator=(const Pointer&) = default;
+        __host__ __device__ inline Pointer& operator=(Pointer&&) = default;
 
         /**
          * Converts to universal pointer type.
@@ -433,7 +447,7 @@ class Pointer : public BasePointer<T>
          * @return The new offset pointer instance.
          */
         template <typename U = T>
-        inline auto getOffsetPointer(ptrdiff_t offset) noexcept
+        __host__ __device__ inline auto getOffsetPointer(ptrdiff_t offset) noexcept
         -> typename std::enable_if<!std::is_same<Pure<U>, U>::value, Pointer>::type
         {
             Pointer instance {*this};

@@ -28,15 +28,6 @@ class Matrix : protected Buffer<T>
     static_assert(D >= 2, "matrices must be at least 2-dimensional");
 
     protected:
-        /**
-         * The auxiliary accessor class, allowing the usage of array operator.
-         * @tparam I The current accessed level in the matrix's topology.
-         * @since 0.1.1
-         */
-        template <size_t I = 0>
-        class Accessor;
-
-    protected:
         Cartesian<D> dimension;         /// The matrix's dimensions.
 
     public:
@@ -66,29 +57,45 @@ class Matrix : protected Buffer<T>
         :   Matrix {Cartesian<D> {std::forward<U>(dimension)...}}
         {}
 
+        /**
+         * Instantiates a new matrix from an already allocated buffer.
+         * @param buffer The pre-allocated matrix buffer.
+         * @param dimension The matrix's dimensions.
+         */
+        inline Matrix(const Buffer<T>& buffer, const Cartesian<D>& dimension) noexcept
+        :   Buffer<T> {buffer}
+        ,   dimension {dimension}
+        {}
+
         inline Matrix& operator=(const Matrix&) = default;
         inline Matrix& operator=(Matrix&&) = default;
 
         /**
-         * Gives access to an element in the matrix.
-         * @param offset The first dimension offset.
-         * @return The composed operator instance.
+         * Gives access to a element in the matrix.
+         * @param offset The offset's values.
+         * @return The requested element.
          */
-        __host__ __device__ inline auto operator[](ptrdiff_t offset) noexcept
-        -> decltype(std::declval<Accessor<>>()[offset])
+        template <typename ...U, typename = typename std::enable_if<
+                utils::add(std::is_convertible<U, size_t>::value...) &&
+                sizeof...(U) == D
+            >::type >
+        __host__ __device__ inline T& operator()(U&&... offset) noexcept
         {
-            return (Accessor<> {*this})[offset];
+            return getOffset({offset...});
         }
 
         /**
          * Gives access to a constant element in the matrix.
-         * @param offset The first dimension offset.
-         * @return The composed operator instance.
+         * @param offset The offset's values.
+         * @return The requested constant element.
          */
-        __host__ __device__ inline auto operator[](ptrdiff_t offset) const noexcept
-        -> const decltype(std::declval<Accessor<>>()[offset])
+        template <typename ...U, typename = typename std::enable_if<
+                utils::add(std::is_convertible<U, size_t>::value...) &&
+                sizeof...(U) == D
+            >::type >
+        __host__ __device__ inline const T& operator()(U&&... offset) const noexcept
         {
-            return (Accessor<> {*this})[offset];
+            return getOffset({offset...});
         }
 
         /**
@@ -121,91 +128,6 @@ class Matrix : protected Buffer<T>
         __host__ __device__ inline const T& getOffset(const Cartesian<D>& offset) const
         {
             return this->Buffer<T>::operator[](dimension.collapseTo(offset));
-        }
-};
-
-/**
- * The auxiliary accessor class, allowing the usage of array operator.
- * @tparam I The current accessed level in the matrix's topology.
- * @since 0.1.1
- */
-template <typename T, size_t D>
-template <size_t I>
-class Matrix<T, D>::Accessor
-{
-    private:
-        const Matrix& matrix;                   /// The target matrix to access.
-        mutable nTuple<ptrdiff_t, D> offset;    /// The required offset.
-
-    public:
-        /**
-         * Initializes the accessor externally.
-         * @param matrix The target matrix to access.
-         */
-        template <size_t J = I, typename = typename std::enable_if<(!J)>::type>
-        __host__ __device__ inline Accessor(const Matrix& matrix) noexcept
-        :   matrix {matrix}
-        {}
-
-        /**
-         * Initializes a new accessor in a level further than previously.
-         * @param matrix The target matrix to be accessed.
-         * @param offset The previous offset value.
-         */
-        template <size_t J = I, typename = typename std::enable_if<(J > 0)>::type>
-        __host__ __device__ inline Accessor(const Matrix& matrix, const nTuple<ptrdiff_t, D>& offset) noexcept
-        :   matrix {matrix}
-        ,   offset {offset}
-        {}
-
-        /**
-         * Gives access to a further dimension within the matrix.
-         * @param val The value given to current dimension.
-         * @return The following matrix's dimension accessor.
-         */
-        template <size_t J = I + 1, typename = typename std::enable_if<(J < D)>::type>
-        __host__ __device__ inline Accessor<J> operator[](ptrdiff_t val) noexcept
-        {
-            tuple::set<I>(offset, val);
-            return {matrix, offset};
-        }
-
-        /**
-         * Gives constant access to a further dimension within the matrix.
-         * @param val The value given to current dimension.
-         * @return The following matrix's dimension constant accessor.
-         */
-        template <size_t J = I + 1, typename = typename std::enable_if<(J < D)>::type>
-        __host__ __device__ inline const Accessor<J> operator[](ptrdiff_t val) const noexcept
-        {
-            tuple::set<I>(offset, val);
-            return {matrix, offset};
-        }
-
-        /**
-         * Accesses the requested element in matrix and returns it.
-         * @param val The last dimension value.
-         * @return The requested element from matrix.
-         */
-        template <size_t J = I + 1, typename = typename std::enable_if<(J == D)>::type>
-        __host__ __device__ inline T& operator[](ptrdiff_t val)
-        {
-            tuple::set<I>(offset, val);
-            // If we got here not const-qualified, than we can guarantee that
-            // this matrix is non-const, and so we can safely remove it.
-            return const_cast<T&>(matrix.getOffset(Cartesian<D>::fromTuple(offset)));
-        }
-
-        /**
-         * Accesses the requested constant element in matrix and returns it.
-         * @param val The last dimension value.
-         * @return The requested constant element from matrix.
-         */
-        template <size_t J = I + 1, typename = typename std::enable_if<(J == D)>::type>
-        __host__ __device__ inline const T& operator[](ptrdiff_t val) const
-        {
-            tuple::set<I>(offset, val);
-            return matrix.getOffset(Cartesian<D>::fromTuple(offset));
         }
 };
 
