@@ -19,25 +19,16 @@ using namespace pairwise;
 Buffer<Pair> Needleman::scatter()
 {
 #if !defined(msa_compile_cython)
-    Buffer<Pair> origin = this->pair;
+    const size_t npair = this->pair.getSize();
 
-    size_t count = 0;
-    size_t displ = 0;
-    size_t npair = origin.getSize();        
+    const size_t quo = npair / (node::size - 1);
+    const size_t rem = npair % (node::size - 1);
+    const size_t rank = node::rank - 1;
 
-    mpi::broadcast(npair);
+    const size_t count = quo + (rem > rank);
+    const ptrdiff_t displ = quo * rank + utils::min(rank, rem);
 
-    onlyslaves {
-        const size_t quo = npair / (node::size - 1);
-        const size_t rem = npair % (node::size - 1);
-
-        const size_t rank = node::rank - 1;
-
-        count = quo + (rem > rank);
-        displ = quo * rank + utils::min(rank, rem);
-    }
-
-    mpi::scatter(origin, this->pair, count, displ);
+    this->pair = BufferSlice<Pair> {this->pair, displ, count};
 #endif
     return this->pair;
 }

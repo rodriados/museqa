@@ -42,7 +42,7 @@ void cmdline::Parser::parse(int argc, char **argv)
         const cmdline::Option& option = find(argv[i]);
 
         if(!option.isUnknown() && option.isVariadic()) {
-            enforce(i + 1 >= argc, "unknown option: %s", option.getLname().c_str());
+            enforce(i + 1 < argc, "unknown option: %s", option.getLname().c_str());
 
             values[option.getLname()] = argv[++i];
             continue;
@@ -57,7 +57,7 @@ void cmdline::Parser::parse(int argc, char **argv)
     }
 
     for(const std::string& option : required)
-        enforce(has(option), "missing option: %s", option.c_str());
+        enforce(!has(option), "missing option: %s", option.c_str());
 
     appname = argv[0];
 }

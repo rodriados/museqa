@@ -113,10 +113,10 @@ namespace
         {
             const ScoringTable table = ScoringTable::get(config.table);
 
-            onlymaster this->generate(config.db.getCount());
+            this->generate(config.db.getCount());
             onlymaster msa::task("pairwise", "aligning %llu pairs", this->pair.getSize());
 
-            this->scatter();
+            onlyslaves this->scatter();
             onlyslaves this->score = alignDb(config.db, table);
             return this->gather();
         }

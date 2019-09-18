@@ -264,7 +264,7 @@ class BufferSlice : public BaseBuffer<T>
         ,   displ {displ}
         {
             enforce(
-                static_cast<size_t>(size + displ) < target.getSize()
+                static_cast<size_t>(size + displ) <= target.getSize()
             ,   "slice initialized out of range"
             );
         }
@@ -279,7 +279,7 @@ class BufferSlice : public BaseBuffer<T>
         ,   displ {slice.getDispl()}
         {
             enforce(
-                static_cast<size_t>(slice.getSize() + slice.getDispl()) < target.getSize()
+                static_cast<size_t>(slice.getSize() + slice.getDispl()) <= target.getSize()
             ,   "slice initialized out of range"
             );
         }

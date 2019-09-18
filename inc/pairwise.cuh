@@ -17,15 +17,21 @@
 typedef pairwise::Pair Pair;
 
 /**
+ * The module execution manager.
+ * @since 0.1.1
+ */
+typedef pairwise::Pairwise Pairwise;
+
+/**
  * The score of a sequence pair alignment.
  * @since 0.1.1
  */
 typedef pairwise::Score Score;
 
 /**
- * The module execution manager.
+ * Represents a reference for a sequence.
  * @since 0.1.1
  */
-typedef pairwise::Pairwise Pairwise;
+typedef pairwise::SequenceRef SequenceRef;
 
 #endif

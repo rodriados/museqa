@@ -35,7 +35,7 @@ Buffer<pairwise::Pair> pairwise::Algorithm::generate(size_t num)
 
     for(size_t i = 0, c = 0; i < num - 1; ++i)
         for(size_t j = i + 1; j < num; ++j, ++c)
-            pair[c] = {static_cast<uint16_t>(i), static_cast<uint16_t>(j)};
+            pair[c] = {static_cast<SequenceRef>(i), static_cast<SequenceRef>(j)};
 
     return pair;
 }

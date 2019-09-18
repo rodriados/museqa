@@ -229,9 +229,9 @@ namespace
     {
         const size_t batch = jobs.size();
 
-        std::unordered_map<ptrdiff_t, uint16_t> map;
+        std::unordered_map<ptrdiff_t, SequenceRef> map;
         Buffer<Workpair> workpairs {jobs};
-        uint16_t index = 0;
+        SequenceRef index = 0;
 
         for(ptrdiff_t id : used)
             map[id] = index++;
@@ -368,10 +368,10 @@ namespace
         {
             const ScoringTable table = ScoringTable::toDevice(config.table);
 
-            onlymaster this->generate(config.db.getCount());
+            this->generate(config.db.getCount());
             onlymaster msa::task("pairwise", "aligning %llu pairs", this->pair.getSize());
 
-            this->scatter();
+            onlyslaves this->scatter();
             onlyslaves this->score = alignDb(config.db, table);
             return this->gather();
         }

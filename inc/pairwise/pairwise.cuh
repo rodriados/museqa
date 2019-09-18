@@ -27,12 +27,18 @@ namespace pairwise
     using Score = int32_t;
 
     /**
+     * Represents a reference for a sequence.
+     * @since 0.1.1
+     */
+    using SequenceRef = uint16_t;
+
+    /**
      * Stores the indeces of a pair of sequences to be aligned.
      * @since 0.1.1
      */
     struct Pair
     {
-        uint16_t id[2];
+        SequenceRef id[2];
     };
 
     /**
