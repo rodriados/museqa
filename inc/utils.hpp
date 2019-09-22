@@ -212,6 +212,18 @@ namespace utils
     {
         return !any(value...);
     }
+
+    /**
+     * Calculates the number of possible pair combinations with given number.
+     * @param count The number of objects to be combinated.
+     * @return The number of possible pair combinations.
+     */
+    template <typename T>
+    __host__ __device__ inline constexpr T combinations(T count) noexcept
+    {
+        static_assert(std::is_integral<T>::value, "an integral value is expected!");
+        return (count * (count - 1)) >> 1;
+    }
 };
 
 /**

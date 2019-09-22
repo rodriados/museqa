@@ -7,6 +7,7 @@
 #include <string>
 
 #include "msa.hpp"
+#include "utils.hpp"
 #include "buffer.hpp"
 #include "exception.hpp"
 
@@ -30,8 +31,7 @@ static const std::map<std::string, pairwise::Factory> dispatcher = {
  */
 Buffer<pairwise::Pair> pairwise::Algorithm::generate(size_t num)
 {
-    const size_t combinations = num * (num - 1) >> 1;
-    pair = Buffer<pairwise::Pair> {combinations};
+    pair = Buffer<pairwise::Pair> {utils::combinations(num)};
 
     for(size_t i = 0, c = 0; i < num - 1; ++i)
         for(size_t j = i + 1; j < num; ++j, ++c)

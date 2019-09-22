@@ -100,6 +100,19 @@ namespace pairwise
             using Buffer<Score>::operator=;
 
             /**
+             * Gives access to a pair score using a matrix format.
+             * @param x The requested x-axis offset.
+             * @param y The requested y-axis offset.
+             * @return The score of requested pair.
+             */
+            inline Score operator()(ptrdiff_t x, ptrdiff_t y) const
+            {
+                const auto min = utils::min(x, y);
+                const auto max = utils::max(x, y);
+                return (x == y) ? 0 : Buffer<Score>::operator[](utils::combinations(max) + min);
+            }
+
+            /**
              * Informs the total number of sequences available in the module.
              * @return The number of processed sequences.
              */
