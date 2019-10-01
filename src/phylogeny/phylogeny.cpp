@@ -15,8 +15,9 @@
  * Keeps the list of available algorithms and their respective factories.
  */
 static const std::map<std::string, phylogeny::Factory> dispatcher = {
-    {"njoining",               phylogeny::njoining::hybrid}
-,   {"njoining-hybrid",        phylogeny::njoining::hybrid}
+    {"njoining",                phylogeny::njoining::hybrid}
+,   {"njoining-hybrid",         phylogeny::njoining::hybrid}
+,   {"njoining-sequential",     phylogeny::njoining::sequential}
 };
 
 /**
@@ -28,10 +29,8 @@ void phylogeny::Phylogeny::run(const phylogeny::Configuration& config)
 {
     const auto& selection = dispatcher.find(config.algorithm);
 
-    if(selection == dispatcher.end())
-        throw Exception("unknown phylogeny algorithm:", config.algorithm);
-
-    onlymaster info("chosen phylogeny algorithm:" s_bold, config.algorithm, s_reset);
+    enforce(selection != dispatcher.end(), "unknown phylogeny algorithm: %s", config.algorithm.c_str());
+    onlymaster msa::info("chosen phylogeny algorithm: %s", config.algorithm.c_str());
 
     phylogeny::Algorithm *algorithm = selection->second();
 

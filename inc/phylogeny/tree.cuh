@@ -13,10 +13,28 @@
 
 namespace phylogeny
 {
-    /*
-     * Defines the value of an undefined node reference.
+    /**
+     * An OTU, a operational taxonomic unit, can be either a single sequence or
+     * an alignment of two or more sequences.
+     * @since 0.1.1
      */
-    enum : uint16_t { undefined = 0xffff };
+    using OTURef = typename std::make_unsigned<SequenceRef>::type;
+
+    /*
+     * Defines the value of an undefined node reference. This value will be used
+     * whenever we have an unset or unknown reference.
+     */
+    enum : OTURef { undefined = 0xffff };
+
+    /**
+     * Stores information about a branch connection in the phylogenetic tree.
+     * @since 0.1.1
+     */
+    struct Branch
+    {
+        OTURef id = undefined;
+        Score distance = -1;
+    };
 
     /**
      * Represents a tree node, containing a pair of child OTU references.
@@ -24,8 +42,9 @@ namespace phylogeny
      */
     struct Node
     {
-        Pair child {{undefined, undefined}};    /// The nodes that lead to the current one.
-        uint16_t parent = undefined;            /// The parent node the current one leads to.
+        Branch parent;          /// The current node's parent connection.
+        Branch child[2];        /// The current node's children connections.
+        bool isLeaf = false;    /// Is the node currently a leaf?
     };
 
     /**
@@ -40,8 +59,8 @@ namespace phylogeny
 
         public:
             inline Tree() noexcept = default;
-            inline Tree(const Tree&) = default;
-            inline Tree(Tree&&) = default;
+            inline Tree(const Tree&) noexcept = default;
+            inline Tree(Tree&&) noexcept = default;
 
             /**
              * Creates a new tree by allocating all nodes it will ever need.
@@ -62,10 +81,10 @@ namespace phylogeny
              */
             inline void join(uint16_t x, uint16_t y) noexcept
             {
-                this->ptr[root].child.id[0] = x;
-                this->ptr[root].child.id[1] = y;
-                this->ptr[x].parent = root;
-                this->ptr[y].parent = root++;
+                this->ptr[root].child[0].id = x;
+                this->ptr[root].child[1].id = y;
+                this->ptr[x].parent.id = root;
+                this->ptr[y].parent.id = root++;
             }
 
             using Buffer<Node>::operator[];

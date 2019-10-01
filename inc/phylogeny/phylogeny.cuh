@@ -9,10 +9,11 @@
 #define PG_PHYLOGENY_CUH_INCLUDED
 
 #include <string>
+#include <utility>
 
 #include "utils.hpp"
 #include "pairwise.cuh"
- 
+
 #include "phylogeny/tree.cuh"
 
 namespace phylogeny
@@ -23,7 +24,7 @@ namespace phylogeny
      */
     struct Configuration
     {
-        const Pairwise& pw;       /// The pairwise module instance.
+        const Pairwise& pw;         /// The pairwise module instance.
         std::string algorithm;      /// The chosen phylogeny algorithm.
     };
 
@@ -33,14 +34,14 @@ namespace phylogeny
      */
     struct Algorithm
     {
-        Algorithm() = default;
-        Algorithm(const Algorithm&) = default;
-        Algorithm(Algorithm&&) = default;
+        inline Algorithm() noexcept = default;
+        inline Algorithm(const Algorithm&) noexcept = default;
+        inline Algorithm(Algorithm&&) noexcept = default;
 
         virtual ~Algorithm() = default;
 
-        Algorithm& operator=(const Algorithm&) = default;
-        Algorithm& operator=(Algorithm&&) = default;
+        inline Algorithm& operator=(const Algorithm&) noexcept = default;
+        inline Algorithm& operator=(Algorithm&&) noexcept = default;
 
         virtual Tree run(const Configuration&) = 0;
     };
@@ -59,12 +60,12 @@ namespace phylogeny
     class Phylogeny final : public Tree
     {
         public:
-            Phylogeny() = default;
-            Phylogeny(const Phylogeny&) = default;
-            Phylogeny(Phylogeny&&) = default;
+            inline Phylogeny() = default;
+            inline Phylogeny(const Phylogeny&) = default;
+            inline Phylogeny(Phylogeny&&) = default;
 
-            Phylogeny& operator=(const Phylogeny&) = default;
-            Phylogeny& operator=(Phylogeny&&) = default;
+            inline Phylogeny& operator=(const Phylogeny&) = default;
+            inline Phylogeny& operator=(Phylogeny&&) = default;
 
             using Tree::operator=;
 
