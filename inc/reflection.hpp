@@ -27,211 +27,217 @@
 #include <cstdint>
 #include <utility>
 
-#include "utils.hpp"
-#include "tuple.hpp"
+#include <utils.hpp>
+#include <tuple.hpp>
 
 #if defined(__GNUC__)
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wnon-template-friend"
 #endif
 
-#ifndef reflection_use_loophole
-  #if __cplusplus >= 201402L && !defined(msa_avoid_loophole)
-    #define reflection_use_loophole 1
+#ifndef use_loophole
+  #if __cplusplus >= 201402L && !defined(avoid_loophole)
+    #define use_loophole 1
   #else
-    #define reflection_use_loophole 0
+    #define use_loophole 0
   #endif
 #endif
 
-namespace reflection
+namespace internal
 {
-#if reflection_use_loophole
-    namespace detail
-    {
-        /**
-         * Generates friend declarations and tags type for overload resolution.
-         * @tparam T The object type to be scanned.
-         * @tparam N The index of requested object member.
-         * @since 0.1.1
-         */
-        template <typename T, size_t N>
-        struct Tag
-        {
-            friend auto loophole(Tag<T, N>);
-        };
-
-        /**#@+
-         * Defines the friend function that automagically returns member's types.
-         * @since 0.1.1
-         */
-        template <typename T, typename U, size_t N, bool B>
-        struct TagDef
+    #if use_loophole
+        namespace reflection
         {
             /**
-             * This function automagically returns object member's types.
-             * @return An instance of the resolved type.
+             * Generates friend declarations and tags type for overload resolution.
+             * @tparam T The object type to be scanned.
+             * @tparam N The index of requested object member.
+             * @since 0.1.1
              */
-            friend auto loophole(Tag<T, N>)
+            template <typename T, size_t N>
+            struct tag
             {
-                return typename std::remove_all_extents<U>::type {};
-            }
-        };
+                friend auto loop(tag<T, N>);
+            };
 
-        // This specialization avoids multiple definition errors.
-        template <typename T, typename U, size_t N>
-        struct TagDef<T, U, N, true>
-        {};
-        /**#@-*/
-
-        /**
-         * Templated conversion operator that triggers instantiations. The use of `sizeof`
-         * here is important as it seems to be more reliable. An template argument `U` is
-         * provided so the template arguments do not get "cached" (although it is not known
-         * whether they are really cached or not).
-         * @tparam T The object type to be scanned.
-         * @tparam N The counter of members.
-         * @since 0.1.1
-         */
-        template <typename T, size_t N>
-        struct Loophole
-        {
             /**#@+
-             * This method is responsible for doing the type detection using the constexpr
-             * friend function and SFINAE. The return value of this function is never used
-             * or known, we only care about its type.
-             * @return Unknown.
+             * Defines the friend function that automagically returns an object's
+             * default constructor parameter types.
+             * @since 0.1.1
              */
-            template <typename U, size_t M>
-            static auto ins(...) -> size_t;
+            template <typename T, typename U, size_t N, bool B>
+            struct tagdef
+            {
+                /**
+                 * This function automagically returns an object's default constructor
+                 * parameter types, and thus, its internal member's types.
+                 * @return An instance of the resolved type.
+                 */
+                friend auto loop(tag<T, N>)
+                {
+                    return typename std::remove_all_extents<U>::type {};
+                }
+            };
 
-            template <typename U, size_t M, size_t = sizeof(loophole(detail::Tag<T, M>{}))>
-            static auto ins(int) -> char;
+            // This specialization avoids multiple definition errors.
+            template <typename T, typename U, size_t N>
+            struct tagdef<T, U, N, true>
+            {};
             /**#@-*/
 
             /**
-             * The casting operator identifies the type required by the object's default constructor.
-             * @return Unknown.
+             * Templated conversion operator that triggers instantiations. The use of `sizeof`
+             * here is important as it seems to be more reliable. An template argument `U` is
+             * provided so the template arguments do not get "cached" (although it is not known
+             * whether they are really cached or not).
+             * @tparam T The object type to be scanned.
+             * @tparam N The counter of members.
+             * @since 0.1.1
              */
-            template <typename U, size_t = sizeof(detail::TagDef<T, U, N, sizeof(ins<U, N>(0)) == sizeof(char)>)>
-            constexpr operator U&() const noexcept;
-        };
+            template <typename T, size_t N>
+            struct loophole
+            {
+                /**#@+
+                 * This method is responsible for doing the type detection using the constexpr
+                 * friend function and SFINAE. The return value of this function is never used
+                 * or known, we only care about its type.
+                 * @return Unknown.
+                 */
+                template <typename U, size_t M>
+                static auto ins(...) -> size_t;
+
+                template <typename U, size_t M, size_t = sizeof(loop(reflection::tag<T, M>{}))>
+                static auto ins(int) -> char;
+                /**#@-*/
+
+                /**
+                 * The casting operator identifies the type required by the object's default constructor.
+                 * @return Unknown.
+                 */
+                template <
+                        typename U
+                    ,   size_t = sizeof(reflection::tagdef<T, U, N, sizeof(ins<U, N>(0)) == sizeof(char)>)
+                    >
+                constexpr operator U&() const noexcept;
+            };
+
+            /**#@+
+             * Generates the tuple corresponding to given type using the loophole.
+             * @tparam T The object to be scanned.
+             * @tparam I The object's number of members.
+             * @since 0.1.1
+             */
+            template <class I, class T>
+            struct loophole_invoker;
+
+            template <size_t ...I, typename T>
+            struct loophole_invoker<indexer<I...>, T> : ::tuple<decltype(T {loophole<T, I> {}...}, 0)>
+            {
+                using type = ::tuple<decltype(loop(tag<T, I> {}))...>;
+            };
+            /**#@-*/
+
+            /**#@+
+             * Automagically counts the number of members of a data object.
+             * @tparam T The object to be scanned.
+             * @tparam N The number of members.
+             * @return The number of members in the data object.
+             */
+            template <typename T, size_t ...N>
+            constexpr size_t count(...)
+            {
+                return sizeof...(N) - 1;
+            }
+
+            template <typename T, size_t ...N>
+            constexpr auto count(int) -> decltype(T {loophole<T, N> {}...}, 0)
+            {
+                return count<T, N..., sizeof...(N)>(0);
+            }
+            /**#@-*/
+        }
+    #endif
+
+    namespace reflection
+    {
+        #if use_loophole
+            /**
+             * This type uses C++14 loophole to create a tuple corresponding
+             * to the object's fields.
+             * @tparam T The object to reflect on.
+             * @since 0.1.1
+             */
+            template <typename T>
+            using loophole_tuple = typename loophole_invoker<indexer_g<count<T>(0)>, T>::type;
+        #else
+            /**
+             * Informs whether loophole is needed to reflect on the object.
+             * @tparam T The object to reflect on.
+             * @since 0.1.1
+             */
+            template <typename T>
+            using loophole_tuple = void;
+        #endif
 
         /**#@+
-         * Generates the tuple corresponding to given type using the loophole.
-         * @tparam T The object to be scanned.
-         * @tparam I The object's number of members.
+         * Helper of creating tuple corresponding to reflected object.
+         * @tparam T The object to reflect on.
+         * @tparam B Does the object inherit Reflector?
          * @since 0.1.1
          */
-        template <class I, class T>
-        struct LoopholeInvoker;
+        template <typename T, bool B, typename = void>
+        struct mirror_tuple;
 
-        template <size_t ...I, typename T>
-        struct LoopholeInvoker<Indexer<I...>, T> : Tuple<decltype(T{Loophole<T, I>{}...}, 0)>
+        template <typename T>
+        struct mirror_tuple<T, false, typename std::enable_if<
+                std::is_trivial<T>::value
+            &&  std::is_standard_layout<T>::value
+            &&  use_loophole
+            >::type >
         {
-            using type = Tuple<decltype(loophole(Tag<T, I>{}))...>;
+            using type = loophole_tuple<T>;
+        };
+
+        template <typename T>
+        struct mirror_tuple<T, true, typename std::enable_if<
+                !std::is_same<typename T::reflex, void>::value
+            >::type >
+        {
+            using type = typename T::reflex;
         };
         /**#@-*/
 
-        /**#@+
-         * Automagically counts the number of members of a data object.
-         * @tparam T The object to be scanned.
-         * @tparam N The number of members.
-         * @return The number of members in the data object.
+        /**
+         * Helper for creating an aligned tuple. This is useful for retrieving
+         * correct and reliable offsets out of tuples.
+         * @tparam T The list of object's types.
+         * @since 0.1.1
          */
-        template <typename T, size_t ...N>
-        constexpr size_t count(...)
-        {
-            return sizeof...(N) - 1;
-        }
+        template <typename ...T>
+        static constexpr auto aligned(::tuple<T...>) noexcept
+        -> ::tuple<storage<sizeof(T), alignof(T)>...>;
 
-        template <typename T, size_t ...N>
-        constexpr auto count(int) -> decltype(T{Loophole<T, N>{}...}, 0)
-        {
-            return count<T, N..., sizeof...(N)>(0);
-        }
-        /**#@-*/
-    };
-#endif
-
-#if reflection_use_loophole
-    /**
-     * This type uses C++14 loophole to create a tuple corresponding
-     * to the object's fields.
-     * @tparam T The object to reflect on.
-     * @since 0.1.1
-     */
-    template <typename T>
-    using LoopholeTuple = typename detail::LoopholeInvoker<
-            IndexerG<detail::count<T>(0)>, T
-        >::type;
-#else
-    /**
-     * Informs whether loophole is needed to reflect on the object.
-     * @tparam T The object to reflect on.
-     * @since 0.1.1
-     */
-    template <typename T>
-    using LoopholeTuple = void;
-#endif
-
-    /**#@+
-     * Helper of creating tuple corresponding to reflected object.
-     * @tparam T The object to reflect on.
-     * @tparam B Does the object inherit Reflector?
-     * @since 0.1.1
-     */
-    template <typename T, bool B, typename = void>
-    struct ReflectionTuple;
-
-    template <typename T>
-    struct ReflectionTuple<T, false, typename std::enable_if<
-            std::is_trivial<T>::value &&
-            std::is_standard_layout<T>::value &&
-            reflection_use_loophole
-        >::type >
-    {
-        using type = LoopholeTuple<T>;
-    };
-
-    template <typename T>
-    struct ReflectionTuple<T, true, typename std::enable_if<
-            !std::is_same<typename T::reflex, void>::value
-        >::type >
-    {
-        using type = typename T::reflex;
-    };
-    /**#@-*/
-
-    /**
-     * Helper for creating an aligned tuple. This is useful for retrieving
-     * correct and reliable offsets out of tuples.
-     * @tparam T The list of object's types.
-     * @since 0.1.1
-     */
-    template <typename ...T>
-    static constexpr auto aligned(Tuple<T...>) noexcept
-    -> Tuple<Storage<sizeof(T), alignof(T)>...>;
-
-    /**
-     * Helper for creating a tuple with references to object values.
-     * @tparam T The list of object's types.
-     * @since 0.1.1
-     */
-    template <typename ...T>
-    static constexpr auto reference(Tuple<T...>) noexcept
-    -> Tuple<T&...>;
-};
+        /**
+         * Helper for creating a tuple with references to object values.
+         * @tparam T The list of object's types.
+         * @since 0.1.1
+         */
+        template <typename ...T>
+        static constexpr auto reference(::tuple<T...>) noexcept
+        -> ::tuple<T&...>;
+    }
+}
 
 /**
  * Indicates whether a non-trivial object is reflectible.
  * @since 0.1.1
  */
-class Reflector
+class reflector
 {
     public:
         /**
-         * If reflection is manually generated, then this must be the tuple
-         * equivalent to the object being reflected.
+         * If reflection is manually generated, then this must be a tuple similar
+         * and equivalent to the object being reflected.
          * @since 0.1.1
          */
         using reflex = void;
@@ -245,7 +251,7 @@ class Reflector
          */
         template <typename ...T>
         static constexpr auto reflect(T&...) noexcept
-        -> decltype(tuple::concat(std::declval<nTuple<
+        -> decltype(utils::concat(std::declval<ntuple<
                 typename std::remove_all_extents<T>::type
             ,   utils::max(std::extent<T>::value, 1ul)
             >>()...));
@@ -257,8 +263,9 @@ class Reflector
  * @since 0.1.1
  */
 template <typename T>
-using ReflectionTuple = typename reflection::ReflectionTuple<
-        T, std::is_base_of<Reflector, T>::value
+using reflection_tuple = typename internal::reflection::mirror_tuple<
+        T
+    ,   std::is_base_of<reflector, T>::value
     >::type;
 
 /**
@@ -268,7 +275,7 @@ using ReflectionTuple = typename reflection::ReflectionTuple<
  * @since 0.1.1
  */
 template <typename T>
-using AlignedTuple = decltype(reflection::aligned(std::declval<ReflectionTuple<T>>()));
+using aligned_tuple = decltype(internal::reflection::aligned(std::declval<reflection_tuple<T>>()));
 
 /**
  * This type creates a tuple with references to the object's properties.
@@ -276,7 +283,7 @@ using AlignedTuple = decltype(reflection::aligned(std::declval<ReflectionTuple<T
  * @since 0.1.1
  */
 template <typename T>
-using ReferenceTuple = decltype(reflection::reference(std::declval<ReflectionTuple<T>>()));
+using reference_tuple = decltype(internal::reflection::reference(std::declval<reflection_tuple<T>>()));
 
 /**
  * Applies reflection over a data object, thus allowing us to automagically get
@@ -285,22 +292,39 @@ using ReferenceTuple = decltype(reflection::reference(std::declval<ReflectionTup
  * @since 0.1.1
  */
 template <typename T>
-class Reflection : public ReferenceTuple<T>
+class reflection : public reference_tuple<T>
 {
+    static_assert(!std::is_union<T>::value, "it is forbidden to reflect over unions");
+    static_assert(std::is_class<T>::value, "the reflected object must be a class or struct");
+    static_assert(sizeof(T) == sizeof(reflection_tuple<T>), "reflection tuple is not compatible");
+    static_assert(alignof(T) == alignof(reflection_tuple<T>), "reflection tuple is not compatible");
+
+    protected:
+        using underlying_tuple = reference_tuple<T>;    /// The underlying tuple type.
+
     public:
-        Reflection() = delete;
-        Reflection(const Reflection&) = default;
-        Reflection(Reflection&&) = delete;
+        inline reflection() = delete;
+        inline reflection(const reflection&) = default;
+        inline reflection(reflection&&) = delete;
 
         /**
          * Gathers references to an instance of the reflected object.
          * @param obj The object instance to get references from.
          */
-        __host__ __device__ inline Reflection(T& obj) noexcept
-        :   ReferenceTuple<T> {getReference(*this, IndexerG<getSize()> {}, obj)}
+        __host__ __device__ inline reflection(T& obj) noexcept
+        :   underlying_tuple {extract(*this, indexer_g<count()> {}, obj)}
         {}
 
-        using ReferenceTuple<T>::operator=;
+        using underlying_tuple::operator=;
+
+        /**
+         * Retrieves the number of members of the given data object.
+         * @return The number of object's members.
+         */
+        __host__ __device__ inline static constexpr auto count() noexcept -> size_t
+        {
+            return underlying_tuple::count;
+        }
 
         /**
          * Retrieves the offset of a member in the data object by its index.
@@ -308,18 +332,9 @@ class Reflection : public ReferenceTuple<T>
          * @return The member offset.
          */
         template <size_t N>
-        __host__ __device__ inline static constexpr ptrdiff_t getOffset() noexcept
+        __host__ __device__ inline static constexpr auto offset() noexcept -> ptrdiff_t
         {
-            return getOffset<N>(AlignedTuple<T> {});
-        }
-
-        /**
-         * Retrieves the number of members of the given data object.
-         * @return The number of object's members.
-         */
-        __host__ __device__ inline static constexpr size_t getSize() noexcept
-        {
-            return ReflectionTuple<T>::count;
+            return offset<N>(aligned_tuple<T> {});
         }
 
     private:
@@ -330,9 +345,9 @@ class Reflection : public ReferenceTuple<T>
          * @return The member offset.
          */
         template <size_t N>
-        __host__ __device__ inline static constexpr ptrdiff_t getOffset(AlignedTuple<T> t) noexcept
+        __host__ __device__ inline static constexpr auto offset(aligned_tuple<T> tp) noexcept -> ptrdiff_t
         {
-            return &t.template get<N>().storage[0] - &t.template get<0>().storage[0];
+            return &tp.template get<N>().storage[0] - &tp.template get<0>().storage[0];
         }
 
         /**
@@ -343,16 +358,11 @@ class Reflection : public ReferenceTuple<T>
          * @return The new reference tuple instance.
          */
         template <typename ...U, size_t ...I>
-        __host__ __device__ inline static auto getReference(Tuple<U...>&, Indexer<I...>, T& obj) noexcept
-        -> ReferenceTuple<T>
+        __host__ __device__ inline static auto extract(tuple<U...>&, indexer<I...>, T& obj) noexcept
+        -> underlying_tuple
         {
-            return {reinterpret_cast<U>(*(reinterpret_cast<char *>(&obj) + getOffset<I>()))...};
+            return {reinterpret_cast<U>(*(reinterpret_cast<char *>(&obj) + offset<I>()))...};
         }
-
-    static_assert(!std::is_union<T>::value, "it is forbidden to reflect over unions!");
-    static_assert(std::is_class<T>::value, "the reflected object must be a class or struct!");
-    static_assert(sizeof(T) == sizeof(ReflectionTuple<T>), "reflection tuple is not compatible!");
-    static_assert(alignof(T) == alignof(ReflectionTuple<T>), "reflection tuple is not compatible!");
 };
 
 #if defined(__GNUC__)

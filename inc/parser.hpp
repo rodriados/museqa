@@ -12,8 +12,8 @@
 #include <vector>
 #include <fstream>
 
-#include "utils.hpp"
-#include "database.hpp"
+#include <utils.hpp>
+#include <database.hpp>
 
 namespace parser
 {
@@ -22,10 +22,10 @@ namespace parser
      * its data to sequences that can be added to the database.
      * @since 0.1.1
      */
-    using Parser = Functor<std::vector<DatabaseEntry>(const std::string&)>;
+    using functor = ::functor<std::vector<database_entry>(const std::string&)>;
 
-    extern std::vector<DatabaseEntry> parse(const std::string&, const std::string& = {});
-    extern std::vector<DatabaseEntry> parseMany(const std::vector<std::string>&, const std::string& = {});
+    extern std::vector<database_entry> parse(const std::string&, const std::string& = {});
+    extern std::vector<database_entry> parse_many(const std::vector<std::string>&, const std::string& = {});
 };
 
 #endif

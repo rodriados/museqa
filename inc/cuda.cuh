@@ -9,443 +9,439 @@
 #define CUDA_CUH_INCLUDED
 
 #ifdef __CUDACC__
-  #define msa_compile_cuda 1
-#endif
-
-#ifdef msa_compile_cuda
   /*
-   * Checks whether a compatible device is available. If not, compilation
-   * fails and informs the error.
+   * Checks whether the compilation is targeting a compatible device. If not,
+   * compilation fails and we inform about the error.
    */
   #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ < 200)
-    #error A device of compute capability 2.0 or higher is required.
-  #elif defined(__CUDA_ARCH__)
-    #define msa_gpu_code 1
+    #error a device of compute capability 2.0 or higher is required
   #endif
 
   #include <cuda.h>
+
+  #define onlynvcc 1
 #endif
 
 #include <string>
 #include <utility>
 
-#include "utils.hpp"
-#include "pointer.hpp"
-#include "exception.hpp"
+#include <utils.hpp>
+#include <pointer.hpp>
+#include <allocatr.hpp>
+#include <exception.hpp>
 
 namespace cuda
 {
     /**
-     * The native CUDA word type. This might be changed in future architectures, but
-     * this is good for now.
+     * The native CUDA word type. This might be changed in future architectures,
+     * but this is good enough for now.
      * @since 0.1.1
      */
-    using NativeWord = unsigned;
+    using word = unsigned;
 
     /**
-     * Indicates either the result (success or error index) of a CUDA Runtime API call,
-     * or the overall status of the Runtime API (which is typically the last triggered
-     * error).
+     * Indicates either the result (success or error index) of a CUDA Runtime API
+     * call, or the overall status of the Runtime API (which is typically the last
+     * triggered error).
      * @since 0.1.1
      */
-    using Status = NativeWord;
+    using status_code = word;
 
     namespace status
     {
-#ifdef msa_compile_cuda
-        /**
-         * Aliases for CUDA error types and status codes enumeration.
-         * @since 0.1.1
-         */
-        enum : std::underlying_type<cudaError_t>::type
-        {
-            success                     = cudaSuccess
-        ,   missingConfiguration        = cudaErrorMissingConfiguration
-        ,   memoryAllocation            = cudaErrorMemoryAllocation
-        ,   initializationError         = cudaErrorInitializationError
-        ,   launchFailure               = cudaErrorLaunchFailure
-        ,   priorLaunchFailure          = cudaErrorPriorLaunchFailure
-        ,   launchTimeout               = cudaErrorLaunchTimeout
-        ,   launchOutOfResources        = cudaErrorLaunchOutOfResources
-        ,   invalidDeviceFunction       = cudaErrorInvalidDeviceFunction
-        ,   invalidConfiguration        = cudaErrorInvalidConfiguration
-        ,   invalidDevice               = cudaErrorInvalidDevice
-        ,   invalidValue                = cudaErrorInvalidValue
-        ,   invalidPitchValue           = cudaErrorInvalidPitchValue
-        ,   invalidSymbol               = cudaErrorInvalidSymbol
-        ,   mapBufferObjectFailed       = cudaErrorMapBufferObjectFailed
-        ,   unmapBufferObjectFailed     = cudaErrorUnmapBufferObjectFailed
-        ,   invalidHostPointer          = cudaErrorInvalidHostPointer
-        ,   invalidDevicePointer        = cudaErrorInvalidDevicePointer
-        ,   invalidTexture              = cudaErrorInvalidTexture
-        ,   invalidTextureBinding       = cudaErrorInvalidTextureBinding
-        ,   invalidChannelDescriptor    = cudaErrorInvalidChannelDescriptor
-        ,   invalidMemcpyDirection      = cudaErrorInvalidMemcpyDirection
-        ,   addressOfConstant           = cudaErrorAddressOfConstant
-        ,   textureFetchFailed          = cudaErrorTextureFetchFailed
-        ,   textureNotBound             = cudaErrorTextureNotBound
-        ,   synchronizationError        = cudaErrorSynchronizationError
-        ,   invalidFilterSetting        = cudaErrorInvalidFilterSetting
-        ,   invalidNormSetting          = cudaErrorInvalidNormSetting
-        ,   mixedDeviceExecution        = cudaErrorMixedDeviceExecution
-        ,   cudaRuntimeUnloading        = cudaErrorCudartUnloading
-        ,   unknown                     = cudaErrorUnknown
-        ,   notYetImplemented           = cudaErrorNotYetImplemented
-        ,   memoryValueTooLarge         = cudaErrorMemoryValueTooLarge
-        ,   invalidResourceHandle       = cudaErrorInvalidResourceHandle
-        ,   notReady                    = cudaErrorNotReady
-        ,   insufficientDriver          = cudaErrorInsufficientDriver
-        ,   setOnActiveProcess          = cudaErrorSetOnActiveProcess
-        ,   invalidSurface              = cudaErrorInvalidSurface
-        ,   noDevice                    = cudaErrorNoDevice
-        ,   eccUncorrectable            = cudaErrorECCUncorrectable
-        ,   sharedObjectSymbolNotFound  = cudaErrorSharedObjectSymbolNotFound
-        ,   sharedObjectInitFailed      = cudaErrorSharedObjectInitFailed
-        ,   unsupportedLimit            = cudaErrorUnsupportedLimit
-        ,   duplicateVariableName       = cudaErrorDuplicateVariableName
-        ,   duplicateTextureName        = cudaErrorDuplicateTextureName
-        ,   duplicateSurfaceName        = cudaErrorDuplicateSurfaceName
-        ,   devicesUnavailable          = cudaErrorDevicesUnavailable
-        ,   invalidKernelImage          = cudaErrorInvalidKernelImage
-        ,   noKernelImageForDevice      = cudaErrorNoKernelImageForDevice
-        ,   incompatibleDriverContext   = cudaErrorIncompatibleDriverContext
-        ,   peerAccessAlreadyEnabled    = cudaErrorPeerAccessAlreadyEnabled
-        ,   peerAccessNotEnabled        = cudaErrorPeerAccessNotEnabled
-        ,   deviceAlreadyInUse          = cudaErrorDeviceAlreadyInUse
-        ,   profilerDisabled            = cudaErrorProfilerDisabled
-        ,   profilerNotInitialized      = cudaErrorProfilerNotInitialized
-        ,   profilerAlreadyStarted      = cudaErrorProfilerAlreadyStarted
-        ,   profilerAlreadyStopped      = cudaErrorProfilerAlreadyStopped
-        ,   assert                      = cudaErrorAssert
-        ,   tooManyPeers                = cudaErrorTooManyPeers
-        ,   hostMemoryAlreadyRegistered = cudaErrorHostMemoryAlreadyRegistered
-        ,   hostMemoryNotRegistered     = cudaErrorHostMemoryNotRegistered
-        ,   operatingSystem             = cudaErrorOperatingSystem
-        ,   peerAccessUnsupported       = cudaErrorPeerAccessUnsupported
-        ,   launchMaxDepthExceeded      = cudaErrorLaunchMaxDepthExceeded
-        ,   launchFileScopedTex         = cudaErrorLaunchFileScopedTex
-        ,   launchFileScopedSurf        = cudaErrorLaunchFileScopedSurf
-        ,   syncDepthExceeded           = cudaErrorSyncDepthExceeded
-        ,   launchPendingCountExceeded  = cudaErrorLaunchPendingCountExceeded
-        ,   notPermitted                = cudaErrorNotPermitted
-        ,   notSupported                = cudaErrorNotSupported
-        ,   hardwareStackError          = cudaErrorHardwareStackError
-        ,   illegalInstruction          = cudaErrorIllegalInstruction
-        ,   misalignedAddress           = cudaErrorMisalignedAddress
-        ,   invalidAddressSpace         = cudaErrorInvalidAddressSpace
-        ,   invalidPc                   = cudaErrorInvalidPc
-        ,   illegalAddress              = cudaErrorIllegalAddress
-        ,   invalidPtx                  = cudaErrorInvalidPtx
-        ,   invalidGraphicsContext      = cudaErrorInvalidGraphicsContext
-        ,   startupFailure              = cudaErrorStartupFailure
-        ,   apiFailureBase              = cudaErrorApiFailureBase
-        };
+        #if defined(onlynvcc)
+            /**
+             * Aliases for CUDA error types and status codes enumeration.
+             * @since 0.1.1
+             */
+            enum : status_code
+            {
+                success                         = cudaSuccess
+            ,   assert                          = cudaErrorAssert
+            ,   api_failure_base                = cudaErrorApiFailureBase
+            ,   address_of_constant             = cudaErrorAddressOfConstant
+            ,   cudaruntime_unloading           = cudaErrorCudartUnloading
+            ,   device_already_in_use           = cudaErrorDeviceAlreadyInUse
+            ,   devices_unavailable             = cudaErrorDevicesUnavailable
+            ,   duplicate_surface_name          = cudaErrorDuplicateSurfaceName
+            ,   duplicate_texture_name          = cudaErrorDuplicateTextureName
+            ,   duplicate_variable_name         = cudaErrorDuplicateVariableName
+            ,   ecc_uncorrectable               = cudaErrorECCUncorrectable
+            ,   hardware_stack_error            = cudaErrorHardwareStackError
+            ,   host_memory_already_registered  = cudaErrorHostMemoryAlreadyRegistered
+            ,   host_memory_not_registered      = cudaErrorHostMemoryNotRegistered
+            ,   illegal_address                 = cudaErrorIllegalAddress
+            ,   illegal_instruction             = cudaErrorIllegalInstruction
+            ,   incompatible_driver_context     = cudaErrorIncompatibleDriverContext
+            ,   initialization_error            = cudaErrorInitializationError
+            ,   insufficient_driver             = cudaErrorInsufficientDriver
+            ,   invalid_address_space           = cudaErrorInvalidAddressSpace
+            ,   invalid_channel_descriptor      = cudaErrorInvalidChannelDescriptor
+            ,   invalid_configuration           = cudaErrorInvalidConfiguration
+            ,   invalid_device                  = cudaErrorInvalidDevice
+            ,   invalid_device_function         = cudaErrorInvalidDeviceFunction
+            ,   invalid_device_pointer          = cudaErrorInvalidDevicePointer
+            ,   invalid_filter_setting          = cudaErrorInvalidFilterSetting
+            ,   invalid_graphics_context        = cudaErrorInvalidGraphicsContext
+            ,   invalid_host_pointer            = cudaErrorInvalidHostPointer
+            ,   invalid_kernel_image            = cudaErrorInvalidKernelImage
+            ,   invalid_memcpy_direction        = cudaErrorInvalidMemcpyDirection
+            ,   invalid_norm_setting            = cudaErrorInvalidNormSetting
+            ,   invalid_pc                      = cudaErrorInvalidPc
+            ,   invalid_pitch_value             = cudaErrorInvalidPitchValue
+            ,   invalid_ptx                     = cudaErrorInvalidPtx
+            ,   invalid_resource_handle         = cudaErrorInvalidResourceHandle
+            ,   invalid_surface                 = cudaErrorInvalidSurface
+            ,   invalid_symbol                  = cudaErrorInvalidSymbol
+            ,   invalid_texture                 = cudaErrorInvalidTexture
+            ,   invalid_texture_binding         = cudaErrorInvalidTextureBinding
+            ,   invalid_value                   = cudaErrorInvalidValue
+            ,   launch_failure                  = cudaErrorLaunchFailure
+            ,   launch_file_scoped_tex          = cudaErrorLaunchFileScopedTex
+            ,   launch_file_scoped_surf         = cudaErrorLaunchFileScopedSurf
+            ,   launch_max_depth_exceeded       = cudaErrorLaunchMaxDepthExceeded
+            ,   launch_pending_count_exceeded   = cudaErrorLaunchPendingCountExceeded
+            ,   launch_out_of_resources         = cudaErrorLaunchOutOfResources
+            ,   launch_timeout                  = cudaErrorLaunchTimeout
+            ,   map_buffer_object_failed        = cudaErrorMapBufferObjectFailed
+            ,   memory_allocation               = cudaErrorMemoryAllocation
+            ,   memory_value_too_large          = cudaErrorMemoryValueTooLarge
+            ,   misaligned_address              = cudaErrorMisalignedAddress
+            ,   missing_configuration           = cudaErrorMissingConfiguration
+            ,   mixed_device_execution          = cudaErrorMixedDeviceExecution
+            ,   no_device                       = cudaErrorNoDevice
+            ,   no_kernel_image_for_device      = cudaErrorNoKernelImageForDevice
+            ,   not_permitted                   = cudaErrorNotPermitted
+            ,   not_ready                       = cudaErrorNotReady
+            ,   not_supported                   = cudaErrorNotSupported
+            ,   not_yet_implemented             = cudaErrorNotYetImplemented
+            ,   operating_system                = cudaErrorOperatingSystem
+            ,   peer_access_already_enabled     = cudaErrorPeerAccessAlreadyEnabled
+            ,   peer_access_not_enabled         = cudaErrorPeerAccessNotEnabled
+            ,   peer_access_unsupported         = cudaErrorPeerAccessUnsupported
+            ,   prior_launch_failure            = cudaErrorPriorLaunchFailure
+            ,   profiler_already_started        = cudaErrorProfilerAlreadyStarted
+            ,   profiler_already_stopped        = cudaErrorProfilerAlreadyStopped
+            ,   profiler_disabled               = cudaErrorProfilerDisabled
+            ,   profiler_not_initialized        = cudaErrorProfilerNotInitialized
+            ,   set_on_active_process           = cudaErrorSetOnActiveProcess
+            ,   shared_object_init_failed       = cudaErrorSharedObjectInitFailed
+            ,   shared_object_symbol_not_found  = cudaErrorSharedObjectSymbolNotFound
+            ,   startup_failure                 = cudaErrorStartupFailure
+            ,   sync_depth_exceeded             = cudaErrorSyncDepthExceeded
+            ,   synchronization_error           = cudaErrorSynchronizationError
+            ,   texture_fetch_failed            = cudaErrorTextureFetchFailed
+            ,   texture_not_bound               = cudaErrorTextureNotBound
+            ,   too_many_peers                  = cudaErrorTooManyPeers
+            ,   unmap_buffer_object_failed      = cudaErrorUnmapBufferObjectFailed
+            ,   unsupported_limit               = cudaErrorUnsupportedLimit
+            ,   unknown                         = cudaErrorUnknown
+            };
 
-        /**
-         * Clears the last error and resets it to success.
-         * @return The last error registered by a runtime call.
-         */
-        inline Status clear() noexcept
-        {
-            return cudaGetLastError();
-        }
+            /**
+             * Clears the last error and resets it to success.
+             * @return The last error registered by a runtime call.
+             */
+            inline status_code clear() noexcept
+            {
+                return cudaGetLastError();
+            }
 
-        /**
-         * Gets the last error from a runtime call in the same host thread.
-         * @return The last error registered by a runtime call.
-         */
-        inline Status last() noexcept
-        {
-            return cudaPeekAtLastError();
-        }
-#endif
+            /**
+             * Gets the last error from a runtime call in the same host thread.
+             * @return The last error registered by a runtime call.
+             */
+            inline status_code last() noexcept
+            {
+                return cudaPeekAtLastError();
+            }
+        #endif
 
-        extern std::string describe(Status) noexcept;
-    };
+        extern std::string describe(status_code) noexcept;
+    }
 
     /**
      * Holds an error message so it can be propagated through the code.
      * @since 0.1.1
      */
-    struct Exception : public ::Exception
+    class exception : public ::exception
     {
-        Status status;              /// The status code.
+        protected:
+            using underlying_type = ::exception;    /// The underlying exception.
 
-        /**
-         * Builds a new exception instance from status code.
-         * @param status The status code.
-         */
-        inline Exception(Status status)
-        :   ::Exception {"CUDA Exception: %s", status::describe(status).c_str()}
-        ,   status {status}
-        {}
+        protected:
+            status_code mcode;                       /// The status code.
 
-        /**
-         * Builds a new exception instance from status code.
-         * @tparam P The format parameters' types.
-         * @param status The status code.
-         * @param fmtstr The additional message's format.
-         * @param args The format's parameters.
-         */
-        template <typename ...P>
-        inline Exception(Status status, const char *fmtstr, P&&... args)
-        :   ::Exception {fmtstr, args...}
-        ,   status {status}
-        {}
+        public:     
+            /**
+             * Builds a new exception instance from status code.
+             * @param code The status code.
+             */
+            inline exception(status_code code) noexcept
+            :   underlying_type {"cuda exception: %s", status::describe(code)}
+            ,   mcode {code}
+            {}
 
-        /**
-         * Informs the status code received from an operation.
-         * @return The error status code.
-         */
-        inline Status getCode() const noexcept
-        {
-            return status;
-        }
+            /**
+             * Builds a new exception instance from status code.
+             * @tparam T The format parameters' types.
+             * @param code The status code.
+             * @param fmtstr The additional message's format.
+             * @param args The format's parameters.
+             */
+            template <typename ...T>
+            inline exception(status_code code, const std::string& fmtstr, T&&... args) noexcept
+            :   underlying_type {fmtstr, args...}
+            ,   mcode {code}
+            {}
+
+            using underlying_type::exception;
+
+            /**
+             * Informs the status code received from an operation.
+             * @return The error status code.
+             */
+            inline status_code code() const noexcept
+            {
+                return mcode;
+            }
     };
 
-#ifdef msa_compile_cuda
-    /**
-     * Checks whether a CUDA has been successful and throws error if not.
-     * @tparam P The format string parameter types.
-     * @param status The status code obtained from a function.
-     * @param fmtstr The format string to use as error message.
-     * @param args The format string values.
-     * @throw The error status code obtained raised to exception.
-     */
-    template <typename ...P>
-    inline void call(Status status, const std::string& fmtstr = {}, P&&... args)
-    {
-        if(status != cuda::status::success)
-            throw Exception {status, fmtstr.c_str(), args...};
-    }
-#endif
-
-    /**
-     * The ID type for devices. Here we simply define it as a numeric identifier,
-     * which is useful for breaking dependencies and for interaction with code using the
-     * original CUDA APIs.
-     * @since 0.1.1
-     */
-    using Device = int;
+    #if defined(onlynvcc)
+        /**
+         * Checks whether a CUDA has been successful and throws error if not.
+         * @param code The status code obtained from a function.
+         * @throw The error status code obtained raised to exception.
+         */
+        inline void check(status_code code)
+        {
+            enforce<exception>(code == cuda::status::success, "cuda exception: %s", status::describe(code));
+        }
+    #endif
 
     namespace device
     {
-#ifdef msa_compile_cuda
         /**
-         * Besides attributes, every CUDA device also has properties. This is the type
-         * for device properties, aliasing {@ref cudaDeviceProp}.
+         * The id type for devices. Here we simply define it as a numeric identifier,
+         * which is useful for breaking dependencies and for interaction with code
+         * using the original CUDA APIs.
          * @since 0.1.1
          */
-        using Properties = cudaDeviceProp;
-#endif
+        using id = word;
 
         /**
-         * If the CUDA runtime has not been set to a specific device, this
-         * is the ID of the device it defaults to.
-         * @see cuda::Device
+         * If the CUDA runtime has not been set to a specific device, this is the
+         * id of the device it defaults to.
+         * @see cuda::device::id
          */
-        enum : Device { original = 0 };
+        enum : id { init = 0 };
 
-#ifdef msa_compile_cuda
-        /**
-         * Returns the free amount of memory available for allocation by the device.
-         * @return The amount of free memory in bytes.
-         */
-        inline size_t freeMemory()
-        {
-            size_t free, _;
-            call(cudaMemGetInfo(&free, &_));
-            return free;
-        }
-#endif
+        #if defined(onlynvcc)
+            /**
+             * Every CUDA device can provide information about its fisical properties.
+             * @see cudaDeviceProp
+             * @since 0.1.1
+             */
+            using props = cudaDeviceProp;
 
-        extern int getCount();
-        extern Device getCurrent();
-        extern void setCurrent(const Device& = original);
-#ifdef msa_compile_cuda
-        extern Properties getProperties(const Device& = original);
-#endif
-    };
+            /**
+             * Returns the amount of free global memory in the current device.
+             * @return The amount of free global memory in bytes.
+             */
+            inline size_t free_memory()
+            {
+                size_t free, total;
+                check(cudaMemGetInfo(&free, &total));
+                return free;
+            }
+        #endif
 
-    /**
-     * Type aliasing for CUDA kernel types.
-     * @tparam P The kernel parameter types.
-     * @since 0.1.1
-     */
-    template <typename ...P>
-    using Kernel = void (*)(P...);
+        extern auto count() -> size_t;
+        extern auto current() -> id;
+        extern auto select(const id& = init) -> void;
 
-#ifdef msa_compile_cuda
-    namespace cache
-    {
+        #if defined(onlynvcc)
+            extern auto properties(const id& = init) -> props;
+        #endif
+    }
+
+    #if defined(onlynvcc)
         /**
          * In some GPU micro-architectures, it's possible to have the multiprocessors
          * change the balance in the allocation of L1-cache-like resources between
          * actual L1 cache and shared memory; these are the possible choices.
          * @since 0.1.1
          */
-        enum Preference : std::underlying_type<cudaFuncCache>::type
+        enum cache : std::underlying_type<cudaFuncCache>::type
         {
-            none    = cudaFuncCachePreferNone
-        ,   equal   = cudaFuncCachePreferEqual
-        ,   shared  = cudaFuncCachePreferShared
-        ,   l1      = cudaFuncCachePreferL1
+            none        = cudaFuncCachePreferNone
+        ,   equal       = cudaFuncCachePreferEqual
+        ,   shared      = cudaFuncCachePreferShared
+        ,   l1          = cudaFuncCachePreferL1
         };
-    };
-
-    namespace kernel
-    {
-        /**
-         * Sets the cache preference to a kernel.
-         * @tparam P The kernel parameter types.
-         * @param kernel The kernel to set the cache preference.
-         * @param pref The cache preference to set.
-         * @return Any detected error or nothing.
-         */
-        template <typename ...P>
-        inline void preference(const Kernel<P...> kernel, cache::Preference pref) 
-        {
-            call(cudaFuncSetCacheConfig(
-                reinterpret_cast<const void *>(kernel)
-            ,   static_cast<cudaFuncCache>(pref))
-            );
-        }
-    };
-
-    template <typename T = void>
-    inline RawPointer<T> allocate(size_t = 1);
-
-    template <typename T = void>
-    inline void free(Pure<T> *);
-
-    /**
-     * Allocates device-side memory on the current device.
-     * @tparam T Type of pointer to create.
-     * @param elems The number of elements of type T to allocate.
-     * @return The allocated memory pointer.
-     */
-    template <typename T>
-    inline RawPointer<T> allocate(size_t elems)
-    {
-        using S = typename std::conditional<std::is_void<T>::value, char, Pure<T>>::type;
-
-        Pure<T> *ptr = nullptr;
-        call(cudaMalloc(&ptr, sizeof(S) * elems));
-
-        return {ptr, free<T>};
-    }
-
-    /**
-     * Synchronously copies data between memory spaces or within a memory space.
-     * @note Since we assume Compute Capability >= 2.0, all devices support the
-     * Unified Virtual Address Space, so the CUDA driver can determine, for each pointer,
-     * where the data is located, and one does not have to specify this.
-     * @tparam T The pointer type.
-     * @param destination A pointer to a memory region either in host memory or on a device's global memory.
-     * @param source A pointer to a a memory region either in host memory or on a device's global memory.
-     * @param elems The number of elements to copy from source to destination.
-     */
-    template <typename T>
-    inline void copy(T *destination, const T *source, size_t elems = 1)
-    {
-        call(cudaMemcpy(destination, source, sizeof(T) * elems, cudaMemcpyDefault));
-    }
-
-    /**
-     * Synchronously sets all bytes in a region of memory to a fixed value.
-     * @tparam T The pointer type.
-     * @param ptr The position from where region starts.
-     * @param value The value to set the memory region to.
-     * @param bytes The number of bytes to set.
-     */
-    template <typename T>
-    inline void set(T *ptr, unsigned value, size_t elems = 1)
-    {
-        call(cudaMemset(ptr, value, sizeof(T) * elems));
-    }
-
-    /**
-     * Synchronously sets all bytes in a region of memory to 0 (zero).
-     * @tparam T The pointer type.
-     * @param ptr Position from where to start.
-     * @param bytes Size of the memory region in bytes.
-     */
-    template <typename T>
-    inline void zero(T *ptr, size_t elems = 1)
-    {
-        set(ptr, 0, elems);
-    }
-
-    /**
-     * Frees an allocated memory region pointer.
-     * @tparam T The pointer type.
-     * @param ptr The pointer to be freed.
-     */
-    template <typename T>
-    inline void free(Pure<T> *ptr)
-    {
-        call(cudaFree(ptr));
-    }
-
-    namespace pinned
-    {
-        template <typename T = void>
-        inline RawPointer<T> allocate(size_t = 1);
-
-        template <typename T = void>
-        inline void free(Pure<T> *);
 
         /**
-         * Allocates pinned host-side memory so copies to and from device are faster.
-         * @tparam T Type of pointer to create.
-         * @param elems The number of elements of type T to allocate.
-         * @return The allocated memory pointer.
+         * On devices with configurable shared memory banks, it's possible to force
+         * all launches of a device function to have one of the following shared
+         * memory bank size configuration.
+         * @since 0.1.1
          */
-        template <typename T>
-        inline RawPointer<T> allocate(size_t elems)
+        enum shared_mem : std::underlying_type<cudaSharedMemConfig>::type
         {
-            using S = typename std::conditional<std::is_void<T>::value, char, Pure<T>>::type;
+            init        = cudaSharedMemBankSizeDefault
+        ,   four_byte   = cudaSharedMemBankSizeFourByte
+        ,   eight_byte  = cudaSharedMemBankSizeEightByte
+        };
 
-            Pure<T> *ptr = nullptr;
-            call(cudaMallocHost(&ptr, sizeof(S) * elems));
+        namespace kernel
+        {
+            /**
+             * Describes a kernel pointer type.
+             * @tparam T The kernel's argument types.
+             * @since 0.1.1
+             */
+            template <typename ...T>
+            using pointer = void (*)(T...);
 
-            return {ptr, free<T>};
+            /**#@+
+             * Sets preferences to a kernel.
+             * @tparam T The kernel parameter types.
+             * @param kernel The kernel to set the preference to.
+             * @param pref The preference to set to kernel.
+             */
+            template <typename ...T>
+            inline void preference(const pointer<T...> kernel, cache pref)
+            {
+                check(cudaFuncSetCacheConfig(
+                    reinterpret_cast<const void *>(kernel)
+                ,   static_cast<cudaFuncCache>(pref)
+                ));
+            }
+
+            template <typename ...T>
+            inline void preference(const pointer<T...> kernel, shared_mem pref)
+            {
+                check(cudaFuncSetSharedMemConfig(
+                    reinterpret_cast<const void *>(kernel)
+                ,   static_cast<cudaSharedMemConfig>(pref)
+                ));
+            }
+            /**#@-*/
+        }
+
+        namespace memory
+        {
+            /**
+             * Creates an allocator for reserving and managing device-side global
+             * memory on the active device.
+             * @tparam T Type of pointer to create.
+             * @return The newly created allocator.
+             */
+            template <typename T>
+            inline auto global() noexcept -> allocatr<T>
+            {
+                return {
+                    typename allocatr<T>::up {
+                        [](size_t count) -> pure<T> * {
+                            pure<T> *ptr;
+                            check(cudaMalloc(&ptr, sizeof(pure<T>) * count));
+                            return ptr;
+                        }
+                    }
+                ,   typename allocatr<T>::down {
+                        [](pure<T> *ptr) -> void {
+                            check(cudaFree(ptr));
+                        }
+                    }
+                };
+            }
+
+            /**
+             * Creates an allocator for reserving and managing pinned host-side
+             * memory. Pinned memory is unpaged and thus can be accessed faster.
+             * @tparam T Type of pointer to create.
+             * @return The newly created allocator.
+             */
+            template <typename T>
+            inline auto pinned() noexcept -> allocatr<T>
+            {
+                return {
+                    typename allocatr<T>::up {
+                        [](size_t count) -> pure<T> * {
+                            pure<T> *ptr;
+                            check(cudaMallocHost(&ptr, sizeof(pure<T>) * count));
+                            return ptr;
+                        }
+                    }
+                ,   typename allocatr<T>::down {
+                        [](pure<T> *ptr) -> void {
+                            check(cudaFreeHost(ptr));
+                        }
+                    }
+                };
+            }
+
+            /**
+             * Synchronously copies data between memory spaces or pointers.
+             * @note Since we assume Compute Capability >= 2.0, all devices support
+             * the Unified Virtual Address Space, so the CUDA driver can determine,
+             * for each pointer, where the data is located, and one does not have
+             * to specify this.
+             * @tparam T The pointer type.
+             * @param dest A pointer on host memory or on a device's global memory.
+             * @param src A pointer on host memory or on a device's global memory.
+             * @param count The number of elements to copy from source to destination.
+             */
+            template <typename T>
+            inline void copy(T *dest, const T *src, size_t count = 1)
+            {
+                check(cudaMemcpy(dest, src, sizeof(T) * count, cudaMemcpyDefault));
+            }
+
+            /**
+             * Synchronously sets all bytes in a region of memory to a fixed value.
+             * @param ptr The position from where region starts.
+             * @param value The value to set the memory region to.
+             * @param bytes The number of bytes to set.
+             */
+            inline void set(void *ptr, uint8_t value, size_t bytes = 1)
+            {
+                check(cudaMemset(ptr, value, bytes));
+            }
+
+            /**
+             * Synchronously sets all bytes in a region of memory to 0 (zero).
+             * @param ptr Position from where to start.
+             * @param bytes Size of the memory region in bytes.
+             */
+            inline void zero(void *ptr, size_t bytes = 1)
+            {
+                set(ptr, 0, bytes);
+            }
         }
 
         /**
-         * Frees an allocated pinned host memory region pointer.
-         * @tparam T The pointer type.
-         * @param ptr The pointer to be freed.
+         * Halts host CPU thread execution until the device has finished processing
+         * all previously requested tasks, such as kernel launches, data copies...
          */
-        template <typename T>
-        inline void free(Pure<T> *ptr)
+        inline void barrier()
         {
-            call(cudaFreeHost(ptr));
+            check(cudaDeviceSynchronize());
         }
-    };
-
-    /**
-     * Halts host CPU thread execution until the device has finished processing all
-     * previously requested tasks, such as kernel launches, data copies and etc.
-     */
-    inline void barrier()
-    {
-        call(cudaDeviceSynchronize());
-    }
-#endif
+    #endif
 
     /**
      * CUDA's NVCC allows use the use of the warpSize identifier, without having
-     * to define it. Un(?)fortunately, warpSize is not a compile-time constant; it
-     * is replaced at some point with the appropriate immediate value which goes into,
-     * the SASS instruction as a literal. This is apparently due to the theoretical
-     * possibility of different warp sizes in the future. However, it is useful -
-     * both for host-side and more importantly for device-side code - to have the
-     * warp size available at compile time. This allows all sorts of useful
-     * optimizations, as well as its use in constexpr code.
+     * to define it. Un(?)fortunately, warpSize is not a compile-time constant;
+     * it is replaced at some point with the appropriate immediate value which
+     * goes into, the SASS instruction as a literal. This is apparently due to
+     * the theoretical possibility of different warp sizes in the future. However,
+     * it is useful, both for host-side and more importantly for device-side code,
+     * to have the warp size available at compile time. This allows all sorts of
+     * useful optimizations, as well as its use in constexpr code.
      * @since 0.1.1
      */
-    enum : NativeWord { warpSize = 32 };
-};
+    enum : word { warp_size = 32 };
+}
 
 #endif

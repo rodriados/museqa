@@ -8,32 +8,39 @@
 #ifndef NODE_HPP_INCLUDED
 #define NODE_HPP_INCLUDED
 
-#include <cstdint>
+#include <utils.hpp>
 
 namespace node
 {
-#ifndef msa_compile_cython
-    /**#@+
-     * Node identification values in cluster.
-     * @see mpi::init
+    /**
+     * Identifies a node in a cluster or in a group.
+     * @since 0.1.1
      */
-    extern uint16_t size;
-    extern uint16_t rank;
-    /**#@-*/
-#endif
+    using id = int32_t;
+
+    #if !defined(__cython__)
+        /**#@+
+         * Informs the number of total nodes in the cluster and the current node's
+         * global identification.
+         * @see mpi::init
+         */
+        extern id& rank;
+        extern uint32_t& count;
+        /**#@-*/
+    #endif
 
     /*
-     * Defining macro indicating the node rank to be used as the master node. It
-     * is recommended not to change it, as no other rank is garanteed to exist.
+     * Defining the master node rank value. It is recommended not to change the
+     * master node's rank, as no other node rank is garanteed to exist.
      */
-    enum : uint16_t { master = 0 };
-};
+    enum : id { master = 0 };
+}
 
 /*
  * Defines some process control macros. These macros are to be used when
  * it is needed to check whether the current process is master or not.
  */
-#ifndef msa_compile_cython
+#if !defined(__cython__)
   #define onlymaster   if(node::rank == node::master)
   #define onlyslaves   if(node::rank != node::master)
   #define onlynode(i)  if((i) == node::rank)

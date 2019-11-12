@@ -13,17 +13,17 @@
 #include <string>
 #include <vector>
 
-#include "sequence.hpp"
-#include "exception.hpp"
+#include <sequence.hpp>
+#include <exception.hpp>
 
 /**
  * Allows sequences to be stored alongside their respective properties.
  * @since 0.1.1
  */
-struct DatabaseEntry
+struct database_entry
 {
     std::string description;    /// The sequence description.
-    Sequence sequence;          /// The sequence content.
+    sequence raw_sequence;      /// The sequence content.
 };
 
 /**
@@ -31,110 +31,93 @@ struct DatabaseEntry
  * sequences may be identified by description or inclusion index.
  * @since 0.1.1
  */
-class Database
+class database
 {
+    public:
+        using element_type = database_entry;    /// The type of data stored in the database.
+
     protected:
-        std::vector<DatabaseEntry> list;    /// The list of sequence entries in database.
+        std::vector<element_type> mlist;        /// The list of sequence entries in database.
 
     public:
-        inline Database() = default;
-        inline Database(const Database&) = default;
-        inline Database(Database&&) = default;
+        inline database() = default;
+        inline database(const database&) = default;
+        inline database(database&&) = default;
 
-        inline Database& operator=(const Database&) = default;
-        inline Database& operator=(Database&&) = default;
+        inline database& operator=(const database&) = default;
+        inline database& operator=(database&&) = default;
 
         /**
          * Gives access to a specific sequence in database.
          * @param offset The requested sequence offset.
          * @return The requested sequence.
          */
-        inline const Sequence& operator[](ptrdiff_t offset) const
+        inline const sequence& operator[](ptrdiff_t offset) const
         {
-            return getEntry(offset).sequence;
-        }
-
-        /**
-         * Informs the number of entries in database.
-         * @return The number of entries in database.
-         */
-        inline size_t getCount() const noexcept
-        {
-            return list.size();
-        }
-
-        /**
-         * Retrieves an entry from database.
-         * @param offset The entry offset index.
-         * @return The requested entry.
-         */
-        inline const DatabaseEntry& getEntry(ptrdiff_t offset) const
-        {
-            enforce(static_cast<size_t>(offset) < getCount(), "database offset out of range");
-            return list.at(offset);
+            return entry(offset).raw_sequence;
         }
 
         /**
          * Adds a new entry to database.
-         * @param sequence The sequence to be added to database.
+         * @param seq The sequence to be added to database.
          */
-        inline void add(const Sequence& sequence)
+        inline void add(const sequence& seq)
         {
-            add("unnamed #" + std::to_string(getCount() + 1), sequence);
+            add("unnamed #" + std::to_string(count() + 1), seq);
         }
 
         /**
          * Adds a new entry to database.
          * @param entry The entry to be added to database.
          */
-        inline void add(const DatabaseEntry& entry)
+        inline void add(const element_type& entry)
         {
-            list.push_back(entry);
+            mlist.push_back(entry);
         }
 
         /**
          * Adds a new entry to database.
          * @param description The sequence description.
-         * @param sequence The sequence to be added to database.
+         * @param seq The sequence to be added to database.
          */
-        inline void add(const std::string& description, const Sequence& sequence)
+        inline void add(const std::string& description, const sequence& seq)
         {
-            list.push_back({description, sequence});
+            mlist.push_back({description, seq});
         }
 
         /**
          * Adds all entries from another database.
-         * @param dbase The database to merge into this.
+         * @param db The database to merge into this.
          */
-        inline void addMany(const Database& dbase)
+        inline void add_many(const database& db)
         {
-            addMany(dbase.list);
+            add_many(db.mlist);
         }
 
         /**
          * Adds many entries to database
          * @param vector The list of sequences to add.
          */
-        inline void addMany(const std::vector<Sequence>& vector)
+        inline void add_many(const std::vector<sequence>& vector)
         {
-            for(const Sequence& sequence : vector)
-                add(sequence);
+            for(const sequence& seq : vector)
+                add(seq);
         }
 
         /**
          * Adds many entries to database
          * @param vector The list of entries to add.
          */
-        inline void addMany(const std::vector<DatabaseEntry>& vector)
+        inline void add_many(const std::vector<element_type>& vector)
         {
-            list.insert(list.end(), vector.begin(), vector.end());
+            mlist.insert(mlist.end(), vector.begin(), vector.end());
         }
 
         /**
          * Adds many entries to database from a map.
          * @param map The map of entries to add.
          */
-        inline void addMany(const std::map<std::string, Sequence>& map)
+        inline void add_many(const std::map<std::string, sequence>& map)
         {
             for(const auto& pair : map)
                 add(pair.first, pair.second);
@@ -145,10 +128,10 @@ class Database
          * @param excluded The elements to be removed from copy.
          * @return The new database with selected elements removed.
          */
-        inline Database except(const std::set<ptrdiff_t>& excluded) const
+        inline database except(const std::set<ptrdiff_t>& excluded) const
         {
-            Database db {*this};
-            db.removeMany(excluded);
+            database db {*this};
+            db.remove_many(excluded);
             return db;
         }
 
@@ -157,7 +140,7 @@ class Database
          * @param excluded The elements to be removed from copy.
          * @return The new database with selected elements removed.
          */
-        inline Database except(const std::vector<ptrdiff_t>& excluded) const
+        inline database except(const std::vector<ptrdiff_t>& excluded) const
         {
             return except(std::set<ptrdiff_t> {excluded.begin(), excluded.end()});
         }
@@ -167,12 +150,12 @@ class Database
          * @param selected The indeces to be included in new database.
          * @return The new database with only the selected elements.
          */
-        inline Database only(const std::set<ptrdiff_t>& selected) const
+        inline database only(const std::set<ptrdiff_t>& selected) const
         {
-            Database db;
+            database db;
 
             for(const auto& it : selected)
-                db.add(getEntry(it));
+                db.add(entry(it));
 
             return db;
         }
@@ -182,7 +165,7 @@ class Database
          * @param selected The indeces to be included in new database.
          * @return The new database with only the selected elements.
          */
-        inline Database only(const std::vector<ptrdiff_t>& selected) const
+        inline database only(const std::vector<ptrdiff_t>& selected) const
         {
             return only(std::set<ptrdiff_t> {selected.begin(), selected.end()});
         }
@@ -193,15 +176,15 @@ class Database
          */
         inline void remove(ptrdiff_t offset)
         {
-            enforce(static_cast<size_t>(offset) < getCount(), "database offset out of range");
-            list.erase(list.begin() + offset);
+            enforce(size_t(offset) < count(), "database offset out of range");
+            mlist.erase(mlist.begin() + offset);
         }
 
         /**
          * Removes many elements from database.
          * @param selected Elements to be removed.
          */
-        inline void removeMany(const std::set<ptrdiff_t>& selected)
+        inline void remove_many(const std::set<ptrdiff_t>& selected)
         {
             for(auto it = selected.rbegin(); it != selected.rend(); ++it)
                 remove(*it);
@@ -211,9 +194,29 @@ class Database
          * Removes many elements from database.
          * @param selected Elements to be removed.
          */
-        inline void removeMany(const std::vector<ptrdiff_t>& selected)
+        inline void remove_many(const std::vector<ptrdiff_t>& selected)
         {
-            removeMany(std::set<ptrdiff_t> {selected.begin(), selected.end()});
+            remove_many(std::set<ptrdiff_t> {selected.begin(), selected.end()});
+        }
+
+        /**
+         * Informs the number of entries in database.
+         * @return The number of entries in database.
+         */
+        inline size_t count() const noexcept
+        {
+            return mlist.size();
+        }
+
+        /**
+         * Retrieves an entry from database.
+         * @param offset The entry offset index.
+         * @return The requested entry.
+         */
+        inline const element_type& entry(ptrdiff_t offset) const
+        {
+            enforce(size_t(offset) < count(), "database offset out of range");
+            return mlist.at(offset);
         }
 };
 

@@ -7,18 +7,18 @@
 #include <string>
 #include <vector>
 
-#include "msa.hpp"
-#include "parser.hpp"
-#include "database.hpp"
-#include "exception.hpp"
+#include <msa.hpp>
+#include <parser.hpp>
+#include <database.hpp>
+#include <exception.hpp>
 
-#include "parser/fasta.hpp"
+#include <parser/fasta.hpp>
 
 /*
  * Keeps the list of available parsers and their respective
  * file extensions correspondence.
  */
-static const std::map<std::string, parser::Parser> dispatcher = {
+static const std::map<std::string, parser::functor> dispatcher = {
     {"fasta", parser::fasta}
 };
 
@@ -28,13 +28,13 @@ static const std::map<std::string, parser::Parser> dispatcher = {
  * @param ext The file type to parse as.
  * @return All parsed database entries from file.
  */
-std::vector<DatabaseEntry> parser::parse(const std::string& filename, const std::string& ext)
+std::vector<database_entry> parser::parse(const std::string& filename, const std::string& ext)
 {
-    std::string extension = ext.size() ? ext : filename.substr(filename.find_last_of('.') + 1);
+    const std::string extension = ext.size() ? ext : filename.substr(filename.find_last_of('.') + 1);
     const auto& pair = dispatcher.find(extension);
 
-    enforce(pair != dispatcher.end(), "unknown parser for extension: %s", extension.c_str());
-    msa::info("parsing sequence file: %s", filename.c_str());
+    enforce(pair != dispatcher.end(), "unknown parser for extension: %s", extension);
+    msa::info("parsing sequence file: %s", filename);
 
     return pair->second(filename);
 }
@@ -45,13 +45,13 @@ std::vector<DatabaseEntry> parser::parse(const std::string& filename, const std:
  * @param ext The file type to parse as.
  * @return All parsed database entries from all files.
  */
-std::vector<DatabaseEntry> parser::parseMany(const std::vector<std::string>& files, const std::string& ext)
+std::vector<database_entry> parser::parse_many(const std::vector<std::string>& files, const std::string& ext)
 {
-    std::vector<DatabaseEntry> result;
+    std::vector<database_entry> result;
 
     for(const std::string& filename : files) {
-        std::vector<DatabaseEntry> sequences = parse(filename, ext);
-        result.insert(result.end(), sequences.begin(), sequences.end());
+        std::vector<database_entry> fcontents = parse(filename, ext);
+        result.insert(result.end(), fcontents.begin(), fcontents.end());
     }
 
     return result;

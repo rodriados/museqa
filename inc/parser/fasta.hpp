@@ -11,12 +11,12 @@
 #include <string>
 #include <vector>
 
-#include "parser.hpp"
-#include "database.hpp"
+#include <parser.hpp>
+#include <database.hpp>
 
 namespace parser
 {
-    extern std::vector<DatabaseEntry> fasta(const std::string&);
+    extern std::vector<database_entry> fasta(const std::string&);
 };
 
 #endif

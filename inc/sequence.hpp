@@ -8,55 +8,57 @@
 #ifndef SEQUENCE_HPP_INCLUDED
 #define SEQUENCE_HPP_INCLUDED
 
-#include <cstdint>
 #include <string>
+#include <cstdint>
 
-#include "utils.hpp"
-#include "buffer.hpp"
-#include "encoder.hpp"
+#include <utils.hpp>
+#include <buffer.hpp>
+#include <format.hpp>
+#include <encoder.hpp>
 
 /**
  * Holds an enconded sequence. The encoding pattern will used throughout all
  * steps: it saves up to a third of the required space and is easily revertable.
  * @since 0.1.1
  */
-class Sequence : public Buffer<encoder::EncodedBlock>
+class sequence : public encoder::buffer
 {
-    using EncodedBuffer = Buffer<encoder::EncodedBlock>;
+    protected:
+        using underlying_buffer = encoder::buffer;  /// The underlying sequence buffer.
 
     public:
-        Sequence() = default;
-        Sequence(const Sequence&) = default;
-        Sequence(Sequence&&) = default;
-        
-        using EncodedBuffer::Buffer;
+        inline sequence() = default;
+        inline sequence(const sequence&) = default;
+        inline sequence(sequence&&) = default;
 
         /**
          * Initializes a new compressed sequence.
          * @param ptr The pointer to buffer to be encoded.
          * @param size The buffer's size.
          */
-        inline Sequence(const char *ptr, size_t size)
-        :   EncodedBuffer {encoder::encode(ptr, size)}
+        inline sequence(const char *ptr, size_t size)
+        :   underlying_buffer {encoder::encode(ptr, size)}
         {}
 
         /**
          * Instantiates a new sequence.
-         * @param string The string containing this sequence's data.
+         * @param str The string containing this sequence's data.
          */
-        inline Sequence(const std::string& string)
-        :   Sequence {string.data(), string.size()}
+        inline sequence(const std::string& str)
+        :   sequence {str.data(), str.size()}
         {}
 
-        Sequence& operator=(const Sequence&) = default;
-        Sequence& operator=(Sequence&&) = default;
+        using underlying_buffer::buffer;
+
+        inline sequence& operator=(const sequence&) = default;
+        inline sequence& operator=(sequence&&) = default;
 
         /**
-         * Retrieves the element at given offset.
+         * Retrieves the encoded unit at given offset.
          * @param offset The requested offset.
-         * @return The element in the specified offset.
+         * @return The unit in the specified offset.
          */
-        __host__ __device__ inline uint8_t operator[](ptrdiff_t offset) const
+        __host__ __device__ inline encoder::unit operator[](ptrdiff_t offset) const
         {
             return encoder::access(*this, offset);
         }
@@ -64,27 +66,27 @@ class Sequence : public Buffer<encoder::EncodedBlock>
         /**
          * Retrieves an encoded character block from sequence.
          * @param offset The index of the requested block.
-         * @return The requested block.
+         * @return The requested encoded block.
          */
-        __host__ __device__ inline encoder::EncodedBlock getBlock(ptrdiff_t offset) const
+        __host__ __device__ inline encoder::block block(ptrdiff_t offset) const
         {
-            return EncodedBuffer::operator[](offset);
+            return underlying_buffer::operator[](offset);
         }
 
         /**
          * Informs the length of the sequence.
          * @return The sequence's length.
          */
-        __host__ __device__ inline size_t getLength() const
+        __host__ __device__ inline size_t length() const
         {
-            return this->getSize() * encoder::batchSize;
+            return size() * encoder::block_size;
         }
 
         /**
          * Transforms the sequence into a string.
          * @return The sequence representation as a string.
          */
-        inline std::string toString() const
+        __host__ __device__ inline std::string decode() const
         {
             return encoder::decode(*this);
         }
@@ -95,26 +97,27 @@ class Sequence : public Buffer<encoder::EncodedBlock>
  * initialized and will have boundaries checked according to view pointers.
  * @since 0.1.1
  */
-class SequenceView : public BufferSlice<encoder::EncodedBlock>
+class sequence_view : public slice_buffer<encoder::block>
 {
-    using EncodedSlice = BufferSlice<encoder::EncodedBlock>;
+    protected:
+        using underlying_buffer = slice_buffer<encoder::block>; /// The underlying sequence buffer.
 
     public:
-        SequenceView() = default;
-        SequenceView(const SequenceView&) = default;
-        SequenceView(SequenceView&&) = default;
+        inline sequence_view() = default;
+        inline sequence_view(const sequence_view&) = default;
+        inline sequence_view(sequence_view&&) = default;
 
-        using EncodedSlice::BufferSlice;
+        using underlying_buffer::slice_buffer;
 
-        SequenceView& operator=(const SequenceView&) = default;
-        SequenceView& operator=(SequenceView&&) = default;
+        inline sequence_view& operator=(const sequence_view&) = default; 
+        inline sequence_view& operator=(sequence_view&&) = default;
 
-                /**
-         * Retrieves the element at given offset.
+        /**
+         * Retrieves the encoded unit at given offset.
          * @param offset The requested offset.
-         * @return The element in the specified offset.
+         * @return The unit in the specified offset.
          */
-        __host__ __device__ inline uint8_t operator[](ptrdiff_t offset) const
+        __host__ __device__ inline encoder::unit operator[](ptrdiff_t offset) const
         {
             return encoder::access(*this, offset);
         }
@@ -122,30 +125,49 @@ class SequenceView : public BufferSlice<encoder::EncodedBlock>
         /**
          * Retrieves an encoded character block from sequence.
          * @param offset The index of the requested block.
-         * @return The requested block.
+         * @return The requested encoded block.
          */
-        __host__ __device__ inline encoder::EncodedBlock getBlock(ptrdiff_t offset) const
+        __host__ __device__ inline encoder::block block(ptrdiff_t offset) const
         {
-            return EncodedSlice::operator[](offset);
+            return underlying_buffer::operator[](offset);
         }
 
         /**
          * Informs the length of the sequence.
          * @return The sequence's length.
          */
-        __host__ __device__ inline size_t getLength() const
+        __host__ __device__ inline size_t length() const
         {
-            return this->getSize() * encoder::batchSize;
+            return size() * encoder::block_size;
         }
 
         /**
          * Transforms the sequence into a string.
          * @return The sequence representation as a string.
          */
-        inline std::string toString() const
+        __host__ __device__ inline std::string decode() const
         {
             return encoder::decode(*this);
         }
 };
+
+namespace fmt
+{
+    /**
+     * Formats a sequence to be printed.
+     * @since 0.1.1
+     */
+    template <>
+    struct formatter<sequence> : public formatter<encoder::buffer>
+    {};
+
+    /**
+     * Formats a sequence slice to be printed.
+     * @since 0.1.1
+     */
+    template <>
+    struct formatter<sequence_view> : public formatter<encoder::buffer>
+    {};
+}
 
 #endif

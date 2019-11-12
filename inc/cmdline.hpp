@@ -8,11 +8,10 @@
 #ifndef CMDLINE_HPP_INCLUDED
 #define CMDLINE_HPP_INCLUDED
 
-#include <utility>
-#include <cstdint>
-#include <cstdlib>
 #include <string>
 #include <vector>
+#include <cstdlib>
+#include <utility>
 #include <map>
 
 namespace cmdline
@@ -22,97 +21,97 @@ namespace cmdline
      * line. There should be an instance for each option available.
      * @since 0.1.1
      */
-    class Option
+    class option
     {
         protected:
-            std::string sname;              /// The option's short name.
-            std::string lname;              /// The option's long name.
-            bool variadic;                  /// Is the option variadic?
-            bool required;                  /// Is the option required?
+            std::string mshort;     /// The option's short name alternative.
+            std::string mlong;      /// The option's long name alternative.
+            bool mvariadic;         /// Is the option variadic, so it requires a value?
+            bool mrequired;         /// Is the option required for software execution?
 
         public:
-            inline Option() = default;
-            inline Option(const Option&) = default;
-            inline Option(Option&&) noexcept = default;
+            inline option() = default;
+            inline option(const option&) = default;
+            inline option(option&&) noexcept = default;
 
             /**
-             * Builds an option from its names and description.
-             * @param sname The option's short name.
-             * @param lname The option's long name.
+             * Builds a new option instance.
+             * @param nshort The option's short name.
+             * @param nlong The option's long name.
              * @param (ignored) The option's description.
-             * @param flag The option's flags.
+             * @param variadic Does the option require a value?
+             * @param required Is the option required?
              */
-            inline Option
-                (   const std::string& sname
-                ,   const std::string& lname
-                ,   const std::string& //description
+            inline option(
+                    const char *nshort
+                ,   const char *nlong
+                ,   const char * //description
                 ,   const bool variadic = false
-                ,   const bool required = false         )
+                ,   const bool required = false
+                )
                 noexcept
-            :   sname(sname)
-            ,   lname(lname)
-            ,   variadic(variadic)
-            ,   required(required)
+            :   mshort {nshort}
+            ,   mlong {nlong}
+            ,   mvariadic {variadic}
+            ,   mrequired {required}
             {}
 
-            inline Option& operator=(const Option&) = default;
-            inline Option& operator=(Option&&) = default;
+            inline option& operator=(const option&) = default;
+            inline option& operator=(option&&) = default;
 
             /**
-             * Gets the option's short name.
-             * @return The retrieved option short name.
-             */
-            inline const std::string& getSname() const noexcept
-            {
-                return sname;
-            }
-
-            /**
-             * Gets the option's long name.
-             * @return The retrieved option long name.
-             */
-            inline const std::string& getLname() const noexcept
-            {
-                return lname;
-            }
-
-            /**
-             * Checks whether the given string correspond to this option.
-             * @param given The option name to check.
+             * Checks whether the a string correspond to this option.
+             * @param tgt The string to check and match with.
              * @return Is this the requested option?
              */
-            inline bool is(const std::string& given) const noexcept
+            inline bool operator==(const std::string& tgt) const noexcept
             {
-                return given == sname
-                    || given == lname;
-            }
-
-            /**
-             * Checks whether the option is required.
-             * @return Is the option required?
-             */
-            inline bool isRequired() const noexcept
-            {
-                return required;
-            }
-
-            /**
-             * Checks whether the option is variadic.
-             * @return Is the option variadic.
-             */
-            inline bool isVariadic() const noexcept
-            {
-                return variadic;
+                return tgt == mshort || tgt == mlong;
             }
 
             /**
              * Checks whether the option is empty or unknown.
              * @return Is the option unknown?
              */
-            inline bool isUnknown() const noexcept
+            inline bool empty() const noexcept
             {
-                return sname.empty()
-                    && lname.empty();
+                return mshort.empty() && mlong.empty();
+            }
+
+            /**
+             * Checks whether the option is required.
+             * @return Is the option required?
+             */
+            inline bool required() const noexcept
+            {
+                return mrequired;
+            }
+
+            /**
+             * Checks whether the option is variadic.
+             * @return Is the option variadic.
+             */
+            inline bool variadic() const noexcept
+            {
+                return mvariadic;
+            }
+
+            /**
+             * Gets the option's short name.
+             * @return The retrieved option short name.
+             */
+            inline const std::string& shortname() const noexcept
+            {
+                return mshort;
+            }
+
+            /**
+             * Gets the option's long name.
+             * @return The retrieved option long name.
+             */
+            inline const std::string& longname() const noexcept
+            {
+                return mlong;
             }
     };
 
@@ -121,189 +120,98 @@ namespace cmdline
      * be easily retrieved when needed.
      * @since 0.1.1
      */
-    class Parser
+    class parser
     {
         private:
-            std::vector<std::string> required;          /// The list of required options.
-            std::map<std::string, Option> options;      /// The map of available command line options.
+            std::vector<std::string> mrequired;             /// The list of required options.
+            std::map<std::string, option> moptions;         /// The map of available options.
 
         protected:
-            std::string appname;                        /// The name used by the application.
-            std::vector<std::string> positional;        /// The list of positional arguments.
-            std::map<std::string, std::string> values;  /// The map of parsed option arguments values.
+            std::string mappname;                           /// The application's name.
+            std::vector<std::string> mpositional;           /// The list of positional values.
+            std::map<std::string, std::string> mvalues;     /// The map of parsed option values.
 
         public:
-            inline Parser() noexcept = default;
-            inline Parser(const Parser&) = default;
-            inline Parser(Parser&&) = default;
+            inline parser() noexcept = default;
+            inline parser(const parser&) = default;
+            inline parser(parser&&) = default;
 
-            /**
-             * Creates a new parser instance and sets the available options it may parse.
-             * @param options The list of available options.
-             */
-            inline Parser(const std::vector<Option>& options) noexcept
-            {
-                init(options);
-            }
+            parser(const std::vector<option>&) noexcept;
 
-            inline Parser& operator=(const Parser&) = default;
-            inline Parser& operator=(Parser&&) = default;
+            inline parser& operator=(const parser&) = default;
+            inline parser& operator=(parser&&) = default;
+
+            virtual ~parser() noexcept = default;
 
             /**#@+
              * Retrieves the value received by a named argument.
-             * @tparam T The type the argument must be converted to.
-             * @param name The name of the requested argument.
-             * @param fallback The value to be returned if none is found.
+             * @param arg The name of the requested argument.
              * @return The value of requested argument.
              */
-            template <typename T = std::string>
-            inline auto get(const std::string& name, const T& fallback = {}) const noexcept
-            -> typename std::enable_if<!std::is_arithmetic<T>::value, T>::type
-            {                
-                static_assert(std::is_convertible<std::string, T>::value, "Cannot convert to requested type");
-
-                const auto& pair = values.find(name);
-
-                return pair != values.end()
-                    ? static_cast<T>(pair->second)
-                    : fallback;
+            inline const std::string& get(const std::string& arg) const noexcept
+            {
+                return mvalues.find(arg)->second;
             }
 
-            template <typename T>
-            inline auto get(const std::string& name, const T& fallback = {}) const noexcept
-            -> typename std::enable_if<std::is_integral<T>::value && std::is_signed<T>::value, T>::type
+            inline const std::string& get(size_t arg) const noexcept
             {
-                return has(name)
-                    ? static_cast<T>(strtoll(get(name).c_str(), nullptr, 0))
-                    : fallback;
-            }
-
-            template <typename T>
-            inline auto get(const std::string& name, const T& fallback = {}) const noexcept
-            -> typename std::enable_if<std::is_integral<T>::value && std::is_unsigned<T>::value, T>::type
-            {
-                return has(name)
-                    ? static_cast<T>(strtoull(get(name).c_str(), nullptr, 0))
-                    : fallback;
-            }
-
-            template <typename T>
-            inline auto get(const std::string& name, const T& fallback = {}) const noexcept
-            -> typename std::enable_if<std::is_floating_point<T>::value, T>::type
-            {
-                return has(name)
-                    ? static_cast<T>(strtold(get(name).c_str(), nullptr))
-                    : fallback;
+                return mpositional[arg];
             }
             /**#@-*/
+
+            /**#@+
+             * Checks whether an argument has been parsed.
+             * @param arg The name of the requested argument.
+             * @return Does the argument exist?
+             */
+            inline bool has(const std::string& arg) const noexcept
+            {
+                return mvalues.find(arg) != mvalues.end();
+            }
+
+            inline bool has(size_t arg) const noexcept
+            {
+                return arg < mpositional.size();
+            }
+            /**#@-*/
+
+            /**
+             * Informs the number of positional arguments.
+             * @return The number of positional arguments.
+             */
+            inline size_t count() const noexcept
+            {
+                return mpositional.size();
+            }
 
             /**
              * Informs the name used to start the application.
              * @return The application name used.
              */
-            inline const std::string& getAppname() const noexcept
+            inline const std::string& appname() const noexcept
             {
-                return appname;
+                return mappname;
             }
 
-            /**
-             * Informs the number of parsed arguments.
-             * @return The number of parsed arguments.
-             */
-            inline size_t getCount() const noexcept
-            {
-                return values.size();
-            }
-
-            /**
-             * Returns the whole list of positional arguments.
-             * @return The list of parsed positional arguments.
-             */
-            inline const std::vector<std::string>& getPositional() const noexcept
-            {
-                return positional;
-            }
-
-            /**
-             * Checks whether an argument exists.
-             * @param argname The name of the requested argument.
-             * @return Does the argument exist?
-             */
-            inline bool has(const std::string& argname) const noexcept
-            {
-                return values.find(argname) != values.end();
-            }
-
-            void init(const std::vector<Option>&);
-            void parse(int, char **);
+            virtual void parse(int, char **);
 
         protected:
-            const Option& find(const std::string&) const noexcept;
+            const option& find(const std::string&) const noexcept;
     };
 
     /**
-     * The global command line parser instance.
+     * The global command line parser singleton instance.
      * @since 0.1.1
      */
-    extern Parser parser;
-
-    /**
-     * Retrieves the value received by a named argument.
-     * @tparam T The type the argument must be converted to.
-     * @param name The name of the requested argument.
-     * @param fallback The value to be returned if none is found.
-     * @return The value of requested argument.
-     */
-    template <typename T>
-    inline T get(const std::string& name, const T& fallback = {}) noexcept
-    {
-        return parser.get<T>(name, fallback);
-    }
-
-    /**
-     * Informs the name used to start the application.
-     * @return The application name used.
-     */
-    inline const std::string& getAppname() noexcept
-    {
-        return parser.getAppname();
-    }
-
-    /**
-     * Informs the number of parsed arguments.
-     * @return The number of parsed arguments.
-     */
-    inline size_t getCount() noexcept
-    {
-        return parser.getCount();
-    }
-
-    /**
-     * Returns the whole list of positional arguments.
-     * @return The list of parsed positional arguments.
-     */
-    inline const std::vector<std::string>& getPositional() noexcept
-    {
-        return parser.getPositional();
-    }
-
-    /**
-     * Checks whether an argument exists.
-     * @param argname The name of the requested argument.
-     * @return Does the argument exist?
-     */
-    inline bool has(const std::string& argname) noexcept
-    {
-        return parser.has(argname);
-    }
+    extern parser singleton;
 
     /**
      * Initializes the command line arguments.
-     * @param config The options available.
+     * @param options The options available.
      */
-    inline void init(const std::vector<Option>& options)
+    inline void init(const std::vector<option>& options)
     {
-        parser.init(options);
+        singleton = parser {options};
     }
 
     /**
@@ -313,8 +221,72 @@ namespace cmdline
      */
     inline void parse(int argc, char **argv)
     {
-        parser.parse(argc, argv);
+        singleton.parse(argc, argv);
     }
-};
+
+    /**
+     * Informs the number of positional arguments.
+     * @return The total number of positional arguments.
+     */
+    inline size_t count() noexcept
+    {
+        return singleton.count();
+    }
+
+    /**
+     * Informs the name used to start the application.
+     * @return The application's name used.
+     */
+    inline const std::string& appname() noexcept
+    {
+        return singleton.appname();
+    }
+
+    /**
+     * Checks whether an argument exists.
+     * @param arg The name of the requested argument.
+     * @return Does the argument exist?
+     */
+    template <typename P>
+    inline bool has(const P& arg) noexcept
+    {
+        return singleton.has(arg);
+    }
+
+    /**#@+
+     * Retrieves the value received by a named argument.
+     * @tparam T The type the argument must be converted to.
+     * @param arg The name of the requested argument.
+     * @param fallback The value to be returned if none is found.
+     * @return The value of requested argument.
+     */
+    template <typename T = std::string, typename P>
+    inline auto get(const P& arg, const T& fallback = {}) noexcept
+    -> typename std::enable_if<std::is_convertible<std::string, T>::value, T>::type
+    {
+        return singleton.has(arg)
+            ? static_cast<T>(singleton.get(arg))
+            : fallback;
+    }
+
+    template <typename T, typename P>
+    inline auto get(const P& arg, const T& fallback = {}) noexcept
+    -> typename std::enable_if<std::is_integral<T>::value, T>::type
+    {
+        return singleton.has(arg)
+            ? static_cast<T>(strtoull(singleton.get(arg).c_str(), nullptr, 0))
+            : fallback;
+    }
+
+    template <typename T, typename P>
+    inline auto get(const P& arg, const T& fallback = {}) noexcept
+    -> typename std::enable_if<std::is_floating_point<T>::value, T>::type
+    {
+        return singleton.has(arg)
+            ? static_cast<T>(strtold(singleton.get(arg).c_str(), nullptr))
+            : fallback;
+    }
+    /**#@-*/
+}
 
 #endif

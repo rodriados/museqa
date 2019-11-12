@@ -6,38 +6,38 @@
 #include <cuda.h>
 #include <string>
 
-#include "cuda.cuh"
+#include <cuda.cuh>
 
 /**
- * Obtain a brief textual explanation for a specified kind of CUDA Runtime API status
- * or error code.
- * @param status The error status obtained.
+ * Obtain a brief textual explanation for a specified kind of CUDA Runtime API
+ * status or error code.
+ * @param code The error code to be described.
  * @return The error description.
  */
-std::string cuda::status::describe(cuda::Status status) noexcept
+std::string cuda::status::describe(cuda::status_code code) noexcept
 {
-    return cudaGetErrorString(static_cast<cudaError_t>(status));
+    return cudaGetErrorString(static_cast<cudaError_t>(code));
 }
 
 /**
  * Gets the number of devices available.
  * @return The number of devices or runtime error.
  */
-int cuda::device::getCount()
+auto cuda::device::count() -> size_t
 {
     int devices;
-    cuda::call(cudaGetDeviceCount(&devices));
-    return devices;
+    cuda::check(cudaGetDeviceCount(&devices));
+    return static_cast<size_t>(devices);
 }
 
 /**
  * Gets the current device id.
  * @return The device id or runtime error.
  */
-cuda::Device cuda::device::getCurrent()
+auto cuda::device::current() -> cuda::device::id
 {
-    cuda::Device device;
-    cuda::call(cudaGetDevice(&device));
+    int device;
+    cuda::check(cudaGetDevice(&device));
     return device;
 }
 
@@ -45,9 +45,9 @@ cuda::Device cuda::device::getCurrent()
  * Sets the current device to given id.
  * @param device The device to be used.
  */
-void cuda::device::setCurrent(const cuda::Device& device)
+auto cuda::device::select(const cuda::device::id& device) -> void
 {
-    cuda::call(cudaSetDevice(device));
+    cuda::check(cudaSetDevice(device));
 }
 
 /**
@@ -55,9 +55,9 @@ void cuda::device::setCurrent(const cuda::Device& device)
  * @param device The device of which properties will be retrieved.
  * @return The device properties.
  */
-cuda::device::Properties cuda::device::getProperties(const cuda::Device& device)
+auto cuda::device::properties(const cuda::device::id& device) -> cuda::device::props
 {
-    cuda::device::Properties props;
-    cuda::call(cudaGetDeviceProperties(&props, device));
+    cuda::device::props props;
+    cuda::check(cudaGetDeviceProperties(&props, device));
     return props;
 }

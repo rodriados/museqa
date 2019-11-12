@@ -8,54 +8,50 @@
 #ifndef EXCEPTION_HPP_INCLUDED
 #define EXCEPTION_HPP_INCLUDED
 
-#include <cstdio>
 #include <string>
-#include <cstring>
+#include <utility>
 #include <exception>
 
-#include "msa.hpp"
-#include "utils.hpp"
-
-#if defined(__GNUC__)
-  #pragma GCC diagnostic push
-  #pragma GCC diagnostic ignored "-Wformat-security"
-#endif
+#include <utils.hpp>
+#include <format.hpp>
 
 /**
  * Holds an error message so it can be propagated through the code.
  * @since 0.1.1
  */
-class Exception : public std::exception
+class exception : public std::exception
 {
     private:
-        const std::string msg;      /// The exception message.
+        const std::string mmsg;     /// The exception's informative message.
 
     public:
+        inline exception() = delete;
+        inline exception(const exception&) = default;
+        inline exception(exception&&) = default;
+
         /**
          * Builds a new exception instance.
-         * @param msg The exception message.
+         * @param msg The exception's informative message.
          */
-        inline explicit Exception(const std::string& msg) noexcept
-        :   msg {msg}
+        inline explicit exception(const std::string& msg) noexcept
+        :   mmsg {msg}
         {}
 
         /**
          * Builds a new exception instance.
+         * @tparam T The message argument types.
          * @param fmtstr The message formating string.
-         * @param args The exception message's parts.
+         * @param args The exception message's format arguments.
          */
         template <typename ...T>
-        inline explicit Exception(const char *fmtstr, T&&... args) noexcept
-        :   Exception {fmtmsg(fmtstr, args...)}
+        inline explicit exception(const std::string& fmtstr, T&&... args) noexcept
+        :   exception {fmt::format(fmtstr, args...)}
         {}
 
-        Exception(const Exception&) = default;
-        Exception(Exception&&) = default;
+        virtual ~exception() noexcept = default;
 
-        virtual ~Exception() noexcept = default;
-
-        Exception& operator=(const Exception&) = default;
-        Exception& operator=(Exception&&) = default;
+        inline exception& operator=(const exception&) = default;
+        inline exception& operator=(exception&&) = default;
 
         /**
          * Returns the exception's explanatory string.
@@ -63,50 +59,33 @@ class Exception : public std::exception
          */
         virtual const char *what() const noexcept
         {
-            return msg.c_str();
-        }
-
-    private:
-        /**
-         * Formats the exception string and returns it as a string.
-         * @param fmtstr The exception message formatting string.
-         * @param args The exception message's parts.
-         * @return The formatted message.
-         */
-        template <typename ...T>
-        inline static std::string fmtmsg(const char *fmtstr, T&&... args) noexcept
-        {
-            char buffer[1024 + 50 * sizeof...(T)];
-            sizeof...(T)
-                ? static_cast<void>(snprintf(buffer, sizeof(buffer), fmtstr, args...))
-                : static_cast<void>(strcpy(buffer, fmtstr));
-            return {buffer};
+            return mmsg.c_str();
         }
 };
 
 /**
  * Checks whether given condition is met, and throws an exception otherwise.
  * This function acts just like an assertion, but throwing our own exception.
+ * @tparam E The exception type to be raised in case of error.
+ * @tparam T The format string's parameter types.
  * @param condition The condition that must be evaluated as true.
  * @param fmtstr The error format to be sent to an eventual thrown exception.
  * @param args The formatting arguments.
  */
-template <typename ...T>
-__host__ __device__ inline void enforce(bool condition, const char *fmtstr, T&&... args)
+template <typename E = exception, typename ...T>
+__host__ __device__ inline void enforce(bool condition, T&&... args)
 {
-#ifndef msa_compile_cuda
-  #ifdef msa_gcc
-    if(__builtin_expect(!condition, 0))
-        throw Exception(fmtstr, args...);
-  #else
-    if(!condition)
-        throw Exception(fmtstr, args...);
-  #endif
-#endif
-}
+    static_assert(std::is_base_of<exception, E>::value, "only exception types are throwable");
 
-#if defined(__GNUC__)
-  #pragma GCC diagnostic pop
-#endif
+    #if !defined(onlycython) && defined(onlyhost)
+        #if defined(__GNUC__)
+            if(__builtin_expect(!condition, 0))
+                throw E {std::forward<decltype(args)>(args)...};
+        #else
+            if(!condition)
+                throw E {std::forward<decltype(args)>(args)...};
+        #endif
+    #endif
+}
 
 #endif

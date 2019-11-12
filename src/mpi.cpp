@@ -3,36 +3,52 @@
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018-2019 Rodrigo Siqueira
  */
+#include <map>
 #include <vector>
 
-#include "mpi.hpp"
-#include "node.hpp"
-
-/**#@+
- * Node identification values in cluster.
- * @see mpi::init
- */
-uint16_t node::rank = 0;
-uint16_t node::size = 0;
-/**#@-*/
+#include <mpi.hpp>
+#include <node.hpp>
 
 /**
  * The default communicator instance.
  * @see mpi::Communicator
  */
-mpi::Communicator mpi::world;
+mpi::communicator::id mpi::world;
 
 /**
  * Keeps track of all generated datatypes throughout execution.
  * @since 0.1.1
  */
-std::vector<MPI_Datatype> mpi::datatype::dtypes;
+std::vector<mpi::datatype::id> mpi::datatype::ref_type;
 
 /**
  * Keeps track of all user defined operators created during execution.
  * @since 0.1.1
  */
-std::vector<MPI_Op> mpi::op::udefops;
+std::vector<mpi::op::id> mpi::op::ref_op;
+
+/**
+ * Maps a datatype to an user-created operator. This is necessary because
+ * it is almost technically impossible to inject the operator inside the
+ * wrapper without an extremelly convoluted mechanism.
+ * @since 0.1.1
+ */
+std::map<mpi::op::id, void *> mpi::op::op_list;
+
+/**
+ * Informs the currently active operator. This will be useful for injecting
+ * the correct operator inside the wrapper.
+ * @since 0.1.1
+ */
+mpi::op::id mpi::op::active;
+
+/**#@+
+ * Node identification values in cluster.
+ * @see mpi::init
+ */
+node::id& node::rank = mpi::world.rank;
+uint32_t& node::count = mpi::world.size;
+/**#@-*/
 
 /**
  * Initializes the cluster's communication and identifies the node in the cluster.
@@ -41,11 +57,8 @@ std::vector<MPI_Op> mpi::op::udefops;
  */
 void mpi::init(int& argc, char **& argv)
 {
-    mpi::call(MPI_Init(&argc, &argv));
+    mpi::check(MPI_Init(&argc, &argv));
     mpi::world = mpi::communicator::build(MPI_COMM_WORLD);
-    
-    node::rank = mpi::world.rank;
-    node::size = mpi::world.size;
 }
 
 /**
@@ -54,11 +67,11 @@ void mpi::init(int& argc, char **& argv)
  */
 void mpi::finalize()
 {
-    for(MPI_Datatype& dtype : mpi::datatype::dtypes)
-        mpi::call(MPI_Type_free(&dtype));
+    for(mpi::datatype::id& typeref : mpi::datatype::ref_type)
+        mpi::check(MPI_Type_free(&typeref));
  
-    for(MPI_Op& op : mpi::op::udefops)
-        mpi::call(MPI_Op_free(&op));
+    for(mpi::op::id& opref : mpi::op::ref_op)
+        mpi::check(MPI_Op_free(&opref));
  
-    mpi::call(MPI_Finalize());
+    MPI_Finalize();
 }

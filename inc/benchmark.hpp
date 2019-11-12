@@ -12,91 +12,101 @@
 #include <chrono>
 #include <utility>
 
-#include "utils.hpp"
-
 namespace benchmark
 {
     /**
-     * The internal clock type used for timing and calculating time intervals.
-     * @since 0.1.1
-     */
-    using Timekeeper = typename std::conditional<
-            std::chrono::high_resolution_clock::is_steady
-        ,   std::chrono::high_resolution_clock
-        ,   std::chrono::steady_clock
-        >::type;
-
-    /**
      * Represents a time duration in a given time frame.
+     * @tparam T The type to represent duration with.
+     * @tparam R The time ratio in relation to seconds.
      * @since 0.1.1
      */
     template <typename T, typename R = std::ratio<1>>
-    struct Duration : public std::chrono::duration<T, R>
+    struct duration : public std::chrono::duration<T, R>
     {
+        using ratio = R;        /// The time ratio in relation to seconds.
+        using value_type = T;   /// The scalar type to represent duration.
+        
         using std::chrono::duration<T, R>::duration;
 
         /**
          * Converts a duration to an printable type.
          * @return The converted duration.
          */
-        inline operator T() const noexcept
+        inline operator value_type() const noexcept
         {
             return this->count();
         }
     };
 
     /**
-     * Represents a point in time.
+     * The internal clock type used for timing and calculating time intervals.
      * @since 0.1.1
      */
-    using TimePoint = std::chrono::time_point<Timekeeper, Duration<double>>;
-
-    /**#@+
-     * Types responsible for defining different time durations. These are
-     * directly convertible to and from the original Duration type.
-     * @see benchmark::Duration
-     * @since 0.1.1
-     */
-    using Milliseconds  = Duration<double, std::milli>;
-    using Seconds       = Duration<double, std::ratio<1>>;
-    using Minutes       = Duration<double, std::ratio<60>>;
-    using Hours         = Duration<double, std::ratio<3600>>;
-    /**#@-*/
+    using ticker = typename std::conditional<
+            std::chrono::high_resolution_clock::is_steady
+        ,   std::chrono::high_resolution_clock
+        ,   std::chrono::steady_clock
+        >::type;
 
     /**
-     * Retrieves a time point representing the current point in time.
+     * Represents a point in time.
+     * @tparam T The scalar type to which the time point must be represented by.
+     * @since 0.1.1
+     */
+    template <typename T>
+    using time_point = std::chrono::time_point<ticker, duration<T>>;
+
+    /**
+     * Retrieves the current real-life time point.
+     * @tparam T The scalar type to which the time point must be represented by.
      * @return The current point in time.
      */
-    inline TimePoint now() noexcept
+    template <typename T = double>
+    inline auto now() noexcept -> time_point<T>
     {
-        return Timekeeper::now();
+        return ticker::now();
     }
 
     /**
      * Retrieves the time elapsed since given time point.
+     * @tparam T The scalar type to which the duration must be represented by.
      * @param point The initial duration start point.
      * @return The time elapsed since given point.
      */
-    inline Duration<double> elapsed(const TimePoint& point) noexcept
+    template <typename T>
+    inline auto elapsed(const time_point<T>& point) noexcept -> duration<T>
     {
-        return {Timekeeper::now() - point};
+        return ticker::now() - point;
     }
 
-    /**
-     * Benchmarks the execution of a given function.
-     * @tparam F The given function type.
-     * @tparam P The lamba function parameter types.
-     * @param lambda The function to be executed.
-     * @param params The function's parameters.
-     * @return The time spent by function's execution.
+    /**#@+
+     * Benchmarks the execution of a given functor.
+     * @tparam R The functor's return type.
+     * @tparam T The scalar type to which the duration must be represented by.
+     * @tparam F The given functor type.
+     * @tparam P The functor's parameter types.
+     * @param ret The functor's execution return value.
+     * @param lambda The functor to be executed.
+     * @param params The functor's parameters.
+     * @return The time spent by functor's execution.
      */
-    template <typename F, typename ...P>
-    inline Duration<double> run(F lambda, P&&... params)
+    template <typename T = double, typename F, typename ...P>
+    inline auto run(F&& lambda, P&&... params) -> duration<T>
     {
-        const auto start = now();
-        Functor<void(P...)> {lambda}(std::forward<decltype(params)>(params)...);
+        const time_point<T> start = now<T>();
+        lambda(std::forward<decltype(params)>(params)...);
         return elapsed(start);
     }
-};
+
+    template <typename R, typename T = double, typename F, typename ...P>
+    inline auto run(R& ret, F&& lambda, P&&... params)
+    -> typename std::enable_if<std::is_copy_assignable<R>::value, duration<T>>::type
+    {
+        const time_point<T> start = now<T>();
+        ret = lambda(std::forward<decltype(params)>(params)...);
+        return elapsed(start);
+    }
+    /**#@-*/
+}
 
 #endif

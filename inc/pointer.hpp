@@ -12,234 +12,157 @@
 #include <cstddef>
 #include <utility>
 
-#include "utils.hpp"
+#include <utils.hpp>
+#include <allocatr.hpp>
 
-/**
- * Type of function used for freeing pointers.
- * @tparam T The pointer type.
- * @since 0.1.1
- */
-template <typename T>
-using Deleter = Functor<void(Pure<T> *)>;
-
-namespace pointer
+namespace internal
 {
-    /**
-     * The function for pointer deletion.
-     * @tparam T The pointer type.
-     * @param ptr The pointer to be deleted.
-     */
-    template <typename T>
-    inline auto deleter(Pure<T> *ptr) -> typename std::enable_if<!std::is_array<T>::value, void>::type
+    namespace ptr
     {
-        delete ptr;
-    }
-
-    /**
-     * The function for array pointer deletion.
-     * @tparam T The pointer type.
-     * @param ptr The array pointer to be deleted.
-     */
-    template <typename T>
-    inline auto deleter(Pure<T> *ptr) -> typename std::enable_if<std::is_array<T>::value, void>::type
-    {
-        delete[] ptr;
-    }
-};
-
-/**
- * Carries a raw pointer, possibly with its deleter function.
- * @tparam T The pointer type.
- * @since 0.1.1
- */
-template <typename T>
-struct RawPointer
-{
-    static_assert(!std::is_reference<T>::value, "Cannot create pointer to a reference.");
-    static_assert(!std::is_function<T>::value, "Cannot create pointer to a function.");
-    
-    Pure<T> *ptr = nullptr;                         /// The pointer itself.
-    Deleter<T> delfunc = pointer::deleter<T>;       /// The pointer deleter function.
-
-    inline constexpr RawPointer() noexcept = default;
-    inline constexpr RawPointer(const RawPointer&) noexcept = default;
-    inline constexpr RawPointer(RawPointer&&) noexcept = default;
-
-    /**
-     * Initializes a new pointer storage object.
-     * @param ptr The raw pointer to be held.
-     * @param delfunc The deleter function for pointer.
-     */
-    inline constexpr RawPointer(Pure<T> *ptr, Deleter<T> delfunc = nullptr) noexcept
-    :   ptr {ptr}
-    ,   delfunc {!delfunc.isEmpty() ? delfunc : pointer::deleter<T>}
-    {}
-
-    inline RawPointer& operator=(const RawPointer&) noexcept = default;
-    inline RawPointer& operator=(RawPointer&&) noexcept = default;
-
-    /**
-     * Converts to universal pointer type.
-     * @return The pointer converted to universal type.
-     */
-    inline constexpr operator Pure<T> *() const noexcept
-    {
-        return ptr;
-    }
-};
-
-namespace pointer
-{
-    /**
-     * Counts the number of references of a given pointer.
-     * @tparam T The pointer type.
-     * @since 0.1.1
-     */
-    template <typename T>
-    struct MetaPointer : public RawPointer<T>
-    {
-        size_t count = 0;               /// The number of existing references to pointer.
-
         /**
-         * Initializes a new pointer counter.
-         * @param ptr The raw pointer to be held.
-         * @param delfunc The deleter function for pointer.
+         * Keeps track of the number of references of a given pointer.
+         * @tparam T The pointer type.
+         * @since 0.1.1
          */
-        inline MetaPointer(Pure<T> *ptr, Deleter<T> delfunc) noexcept
-        :   RawPointer<T> {ptr, delfunc}
-        ,   count {1}
-        {}
-
-        /**
-         * Deletes the raw pointer by calling its deleter function.
-         * @see MetaPointer::MetaPointer
-         */
-        inline ~MetaPointer()
+        template <typename T>
+        struct counter
         {
-            (this->delfunc)(this->ptr);
+            using element_type = pure<T>;           /// The type of element represented by the pointer.
+            using allocator_type = ::allocatr<T>;   /// The pointer's allocator type.
+
+            size_t refcount = 0;                    /// The number of current pointer references.
+            element_type *rawptr = nullptr;         /// The raw target pointer.
+            const allocator_type allocr = nullptr;  /// The pointer's allocator.
+
+            /**
+             * Initializes a new pointer counter.
+             * @param ptr The raw pointer to be held.
+             * @param alloc The pointer's allocator.
+             * @see internal::ptr::acquire
+             */
+            inline counter(element_type *ptr, const allocator_type& alloc) noexcept
+            :   refcount {1}
+            ,   rawptr {ptr}
+            ,   allocr {alloc}
+            {}
+
+            /**
+             * Deletes and frees the raw pointer by calling its deallocator.
+             * @see internal::ptr::release
+             */
+            inline ~counter()
+            {
+                allocr.delocate(rawptr);
+            }
+        };
+
+        /**
+         * Creates a new pointer context from given arguments.
+         * @tparam T The pointer type.
+         * @param ptr The pointer to be put into context.
+         * @param alloc The pointer's allocator.
+         * @return The new pointer's counter instance.
+         */
+        template <typename T>
+        inline counter<T> *acquire(pure<T> *ptr, const ::allocatr<T>& alloc) noexcept
+        {
+            return new counter<T> {ptr, alloc};
         }
-    };
 
-    /**
-     * Creates a new pointer context from given arguments.
-     * @tparam T The pointer type.
-     * @param ptr The pointer to be put into context.
-     * @param delfunc The delete functor.
-     * @return New instance.
-     */
-    template <typename T>
-    inline MetaPointer<T> *acquire(Pure<T> *ptr, Deleter<T> delfunc = nullptr) noexcept
-    {
-        return new MetaPointer<T> {ptr, delfunc};
-    }
+        /**
+         * Acquires access to an already existing pointer.
+         * @tparam T The pointer type.
+         * @param meta The metadata of pointer to be acquired.
+         * @return The metadata acquired pointer.
+         */
+        template <typename T>
+        __host__ __device__ inline counter<T> *acquire(counter<T> *meta) noexcept
+        {
+            meta && ++meta->refcount;
+            return meta;
+        }
 
-    /**
-     * Acquires access to an already existing pointer.
-     * @tparam T The pointer type.
-     * @param ptr The pointer to be acquired.
-     * @return The acquired pointer.
-     */
-    template <typename T>
-    __host__ __device__ inline MetaPointer<T> *acquire(MetaPointer<T> *ptr) noexcept
-    {
-        ptr && ++ptr->count;
-        return ptr;
+        /**
+         * Releases access to pointer, and deletes it if so needed.
+         * @tparam T The pointer type.
+         * @param meta The metadata of pointer to be released.
+         * @see internal::ptr::acquire
+         */
+        template <typename T>
+        __host__ __device__ inline void release(counter<T> *meta)
+        {
+            #ifdef onlyhost
+                if(meta && --meta->refcount <= 0)
+                    delete meta;
+            #endif
+        }
     }
-
-    /**
-     * Releases access to pointer, and deletes it if needed.
-     * @tparam T The pointer type.
-     * @param ptr The pointer to be released.
-     * @see pointer::acquire
-     */
-    template <typename T>
-    __host__ __device__ inline void release(MetaPointer<T> *ptr)
-    {
-#ifndef msa_compile_cuda
-        if(ptr && --ptr->count <= 0)
-            delete ptr;
-#endif
-    }
-};
+}
 
 /**
- * The base of a smart pointer. This class can be used to represent a pointer that is
- * automatically deleted when all references to it have been destroyed.
+ * Implements a smart pointer. This class can be used to represent a pointer that
+ * is managed and deleted automatically when all references to it have been destroyed.
  * @tparam T The type of pointer to be held.
  * @since 0.1.1
  */
 template <typename T>
-class BasePointer
+class pointer
 {
-    static_assert(!std::is_reference<T>::value, "Cannot create pointer to a reference.");
-    static_assert(!std::is_function<T>::value, "Cannot create pointer to a function.");
-
-    protected:
-        pointer::MetaPointer<T> *meta = nullptr;    /// The pointer metadata.
-        Pure<T> *ptr = nullptr;                     /// The encapsulated pointer.
+    static_assert(!std::is_reference<T>::value, "cannot create pointer to a reference");
+    static_assert(!std::is_function<T>::value, "cannot create pointer to a function");
 
     public:
-        __host__ __device__ inline BasePointer() noexcept = default;
+        using element_type = pure<T>;       /// The type of element represented by the pointer.
+        using allocator_type = allocatr<T>; /// The pointer allocator type.
 
-#ifndef msa_compile_cuda
+    protected:
+        element_type *mptr = nullptr;                   /// The encapsulated pointer.
+        internal::ptr::counter<T> *meta = nullptr;     /// The pointer's metadata.
+
+    public:
+        __host__ __device__ constexpr inline pointer() noexcept = default;
+
         /**
          * Builds a new instance from a raw pointer.
          * @param ptr The pointer to be encapsulated.
-         * @param delfunc The delete functor.
          */
-        inline BasePointer(Pure<T> *ptr, Deleter<T> delfunc = nullptr) noexcept
-        :   meta {pointer::acquire<T>(ptr, delfunc)}
-        ,   ptr {ptr}
+        inline pointer(element_type *ptr) noexcept
+        :   pointer {ptr, internal::ptr::acquire(ptr, allocator_type {})}
         {}
-#else
+
         /**
-         * Builds a new instance from a device pointer. This pointer is not, in
-         * any manner, owned by the instance. This is just so that a device pointer
-         * can successfully populate an object property securely.
-         * @param ptr The device pointer to be encapsulated.
+         * Builds a new instance from a raw pointer.
+         * @param ptr The pointer to be encapsulated.
+         * @param alloc The allocator of given pointer.
          */
-        __device__ inline BasePointer(Pure<T> *ptr, Deleter<T> = nullptr) noexcept
-        :   ptr {ptr}
+        inline pointer(element_type *ptr, const allocator_type& alloc) noexcept
+        :   pointer {ptr, internal::ptr::acquire(ptr, alloc)}
         {}
-#endif
 
         /**
          * Gets reference to an already existing pointer.
          * @param other The reference to be acquired.
          */
-        __host__ __device__ inline BasePointer(const BasePointer& other) noexcept
-        :   meta {pointer::acquire(other.meta)}
-        ,   ptr {other.ptr}
+        __host__ __device__ inline pointer(const pointer& other) noexcept
+        :   pointer {other.mptr, internal::ptr::acquire(other.meta)}
         {}
 
         /**
          * Acquires a moved reference to an already existing pointer.
          * @param other The reference to be moved.
          */
-        __host__ __device__ inline BasePointer(BasePointer&& other) noexcept
-        :   meta {other.meta}
-        ,   ptr {other.ptr}
+        __host__ __device__ inline pointer(pointer&& other) noexcept
         {
-            other.reset();
+            operator=(std::forward<decltype(other)>(other));
         }
 
         /**
-         * Builds a new instance from a raw pointer instance.
-         * @tparam U The given raw pointer type.
-         * @param raw The raw pointer object.
-         */
-        template <typename U = T>
-        inline BasePointer(const RawPointer<U>& raw) noexcept
-        :   BasePointer {raw.ptr, raw.delfunc}
-        {}
-
-        /**
          * Releases the acquired pointer reference.
-         * @see BasePointer::BasePointer
+         * @see pointer::pointer
          */
-        __host__ __device__ inline ~BasePointer()
+        __host__ __device__ inline ~pointer()
         {
-            pointer::release(meta);
+            internal::ptr::release(meta);
         }
 
         /**
@@ -247,11 +170,11 @@ class BasePointer
          * @param other The reference to be acquired.
          * @return This pointer object.
          */
-        __host__ __device__ inline BasePointer& operator=(const BasePointer& other)
+        __host__ __device__ inline pointer& operator=(const pointer& other)
         {
-            pointer::release(meta);
-            meta = pointer::acquire(other.meta);
-            ptr = other.ptr;
+            internal::ptr::release(meta);
+            meta = internal::ptr::acquire(other.meta);
+            mptr = other.mptr;
             return *this;
         }
 
@@ -260,11 +183,9 @@ class BasePointer
          * @param other The reference to be acquired.
          * @return This pointer object.
          */
-        __host__ __device__ inline BasePointer& operator=(BasePointer&& other)
+        __host__ __device__ inline pointer& operator=(pointer&& other)
         {
-            pointer::release(meta);
-            meta = other.meta;
-            ptr = other.ptr;
+            other.swap(*this);
             other.reset();
             return *this;
         }
@@ -273,54 +194,76 @@ class BasePointer
          * Dereferences the pointer.
          * @return The pointed object.
          */
-        __host__ __device__ inline Pure<T>& operator*() noexcept
+        __host__ __device__ inline element_type& operator*() noexcept
         {
-            return *ptr;
+            return *mptr;
         }
 
         /**
          * Dereferences the constant pointer.
          * @return The constant pointed object.
          */
-        __host__ __device__ inline const Pure<T>& operator*() const noexcept
+        __host__ __device__ inline const element_type& operator*() const noexcept
         {
-            return *ptr;
+            return *mptr;
         }
 
         /**
          * Gives access to the raw pointer.
          * @return The raw pointer.
          */
-        __host__ __device__ inline Pure<T> *operator&() noexcept
+        __host__ __device__ inline element_type *operator&() noexcept
         {
-            return ptr;
+            return mptr;
         }
 
         /**
          * Gives access to the raw constant pointer.
          * @return The raw constant pointer.
          */
-        __host__ __device__ inline const Pure<T> *operator&() const noexcept
+        __host__ __device__ inline const element_type *operator&() const noexcept
         {
-            return ptr;
+            return mptr;
         }
 
         /**
          * Gives access to raw pointer using the dereference operator.
          * @return The raw pointer.
          */
-        __host__ __device__ inline Pure<T> *operator->() noexcept
+        __host__ __device__ inline element_type *operator->() noexcept
         {
-            return ptr;
+            return mptr;
         }
 
         /**
          * Gives access to raw constant pointer using the dereference operator.
          * @return The raw constant pointer.
          */
-        __host__ __device__ inline const Pure<T> *operator->() const noexcept
+        __host__ __device__ inline const element_type *operator->() const noexcept
         {
-            return ptr;
+            return mptr;
+        }
+
+        /**
+         * Gives access to an object in an array pointer offset.
+         * @param offset The offset to be accessed.
+         * @return The requested object instance.
+         */
+        __host__ __device__ inline element_type& operator[](ptrdiff_t offset) noexcept
+        {
+            static_assert(!std::is_same<element_type, T>::value, "only array pointers have valid offsets");
+            return mptr[offset];
+        }
+
+        /**
+         * Gives access to an constant object in an array pointer offset.
+         * @param offset The offset to be accessed.
+         * @return The requested constant object instance.
+         */
+        __host__ __device__ inline const element_type& operator[](ptrdiff_t offset) const noexcept
+        {
+            static_assert(!std::is_same<element_type, T>::value, "only array pointers hava valid offsets");
+            return mptr[offset];
         }
 
         /**
@@ -329,116 +272,34 @@ class BasePointer
          */
         __host__ __device__ inline operator bool() const noexcept
         {
-            return ptr != nullptr;
+            return (mptr != nullptr);
+        }
+
+        /**
+         * Converts to raw pointer type.
+         * @return The pointer converted to raw type.
+         */
+        __host__ __device__ inline operator element_type *() noexcept
+        {
+            return mptr;
+        }
+
+        /**
+         * Converts to raw constant pointer type.
+         * @return The constant pointer converted to raw type.
+         */
+        __host__ __device__ inline operator const element_type *() const noexcept
+        {
+            return mptr;
         }
 
         /**
          * Gives access to raw pointer.
          * @return The raw pointer.
          */
-        __host__ __device__ inline const Pure<T> *get() const noexcept
+        __host__ __device__ inline const element_type *get() const noexcept
         {
-            return ptr;
-        }
-
-        /**
-         * Gives access to the pointer deleter.
-         * @return The pointer deleter.
-         */
-        inline const Deleter<T> getDeleter() const noexcept
-        {
-            return meta ? meta->delfunc : nullptr;
-        }
-
-        /**
-         * Informs the number of references created to pointer.
-         * @return The number of references to pointer.
-         */
-        inline size_t useCount() const noexcept
-        {
-            return meta ? meta->count : 0;
-        }
-
-        /**
-         * Resets the pointer manager to an empty state.
-         * @see BasePointer::BasePointer
-         */
-        __host__ __device__ inline void reset() noexcept
-        {
-            meta = nullptr;
-            ptr = nullptr;
-        }
-};
-
-/**
- * Represents a smart pointer. This class can be used to represent a pointer that is
- * deleted automatically when all references to it have been destroyed.
- * @tparam T The type of pointer to be held.
- * @since 0.1.1
- */
-template <typename T>
-class Pointer : public BasePointer<T>
-{
-    public:
-        __host__ __device__ inline Pointer() noexcept = default;
-        __host__ __device__ inline Pointer(const Pointer&) noexcept = default;
-        __host__ __device__ inline Pointer(Pointer&&) noexcept = default;
-
-        using BasePointer<T>::BasePointer;
-
-        __host__ __device__ inline Pointer& operator=(const Pointer&) = default;
-        __host__ __device__ inline Pointer& operator=(Pointer&&) = default;
-
-        /**
-         * Converts to universal pointer type.
-         * @return The pointer converted to universal type.
-         */
-        __host__ __device__ inline operator Pure<T> *() noexcept
-        {
-            return this->ptr;
-        }
-
-        /**
-         * Converts to universal constant pointer type.
-         * @return The constant pointer converted to universal type.
-         */
-        __host__ __device__ inline operator const Pure<T> *() const noexcept
-        {
-            return this->ptr;
-        }
-
-        /**
-         * Gives access to an object in an array pointer offset.
-         * @param offset The offset to be accessed.
-         * @return The requested object instance.
-         */
-        __host__ __device__ inline Pure<T>& operator[](ptrdiff_t offset) noexcept
-        {
-            static_assert(!std::is_same<Pure<T>, T>::value, "only array pointers have offsets");
-            return this->ptr[offset];
-        }
-
-        /**
-         * Gives access to an constant object in an array pointer offset.
-         * @param offset The offset to be accessed.
-         * @return The requested constant object instance.
-         */
-        __host__ __device__ inline const Pure<T>& operator[](ptrdiff_t offset) const noexcept
-        {
-            static_assert(!std::is_same<Pure<T>, T>::value, "only array pointers have offsets");
-            return this->ptr[offset];
-        }
-
-        /**
-         * Gives access to an offset constant object instance.
-         * @param offset The offset to pointer.
-         * @return The offset object instance.
-         */
-        template <typename U = T>
-        __host__ __device__ inline auto getOffset(ptrdiff_t offset) const noexcept
-        -> typename std::enable_if<!std::is_same<Pure<U>, U>::value, const Pure<T>&>::type
-        {
-            return this->ptr[offset];
+            return mptr;
         }
 
         /**
@@ -446,14 +307,92 @@ class Pointer : public BasePointer<T>
          * @param offset The requested offset.
          * @return The new offset pointer instance.
          */
-        template <typename U = T>
-        __host__ __device__ inline auto getOffsetPointer(ptrdiff_t offset) noexcept
-        -> typename std::enable_if<!std::is_same<Pure<U>, U>::value, Pointer>::type
+        __host__ __device__ inline pointer offset(ptrdiff_t offset) noexcept
         {
-            Pointer instance {*this};
-            instance.ptr += offset;
-            return instance;
+            static_assert(!std::is_same<element_type, T>::value, "only array pointers hava valid offsets");
+            return pointer {mptr + offset, internal::ptr::acquire(meta)};
         }
+
+        /**
+         * Resets the pointer manager to an empty state.
+         * @see pointer::pointer
+         */
+        __host__ __device__ inline void reset() noexcept
+        {
+            internal::ptr::release(meta);
+            mptr = nullptr;
+            meta = nullptr;
+        }
+
+        /**
+         * Swaps the contents with another pointer instance.
+         * @param other The target instance to swap with.
+         */
+        __host__ __device__ inline void swap(pointer& other) noexcept
+        {
+            utils::swap(mptr, other.mptr);
+            utils::swap(meta, other.meta);
+        }
+
+        /**
+         * Returns the reference to the current pointer's allocator.
+         * @return The pointer's allocator instance.
+         */
+        inline const allocator_type& allocator() const noexcept
+        {
+            return meta->allocr;
+        }
+
+        /**
+         * Informs the number of references created to pointer.
+         * @return The number of references to pointer.
+         */
+        inline size_t use_count() const noexcept
+        {
+            return meta ? meta->count : 0;
+        }
+
+        /**
+         * Allocates a new array pointer of given size.
+         * @param count The number of elements to be allocated.
+         * @return The newly allocated pointer.
+         */
+        static inline auto make(size_t count = 1) noexcept -> pointer
+        {
+            return make(allocator_type {}, count);
+        }
+
+        /**
+         * Allocates a new array pointer of given size with an allocator.
+         * @param alloc The allocator to be used to new pointer.
+         * @param count The number of elements to be allocated.
+         * @return The newly allocated pointer.
+         */
+        static inline auto make(const allocator_type& alloc, size_t count = 1) noexcept -> pointer
+        {
+            return {alloc.allocate(count), alloc};
+        }
+
+        /**
+         * Creates a non-owning weak reference to given pointer.
+         * @param ptr The non-owning pointer to create weak-reference from.
+         * @return The weak referenced pointer instance.
+         */
+        __host__ __device__ static inline auto weak(element_type *ptr) noexcept -> pointer
+        {
+            return pointer {ptr, nullptr};
+        }
+
+    protected:
+        /**
+         * Builds a new instance from custom internal parts.
+         * @param ptr The raw pointer object.
+         * @param meta The pointer's metadata.
+         */
+        __host__ __device__ inline pointer(element_type *ptr, internal::ptr::counter<T> *meta) noexcept
+        :   mptr {ptr}
+        ,   meta {meta}
+        {}
 };
 
 #endif

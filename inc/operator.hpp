@@ -8,9 +8,9 @@
 #ifndef OPERATOR_HPP_INCLUDED
 #define OPERATOR_HPP_INCLUDED
 
-#include "utils.hpp"
+#include <utils.hpp>
 
-namespace op
+namespace utils
 {
     /**
      * Wraps an operator function. An operator always transforms two elements
@@ -19,10 +19,10 @@ namespace op
      * @since 0.1.1
      */
     template <typename T>
-    struct Operator : public Functor<T(const T&, const T&)>
+    struct op : public functor<T(const T&, const T&)>
     {
-        using Functor<T(const T&, const T&)>::Functor;
-        using Functor<T(const T&, const T&)>::operator=;
+        using functor<T(const T&, const T&)>::functor;
+        using functor<T(const T&, const T&)>::operator=;
     };
 
     /**
@@ -97,8 +97,8 @@ namespace op
      * The sum operator.
      * @return The sum of the operands.
      */
-    template <typename T>
-    __host__ __device__ inline constexpr auto add(const T& a, const T& b) noexcept -> decltype(a + b)
+    template <typename T, typename U = T>
+    __host__ __device__ inline constexpr auto add(const T& a, const U& b) noexcept -> decltype(a + b)
     {
         return a + b;
     }
@@ -107,8 +107,8 @@ namespace op
      * The subtraction operator.
      * @return The difference of the operands.
      */
-    template <typename T>
-    __host__ __device__ inline constexpr auto sub(const T& a, const T& b) noexcept -> decltype(a - b)
+    template <typename T, typename U = T>
+    __host__ __device__ inline constexpr auto sub(const T& a, const U& b) noexcept -> decltype(a - b)
     {
         return a - b;
     }
@@ -117,8 +117,8 @@ namespace op
      * The multiplication operator.
      * @return The product of the operands.
      */
-    template <typename T>
-    __host__ __device__ inline constexpr auto mul(const T& a, const T& b) noexcept -> decltype(a * b)
+    template <typename T, typename U = T>
+    __host__ __device__ inline constexpr auto mul(const T& a, const U& b) noexcept -> decltype(a * b)
     {
         return a * b;
     }
@@ -127,8 +127,8 @@ namespace op
      * The division operator.
      * @return The division of the operands.
      */
-    template <typename T>
-    __host__ __device__ inline constexpr auto div(const T& a, const T& b) noexcept -> decltype(a / b)
+    template <typename T, typename U = T>
+    __host__ __device__ inline constexpr auto div(const T& a, const U& b) noexcept -> decltype(a / b)
     {
         return a / b;
     }
@@ -137,8 +137,8 @@ namespace op
      * The module operator.
      * @return The module of the operands.
      */
-    template <typename T>
-    __host__ __device__ inline constexpr auto mod(const T& a, const T& b) noexcept -> decltype(a % b)
+    template <typename T, typename U = T>
+    __host__ __device__ inline constexpr auto mod(const T& a, const U& b) noexcept -> decltype(a % b)
     {
         return a % b;
     }
@@ -148,9 +148,9 @@ namespace op
      * @return The minimum between the operands.
      */
     template <typename T>
-    __host__ __device__ inline constexpr auto min(const T& a, const T& b) noexcept -> decltype(a < b ? a : b)
+    __host__ __device__ inline constexpr auto min(const T& a, const T& b) noexcept -> const T&
     {
-        return a < b ? a : b;
+        return utils::lt(a, b) ? a : b;
     }
 
     /**
@@ -158,10 +158,10 @@ namespace op
      * @return The maximum between the operands.
      */
     template <typename T>
-    __host__ __device__ inline constexpr auto max(const T& a, const T& b) noexcept -> decltype(a > b ? a : b)
+    __host__ __device__ inline constexpr auto max(const T& a, const T& b) noexcept -> const T&
     {
-        return a > b ? a : b;
+        return utils::gt(a, b) ? a : b;
     }
-};
+}
 
 #endif

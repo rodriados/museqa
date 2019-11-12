@@ -71,7 +71,7 @@ namespace msa
      * @param pw The pairwise manager instance.
      * @param db The database of sequences to be aligned.
      */
-    static void pwrun(Pairwise& pw, Database& db)
+    static void pwrun(const Pairwise& pw, const Database& db)
     {
         pw.run({
             db
@@ -87,7 +87,7 @@ namespace msa
      * @param pg The phylogeny module instance.
      * @param pw The pairwise step instance.
      */
-    static void pgrun(Phylogeny& pg, Pairwise& pw)
+    static void pgrun(const Phylogeny& pg, const Pairwise& pw)
     {
         pg.run({
             pw
@@ -116,9 +116,9 @@ namespace msa
     }
 
     /**
-     * Halts the software execution in all nodes with a code.
+     * Halts the whole software's execution and exits with given code.
      * @param code The exit code.
-     * @return The code to operational system.
+     * @since 0.1.1
      */
     void halt(uint8_t code) noexcept
     {

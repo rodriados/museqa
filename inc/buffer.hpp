@@ -12,71 +12,69 @@
 #include <cstring>
 #include <vector>
 
-#include "utils.hpp"
-#include "pointer.hpp"
-#include "exception.hpp"
+#include <utils.hpp>
+#include <pointer.hpp>
+#include <exception.hpp>
 
 /**
- * The base of a general-purpose buffer. The buffer's idea is to store all of
- * its data contiguously in memory.
+ * Creates a general-purpose buffer. The buffer's idea is to store all of its data
+ * contiguously in memory. Originally, the buffer is not growable.
  * @tparam T The buffer contents type.
+ * @see std::string
+ * @see std::vector
  * @since 0.1.1
  */
 template <typename T>
-class BaseBuffer
+class buffer
 {
-    protected:
-        Pointer<T[]> ptr;       /// The pointer to the buffer being encapsulated.
-        size_t size = 0;        /// The number of elements in buffer.
+    static_assert(!std::is_array<T>::value, "buffer element cannot be of array type");
 
     public:
-        inline BaseBuffer() noexcept = default;
-        inline BaseBuffer(const BaseBuffer&) noexcept = default;
-        inline BaseBuffer(BaseBuffer&&) noexcept = default;
+        using element_type = T;                             /// The buffer's element size.
+        using pointer_type = pointer<element_type[]>;       /// The buffer's pointer type.
+        using allocator_type = allocatr<element_type[]>;    /// The buffer's allocator type.
+
+    protected:
+        pointer_type mptr;              /// The pointer to the corresponding buffer's memory area.
+        size_t msize = 0;               /// The number of elements in buffer.
+
+    public:
+        inline buffer() noexcept = default;
+        inline buffer(const buffer&) noexcept = default;
+        inline buffer(buffer&&) noexcept = default;
 
         /**
-         * Creates a new buffer by allocating memory.
-         * @param size The number of elements to allocate memory for.
+         * Acquires the ownership of a raw buffer pointer.
+         * @param ptr The buffer pointer to acquire.
+         * @param size The size of buffer to acquire.
          */
-        inline explicit BaseBuffer(size_t size)
-        :   ptr {new T[size]}
-        ,   size {size}
-        {
-            enforce(ptr != nullptr, "could not allocate buffer memory");
-        }
-
-        /**
-         * Acquires the ownership of a buffer pointer.
-         * @param ptr The buffer pointer to encapsulate.
-         * @param size The size of buffer to encapsulate.
-         */
-        inline explicit BaseBuffer(const Pointer<T[]>& ptr, size_t size) noexcept
-        :   ptr {ptr}
-        ,   size {size}
+        inline explicit buffer(element_type *ptr, size_t size)
+        :   mptr {ptr}
+        ,   msize {size}
         {}
 
         /**
          * Acquires the ownership of a buffer pointer.
-         * @param ptr The raw pointer instance to encapsulate.
-         * @param size The size of buffer to encapsulate.
+         * @param ptr The buffer pointer to acquire.
+         * @param size The size of buffer to acquire.
          */
-        inline explicit BaseBuffer(const RawPointer<T>& ptr, size_t size) noexcept
-        :   ptr {ptr}
-        ,   size {size}
+        inline explicit buffer(pointer_type&& ptr, size_t size)
+        :   mptr {std::forward<decltype(ptr)>(ptr)}
+        ,   msize {size}
         {}
 
-        inline BaseBuffer& operator=(const BaseBuffer&) = default;
-        inline BaseBuffer& operator=(BaseBuffer&&) = default;
+        inline buffer& operator=(const buffer&) = default;
+        inline buffer& operator=(buffer&&) = default;
 
         /**
          * Gives access to a specific location in buffer's data.
          * @param offset The requested buffer offset.
          * @return The buffer's position pointer.
          */
-        __host__ __device__ inline T& operator[](ptrdiff_t offset)
+        __host__ __device__ inline element_type& operator[](ptrdiff_t offset)
         {
-            enforce(0 <= offset && static_cast<size_t>(offset) < getSize(), "buffer offset out of range");
-            return ptr[offset];
+            enforce(offset >= 0 && size_t(offset) < size(), "buffer offset out of range");
+            return mptr[offset];
         }
 
         /**
@@ -84,155 +82,148 @@ class BaseBuffer
          * @param offset The requested buffer offset.
          * @return The buffer's position constant pointer.
          */
-        __host__ __device__ inline const T& operator[](ptrdiff_t offset) const
+        __host__ __device__ inline const element_type& operator[](ptrdiff_t offset) const
         {
-            enforce(0 <= offset && static_cast<size_t>(offset) < getSize(), "buffer offset out of range");
-            return const_cast<const T&>(ptr[offset]);
+            enforce(offset >= 0 && size_t(offset) < size(), "buffer offset out of range");
+            return mptr[offset];
         }
 
         /**
          * Allows the buffer to be traversed as an iterator.
          * @return The pointer to the first element in the buffer.
          */
-        __host__ __device__ inline T *begin() noexcept
+        __host__ __device__ inline element_type *begin() noexcept
         {
-            return getBuffer();
+            return raw();
         }
 
         /**
          * Allows the buffer to be traversed as a const-iterator.
          * @return The const-pointer to the first element in the buffer.
          */
-        __host__ __device__ inline const T *begin() const noexcept
+        __host__ __device__ inline const element_type *begin() const noexcept
         {
-            return getBuffer();
+            return raw();
         }
 
         /**
          * Returns the pointer to the end of buffer.
          * @return The pointer after the last element in buffer.
          */
-        __host__ __device__ inline T *end() noexcept
+        __host__ __device__ inline element_type *end() noexcept
         {
-            return begin() + size;
+            return begin() + size();
         }
 
         /**
          * Returns the const-pointer to the end of buffer.
          * @return The const-pointer after the last element in buffer.
          */
-        __host__ __device__ inline const T *end() const noexcept
+        __host__ __device__ inline const element_type *end() const noexcept
         {
-            return begin() + size;
+            return begin() + size();
         }
 
         /**
-         * Gives access to buffer's data.
+         * Gives access to raw buffer's data.
          * @return The buffer's internal pointer.
          */
-        __host__ __device__ inline T *getBuffer() noexcept
+        __host__ __device__ inline element_type *raw() noexcept
         {
-            return &ptr;
+            return &mptr;
         }
 
         /**
-         * Gives constant access to buffer's data.
+         * Gives constant access to raw buffer's data.
          * @return The buffer's internal constant pointer.
          */
-        __host__ __device__ inline const T *getBuffer() const noexcept
+        __host__ __device__ inline const element_type *raw() const noexcept
         {
-            return ptr.get();
+            return mptr.get();
         }
 
         /**
-         * Gives access to buffer's pointer.
-         * @return The buffer's smart pointer.
-         */
-        __host__ __device__ inline const Pointer<T[]>& getPointer() const noexcept
-        {
-            return ptr;
-        }
-
-        /**
-         * Gives access to an offset pointer.
-         * @param offset The offset to apply to pointer.
+         * Gives access to an offset of the buffer's pointer.
+         * @param offset The requested buffer offset.
          * @return The buffer's offset pointer.
          */
-        inline Pointer<T[]> getOffsetPointer(ptrdiff_t offset)
+        __host__ __device__ inline pointer_type offset(ptrdiff_t offset)
         {
-            enforce(0 <= offset && static_cast<size_t>(offset) < getSize(), "buffer offset out of range");
-            return ptr.getOffsetPointer(offset);
+            enforce(offset >= 0 && size_t(offset) < size(), "buffer offset out of range");
+            return mptr.offset(offset);
         }
 
         /**
-         * Informs the buffer's number of blocks.
-         * @return The number of buffer blocks.
+         * Informs the buffer's number of elements.
+         * @return The number of elements in buffer.
          */
-        __host__ __device__ inline size_t getSize() const noexcept
+        __host__ __device__ inline size_t size() const noexcept
         {
-            return size;
-        }
-};
-
-/**
- * Creates a general-purpose contiguous buffer.
- * @tparam T The buffer contents type.
- * @see std::string
- * @see std::vector
- * @since 0.1.1
- */
-template <typename T>
-class Buffer : public BaseBuffer<T>
-{
-    public:
-        inline Buffer() noexcept = default;
-        inline Buffer(const Buffer&) noexcept = default;
-        inline Buffer(Buffer&&) noexcept = default;
-
-        using BaseBuffer<T>::BaseBuffer;
-
-        /** 
-         * Constructs a new buffer from an different buffer type instance.
-         * @param buffer The buffer to be copied.
-         */ 
-        inline Buffer(const BaseBuffer<T>& buffer)
-        :   BaseBuffer<T> {buffer.getSize()}
-        {   
-            copy(buffer.getBuffer());
+            return msize;
         }
 
         /**
-         * Copies the contents of a not-ownable already existing buffer.
-         * @param ptr The pointer of buffer to be copied.
-         * @param size The size of buffer to encapsulate.
+         * Copies data from an existing buffer instance.
+         * @param buf The target buffer to copy data from.
+         * @return A newly created buffer instance.
          */
-        inline Buffer(const T *ptr, size_t size)
-        :   BaseBuffer<T> {size}
+        static inline buffer copy(const buffer& buf)
         {
-            copy(ptr);
+            return make(buf.size()).copy_from(buf.raw());
         }
 
         /**
-         * Constructs a new buffer from a vector.
-         * @param vector The vector from which the buffer will be created.
+         * Copies data from a vector instance.
+         * @param vector The target vector instance to copy data from.
+         * @return A newly created buffer instance.
          */
-        inline Buffer(const std::vector<T>& vector)
-        :   BaseBuffer<T> {vector.size()}
+        static inline buffer copy(const std::vector<element_type>& vector)
         {
-            copy(vector.data());
+            return make(vector.size()).copy_from(vector.data());
         }
 
-        inline Buffer& operator=(const Buffer&) = default;
-        inline Buffer& operator=(Buffer&&) = default;
+        /**
+         * Copies data from an existing pointer.
+         * @param ptr The target pointer to copy from.
+         * @param count The number of elements to copy.
+         * @return A newly created buffer instance.
+         */
+        static inline buffer copy(const element_type *ptr, size_t count)
+        {
+            return make(count).copy_from(ptr);
+        }
 
+        /**
+         * Creates a new buffer of given size.
+         * @param size The buffer's number of elements.
+         * @return The newly created buffer instance.
+         */
+        static inline buffer make(size_t size = 1) noexcept
+        {
+            return make(allocator_type {}, size);
+        }
+
+        /**
+         * Creates a new buffer of given size with an allocator.
+         * @param alloc The allocator to be used to new buffer.
+         * @param size The buffer's number of elements.
+         * @return The newly created buffer instance.
+         */
+        static inline buffer make(const allocator_type& alloc, size_t size = 1) noexcept
+        {
+            return buffer {pointer_type::make(alloc, size), size};
+        }
+        
     protected:
         /**
-         * Copies an existing buffer's data.
-         * @param ptr The pointer of buffer to be copied.
+         * Effectively copies data from the given pointer.
+         * @param ptr The pointer to copy data from.
+         * @return The current buffer instance.
          */
-        inline void copy(const T *ptr) noexcept
+        inline buffer copy_from(const element_type *ptr) noexcept
         {
-            memcpy(this->getBuffer(), ptr, sizeof(T) * this->getSize());
+            memcpy(raw(), ptr, sizeof(element_type) * size());
+            return *this;
         }
 };
 
@@ -243,58 +234,59 @@ class Buffer : public BaseBuffer<T>
  * @since 0.1.1
  */
 template <typename T>
-class BufferSlice : public BaseBuffer<T>
+class slice_buffer : public buffer<T>
 {
     protected:
-        ptrdiff_t displ = 0;    /// The slice displacement in relation to original buffer.
+        using underlying_buffer = buffer<T>;    /// The underlying buffer type.
+
+    protected:
+        ptrdiff_t mdispl = 0;       /// The slice displacement in relation to original buffer.
 
     public:
-        inline BufferSlice() noexcept = default;
-        inline BufferSlice(const BufferSlice&) noexcept = default;
-        inline BufferSlice(BufferSlice&&) noexcept = default;
+        inline slice_buffer() noexcept = default;
+        inline slice_buffer(const slice_buffer&) noexcept = default;
+        inline slice_buffer(slice_buffer&&) noexcept = default;
 
         /**
-         * Instantiates a new buffer slice.
-         * @param target The target buffer to which the slice shall relate to.
+         * Instantiates a new slice buffer.
+         * @param tgt The target buffer to which the slice shall relate to.
          * @param displ The initial displacement of slice.
          * @param size The number of elements in the slice.
          */
-        inline BufferSlice(BaseBuffer<T>& target, ptrdiff_t displ = 0, size_t size = 0)
-        :   BaseBuffer<T> {target.getOffsetPointer(displ), size}
-        ,   displ {displ}
+        inline slice_buffer(underlying_buffer& tgt, ptrdiff_t displ = 0, size_t size = 0)
+        :   underlying_buffer {std::move(tgt.offset(displ)), size}
+        ,   mdispl {displ}
         {
-            enforce(
-                static_cast<size_t>(size + displ) <= target.getSize()
-            ,   "slice initialized out of range"
-            );
+            enforce(size_t(mdispl + size) <= tgt.size(), "slice out of buffer's range");
         }
 
         /**
          * Instantiates a slice by copying slice pointers into another buffer.
-         * @param target The target buffer to which the slice shall relate to.
-         * @param slice The slice data to be put into the new target.
+         * @param tgt The target buffer to which the slice shall relate to.
+         * @param base The slice data to be put into the new target.
          */
-        inline BufferSlice(BaseBuffer<T>& target, const BufferSlice& slice)
-        :   BaseBuffer<T> {target.getOffsetPointer(slice.getDispl()), slice.getSize()}
-        ,   displ {slice.getDispl()}
+        inline slice_buffer(underlying_buffer& tgt, const slice_buffer& base)
+        :   underlying_buffer {std::move(tgt.offset(base.displ())), base.size()}
+        ,   mdispl {base.displ()}
         {
-            enforce(
-                static_cast<size_t>(slice.getSize() + slice.getDispl()) <= target.getSize()
-            ,   "slice initialized out of range"
-            );
+            enforce(size_t(mdispl + base.size()) <= tgt.size(), "slice out of buffer's range");
         }
 
-        inline BufferSlice& operator=(const BufferSlice&) = default;
-        inline BufferSlice& operator=(BufferSlice&&) = default;
+        inline slice_buffer& operator=(const slice_buffer&) = default;
+        inline slice_buffer& operator=(slice_buffer&&) = default;
 
         /**
-         * Informs the displacement pointer in relation to original buffer.
-         * @return The buffer's slice displacement.
+         * Informs the pointer displacement in relation to the original buffer.
+         * @return The buffer's slice pointer displacement.
          */
-        __host__ __device__ inline ptrdiff_t getDispl() const noexcept
+        __host__ __device__ inline ptrdiff_t displ() const noexcept
         {
-            return displ;
+            return mdispl;
         }
+
+    private:
+        using underlying_buffer::copy;
+        using underlying_buffer::make;
 };
 
 #endif
