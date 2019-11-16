@@ -24,12 +24,22 @@
 class sequence : public encoder::buffer
 {
     protected:
-        using underlying_buffer = encoder::buffer;  /// The underlying sequence buffer.
+        using underlying_buffer = encoder::buffer;      /// The underlying sequence buffer.
 
     public:
-        inline sequence() = default;
-        inline sequence(const sequence&) = default;
-        inline sequence(sequence&&) = default;
+        inline sequence() noexcept = default;
+        inline sequence(const sequence&) noexcept = default;
+        inline sequence(sequence&&) noexcept = default;
+
+        using underlying_buffer::buffer;
+
+        /**
+         * Initializes a new sequence from an instance of its underlying buffer.
+         * @param buf The buffer to create the new sequence from.
+         */
+        inline sequence(const underlying_buffer& buf)
+        :   underlying_buffer {buf}
+        {}
 
         /**
          * Initializes a new compressed sequence.
@@ -47,8 +57,6 @@ class sequence : public encoder::buffer
         inline sequence(const std::string& str)
         :   sequence {str.data(), str.size()}
         {}
-
-        using underlying_buffer::buffer;
 
         inline sequence& operator=(const sequence&) = default;
         inline sequence& operator=(sequence&&) = default;
@@ -103,9 +111,9 @@ class sequence_view : public slice_buffer<encoder::block>
         using underlying_buffer = slice_buffer<encoder::block>; /// The underlying sequence buffer.
 
     public:
-        inline sequence_view() = default;
-        inline sequence_view(const sequence_view&) = default;
-        inline sequence_view(sequence_view&&) = default;
+        inline sequence_view() noexcept = default;
+        inline sequence_view(const sequence_view&) noexcept = default;
+        inline sequence_view(sequence_view&&) noexcept = default;
 
         using underlying_buffer::slice_buffer;
 

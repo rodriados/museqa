@@ -5,6 +5,7 @@
  */
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 #include <cmdline.hpp>
 #include <exception.hpp>
@@ -13,64 +14,66 @@
  * The global command line parser singleton instance.
  * @since 0.1.1
  */
-cmdline::parser cmdline::singleton;
+cmdline::parser cmdline::instance;
 
-/**
- * Initializes the parser with the options it should parse.
- * @param options The list of available options for this parser.
- */
-cmdline::parser::parser(const std::vector<cmdline::option>& options) noexcept
+namespace cmdline
 {
-    for(const cmdline::option& option : options) {
-        if(option.required())
-            mrequired.push_back(option.longname());
+    /**
+     * Prepares a list of options to be parsed. If flags of options somehow overlap,
+     * the last option in order will be the flag's corresponding option.
+     * @param options The list of available options for this parser.
+     * @return The map of prepared options.
+     */
+    auto prepare(const std::vector<option>& options) noexcept
+    -> std::unordered_map<std::string, option>
+    {
+        std::unordered_map<std::string, option> result;
 
-        moptions["-" + option.shortname()] = option;
-        moptions["--" + option.longname()] = option;
+        for(const option& current : options)
+            if(!current.name.empty() && !current.flags.empty())
+                for(const std::string& flag : current.flags)
+                    result[flag] = current;
+
+        return result;
     }
-}
 
-/**
- * Parses the command line arguments through its options.
- * @param argc The number of command line arguments.
- * @param argv The command line arguments.
- */
-void cmdline::parser::parse(int argc, char **argv)
-{
-    for(int i = 1; i < argc; ++i) {
-        const cmdline::option& option = find(argv[i]);
+    /**
+     * Searches for an option via one of its names.
+     * @param needle The option being searched for.
+     * @return The found option or an unknown option.
+     */
+    auto find(const parser& parser, const std::string& needle) noexcept -> const option&
+    {
+        static option unknown {};
 
-        if(!option.empty()) {
-            if(option.variadic()) {
-                enforce(i + 1 < argc, "missing argument value for '%s'", option.longname());
-                mvalues[option.longname()] = argv[++i];
-                continue;
+        const auto& value = parser.config.find(needle);
+        return value != parser.config.end() ? value->second : unknown;
+    }
+
+    /**
+     * Parses the command line arguments through its options.
+     * @param argc The number of command line arguments.
+     * @param argv The command line arguments.
+     */
+    void parse(int argc, char **argv)
+    {
+        for(int i = 1; i < argc; ++i) {
+            const option& current = find(instance, argv[i]);
+
+            if(!current.name.empty() && !current.flags.empty()) {
+                if(current.variadic) {
+                    enforce(i + 1 < argc, "missing argument value for option '%s'", current.name);
+                    instance.result[current.name] = argv[++i];
+                    continue;
+                }
+
+                else {
+                    instance.result[current.name] = argv[i];
+                    continue;
+                }
             }
 
-            else {
-                mvalues[option.longname()] = option.longname();
-                continue;
-            }
+            instance.positional.push_back(argv[i]);
         }
-
-        mpositional.push_back(argv[i]);
     }
-
-    for(const std::string& option : mrequired)
-        enforce(has(option), "missing command line argument '%s'", option);
-
-    mappname = argv[0];
-}
-
-/**
- * Searches for an option via one of its names.
- * @param needle The option being searched for.
- * @return The found option or an unknown option.
- */
-const cmdline::option& cmdline::parser::find(const std::string& needle) const noexcept
-{
-    static cmdline::option unknown {};
-
-    const auto& value = moptions.find(needle);
-    return value != moptions.end() ? value->second : unknown;
 }

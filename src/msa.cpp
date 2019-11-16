@@ -6,93 +6,93 @@
 #include <string>
 #include <vector>
 
-#include "msa.hpp"
-#include "mpi.hpp"
-#include "cuda.cuh"
-#include "parser.hpp"
-#include "cmdline.hpp"
-#include "encoder.hpp"
-#include "database.hpp"
-#include "benchmark.hpp"
-#include "exception.hpp"
+#include <msa.hpp>
+#include <mpi.hpp>
+#include <cuda.cuh>
+#include <parser.hpp>
+#include <cmdline.hpp>
+#include <encoder.hpp>
+#include <database.hpp>
+#include <benchmark.hpp>
+#include <exception.hpp>
 
-#include "pairwise.cuh"
-#include "phylogeny.cuh"
+#include <pairwise.cuh>
+#include <phylogeny.cuh>
 
 /**
  * The list of command line options available. This list might be increased
  * depending on the options available for the different steps of the software.
  * @since 0.1.1
  */
-static const std::vector<cmdline::Option> options = {
-    {"m", "multigpu",   "Try to use multiple devices in a single host."}
-,   {"x", "matrix",     "Choose the scoring matrix to use in pairwise.", true}
-,   {"1", "pairwise",   "Choose the algorithm to use in pairwise module.", true}
-,   {"2", "phylogeny",  "Choose the algorithm to use in phylogeny module.", true}
+static const std::vector<cmdline::option> options = {
+    {"multigpu",    {"-m", "--multigpu"},   "Try to use multiple devices in a single host."}
+,   {"matrix",      {"-x", "--matrix"},     "Choose the scoring matrix to use in pairwise.", true}
+,   {"pairwise",    {"-1", "--pairwise"},   "Choose the algorithm to use in pairwise module.", true}
+,   {"phylogeny",   {"-2", "--phylogeny"},  "Choose the algorithm to use in phylogeny module.", true}
 };
 
 namespace msa
 {
-    static Database db;         /// The database of sequences to align.
-    static Pairwise pw;         /// The pairwise module manager.
-    static Phylogeny pg;        /// The phylogenetics module manager.
-
     /**
      * Parses all files given via command line and shares with all nodes.
-     * @param db The database to load sequences into.
+     * @return The database with all loaded sequences.
      */
-    static void load(Database& db)
+    static auto load() -> database
     {
-        std::vector<size_t> sizeList;
-        std::vector<encoder::EncodedBlock> blockList;
+        database db;
+        std::vector<size_t> lsize;
+        std::vector<encoder::block> lblock;
 
-        onlymaster db.addMany(parser::parseMany(cmdline::getPositional()));
+        onlymaster for(size_t i = 0, n = cmdline::count(); i < n; ++i)
+            db.add_many(parser::parse(cmdline::get(i)));
 
-        onlymaster for(size_t i = 0, n = db.getCount(); i < n; ++i) {
-            sizeList.push_back(db[i].getSize());
-            blockList.insert(blockList.end(), db[i].begin(), db[i].end());
+        onlymaster for(size_t i = 0, n = db.count(); i < n; ++i) {
+            lsize.push_back(db[i].size());
+            lblock.insert(lblock.end(), db[i].begin(), db[i].end());
         }
 
-        mpi::broadcast(sizeList);
-        mpi::broadcast(blockList);
+        mpi::broadcast(lsize);
+        mpi::broadcast(lblock);
 
-        onlyslaves for(size_t i = 0, j = 0, n = sizeList.size(); i < n; ++i) {
-            db.add({&blockList[j], sizeList[i]});
-            j += sizeList[i];
+        onlymaster info("loaded a total of %d sequences", db.count());
+
+        onlyslaves for(size_t i = 0, j = 0, n = lsize.size(); i < n; ++i) {
+            db.add({&lblock[j], lsize[i]});
+            j += lsize[i];
         }
 
-        onlymaster info("loaded a total of %d sequences", db.getCount());
+        return db;
     }
 
     /**
      * Runs the first step in the multiple sequence alignment heuristic: the
      * pairwise alignment. This step will align all possible pairs of sequences
      * and give a score to each of these pairs.
-     * @param pw The pairwise manager instance.
      * @param db The database of sequences to be aligned.
+     * @return The pairwise manager instance.
      */
-    static void pwrun(const Pairwise& pw, const Database& db)
+    static auto rpairwise(const database& db) -> pairwise::manager
     {
-        pw.run({
-            db
-        ,   cmdline::get<std::string>("pairwise", "needleman")
-        ,   cmdline::get<std::string>("matrix", "blosum62")
-        });
+        return pairwise::manager::run({
+                db
+            ,   cmdline::get("pairwise", std::string ("default"))
+            ,   cmdline::get("matrix", std::string ("default"))
+            });
     }
 
     /**
      * Runs the second step in the multiple sequence alignment heuristic: the
      * pseudo-phylogenetic tree construction. This step will group sequences in
      * ways that they can later be definitively aligned.
-     * @param pg The phylogeny module instance.
      * @param pw The pairwise step instance.
+     * @return The phylogeny module instance.
      */
-    static void pgrun(const Phylogeny& pg, const Pairwise& pw)
+    static auto rphylogeny(const pairwise::manager& pw) -> phylogeny::manager
     {
-        pg.run({
-            pw
-        ,   cmdline::get<std::string>("phylogeny", "njoining")
-        });
+        return phylogeny::manager::run({
+                pw
+            ,   cmdline::get("phylogeny", std::string ("default"))
+            });
     }
 
     /**
@@ -101,18 +101,20 @@ namespace msa
      * @see watch
      */
     static void run() noexcept
-    {
-        try {
-            msa::report("total", benchmark::run([]() {
-                msa::report("loading", benchmark::run(load, db));
-                msa::report("pairwise", benchmark::run(pwrun, pw, db));
-                msa::report("phylogeny", benchmark::run(pgrun, pg, pw));
-            }));
-        }
+    try {
+        database db;
+        pairwise::manager pw;
+        //phylogeny::manager pg;
 
-        catch(Exception e) {
-            msa::error(e.what());
-        }
+        msa::report("total", benchmark::run([&]() {
+            msa::report("loading", benchmark::run(db, load));
+            msa::report("pairwise", benchmark::run(pw, rpairwise, db));
+            msa::report("phylogeny", benchmark::run(pg, rphylogeny, pw));
+        }));
+    }
+
+    catch(const exception& e) {
+        msa::error(e.what());
     }
 
     /**
@@ -140,14 +142,14 @@ int main(int argc, char **argv)
     cmdline::init(options);
     cmdline::parse(argc, argv);
 
-    if(node::size < 2)
-        msa::error("at least 2 nodes are needed.");
+    if(node::count < 2)
+        msa::error("at least 2 nodes are needed");
 
-    onlyslaves if(!cuda::device::getCount())
-        msa::error("no compatible GPU device has been found.");
+    onlyslaves if(!cuda::device::count())
+        msa::error("no compatible gpu device has been found");
 
     onlyslaves if(cmdline::has("multigpu"))
-        cuda::device::setCurrent(node::rank - 1);
+        cuda::device::select(node::rank - 1);
 
     msa::run();
     mpi::finalize();

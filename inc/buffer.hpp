@@ -154,6 +154,15 @@ class buffer
         }
 
         /**
+         * Exposes the buffer's internal allocator instance.
+         * @return The buffer's internal allocator.
+         */
+        __host__ __device__ inline const allocator_type& allocator() const noexcept
+        {
+            return mptr.allocator();
+        }
+
+        /**
          * Informs the buffer's number of elements.
          * @return The number of elements in buffer.
          */

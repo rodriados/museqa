@@ -276,7 +276,7 @@ namespace utils
      * @return The number of possible pair combinations.
      */
     template <typename T>
-    __host__ __device__ inline constexpr auto nchoose(T&& count) noexcept
+    __host__ __device__ inline constexpr auto nchoose(const T& count) noexcept
     -> typename std::enable_if<std::is_integral<T>::value, T>::type
     {
         return (count * (count - 1)) >> 1;

@@ -340,20 +340,17 @@ namespace cuda
             template <typename T>
             inline auto global() noexcept -> allocatr<T>
             {
-                return {
-                    typename allocatr<T>::up {
-                        [](size_t count) -> pure<T> * {
-                            pure<T> *ptr;
-                            check(cudaMalloc(&ptr, sizeof(pure<T>) * count));
-                            return ptr;
-                        }
-                    }
-                ,   typename allocatr<T>::down {
-                        [](pure<T> *ptr) -> void {
-                            check(cudaFree(ptr));
-                        }
-                    }
-                };
+                typename allocatr<T>::up fup = {[](size_t count) -> pure<T> * {
+                        pure<T> *ptr;
+                        check(cudaMalloc(&ptr, sizeof(pure<T>) * count));
+                        return ptr;
+                    }};
+
+                typename allocatr<T>::down fdown = {[](pure<T> *ptr) -> void {
+                        check(cudaFree(ptr));
+                    }};
+
+                return {fup, fdown};
             }
 
             /**
@@ -365,20 +362,17 @@ namespace cuda
             template <typename T>
             inline auto pinned() noexcept -> allocatr<T>
             {
-                return {
-                    typename allocatr<T>::up {
-                        [](size_t count) -> pure<T> * {
-                            pure<T> *ptr;
-                            check(cudaMallocHost(&ptr, sizeof(pure<T>) * count));
-                            return ptr;
-                        }
-                    }
-                ,   typename allocatr<T>::down {
-                        [](pure<T> *ptr) -> void {
-                            check(cudaFreeHost(ptr));
-                        }
-                    }
-                };
+                typename allocatr<T>::up fup = {[](size_t count) -> pure<T> * {
+                        pure<T> *ptr;
+                        check(cudaMallocHost(&ptr, sizeof(pure<T>) * count));
+                        return ptr;
+                    }};
+
+                typename allocatr<T>::down fdown = {[](pure<T> *ptr) -> void {
+                        check(cudaFreeHost(ptr));
+                    }};
+
+                return {fup, fdown};
             }
 
             /**
