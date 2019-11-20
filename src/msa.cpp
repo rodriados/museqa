@@ -17,7 +17,7 @@
 #include <exception.hpp>
 
 #include <pairwise.cuh>
-#include <phylogeny.cuh>
+//#include <phylogeny.cuh>
 
 /**
  * The list of command line options available. This list might be increased
@@ -57,7 +57,7 @@ namespace msa
         onlymaster info("loaded a total of %d sequences", db.count());
 
         onlyslaves for(size_t i = 0, j = 0, n = lsize.size(); i < n; ++i) {
-            db.add({&lblock[j], lsize[i]});
+            db.add(sequence::copy(&lblock[j], lsize[i]));
             j += lsize[i];
         }
 
@@ -75,7 +75,7 @@ namespace msa
     {
         return pairwise::manager::run({
                 db
-            ,   cmdline::get("pairwise", std::string ("default"))
+            ,   cmdline::get("pairwise", std::string ("needleman"))
             ,   cmdline::get("matrix", std::string ("default"))
             });
     }
@@ -87,13 +87,13 @@ namespace msa
      * @param pw The pairwise step instance.
      * @return The phylogeny module instance.
      */
-    static auto rphylogeny(const pairwise::manager& pw) -> phylogeny::manager
+    /*static auto rphylogeny(const pairwise::manager& pw) -> phylogeny::manager
     {
         return phylogeny::manager::run({
                 pw
             ,   cmdline::get("phylogeny", std::string ("default"))
             });
-    }
+    }*/
 
     /**
      * Runs the application. This function measures the application's total
@@ -109,7 +109,7 @@ namespace msa
         msa::report("total", benchmark::run([&]() {
             msa::report("loading", benchmark::run(db, load));
             msa::report("pairwise", benchmark::run(pw, rpairwise, db));
-            msa::report("phylogeny", benchmark::run(pg, rphylogeny, pw));
+            //msa::report("phylogeny", benchmark::run(pg, rphylogeny, pw));
         }));
     }
 
@@ -122,7 +122,7 @@ namespace msa
      * @param code The exit code.
      * @since 0.1.1
      */
-    void halt(uint8_t code) noexcept
+    [[noreturn]] void halt(uint8_t code) noexcept
     {
         mpi::finalize();
         exit(code);

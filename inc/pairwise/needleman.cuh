@@ -8,30 +8,32 @@
 #ifndef PW_NEEDLEMAN_CUH_INCLUDED
 #define PW_NEEDLEMAN_CUH_INCLUDED
 
-#include "buffer.hpp"
-#include "pairwise/pairwise.cuh"
+#include <buffer.hpp>
+#include <pointer.hpp>
+
+#include <pairwise/pairwise.cuh>
 
 namespace pairwise
 {
-    /**
-     * Represents a general needleman algorithm.
-     * @since 0.1.1
-     */
-    struct Needleman : public Algorithm
-    {
-        Buffer<Score> score;            /// The algorithm result.
-
-        virtual Buffer<Score> run(const Configuration&) = 0;
-
-        Buffer<Pair> scatter();
-        Buffer<Score> gather();
-    };
-
     namespace needleman
     {
-        extern Algorithm *hybrid();
-        extern Algorithm *sequential();
-    };
-};
+        /**
+         * Represents a general needleman algorithm.
+         * @since 0.1.1
+         */
+        struct algorithm : public pairwise::algorithm
+        {
+            virtual auto scatter() -> buffer<pair>;
+            virtual auto gather(buffer<score>&) const -> buffer<score>;            
+            virtual auto run(const configuration&) -> buffer<score> = 0;
+        };
+
+        /*
+         * The list of available needleman algorithm implementations.
+         */
+        extern pairwise::algorithm *hybrid();
+        extern pairwise::algorithm *sequential();
+    }
+}
 
 #endif

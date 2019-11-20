@@ -8,81 +8,88 @@
 #ifndef PW_DATABASE_CUH_INCLUDED
 #define PW_DATABASE_CUH_INCLUDED
 
-#include <set>
-#include <vector>
-#include <cstdint>
-
-#include "buffer.hpp"
-#include "encoder.hpp"
-#include "pointer.hpp"
-#include "database.hpp"
-#include "sequence.hpp"
-#include "exception.hpp"
+#include <cuda.cuh>
+#include <buffer.hpp>
+#include <pointer.hpp>
+#include <database.hpp>
+#include <sequence.hpp>
+#include <exception.hpp>
 
 namespace pairwise
 {
     /**
      * Stores a list of sequences from a database as a single contiguous sequence.
      * No description nor any other metadata will be stored alongside the sequences,
-     * which will all solely be identified by their indexes. These indeces will be
-     * kept the same as in the original database.
+     * which will all solely be identified by their indeces. These indeces will
+     * be kept the same as in the original database.
      * @since 0.1.1
      */
-    class Database : public Sequence
+    class database : public sequence
     {
+        public:
+            using element_type = sequence_view;             /// The database's element type.
+
         protected:
-            Buffer<SequenceView> view;          /// The buffer of sequence views.
+            using underlying_type = sequence;               /// The database's underlying type.
+            using entry_buffer = buffer<element_type>;      /// The database's underlying buffer type.
+
+        protected:
+            entry_buffer mviews;                            /// The buffer of sequence views.
 
         public:
-            Database() = default;
-            Database(const Database&) = default;
-            Database(Database&&) = default;
+            inline database() noexcept = default;
+            inline database(const database&) noexcept = default;
+            inline database(database&&) noexcept = default;
 
-            Database(const ::Database&);
+            /**
+             * Initializes a contiguous database from a common database instance.
+             * @param db The database to be transformed.
+             */
+            inline database(const ::database& db) noexcept
+            :   underlying_type {merge(db)}
+            ,   mviews {init(*this, db)}
+            {}
 
-            Database(const ::Database&, const std::set<ptrdiff_t>&);
-            Database(const ::Database&, const std::vector<ptrdiff_t>&);
-
-            Database& operator=(const Database&) = default;
-            Database& operator=(Database&&) = default;
+            inline database& operator=(const database&) = default;
+            inline database& operator=(database&&) = default;
 
             /**
              * Gives access to a specific sequence in the database.
              * @param offset The offset of requested sequence.
              * @return The requested sequence.
              */
-            __host__ __device__ inline const SequenceView& operator[](ptrdiff_t offset) const
+            __host__ __device__ inline auto operator[](ptrdiff_t offset) const -> const element_type&
             {
-                enforce(offset < 0 || unsigned(offset) >= getCount(), "database index out of range");
-                return view[offset];
+                enforce(offset >= 0 && size_t(offset) < count(), "database index out of range");
+                return mviews[offset];
             }
 
             /**
              * Informs the number of sequences in database.
              * @return The database's number of sequences.
              */
-            __host__ __device__ inline size_t getCount() const
+            __host__ __device__ inline size_t count() const
             {
-                return view.getSize();
+                return mviews.size();
             }
 
-            Database toDevice() const;
+            auto to_device() const -> database;
 
         private:
             /**
-             * Initializes a new database from already compressed sequences and their respective views.
+             * Initializes a new database from already compressed sequences and
+             * their respective views.
              * @param blocks The encoded blocks of compressed database sequences.
              * @param views The sequence views upon the compressed sequences.
              */
-            inline Database(const BaseBuffer<encoder::EncodedBlock>& blocks, const BaseBuffer<SequenceView>& views)
-            {
-                view.BaseBuffer<SequenceView>::operator=(views);
-                BaseBuffer<encoder::EncodedBlock>::operator=(blocks);
-            }
+            inline database(const underlying_type& blocks, const entry_buffer& views)
+            :   underlying_type {blocks}
+            ,   mviews {views}
+            {}
 
-            void init(const ::Database&);
-            static std::vector<encoder::EncodedBlock> merge(const ::Database&);
+            static auto init(underlying_type&, const ::database&) -> entry_buffer;
+            static auto merge(const ::database&) -> underlying_type;
     };
-};
+}
 
 #endif

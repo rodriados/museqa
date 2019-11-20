@@ -11,12 +11,13 @@
 #include <string>
 #include <cstdint>
 
-#include "cuda.cuh"
-#include "utils.hpp"
-#include "buffer.hpp"
-#include "pointer.hpp"
-#include "database.hpp"
-#include "exception.hpp"
+#include <cuda.cuh>
+#include <utils.hpp>
+#include <buffer.hpp>
+#include <pointer.hpp>
+#include <database.hpp>
+#include <cartesian.hpp>
+#include <exception.hpp>
 
 namespace pairwise
 {
@@ -24,30 +25,36 @@ namespace pairwise
      * The score of a sequence pair alignment.
      * @since 0.1.1
      */
-    using Score = int32_t;
+    using score = float;
 
     /**
      * Represents a reference for a sequence.
      * @since 0.1.1
      */
-    using SequenceRef = uint16_t;
+    using sequenceref = int_least16_t;
 
     /**
      * Stores the indeces of a pair of sequences to be aligned.
      * @since 0.1.1
      */
-    struct Pair
+    union pair
     {
-        SequenceRef id[2];
+        struct
+        {
+            sequenceref first;
+            sequenceref second;
+        };
+
+        sequenceref id[2];
     };
 
     /**
      * Manages and encapsulates all configurable aspects of the pairwise module.
      * @since 0.1.1
      */
-    struct Configuration
+    struct configuration
     {
-        const ::Database& db;           /// The database of sequences to align.
+        const ::database& db;           /// The database of sequences to align.
         std::string algorithm;          /// The chosen pairwise algorithm.
         std::string table;              /// The chosen scoring table.
     };
@@ -56,72 +63,86 @@ namespace pairwise
      * Represents a pairwise module algorithm.
      * @since 0.1.1
      */    
-    struct Algorithm
+    struct algorithm
     {
-        Buffer<Pair> pair;              /// The sequence pairs to be aligned.
+        buffer<pair> pairs;             /// The sequence pairs to be aligned.
 
-        inline Algorithm() noexcept = default;
-        inline Algorithm(const Algorithm&) noexcept = default;
-        inline Algorithm(Algorithm&&) noexcept = default;
+        inline algorithm() noexcept = default;
+        inline algorithm(const algorithm&) noexcept = default;
+        inline algorithm(algorithm&&) noexcept = default;
 
-        virtual ~Algorithm() = default;
+        virtual ~algorithm() = default;
 
-        inline Algorithm& operator=(const Algorithm&) = default;
-        inline Algorithm& operator=(Algorithm&&) = default;
+        inline algorithm& operator=(const algorithm&) = default;
+        inline algorithm& operator=(algorithm&&) = default;
 
-        virtual Buffer<Pair> generate(size_t);
-        virtual Buffer<Score> run(const Configuration&) = 0;
+        virtual auto generate(size_t) -> buffer<pair>&;
+        virtual auto run(const configuration&) -> buffer<score> = 0;
     };
 
     /**
      * Functor responsible for instantiating an algorithm.
-     * @see Pairwise::run
+     * @see pairwise::manager::run
      * @since 0.1.1
      */
-    using Factory = Functor<Algorithm *()>;
+    using factory = functor<algorithm *()>;
 
     /**
      * Manages all data and execution of the pairwise module.
      * @since 0.1.1
      */
-    class Pairwise final : public Buffer<Score>
+    class manager final : public buffer<score>
     {
         protected:
-            size_t count;           /// The total number of sequences available.
+            using element_type = score;                 /// The object's element type.
+            using underlying_buffer = buffer<score>;    /// The object's underlying buffer.
+
+        protected:
+            size_t mcount;                              /// The total number of aligned sequences.
 
         public:
-            inline Pairwise() noexcept = default;
-            inline Pairwise(const Pairwise&) noexcept = default;
-            inline Pairwise(Pairwise&&) noexcept = default;
+            inline manager() noexcept = default;
+            inline manager(const manager&) noexcept = default;
+            inline manager(manager&&) noexcept = default;
 
-            inline Pairwise& operator=(const Pairwise&) = default;
-            inline Pairwise& operator=(Pairwise&&) = default;
+            inline manager& operator=(const manager&) = default;
+            inline manager& operator=(manager&&) = default;
 
-            using Buffer<Score>::operator=;
+            using underlying_buffer::operator=;
 
             /**
              * Gives access to a pair score using a matrix format.
-             * @param x The requested x-axis offset.
-             * @param y The requested y-axis offset.
+             * @param offset The requested element's offset.
              * @return The score of requested pair.
              */
-            inline Score operator()(ptrdiff_t x, ptrdiff_t y) const
+            inline element_type operator[](const cartesian<2>& offset) const
             {
-                const auto min = utils::min(x, y);
-                const auto max = utils::max(x, y);
-                return (x == y) ? 0 : Buffer<Score>::operator[](utils::combinations(max) + min);
+                const auto min = utils::min(offset[0], offset[1]);
+                const auto max = utils::max(offset[0], offset[1]);
+                return (min != max) ? underlying_buffer::operator[](utils::nchoose(max) + min) : 0;
             }
 
             /**
              * Informs the total number of sequences available in the module.
              * @return The number of processed sequences.
              */
-            inline size_t getCount() const noexcept
+            inline auto count() const noexcept -> size_t
             {
-                return count;
+                return mcount;
             }
 
-            void run(const Configuration&);
+            static auto run(const configuration&) -> manager;
+
+        protected:
+            /**
+             * Initializes a new manager instance with results obtained by the module.
+             * @param buf The buffer with the module's results.
+             * @param count The number of sequences aligned.
+             */
+            inline manager(const buffer<score>& buf, size_t count) noexcept
+            :   underlying_buffer {buf}
+            ,   mcount {count}
+            {}
     };
 
     /**
@@ -129,45 +150,58 @@ namespace pairwise
      * in memory, in order to facilitate accessing its elements.
      * @since 0.1.1
      */
-    struct ScoringTable
+    class scoring_table
     {
-        using Element = int8_t;
-        using RawTable = Element[25][25];
+        public:
+            using element_type = score;             /// The table content's type.
+            using raw_type = element_type[25][25];  /// The raw table type.
+            using pointer_type = pointer<raw_type>; /// The table's pointer type.
 
-        Pointer<RawTable> contents;     /// The table's contents.
-        Element penalty;                /// The table's penalty value.
+        protected:
+            pointer_type mcontents;                 /// The table's contents.
+            element_type mpenalty;                  /// The table's penalty value.
 
-        inline ScoringTable() noexcept = default;
-        inline ScoringTable(const ScoringTable&) noexcept = default;
-        inline ScoringTable(ScoringTable&&) noexcept = default;
+        public:
+            inline scoring_table() noexcept = default;
+            inline scoring_table(const scoring_table&) noexcept = default;
+            inline scoring_table(scoring_table&&) noexcept = default;
 
-        /**
-         * Creates a new scoring table instance.
-         * @param ptr The scoring table's pointer.
-         * @param penalty The penalty applied by the scoring table.
-         */
-        inline ScoringTable(const Pointer<RawTable>& ptr, const Element& penalty) noexcept
-        :   contents {ptr}
-        ,   penalty {penalty}
-        {}
+            /**
+             * Creates a new scoring table instance.
+             * @param ptr The scoring table's pointer.
+             * @param penalty The penalty applied by the scoring table.
+             */
+            inline scoring_table(const pointer_type& ptr, const element_type& penalty) noexcept
+            :   mcontents {ptr}
+            ,   mpenalty {penalty}
+            {}
 
-        inline ScoringTable& operator=(const ScoringTable&) = default;
-        inline ScoringTable& operator=(ScoringTable&&) = default;
+            inline scoring_table& operator=(const scoring_table&) = default;
+            inline scoring_table& operator=(scoring_table&&) = default;
 
-        /**
-         * Gives access to the table's contents.
-         * @param offset The requested table offset.
-         * @return The required table row's reference.
-         */
-        __host__ __device__ inline auto operator[](ptrdiff_t offset) const noexcept
-        -> const Element (&)[25]
-        {
-            return (*contents)[offset];
-        }
+            /**
+             * Gives access to the table's contents.
+             * @param offset The requested table offset.
+             * @return The required table row's reference.
+             */
+            __host__ __device__ inline element_type operator[](const cartesian<2>& offset) const noexcept
+            {
+                return (*mcontents)[offset[0]][offset[1]];
+            }
 
-        static ScoringTable get(const std::string&);
-        static ScoringTable toDevice(const std::string&);
-        static const std::vector<std::string>& getList() noexcept;
+            /**
+             * Gives access to the table's penalty value.
+             * @return The table's penalty value.
+             */
+            __host__ __device__ inline auto penalty() const noexcept -> decltype(mpenalty)
+            {
+                return mpenalty;
+            }
+
+            auto to_device() const -> scoring_table;
+
+            static auto make(const std::string&) -> scoring_table;
+            static auto list() noexcept -> const std::vector<std::string>&;
     };
 
     /**
@@ -177,13 +211,14 @@ namespace pairwise
      * @param table The chosen scoring table.
      * @return The module's configuration instance.
      */
-    inline Configuration configure
-        (   const ::Database& db
+    inline configuration configure(
+            const ::database& db
         ,   const std::string& algorithm = {}
-        ,   const std::string& table     = {}   )
+        ,   const std::string& table = {}
+        )
     {
         return {db, algorithm, table};
     }
-};
+}
 
 #endif

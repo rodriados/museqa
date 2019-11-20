@@ -128,7 +128,7 @@ namespace msa
          * Halts the whole software's execution and exits with given code.
          * @param code The exit code.
          */
-        extern void halt(uint8_t = 0) noexcept;
+        [[noreturn]] extern void halt(uint8_t = 0) noexcept;
     #endif
 
     /**

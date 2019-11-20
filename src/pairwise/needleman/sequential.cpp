@@ -5,15 +5,15 @@
  */
 #include <cstdint>
 
-#include "msa.hpp"
-#include "node.hpp"
-#include "buffer.hpp"
-#include "pointer.hpp"
-#include "encoder.hpp"
-#include "database.hpp"
+#include <msa.hpp>
+#include <node.hpp>
+#include <buffer.hpp>
+#include <encoder.hpp>
+#include <database.hpp>
+#include <sequence.hpp>
 
-#include "pairwise/pairwise.cuh"
-#include "pairwise/needleman.cuh"
+#include <pairwise/pairwise.cuh>
+#include <pairwise/needleman.cuh>
 
 using namespace pairwise;
 
@@ -26,21 +26,16 @@ namespace
      * @param table The scoring table used to compare both sequences.
      * @return The alignment score.
      */
-    static int32_t globalAlign(const Sequence& one, const Sequence& two, const ScoringTable& table)
+    static score align_pair(const sequence& one, const sequence& two, const scoring_table& table)
     {
-        const auto len1 = one.getLength();
-        const auto len2 = two.getLength();
-        const auto penalty = table.penalty;
-
-        Buffer<int32_t> line = {new int32_t[len2 + 1], len2 + 1};
-        int32_t done, val;
+        auto line = buffer<score>::make(two.length() + 1);
 
         // Filling 0-th line with penalties. This is the only initialization needed
         // for sequential algorithm.
-        for(size_t i = 0; i <= len2; ++i)
-            line[i] = - (penalty * i);
+        for(size_t i = 0; i <= two.length(); ++i)
+            line[i] = i * -table.penalty();
 
-        for(size_t i = 0; i < len1; ++i) {
+        for(size_t i = 0; i < one.length(); ++i) {
             // If the current line is at sequence end, then we can already finish the
             // algorithm, as no changes are expected to occur after the end of sequence.
             if(one[i] == encoder::end)
@@ -48,25 +43,54 @@ namespace
 
             // Initialize the 0-th column values. It will always be initialized with
             // penalties, in the same manner as the 0-th line.
-            done = line[0];
-            line[0] = - penalty * (i + 1);
+            score done = line[0];
+            line[0] = (i + 1) * -table.penalty();
 
             // Iterate over the second sequence, calculating the best alignment possible
             // for each of its characters.
-            for(size_t j = 1, m = two.getLength(); j <= m; ++j) {
-                val = two[j - 1] != encoder::end
-                    ? utils::max(
-                            done + table[one[i]][two[j - 1]]
-                        ,   utils::max(line[j - 1] - penalty, line[j] - penalty)
-                        )
-                    : line[j - 1];
+            for(size_t j = 1; j <= two.length(); ++j) {
+                score value = line[j - 1];
+
+                if(two[j - 1] != encoder::end) {                
+                    const auto insertd = value - table.penalty();
+                    const auto removed = line[j] - table.penalty();
+                    const auto matched = done + table[{one[i], two[j - 1]}];
+                    value = utils::max(matched, utils::max(insertd, removed));
+                }
 
                 done = line[j];
-                line[j] = val;
+                line[j] = value;
             }
         }
 
-        return line[two.getLength()];
+        return line[two.length()];
+    }
+
+    /**
+     * Executes the sequential Needleman-Wunsch algorithm for the pairwise step.
+     * @param pairs The workpairs to align in the current node.
+     * @param db The sequences available for alignment.
+     * @param table The scoring table to use.
+     * @return The score of aligned pairs.
+     */
+    static auto align_db(const buffer<pair>& pairs, const ::database& db, const scoring_table& table)
+    -> buffer<score>
+    {
+        const size_t count = pairs.size();
+        auto result = buffer<score>::make(count);
+
+        for(size_t i = 0; i < count; ++i) {
+            const sequence& one = db[pairs[i].first];
+            const sequence& two = db[pairs[i].second];
+
+            result[i] = align_pair(
+                    one.size() > two.size() ? one : two
+                ,   one.size() > two.size() ? two : one
+                ,   table
+                );
+        }
+
+        return result;
     }
 
     /**
@@ -75,59 +99,33 @@ namespace
      * algorithm.
      * @since 0.1.1
      */
-    struct Sequential : public Needleman
+    struct sequential : public needleman::algorithm
     {
-        /**
-         * Executes the sequential Needleman-Wunsch algorithm for the pairwise step.
-         * @param db The sequences available for alignment.
-         * @param pairs The workpairs to align.
-         * @param table The scoring table to use.
-         * @return The score of aligned pairs.
-         */
-        Buffer<Score> alignDb(const ::Database& db, const ScoringTable& table)
-        {
-            const size_t total = this->pair.getSize();
-            Buffer<Score> score {total};
-
-            for(size_t i = 0; i < total; ++i) {
-                const Sequence& seq1 = db[this->pair[i].id[0]];
-                const Sequence& seq2 = db[this->pair[i].id[1]];
-
-                score[i] = globalAlign(
-                    seq1.getSize() > seq2.getSize() ? seq1 : seq2
-                ,   seq1.getSize() > seq2.getSize() ? seq2 : seq1
-                ,   table
-                );
-            }
-
-            return score;
-        }
-
         /**
          * Executes the sequential needleman algorithm for the pairwise step. This method is
          * responsible for distributing and gathering workload from different cluster nodes.
          * @param config The module's configuration.
          * @return The module's result value.
          */
-        Buffer<Score> run(const Configuration& config) override
+        auto run(const configuration& config) -> buffer<score> override
         {
-            const ScoringTable table = ScoringTable::get(config.table);
+            buffer<score> result;
 
-            this->generate(config.db.getCount());
-            onlymaster msa::task("pairwise", "aligning %llu pairs", this->pair.getSize());
+            const auto table = scoring_table::make(config.table);
+            const auto& allpairs = this->generate(config.db.count());
 
-            onlyslaves this->scatter();
-            onlyslaves this->score = alignDb(config.db, table);
-            return this->gather();
+            onlymaster msa::task("pairwise", "aligning %llu pairs", allpairs.size());
+            onlyslaves result = align_db(this->scatter(), config.db, table);
+            return this->gather(result);
         }
     };
-};
+}
 
 /**
  * Instantiates a new sequential needleman instance.
  * @return The new algorithm instance.
  */
-extern Algorithm *needleman::sequential()
+extern pairwise::algorithm *needleman::sequential()
 {
-    return new Sequential;
+    return new ::sequential;
 }

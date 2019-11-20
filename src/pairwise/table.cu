@@ -7,35 +7,64 @@
 #include <string>
 #include <cstdint>
 
-#include "msa.hpp"
-#include "cuda.cuh"
-#include "pointer.hpp"
-#include "exception.hpp"
+#include <msa.hpp>
+#include <cuda.cuh>
+#include <pointer.hpp>
+#include <exception.hpp>
 
-#include "pairwise/pairwise.cuh"
-
-using namespace pairwise;
+#include <pairwise/pairwise.cuh>
 
 /**
- * Aliasing the scoring table type to avoid excessive verbosity.
+ * Aliasing the scoring table's raw type in order to avoid excessive verbosity with
+ * the fully-qualified type name.
  * @since 0.1.1
  */
-using Table = ScoringTable::RawTable;
+using table_type = pairwise::scoring_table::raw_type;
 
 /**
- * Aliasing the scoring table's element type to avoid verbosity.
+ * Aliasing the scoring table's raw element type in order to avoid excessive verbosity
+ * with the fully-qualified type name.
  * @since 0.1.1
  */
-using Element = ScoringTable::Element;
+using element_type = pairwise::scoring_table::element_type;
 
-/*
- * The scoring tables data. One of these tables will be transfered to device memory
- * so it can be used to score sequence alignments. The first table, index-zero, is
- * used as the default, when no valid parameter is found to indicate which table
+/**
+ * The raw scoring tables data. One of these tables will be transfered to device
+ * memory so it can be used to score sequence alignments. The first table, index-zero,
+ * is used as the default, when no valid parameter is found to indicate which table
  * should be used instead.
+ * @since 0.1.1
  */
-static Table rawdata[] = {
-    {   /* [0] blosum62 */
+static table_type tabledata[] = {
+    {   /* [0] default */
+        /*A  C  T  G  R  N  D  Q  E  H  I  L  K  M  F  P  S  W  Y  V  B  J  Z  X  **/
+        { 1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1}
+    ,   {-1, 1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1}
+    ,   {-1,-1, 1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1}
+    ,   {-1,-1,-1, 1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1}
+    ,   {-1,-1,-1,-1, 1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1}
+    ,   {-1,-1,-1,-1,-1, 1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1}
+    ,   {-1,-1,-1,-1,-1,-1, 1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1}
+    ,   {-1,-1,-1,-1,-1,-1,-1, 1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1}
+    ,   {-1,-1,-1,-1,-1,-1,-1,-1, 1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1}
+    ,   {-1,-1,-1,-1,-1,-1,-1,-1,-1, 1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1}
+    ,   {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, 1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1}
+    ,   {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, 1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1}
+    ,   {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, 1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1}
+    ,   {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, 1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1}
+    ,   {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, 1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1}
+    ,   {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, 1,-1,-1,-1,-1,-1,-1,-1,-1,-1}
+    ,   {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, 1,-1,-1,-1,-1,-1,-1,-1,-1}
+    ,   {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, 1,-1,-1,-1,-1,-1,-1,-1}
+    ,   {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, 1,-1,-1,-1,-1,-1,-1}
+    ,   {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, 1,-1,-1,-1,-1,-1}
+    ,   {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, 1,-1,-1,-1,-1}
+    ,   {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, 1,-1,-1,-1}
+    ,   {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, 1,-1,-1}
+    ,   {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1}
+    ,   {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, 0}
+    }
+,   {   /* [1] blosum62 */
         /*A  C  T  G  R  N  D  Q  E  H  I  L  K  M  F  P  S  W  Y  V  B  J  Z  X  **/
         { 4, 0, 0, 0,-1,-2,-2,-1,-1,-2,-1,-1,-1,-1,-2,-1, 1,-3,-2, 0,-2,-1,-1,-1,-4}
     ,   { 0, 9,-1,-3,-3,-3,-3,-3,-4,-3,-1,-1,-3,-1,-2,-3,-1,-2,-2,-1,-3,-1,-3,-1,-4}
@@ -63,7 +92,7 @@ static Table rawdata[] = {
     ,   {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-4}
     ,   {-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4, 0}
     }
-,   {   /* [1] blosum45 */
+,   {   /* [2] blosum45 */
         /*A  C  T  G  R  N  D  Q  E  H  I  L  K  M  F  P  S  W  Y  V  B  J  Z  X  **/
         { 5,-1, 0,-1,-2,-1,-2,-1, 0,-2,-1,-1,-1,-1,-2,-1, 1,-2,-2, 0,-1,-1,-1,-1,-5}
     ,   {-1,12,-1,-3,-3,-2,-3,-3,-3,-3,-3,-2,-3,-2,-2,-4,-1,-5,-3,-1,-2,-2,-3,-1,-5}
@@ -91,7 +120,7 @@ static Table rawdata[] = {
     ,   {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-5}
     ,   {-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5, 0}
     }
-,   {   /* [2] blosum50 */
+,   {   /* [3] blosum50 */
         /*A  C  T  G  R  N  D  Q  E  H  I  L  K  M  F  P  S  W  Y  V  B  J  Z  X  **/
         { 5,-1,-3,-2,-2,-1,-2,-1,-1, 0,-1,-2,-1,-1,-3,-1, 1, 0,-2, 0,-2,-2,-1,-1,-5}
     ,   {-1,13,-5,-3,-4,-2,-4,-3,-3,-3,-2,-2,-3,-2,-2,-4,-1,-1,-3,-1,-3,-2,-3,-1,-5}
@@ -119,7 +148,7 @@ static Table rawdata[] = {
     ,   {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-5}
     ,   {-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5, 0}
     }
-,   {   /* [3] blosum80 */
+,   {   /* [4] blosum80 */
         /*A  C  T  G  R  N  D  Q  E  H  I  L  K  M  F  P  S  W  Y  V  B  J  Z  X  **/
         { 5,-1, 0,-1,-2,-2,-2,-1, 0,-2,-2,-2,-1,-1,-3,-1, 1,-3,-2, 0,-2,-2,-1,-1,-6}
     ,   {-1, 9,-1,-5,-4,-3,-4,-4,-4,-4,-2,-2,-4,-2,-3,-4,-2,-3,-3,-1,-4,-2,-4,-1,-6}
@@ -147,7 +176,7 @@ static Table rawdata[] = {
     ,   {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-6}
     ,   {-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6, 0}
     }
-,   {   /* [4] blosum90 */
+,   {   /* [5] blosum90 */
         /*A  C  T  G  R  N  D  Q  E  H  I  L  K  M  F  P  S  W  Y  V  B  J  Z  X  **/
         { 5,-1, 0,-1,-2,-2,-3,-1, 0,-2,-2,-2,-1,-2,-3,-1, 1,-4,-3,-1,-2,-2,-1,-1,-6}
     ,   {-1, 9,-2,-6,-5,-4,-5,-4,-4,-5,-2,-2,-4,-2,-3,-4,-2,-4,-4,-2,-4,-2,-5,-1,-6}
@@ -175,7 +204,7 @@ static Table rawdata[] = {
     ,   {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-6}
     ,   {-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6,-6, 0}
     }
-,   {   /* [5] pam250 */
+,   {   /* [6] pam250 */
         /*A  C  T  G  R  N  D  Q  E  H  I  L  K  M  F  P  S  W  Y  V  B  J  Z  X  **/
         { 2,-2, 1, 0,-2, 0, 0, 0, 1,-1,-1,-2,-1,-1,-3, 1, 1,-6,-3, 0, 0,-1, 0,-1,-8}
     ,   {-2,12,-2,-5,-4,-4,-5,-5,-3,-3,-2,-6,-5,-5,-4,-3, 0,-8, 0,-2,-4,-5,-5,-1,-8}
@@ -206,19 +235,12 @@ static Table rawdata[] = {
 };
 
 /**
- * Represents a local and simple scoring table instance. This struct is used to
- * link the static tables to their respective penalty values.
+ * The list of all available scoring tables' names.
+ * @since 0.1.1
  */
-typedef struct {
-    Table * const data;
-    const Element penalty;
-} LocalTable;
-
-/**
- * The list of available scoring tables' names.
- */
-static const std::vector<std::string> available = {
-    "blosum62"
+static const std::vector<std::string> tablename = {
+    "default"
+,   "blosum62"
 ,   "blosum45"
 ,   "blosum50"
 ,   "blosum80"
@@ -227,29 +249,51 @@ static const std::vector<std::string> available = {
 };
 
 /**
+ * Represents a local and simple scoring table instance. This struct is used to
+ * link the static tables to their respective penalty values.
+ * @since 0.1.1
+ */
+typedef struct {
+    table_type * const data;
+    const element_type penalty;
+} local_table;
+
+/**
  * Maps the table's string names to their respective info. This will be needed when
  * translating a table's names from a string to its contents.
  */
-static const std::map<std::string, const LocalTable> dispatcher = {
-    {available[0], {&rawdata[0], 4}}
-,   {available[1], {&rawdata[1], 5}}
-,   {available[2], {&rawdata[2], 5}}
-,   {available[3], {&rawdata[3], 6}}
-,   {available[4], {&rawdata[4], 6}}
-,   {available[5], {&rawdata[5], 8}}
+static const std::map<std::string, const local_table> dispatcher = {
+    {tablename[0], {&tabledata[0], 1}}
+,   {tablename[1], {&tabledata[1], 4}}
+,   {tablename[2], {&tabledata[2], 5}}
+,   {tablename[3], {&tabledata[3], 5}}
+,   {tablename[4], {&tabledata[4], 6}}
+,   {tablename[5], {&tabledata[5], 6}}
+,   {tablename[6], {&tabledata[6], 8}}
 };
+
+/**
+ * Transfers the selected scoring table into device memory.
+ * @return The new scoring table instance.
+ */
+auto pairwise::scoring_table::to_device() const -> pairwise::scoring_table
+{
+    auto ptr = pointer<table_type>::make(cuda::memory::global<table_type>());
+    cuda::memory::copy(&ptr, &mcontents);
+    return {ptr, mpenalty};
+}
 
 /**
  * Gets the description of a scoring table selected by name.
  * @param name The name of selected scoring table.
  * @return The local description of requested table.
  */
-static const LocalTable& retrieve(const std::string& name)
+static const local_table& retrieve(const std::string& name)
 {
     const auto& pair = dispatcher.find(name);
 
-    enforce(pair != dispatcher.end(), "could not find scoring table: %s", name.c_str());
-    onlymaster msa::info("selected pairwise scoring table: %s", name.c_str());
+    enforce(pair != dispatcher.end(), "could not find scoring table '%s'", name);
+    onlymaster msa::info("selected pairwise scoring table '%s'", name);
 
     return pair->second;
 }
@@ -259,41 +303,17 @@ static const LocalTable& retrieve(const std::string& name)
  * @param name The name of selected scoring table.
  * @return The pointer to selected table.
  */
-ScoringTable ScoringTable::get(const std::string& name)
+auto pairwise::scoring_table::make(const std::string& name) -> pairwise::scoring_table
 {
-    const LocalTable& selected = retrieve(name);
-    
-    Pointer<Table> ptr = {
-        selected.data
-    ,   Deleter<Table> {[](Table *) { /* You don't touch my table! */; }}
-    };
-
-    return {ptr, selected.penalty};
-}
-
-/**
- * Loads up the selected scoring table into device memory.
- * @param name The name of selected scoring table.
- * @return The pointer to selected table.
- */
-ScoringTable ScoringTable::toDevice(const std::string& name)
-{
-    ScoringTable table = get(name);
-    Pointer<Table> ptr;
-
-    onlyslaves {
-        ptr = cuda::allocate<Table>();
-        cuda::copy<Table>(ptr, &table.contents);
-    }
-
-    return {ptr, table.penalty};
+    const local_table& selected = retrieve(name);
+    return {pointer<table_type>::weak(selected.data), selected.penalty};
 }
 
 /**
  * Informs the names of all available scoring tables.
  * @return The list of available scoring tables.
  */
-const std::vector<std::string>& ScoringTable::getList() noexcept
+auto pairwise::scoring_table::list() noexcept -> const std::vector<std::string>&
 {
-    return available;
+    return tablename;
 }

@@ -338,9 +338,9 @@ class pointer
          * Returns the reference to the current pointer's allocator.
          * @return The pointer's allocator instance.
          */
-        inline const allocator_type& allocator() const noexcept
+        inline allocator_type allocator() const noexcept
         {
-            return meta->allocr;
+            return meta ? meta->allocr : allocator_type {};
         }
 
         /**

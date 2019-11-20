@@ -6,18 +6,19 @@
 #include <map>
 #include <string>
 
-#include "msa.hpp"
-#include "utils.hpp"
-#include "buffer.hpp"
-#include "exception.hpp"
+#include <msa.hpp>
+#include <utils.hpp>
+#include <buffer.hpp>
+#include <exception.hpp>
 
-#include "pairwise/pairwise.cuh"
-#include "pairwise/needleman.cuh"
+#include <pairwise/pairwise.cuh>
+#include <pairwise/needleman.cuh>
 
-/*
+/**
  * Keeps the list of available algorithms and their respective factories.
+ * @since 0.1.1
  */
-static const std::map<std::string, pairwise::Factory> dispatcher = {
+static const std::map<std::string, pairwise::factory> dispatcher = {
     {"needleman",               pairwise::needleman::hybrid}
 ,   {"needleman-hybrid",        pairwise::needleman::hybrid}
 ,   {"needleman-sequential",    pairwise::needleman::sequential}
@@ -27,35 +28,36 @@ static const std::map<std::string, pairwise::Factory> dispatcher = {
 /**
  * Generates all working pairs for a given number of elements.
  * @param num The total number of elements.
- * @return The generated pairs.
+ * @return The generated sequence pairs.
  */
-Buffer<pairwise::Pair> pairwise::Algorithm::generate(size_t num)
+auto pairwise::algorithm::generate(size_t num) -> buffer<pairwise::pair>&
 {
-    pair = Buffer<pairwise::Pair> {utils::combinations(num)};
+    const auto ntotal = utils::nchoose(num);
+    auto pairbuf = buffer<pairwise::pair>::make(ntotal);
 
     for(size_t i = 0, c = 0; i < num - 1; ++i)
         for(size_t j = i + 1; j < num; ++j, ++c)
-            pair[c] = {static_cast<SequenceRef>(i), static_cast<SequenceRef>(j)};
+            pairbuf[c] = {pairwise::sequenceref(i), pairwise::sequenceref(j)};
 
-    return pair;
+    return pairs = pairbuf;
 }
 
 /**
  * Aligns every sequence in given database pairwise, thus calculating a similarity
  * score for every different permutation of sequence pairs.
  * @param config The module's configuration.
+ * @return The new module manager instance.
  */
-void pairwise::Pairwise::run(const pairwise::Configuration& config)
+auto pairwise::manager::run(const pairwise::configuration& config) -> pairwise::manager
 {
-    const auto& selection = dispatcher.find(config.algorithm);
+    const auto& selected = dispatcher.find(config.algorithm);
 
-    enforce(selection != dispatcher.end(), "unknown pairwise algorithm: %s", config.algorithm.c_str());
-    onlymaster msa::info("chosen pairwise algorithm: %s", config.algorithm.c_str());
+    enforce(selected != dispatcher.end(), "unknown pairwise algorithm '%s'", config.algorithm);
+    onlymaster msa::info("chosen pairwise algorithm '%s'", config.algorithm);
 
-    pairwise::Algorithm *algorithm = selection->second();
+    pairwise::algorithm *worker = (selected->second)();
+    pairwise::manager result {worker->run(config), config.db.count()};
+    delete worker;
 
-    *this = algorithm->run(config);
-    count = config.db.getCount();
-
-    delete algorithm;
+    return result;
 }

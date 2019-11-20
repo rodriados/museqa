@@ -3,66 +3,32 @@
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018 Rodrigo Siqueira
  */
-#include <set>
 #include <vector>
 
-#include "cuda.cuh"
-#include "encoder.hpp"
-#include "pointer.hpp"
-#include "database.hpp"
-#include "sequence.hpp"
+#include <cuda.cuh>
+#include <encoder.hpp>
+#include <pointer.hpp>
+#include <database.hpp>
+#include <sequence.hpp>
 
-#include "pairwise/database.cuh"
-
-/**
- * Initializes a contiguous database from a common database instance.
- * @param db The database to be transformed.
- */
-pairwise::Database::Database(const ::Database& db)
-:   Sequence {merge(db)}
-,   view {db.getCount()}
-{
-    init(db);
-}
-
-/**
- * Initializes a contiguous database from the subset of common database instance.
- * @param db The database to be transformed.
- * @param selected The subset of elements to be in new database.
- */
-pairwise::Database::Database(const ::Database& db, const std::set<ptrdiff_t>& selected)
-:   view {selected.size()}
-{
-    ::Database selectdb = db.only(selected);
-    Sequence::operator=(merge(selectdb));
-
-    init(selectdb);
-}
-
-/**
- * Initializes a contiguous database from the subset of common database instance.
- * @param db The database to be transformed.
- * @param selected The subset of elements to be in new database.
- */
-pairwise::Database::Database(const ::Database& db, const std::vector<ptrdiff_t>& selected)
-:   view {selected.size()}
-{
-    ::Database selectdb = db.only(selected);
-    Sequence::operator=(merge(selectdb));
-
-    init(selectdb);
-}
+#include <pairwise/database.cuh>
 
 /**
  * Sets up the view pointers responsible for keeping track of internal sequences.
+ * @param seq The merged sequence to have its internal parts splitted.
  * @param db The database to have its sequences mapped.
  */
-void pairwise::Database::init(const ::Database& db)
+auto pairwise::database::init(underlying_type& merged, const ::database& db) -> entry_buffer
 {
-    for(size_t i = 0, j = 0, n = getCount(); i < n; ++i) {
-        view[i] = {*this, static_cast<ptrdiff_t>(j), db[i].getSize()};
-        j += db[i].getSize();
+    const size_t count = db.count();
+    auto result = entry_buffer::make(count);
+
+    for(size_t i = 0, j = 0; i < count; ++i) {
+        result[i] = {merged, ptrdiff_t(j), db[i].size()};
+        j += db[i].size();
     }
+
+    return result;
 }
 
 /**
@@ -70,38 +36,35 @@ void pairwise::Database::init(const ::Database& db)
  * @param db The database to have its sequences merged.
  * @return The merged sequences blocks.
  */
-std::vector<encoder::EncodedBlock> pairwise::Database::merge(const ::Database& db)
+auto pairwise::database::merge(const ::database& db) -> underlying_type
 {
-    std::vector<encoder::EncodedBlock> merged;
+    const size_t count = db.count();
+    std::vector<encoder::block> merged;
 
-    for(size_t i = 0, n = db.getCount(); i < n; ++i)
+    for(size_t i = 0; i < count; ++i)
         merged.insert(merged.end(), db[i].begin(), db[i].end());
 
-    return merged;
+    return underlying_type::copy(merged);
 }
 
 /**
  * Transfers this database instance to the compute-capable device.
  * @return The database instance allocated in device.
  */
-pairwise::Database pairwise::Database::toDevice() const
+auto pairwise::database::to_device() const -> pairwise::database
 {
-    const size_t dbsize = this->getSize();
-    const size_t dbcount = this->getCount();
+    const size_t nblocks = this->size();
+    const size_t nviews = this->count();
 
-    using Block = encoder::EncodedBlock;
-    using View = SequenceView;
+    auto dblocks = underlying_type::make(cuda::memory::global<encoder::block[]>(), nblocks);
+    auto dviews = entry_buffer::make(cuda::memory::global<element_type[]>(), nviews);
+    auto helper = entry_buffer::make(nviews);
 
-    Buffer<Block> device_seq = Buffer<Block> {cuda::allocate<Block>(dbsize), dbsize};
-    Buffer<View> device_view = Buffer<View> {cuda::allocate<View>(dbcount), dbcount};
+    for(size_t i = 0; i < nviews; ++i)
+        helper[i] = {dblocks, mviews[i]};
 
-    Buffer<View> transformed {dbcount};
+    cuda::memory::copy(dblocks.raw(), this->raw(), nblocks);
+    cuda::memory::copy(dviews.raw(), helper.raw(), nviews);
 
-    for(size_t i = 0; i < dbcount; ++i)
-        transformed[i] = {device_seq, view[i]};
-
-    cuda::copy<Block>(device_seq.getBuffer(), this->getBuffer(), dbsize);
-    cuda::copy<View>(device_view.getBuffer(), transformed.getBuffer(), dbcount);
-
-    return {device_seq, device_view};
+    return {dblocks, dviews};
 }
