@@ -87,7 +87,7 @@ watchdog()
     init()
     {
         process_name="$1"
-        process_message="$2"
+        process_message="$(markdown "$2")"
         process_active=1
         process_total=()
         process_done=()

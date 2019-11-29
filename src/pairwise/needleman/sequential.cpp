@@ -89,7 +89,7 @@ namespace
                 ,   table
                 );
 
-            onlymaster watchdog::update("pairwise", 0, i, count);
+            watchdog::update("pairwise", 0, i, count);
         }
 
         return result;
@@ -114,12 +114,9 @@ namespace
             buffer<score> result;
 
             const auto table = scoring_table::make(config.table);
-            const auto& allpairs = this->generate(config.db.count());
+            this->generate(config.db.count());
 
-            onlymaster watchdog::init("pairwise", "aligning <bold>%llu</> pairs", allpairs.size());
             onlyslaves result = align_db(this->scatter(), config.db, table);
-            onlymaster watchdog::finish("pairwise", "aligned all sequence pairs");
-
             return this->gather(result);
         }
     };

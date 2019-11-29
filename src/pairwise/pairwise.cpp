@@ -53,10 +53,12 @@ auto pairwise::manager::run(const pairwise::configuration& config) -> pairwise::
     const auto& selected = dispatcher.find(config.algorithm);
 
     enforce(selected != dispatcher.end(), "unknown pairwise algorithm <bold>%s</>", config.algorithm);
-    onlymaster watchdog::info("chosen pairwise algorithm <bold>%s</>", config.algorithm);
+    onlymaster watchdog::info("chosen pairwise algorithm <bold>%s</>", config.algorithm);    
 
+    onlymaster watchdog::init("pairwise", "aligning <bold>%llu</> pairs", utils::nchoose(config.db.count()));
     pairwise::algorithm *worker = (selected->second)();
     pairwise::manager result {worker->run(config), config.db.count()};
+    onlymaster watchdog::finish("pairwise", "aligned all sequence pairs");
     delete worker;
 
     return result;
