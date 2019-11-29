@@ -382,6 +382,8 @@ namespace
             align_kernel<<<in.jobs.size(), block_size, sizeof(score) * batch_size>>>(in, out, table);
             cuda::memory::copy(result.raw() + done, out.raw(), in.jobs.size());
             done += in.jobs.size();
+
+            watchdog::update("pairwise", node::rank, done, count);
         }
 
         return result;
@@ -407,8 +409,10 @@ namespace
             const auto table = scoring_table::make(config.table);
             const auto& allpairs = this->generate(config.db.count());
 
-            onlymaster msa::task("pairwise", "aligning %llu pairs", allpairs.size());
+            onlymaster watchdog::init("pairwise", "aligning %llu pairs", allpairs.size());
             onlyslaves result = align_db(this->scatter(), config.db, table.to_device());
+            onlymaster watchdog::finish("pairwise", "aligned all sequence pairs");
+
             return this->gather(result);
         }
     };

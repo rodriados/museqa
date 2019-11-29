@@ -130,6 +130,23 @@ namespace msa
          */
         [[noreturn]] extern void halt(uint8_t = 0) noexcept;
     #endif
+}
+
+namespace watchdog
+{
+    /**
+     * Prints an informative log message.
+     * @tparam T The message arguments' types.
+     * @param fmtstr The message format template.
+     * @param args The message arguments.
+     */
+    template <typename ...T>
+    inline void info(const std::string& fmtstr, T&&... args) noexcept
+    {
+        #if !defined(onlycython)
+            fmt::print("[_WTCHDG_|info|" + fmtstr + "]\n", args...);
+        #endif
+    }
 
     /**
      * Prints an error log message and halts execution.
@@ -141,50 +158,10 @@ namespace msa
     inline void error(const std::string& fmtstr, T&&... args)
     {
         #if !defined(onlycython)
-            fmt::print("[error] " + fmtstr + '\n', args...);
-            halt(1);
+            fmt::print("[_WTCHDG_|error|" + fmtstr + "]\n", args...);
+            msa::halt(1);
         #else
             throw exception {fmtstr, args...};
-        #endif
-    }
-
-    /**
-     * Prints an informative log message.
-     * @tparam T The message arguments' types.
-     * @param fmtstr The message format template.
-     * @param args The message arguments.
-     */
-    template <typename ...T>
-    inline void info(const std::string& fmtstr, T&&... args) noexcept
-    {
-        #if !defined(onlycython)
-            fmt::print("[info] " + fmtstr + '\n', args...);
-        #endif
-    }
-
-    /**
-     * Prints a time report for given task.
-     * @param taskname The name of completed task.
-     * @param seconds The duration in seconds of given task.
-     */
-    inline void report(const char *taskname, double seconds) noexcept
-    {
-        #if !defined(onlycython)
-            onlymaster fmt::print("[report] %s in %lf seconds\n", taskname, seconds);
-        #endif
-    }
-
-    /**
-     * Informs the watchdog about the task we are currently processing.
-     * @param taskname The name of the task being processed.
-     * @param fmtstr The message formatting string.
-     * @param args The message parts to be printed.
-     */
-    template <typename ...T>
-    inline void task(const char *taskname, const std::string& fmtstr, T&&... args) noexcept
-    {
-        #if !defined(onlycython)
-            fmt::print("[task] %s " + fmtstr + '\n', taskname, args...);
         #endif
     }
 
@@ -198,7 +175,61 @@ namespace msa
     inline void warning(const std::string& fmtstr, T&&... args) noexcept
     {
         #if !defined(onlycython)
-            fmt::print("[warning] " + fmtstr + '\n', args...);
+            fmt::print("[_WTCHDG_|warning|" + fmtstr + "]\n", args...);
+        #endif
+    }
+
+    /**
+     * Informs the watchdog about a new task to be watched.
+     * @param task The name of task to be watched.
+     * @param fmtstr The message formatting string.
+     * @param args The message parts to be printed.
+     */
+    template <typename ...T>
+    inline void init(const char *task, const std::string& fmtstr, T&&... args) noexcept
+    {
+        #if !defined(onlycython)
+            fmt::print("[_WTCHDG_|init|%s|" + fmtstr + "]\n", task, args...);
+        #endif
+    }
+
+    /**
+     * Informs the watchdog about the progress of the task being watched.
+     * @param task The name of task being watched.
+     * @param id The task's working node identification.
+     * @param done The number of completed subtasks.
+     * @param total The node's total number of subtasks.
+     */
+    inline void update(const char *task, int id, size_t done, size_t total)
+    {
+        #if !defined(onlycython)
+            fmt::print("[_WTCHDG_|update|%s|%d|%llu|%llu]\n", task, id, done, total);
+        #endif
+    }
+
+    /**
+     * Informs the watchdog about the completion of the watched task.
+     * @param task The name of task to be watched.
+     * @param fmtstr The message formatting string.
+     * @param args The message parts to be printed.
+     */
+    template <typename ...T>
+    inline void finish(const char *task, const std::string& fmtstr, T&&... args) noexcept
+    {
+        #if !defined(onlycython)
+            fmt::print("[_WTCHDG_|finish|%s|" + fmtstr + "]\n", task, args...);
+        #endif
+    }
+
+    /**
+     * Prints a time report for given task.
+     * @param taskname The name of completed task.
+     * @param seconds The duration in seconds of given task.
+     */
+    inline void report(const char *taskname, double seconds) noexcept
+    {
+        #if !defined(onlycython)
+            onlymaster watchdog::info("<bold green>%s</> done in <bold>%lf</> seconds", taskname, seconds);
         #endif
     }
 };

@@ -54,7 +54,7 @@ namespace msa
         mpi::broadcast(lsize);
         mpi::broadcast(lblock);
 
-        onlymaster info("loaded a total of %d sequences", db.count());
+        onlymaster watchdog::info("loaded a total of <bold>%d</> sequences", db.count());
 
         onlyslaves for(size_t i = 0, j = 0, n = lsize.size(); i < n; ++i) {
             db.add(sequence::copy(&lblock[j], lsize[i]));
@@ -106,15 +106,15 @@ namespace msa
         pairwise::manager pw;
         //phylogeny::manager pg;
 
-        msa::report("total", benchmark::run([&]() {
-            msa::report("loading", benchmark::run(db, load));
-            msa::report("pairwise", benchmark::run(pw, rpairwise, db));
-            //msa::report("phylogeny", benchmark::run(pg, rphylogeny, pw));
+        watchdog::report("total", benchmark::run([&]() {
+            watchdog::report("loading", benchmark::run(db, load));
+            watchdog::report("pairwise", benchmark::run(pw, rpairwise, db));
+            //watchdog::report("phylogeny", benchmark::run(pg, rphylogeny, pw));
         }));
     }
 
     catch(const exception& e) {
-        msa::error(e.what());
+        watchdog::error(e.what());
     }
 
     /**
@@ -143,10 +143,13 @@ int main(int argc, char **argv)
     cmdline::parse(argc, argv);
 
     if(node::count < 2)
-        msa::error("at least 2 nodes are needed");
+        watchdog::error("at least 2 nodes are needed");
+
+    if(cmdline::count() <= 0)
+        watchdog::error("no input files to align");
 
     onlyslaves if(!cuda::device::count())
-        msa::error("no compatible gpu device has been found");
+        watchdog::error("no compatible gpu device has been found");
 
     onlyslaves if(cmdline::has("multigpu"))
         cuda::device::select(node::rank - 1);

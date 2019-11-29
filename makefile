@@ -67,7 +67,8 @@ install:
 	@mkdir -p $(OBJINTERNAL)
 
 production: install $(OBJDIR)/$(NAME)
-	@chmod +x src/watchdog
+	@chmod +x src/hostfinder.sh
+	@chmod +x src/watchdog.sh
 	@chmod +x msarun
 
 testing: override MPPP = $(PYCC)

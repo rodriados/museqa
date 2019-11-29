@@ -52,8 +52,8 @@ auto pairwise::manager::run(const pairwise::configuration& config) -> pairwise::
 {
     const auto& selected = dispatcher.find(config.algorithm);
 
-    enforce(selected != dispatcher.end(), "unknown pairwise algorithm '%s'", config.algorithm);
-    onlymaster msa::info("chosen pairwise algorithm '%s'", config.algorithm);
+    enforce(selected != dispatcher.end(), "unknown pairwise algorithm <bold>%s</>", config.algorithm);
+    onlymaster watchdog::info("chosen pairwise algorithm <bold>%s</>", config.algorithm);
 
     pairwise::algorithm *worker = (selected->second)();
     pairwise::manager result {worker->run(config), config.db.count()};
