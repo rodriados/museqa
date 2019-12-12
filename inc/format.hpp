@@ -23,6 +23,8 @@ namespace msa
     {
         namespace fmt
         {
+            using msa::pointer;
+            
             /**
              * Checks whether all argument types are actually printable.
              * @tparam T The list of argment types to be checked.
@@ -40,17 +42,17 @@ namespace msa
              * @return The final formatted string.
              */
             template <typename ...T>
-            inline const msa::pointer<char[]> format(const char *fmtstr, T&&... args) noexcept
+            inline const pointer<char[]> format(const char *fmtstr, T&&... args) noexcept
             {
                 static_assert(valid<decltype(args)...>::value, "formatter must return scalar");
                 size_t length = snprintf(nullptr, 0, fmtstr, args...) + 1;
-                auto result = msa::pointer<char[]>::make(length);
+                auto result = pointer<char[]>::make(length);
                 snprintf(&result, length, fmtstr, args...);
                 return result;
             }
 
             template <typename ...T>
-            inline const msa::pointer<char[]> format(const std::string& fmtstr, T&&... args) noexcept
+            inline const pointer<char[]> format(const std::string& fmtstr, T&&... args) noexcept
             {
                 return format(fmtstr.c_str(), args...);
             }
