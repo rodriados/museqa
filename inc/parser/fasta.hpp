@@ -5,18 +5,16 @@
  */
 #pragma once
 
-#ifndef PARSER_FASTA_HPP_INCLUDED
-#define PARSER_FASTA_HPP_INCLUDED
-
 #include <string>
 #include <vector>
 
 #include <parser.hpp>
 #include <database.hpp>
 
-namespace parser
+namespace msa
 {
-    extern std::vector<database_entry> fasta(const std::string&);
-};
-
-#endif
+    namespace parser
+    {
+        extern database fasta(const std::string&);
+    }
+}

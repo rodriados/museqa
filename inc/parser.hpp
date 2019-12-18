@@ -5,9 +5,6 @@
  */
 #pragma once
 
-#ifndef PARSER_HPP_INCLUDED
-#define PARSER_HPP_INCLUDED
-
 #include <string>
 #include <vector>
 #include <fstream>
@@ -15,17 +12,18 @@
 #include <utils.hpp>
 #include <database.hpp>
 
-namespace parser
+namespace msa
 {
-    /**
-     * A parser is a function resposible for reading a file and converting
-     * its data to sequences that can be added to the database.
-     * @since 0.1.1
-     */
-    using functor = ::functor<std::vector<database_entry>(const std::string&)>;
+    namespace parser
+    {
+        /**
+         * A parser is a function resposible for reading a file and converting
+         * its data to sequences that can be added to the database.
+         * @since 0.1.1
+         */
+        using functor = msa::functor<auto(const std::string&) -> database>;
 
-    extern std::vector<database_entry> parse(const std::string&, const std::string& = {});
-    extern std::vector<database_entry> parse_many(const std::vector<std::string>&, const std::string& = {});
-};
-
-#endif
+        extern auto parse(const std::string&, const std::string& = {}) -> database;
+        extern auto parse(const std::vector<std::string>&, const std::string& = {}) -> database;
+    }
+}
