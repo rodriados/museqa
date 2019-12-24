@@ -144,7 +144,7 @@ namespace msa
              * Allows the database to be iterated without being modified.
              * @return The database's const iterator.
              */
-            inline auto begin() const noexcept -> const underlying_type::iterator
+            inline auto begin() const noexcept -> const underlying_type::const_iterator
             {
                 return m_map.begin();
             }
@@ -162,7 +162,7 @@ namespace msa
              * Informs the database's final const iterator point.
              * @return The const iterator to the point after last element in database.
              */
-            inline auto end() const noexcept -> const underlying_type::iterator
+            inline auto end() const noexcept -> const underlying_type::const_iterator
             {
                 return m_map.end();
             }

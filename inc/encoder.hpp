@@ -32,7 +32,7 @@ namespace msa
          * Aliases a block buffer into a more readable name.
          * @since 0.1.1
          */
-        using buffer = ::buffer<block>;
+        using buffer = msa::buffer<block>;
 
         /**
          * Defining the unit symbol for final of sequence.

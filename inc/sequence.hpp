@@ -57,6 +57,16 @@ namespace msa
             :   sequence {str.data(), str.size()}
             {}
 
+            /**
+             * Instantiates a new sequence from a const string.
+             * @tparam N The sequence's size.
+             * @param str The string to initialize the new sequence.
+             */
+            template <size_t N>
+            inline sequence(const char (&str)[N])
+            :   sequence {str, N}
+            {}
+
             inline sequence& operator=(const sequence&) = default;
             inline sequence& operator=(sequence&&) = default;
 
