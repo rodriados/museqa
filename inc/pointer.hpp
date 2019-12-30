@@ -26,12 +26,11 @@ namespace msa
             template <typename T>
             struct counter
             {
-                using element_type = pure<T>;           /// The type of element represented by the pointer.
-                using allocator_type = allocator<T>;    /// The pointer's allocator type.
+                using element_type = T;                 /// The type of elements represented by the pointer.
 
-                size_t count = 0;                       /// The number of current pointer references.
+                size_t count = 0;                       /// The  number of currently active pointer references.
                 element_type *ptr = nullptr;            /// The raw target pointer.
-                const allocator_type alloc = nullptr;   /// The pointer's allocator.
+                const allocator alloc = nullptr;        /// The pointer's allocator.
 
                 /**
                  * Initializes a new pointer counter.
@@ -39,14 +38,14 @@ namespace msa
                  * @param alloc The pointer's allocator.
                  * @see detail::pointer::acquire
                  */
-                inline counter(element_type *ptr, const allocator_type& alloc) noexcept
+                inline counter(element_type *ptr, const allocator& alloc) noexcept
                 :   count {1}
                 ,   ptr {ptr}
                 ,   alloc {alloc}
                 {}
 
                 /**
-                 * Deletes and frees the raw pointer by calling its deallocator.
+                 * Deletes and frees the memory claimed by the raw pointer.
                  * @see detail::pointer::release
                  */
                 inline ~counter()
@@ -63,7 +62,7 @@ namespace msa
              * @return The new pointer's counter instance.
              */
             template <typename T>
-            inline counter<T> *acquire(pure<T> *ptr, const allocator<T>& alloc) noexcept
+            inline counter<T> *acquire(T *ptr, const allocator& alloc) noexcept
             {
                 return new counter<T> {ptr, alloc};
             }
@@ -108,12 +107,11 @@ namespace msa
     template <typename T>
     class pointer
     {
-        static_assert(!std::is_reference<T>::value, "cannot create pointer to a reference");
         static_assert(!std::is_function<T>::value, "cannot create pointer to a function");
+        static_assert(!std::is_reference<T>::value, "cannot create pointer to a reference");
 
         public:
             using element_type = pure<T>;                   /// The type of pointer's elements.
-            using allocator_type = allocator<element_type>; /// The pointer allocator type.
 
         protected:
             using counter_type = detail::pointer::counter<element_type>;    /// The pointer counter type.
@@ -130,7 +128,7 @@ namespace msa
              * @param ptr The pointer to be encapsulated.
              */
             inline pointer(element_type *ptr) noexcept
-            :   pointer {ptr, detail::pointer::acquire(ptr, allocator_type {})}
+            :   pointer {ptr, detail::pointer::acquire(ptr, allocator::builtin<element_type>())}
             {}
 
             /**
@@ -138,7 +136,7 @@ namespace msa
              * @param ptr The pointer to be encapsulated.
              * @param alloc The allocator of given pointer.
              */
-            inline pointer(element_type *ptr, const allocator_type& alloc) noexcept
+            inline pointer(element_type *ptr, const allocator& alloc) noexcept
             :   pointer {ptr, detail::pointer::acquire(ptr, alloc)}
             {}
 
@@ -341,9 +339,9 @@ namespace msa
              * Returns the reference to the current pointer's allocator.
              * @return The pointer's allocator instance.
              */
-            inline allocator_type alloc() const noexcept
+            inline allocator alloc() const noexcept
             {
-                return m_meta ? m_meta->alloc : allocator_type {};
+                return m_meta ? m_meta->alloc : allocator::builtin<element_type>();
             }
 
             /**
@@ -362,7 +360,7 @@ namespace msa
              */
             static inline auto make(size_t count = 1) noexcept -> pointer
             {
-                return make(allocator_type {}, count);
+                return make(allocator::builtin<element_type>(), count);
             }
 
             /**
@@ -371,9 +369,9 @@ namespace msa
              * @param count The number of elements to be allocated.
              * @return The newly allocated pointer.
              */
-            static inline auto make(const allocator_type& alloc, size_t count = 1) noexcept -> pointer
+            static inline auto make(const allocator& alloc, size_t count = 1) noexcept -> pointer
             {
-                return {alloc.allocate(count), alloc};
+                return pointer {static_cast<element_type *>(alloc.allocate(count)), alloc};
             }
 
             /**

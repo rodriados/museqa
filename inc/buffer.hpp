@@ -32,7 +32,6 @@ namespace msa
         public:
             using element_type = T;                         /// The buffer's element size.
             using pointer_type = pointer<element_type[]>;   /// The buffer's pointer type.
-            using allocator_type = allocator<element_type>; /// The buffer's allocator type.
 
         protected:
             pointer_type m_ptr;     /// The pointer to the corresponding buffer's memory area.
@@ -157,7 +156,7 @@ namespace msa
              * Exposes the buffer's internal allocator instance.
              * @return The buffer's internal allocator.
              */
-            __host__ __device__ inline allocator_type alloc() const noexcept
+            __host__ __device__ inline allocator alloc() const noexcept
             {
                 return m_ptr.alloc();
             }
@@ -209,7 +208,7 @@ namespace msa
              */
             static inline buffer make(size_t size = 1) noexcept
             {
-                return make(allocator_type {}, size);
+                return buffer {pointer_type::make(size), size};
             }
 
             /**
@@ -218,7 +217,7 @@ namespace msa
              * @param size The buffer's number of elements.
              * @return The newly created buffer instance.
              */
-            static inline buffer make(const allocator_type& alloc, size_t size = 1) noexcept
+            static inline buffer make(const allocator& alloc, size_t size = 1) noexcept
             {
                 return buffer {pointer_type::make(alloc, size), size};
             }
