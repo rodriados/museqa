@@ -30,7 +30,7 @@ namespace msa
 
                 size_t count = 0;                       /// The  number of currently active pointer references.
                 element_type *ptr = nullptr;            /// The raw target pointer.
-                const allocator alloc = nullptr;        /// The pointer's allocator.
+                const allocator alloc;                  /// The pointer's allocator.
 
                 /**
                  * Initializes a new pointer counter.
@@ -371,7 +371,8 @@ namespace msa
              */
             static inline auto make(const allocator& alloc, size_t count = 1) noexcept -> pointer
             {
-                return pointer {static_cast<element_type *>(alloc.allocate(count)), alloc};
+                element_type *ptr = alloc.allocate<element_type>(count);
+                return pointer {ptr, alloc};
             }
 
             /**

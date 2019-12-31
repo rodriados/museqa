@@ -17,16 +17,16 @@ namespace msa
     class allocator
     {
         public:
-            using ptr_type = void *;                            /// The type of pointer to allocate.
-            using up_type = functor<void(ptr_type *, size_t)>;  /// The allocator's functor type.
-            using down_type = functor<void(ptr_type)>;          /// The deallocator's functor type.
+            using ptr_type = void *;                                    /// The type of pointer to allocate.
+            using up_type = functor<void(ptr_type *, size_t, size_t)>;  /// The allocator's functor type.
+            using down_type = functor<void(ptr_type)>;                  /// The deallocator's functor type.
 
         protected:
             up_type m_up;                       /// The allocator's up functor.
             down_type m_down;                   /// The allocator's down functor.
 
         public:
-            inline constexpr allocator() noexcept = delete;
+            inline constexpr allocator() noexcept = default;
             inline constexpr allocator(const allocator&) noexcept = default;
             inline constexpr allocator(allocator&&) noexcept = default;
 
@@ -58,24 +58,27 @@ namespace msa
             /**
              * Invokes the allocator functor and creates a new allocated pointer.
              * @param ptr The target pointer to allocated memory to.
-             * @param count The number of elements to allocate memory to.
+             * @param n The number of elements to allocate memory to.
              * @return The newly allocated pointer.
              */
-            inline auto allocate(ptr_type *ptr, size_t count) const -> ptr_type
+            template <typename T = void>
+            inline auto allocate(T **ptr, size_t n) const -> T *
             {
-                (m_up)(ptr, count);
+                using type = typename std::conditional<std::is_same<T, void>::value, char, T>::type;
+                m_up.operator()(reinterpret_cast<ptr_type *>(ptr), sizeof(type), n);
                 return *ptr;
             }
 
             /**
              * Invokes the allocator functor and creates a new allocated pointer.
-             * @param count The number of elements to allocate memory to.
+             * @param n The number of elements to allocate memory to.
              * @return The newly allocated pointer.
              */
-            inline auto allocate(size_t count) const -> ptr_type
+            template <typename T = void>
+            inline auto allocate(size_t n) const -> T *
             {
-                ptr_type ptr;
-                return allocate(&ptr, count);
+                T *ptr;
+                return allocate(&ptr, n);
             }
 
             /**
@@ -84,7 +87,7 @@ namespace msa
              */
             inline void deallocate(ptr_type ptr) const
             {
-                (m_down)(ptr);
+                m_down.operator()(ptr);
             }
 
             /**
@@ -97,7 +100,7 @@ namespace msa
             inline static auto builtin() -> allocator
             {
                 return {
-                    [](void **ptr, size_t count) { *ptr = new T [count]; }
+                    [](void **ptr, size_t _, size_t n) { *ptr = new T [n]; }
                 ,   [](void *ptr) { delete[] (static_cast<T*>(ptr)); }
                 };
             }
