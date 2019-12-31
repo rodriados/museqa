@@ -25,11 +25,11 @@
 #if defined(__GNUC__)
   #define __msa_compiler_gnuc 1
   #if !defined(__clang__)
-    #define __msa_compiler_gcc (__GNUC__ * 100 + __GNUC_MINOR__)
+    #define __msa_compiler_gcc 1
     #define __msa_compiler_clang 0
     #define __msa_compiler_tested 1
   #else
-    #define __msa_compiler_clang (__clang_major__ * 100 + __clang_minor__)
+    #define __msa_compiler_clang 1
     #define __msa_compiler_gcc 0
   #endif
 #else
@@ -39,22 +39,20 @@
 #endif
 
 #if defined(__NVCC__) || defined(__CUDACC__)
-  #define __msa_compiler_nvcc (__CUDA_VER_MAJOR__ * 100 + __CUDA_VER_MINOR__)
+  #define __msa_compiler_nvcc 1
   #define __msa_compiler_tested 1
 #else
   #define __msa_compiler_nvcc 0
 #endif
 
-#if defined(__INTEL_COMPILER)
-  #define __msa_compiler_icc __INTEL_COMPILER
-#elif defined(__ICL)
-  #define __msa_compiler_icc __ICL
+#if defined(__INTEL_COMPILER) || defined(__ICL)
+  #define __msa_compiler_icc 1
 #else
   #define __msa_compiler_icc 0
 #endif
 
 #if defined(_MSC_VER)
-  #define __msa_compiler_msc _MSC_VER
+  #define __msa_compiler_msc 1
 #else
   #define __msa_compiler_msc 0
 #endif
