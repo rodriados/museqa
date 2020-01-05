@@ -156,9 +156,9 @@ namespace msa
              * Exposes the buffer's internal allocator instance.
              * @return The buffer's internal allocator.
              */
-            __host__ __device__ inline allocator alloc() const noexcept
+            __host__ __device__ inline msa::allocator allocator() const noexcept
             {
-                return m_ptr.alloc();
+                return m_ptr.allocator();
             }
 
             /**
@@ -213,13 +213,13 @@ namespace msa
 
             /**
              * Creates a new buffer of given size with an allocator.
-             * @param alloc The allocator to be used to new buffer.
+             * @param allocator The allocator to be used to new buffer.
              * @param size The buffer's number of elements.
              * @return The newly created buffer instance.
              */
-            static inline buffer make(const allocator& alloc, size_t size = 1) noexcept
+            static inline buffer make(const msa::allocator& allocator, size_t size = 1) noexcept
             {
-                return buffer {pointer_type::make(alloc, size), size};
+                return buffer {pointer_type::make(allocator, size), size};
             }
             
         protected:

@@ -27,21 +27,22 @@ namespace msa
             struct counter
             {
                 using element_type = T;                 /// The type of elements represented by the pointer.
+                using allocator_type = msa::allocator;  /// The type of allocator for given type.
 
-                size_t count = 0;                       /// The  number of currently active pointer references.
                 element_type *ptr = nullptr;            /// The raw target pointer.
-                const allocator alloc;                  /// The pointer's allocator.
+                size_t use_count = 0;                   /// The  number of currently active pointer references.
+                const allocator_type allocator;         /// The pointer's allocator.
 
                 /**
                  * Initializes a new pointer counter.
                  * @param ptr The raw pointer to be held.
-                 * @param alloc The pointer's allocator.
+                 * @param allocator The pointer's allocator.
                  * @see detail::pointer::acquire
                  */
-                inline counter(element_type *ptr, const allocator& alloc) noexcept
-                :   count {1}
-                ,   ptr {ptr}
-                ,   alloc {alloc}
+                inline counter(element_type *ptr, const allocator_type& allocator) noexcept
+                :   ptr {ptr}
+                ,   use_count {1}
+                ,   allocator {allocator}
                 {}
 
                 /**
@@ -50,7 +51,7 @@ namespace msa
                  */
                 inline ~counter()
                 {
-                    alloc.deallocate(ptr);
+                    allocator.deallocate(ptr);
                 }
             };
 
@@ -58,13 +59,13 @@ namespace msa
              * Creates a new pointer context from given arguments.
              * @tparam T The pointer type.
              * @param ptr The pointer to be put into context.
-             * @param alloc The pointer's allocator.
+             * @param allocator The pointer's allocator.
              * @return The new pointer's counter instance.
              */
             template <typename T>
-            inline counter<T> *acquire(T *ptr, const allocator& alloc) noexcept
+            inline counter<T> *acquire(T *ptr, const msa::allocator& allocator) noexcept
             {
-                return new counter<T> {ptr, alloc};
+                return new counter<T> {ptr, allocator};
             }
 
             /**
@@ -76,7 +77,7 @@ namespace msa
             template <typename T>
             __host__ __device__ inline counter<T> *acquire(counter<T> *meta) noexcept
             {
-                meta && ++meta->count;
+                meta && ++meta->use_count;
                 return meta;
             }
 
@@ -90,7 +91,7 @@ namespace msa
             __host__ __device__ inline void release(counter<T> *meta)
             {
                 #if __msa(runtime, host)
-                    if(meta && --meta->count <= 0)
+                    if(meta && --meta->use_count <= 0)
                         delete meta;
                 #endif
             }
@@ -109,9 +110,11 @@ namespace msa
     {
         static_assert(!std::is_function<T>::value, "cannot create pointer to a function");
         static_assert(!std::is_reference<T>::value, "cannot create pointer to a reference");
+        static_assert(!std::is_same<T, void>::value, "cannot create void smart pointers");
 
         public:
-            using element_type = pure<T>;                   /// The type of pointer's elements.
+            using element_type = pure<T>;           /// The type of pointer's elements.
+            using allocator_type = msa::allocator;  /// The type of allocator for given type.
 
         protected:
             using counter_type = detail::pointer::counter<element_type>;    /// The pointer counter type.
@@ -128,16 +131,16 @@ namespace msa
              * @param ptr The pointer to be encapsulated.
              */
             inline pointer(element_type *ptr) noexcept
-            :   pointer {ptr, detail::pointer::acquire(ptr, allocator::builtin<element_type>())}
+            :   pointer {ptr, detail::pointer::acquire(ptr, allocator_type::builtin<T>())}
             {}
 
             /**
              * Builds a new instance from a raw pointer.
              * @param ptr The pointer to be encapsulated.
-             * @param alloc The allocator of given pointer.
+             * @param allocator The allocator of given pointer.
              */
-            inline pointer(element_type *ptr, const allocator& alloc) noexcept
-            :   pointer {ptr, detail::pointer::acquire(ptr, alloc)}
+            inline pointer(element_type *ptr, const allocator_type& allocator) noexcept
+            :   pointer {ptr, detail::pointer::acquire(ptr, allocator)}
             {}
 
             /**
@@ -339,9 +342,9 @@ namespace msa
              * Returns the reference to the current pointer's allocator.
              * @return The pointer's allocator instance.
              */
-            inline allocator alloc() const noexcept
+            inline allocator_type allocator() const noexcept
             {
-                return m_meta ? m_meta->alloc : allocator::builtin<element_type>();
+                return m_meta ? m_meta->allocator : allocator_type::builtin<T>();
             }
 
             /**
@@ -360,19 +363,19 @@ namespace msa
              */
             static inline auto make(size_t count = 1) noexcept -> pointer
             {
-                return make(allocator::builtin<element_type>(), count);
+                return make(allocator_type::builtin<T>(), count);
             }
 
             /**
              * Allocates a new array pointer of given size with an allocator.
-             * @param alloc The allocator to be used to new pointer.
+             * @param allocator The allocator to be used to new pointer.
              * @param count The number of elements to be allocated.
              * @return The newly allocated pointer.
              */
-            static inline auto make(const allocator& alloc, size_t count = 1) noexcept -> pointer
+            static inline auto make(const allocator_type& allocator, size_t count = 1) noexcept -> pointer
             {
-                element_type *ptr = alloc.allocate<element_type>(count);
-                return pointer {ptr, alloc};
+                element_type *ptr = allocator.allocate<element_type>(count);
+                return pointer {ptr, allocator};
             }
 
             /**

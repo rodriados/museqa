@@ -5,6 +5,7 @@
  */
 #pragma once
 
+#include <utility>
 #include <utils.hpp>
 
 namespace msa
@@ -100,8 +101,12 @@ namespace msa
             inline static auto builtin() -> allocator
             {
                 return {
-                    [](void **ptr, size_t _, size_t n) { *ptr = new T [n]; }
-                ,   [](void *ptr) { delete[] (static_cast<T*>(ptr)); }
+                    std::is_same<pure<T>, T>::value
+                        ? [](void **ptr, size_t _, size_t n) { *ptr = new pure<T>; }
+                        : [](void **ptr, size_t _, size_t n) { *ptr = new pure<T> [n]; }
+                ,   std::is_same<pure<T>, T>::value
+                        ? [](void *ptr) { delete (static_cast<pure<T> *>(ptr)); }
+                        : [](void *ptr) { delete[] (static_cast<pure<T> *>(ptr)); }
                 };
             }
     };
