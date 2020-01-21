@@ -8,19 +8,13 @@
 #ifndef PHYLOGENY_CUH_INCLUDED
 #define PHYLOGENY_CUH_INCLUDED
 
-#include "phylogeny/tree.cuh"
-#include "phylogeny/phylogeny.cuh"
+#include <phylogeny/phylogeny.cuh>
 
 /**
- * Represents the hierarchy of a pseudo-phylogenetic tree.
+ * Represents a pseudo-phylogenetic tree, so the sequences can be organized in a
+ * hierarchical structure for them to be progressively aligned.
  * @since 0.1.1
  */
-typedef phylogeny::Tree Tree;
-
-/**
- * The phylogeny module manager.
- * @since 0.1.1
- */
-typedef phylogeny::Phylogeny Phylogeny;
+typedef phylogeny::tree tree;
 
 #endif

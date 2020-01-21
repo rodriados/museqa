@@ -11,8 +11,8 @@ cdef extern from "parser.hpp" namespace "parser":
     cdef vector[cDatabaseEntry] parse(const string&, const string&) except +RuntimeError
     cdef vector[cDatabaseEntry] parse(const string&) except +RuntimeError
 
-    cdef vector[cDatabaseEntry] parseMany(const vector[string]&, const string&) except +RuntimeError
-    cdef vector[cDatabaseEntry] parseMany(const vector[string]&) except +RuntimeError 
+    cdef vector[cDatabaseEntry] parse_many(const vector[string]&, const string&) except +RuntimeError
+    cdef vector[cDatabaseEntry] parse_many(const vector[string]&) except +RuntimeError 
 
 cdef extern from "parser/fasta.hpp" namespace "parser":
-    cdef vector[cDatabaseEntry] parseFasta "parser::fasta"(const string&) except +RuntimeError
+    cdef vector[cDatabaseEntry] parse_fasta "parser::fasta"(const string&) except +RuntimeError

@@ -37,7 +37,7 @@ auto pairwise::algorithm::generate(size_t num) -> buffer<pairwise::pair>&
 
     for(size_t i = 0, c = 0; i < num - 1; ++i)
         for(size_t j = i + 1; j < num; ++j, ++c)
-            pairbuf[c] = {pairwise::sequenceref(i), pairwise::sequenceref(j)};
+            pairbuf[c] = {pairwise::seqref(i), pairwise::seqref(j)};
 
     return pairs = pairbuf;
 }

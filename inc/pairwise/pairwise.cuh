@@ -31,7 +31,7 @@ namespace pairwise
      * Represents a reference for a sequence.
      * @since 0.1.1
      */
-    using sequenceref = int_least16_t;
+    using seqref = int_least16_t;
 
     /**
      * Stores the indeces of a pair of sequences to be aligned.
@@ -39,13 +39,8 @@ namespace pairwise
      */
     union pair
     {
-        struct
-        {
-            sequenceref first;
-            sequenceref second;
-        };
-
-        sequenceref id[2];
+        struct { seqref first, second; };
+        seqref id[2];
     };
 
     /**

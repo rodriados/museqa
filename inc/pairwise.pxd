@@ -12,41 +12,44 @@ cdef extern from "pairwise/pairwise.cuh" namespace "pairwise":
 
     # The score of the alignment of a sequence pair.
     # @since 0.1.1
-    ctypedef int32_t cScore "pairwise::Score"
+    ctypedef float cScore "pairwise::score"
 
     # Manages and encapsulates all configurable aspects of the pairwise module.
     # @since 0.1.1
-    cdef struct cConfiguration "pairwise::Configuration":
+    cdef struct cConfiguration "pairwise::configuration":
         const cDatabase* db
         string algorithm
         string table
 
     # Manages all data and execution of the pairwise module.
     # @since 0.1.1
-    cdef cppclass cPairwise "pairwise::Pairwise":
+    cdef cppclass cPairwise "pairwise::manager":
         cPairwise() except +
         cPairwise(const cPairwise&) except +
 
         cPairwise& operator=(const cPairwise&)
-        cScore& operator[](ptrdiff_t) except +RuntimeError
+        cScore operator[](const cCartesian[2]&) except +RuntimeError
 
-        const cScore *getBuffer()
-        size_t getSize()
+        size_t count()
 
-        void run(const cConfiguration&) except +RuntimeError
+        @staticmethod
+        cPairwise run(const cConfiguration&) except +RuntimeError
 
     # The aminoacid substitution tables. These tables are stored contiguously
     # in memory, in order to facilitate accessing its elements.
     # @since 0.1.1
-    cdef cppclass cScoringTable "pairwise::ScoringTable":
-        const (int8_t&)[25] operator[](ptrdiff_t)
+    cdef cppclass cScoringTable "pairwise::scoring_table":
+        cScore operator[](const cCartesian[2]&)
+
+        cScore penalty()
 
         @staticmethod
-        cScoringTable get(const string&) except +RuntimeError
+        cScoringTable make(const string&) except +RuntimeError
 
         @staticmethod
-        const vector[string]& getList()
+        const vector[string]& list()
 
+    # Creates a module's configuration instance.
     cdef cConfiguration configure(const cDatabase&, const string&, const string&)
 
 # Manages all data and execution of the pairwise module.

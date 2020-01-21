@@ -22,7 +22,7 @@ typedef pairwise::score score;
  * for a sequence in the sequence database.
  * @since 0.1.1
  */
-typedef pairwise::sequenceref sequenceref;
+typedef pairwise::seqref seqref;
 
 /**
  * A pair of sequence identifiers. This is the union pair object the pairwise module
