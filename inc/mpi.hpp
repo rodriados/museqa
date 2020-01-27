@@ -738,19 +738,19 @@ namespace msa
              * new operators is highly recommended.
              * @since 0.1.1
              */
-            static constexpr id const& max      = MPI_MAX;
-            static constexpr id const& min      = MPI_MIN;
-            static constexpr id const& add      = MPI_SUM;
-            static constexpr id const& mul      = MPI_PROD;
-            static constexpr id const& andl     = MPI_LAND;
-            static constexpr id const& andb     = MPI_BAND;
-            static constexpr id const& orl      = MPI_LOR;
-            static constexpr id const& orb      = MPI_BOR;
-            static constexpr id const& xorl     = MPI_LXOR;
-            static constexpr id const& xorb     = MPI_BXOR;
-            static constexpr id const& minloc   = MPI_MINLOC;
-            static constexpr id const& maxloc   = MPI_MAXLOC;
-            static constexpr id const& replace  = MPI_REPLACE;
+            static id const& max      = MPI_MAX;
+            static id const& min      = MPI_MIN;
+            static id const& add      = MPI_SUM;
+            static id const& mul      = MPI_PROD;
+            static id const& andl     = MPI_LAND;
+            static id const& andb     = MPI_BAND;
+            static id const& orl      = MPI_LOR;
+            static id const& orb      = MPI_BOR;
+            static id const& xorl     = MPI_LXOR;
+            static id const& xorb     = MPI_BXOR;
+            static id const& minloc   = MPI_MINLOC;
+            static id const& maxloc   = MPI_MAXLOC;
+            static id const& replace  = MPI_REPLACE;
             /**#@-*/
         }
 
@@ -768,8 +768,8 @@ namespace msa
                 raw_type m_ref = MPI_COMM_NULL; /// The internal MPI communicator reference.
 
             public:
-                const node rank = 0;            /// The rank of current node in relation to communicator.
-                const int32_t size = 0;         /// The number of nodes known by communicator.
+                const mpi::node rank = 0;       /// The rank of current node in relation to communicator.
+                const uint32_t size = 0;        /// The number of nodes known by communicator.
 
             public:
                 inline communicator() noexcept = default;
@@ -778,19 +778,7 @@ namespace msa
 
                 inline communicator& operator=(const communicator&) noexcept = delete;
                 inline communicator& operator=(communicator&&) noexcept = delete;
-
-                void barrier() const;
-                void broadcast(payload::base *, const node&) const;
-
-                void send(payload::base *, const node&, const tag&) const;
-                auto receive(payload::base *, const node&, const tag&) const -> status;
-                auto probe(const node&, const tag&) const -> status;
-
-                void gather(payload::base *, payload::base *, const node&) const;
-                void gatherv(payload::base *, int *, payload::base *, const node&) const;
-                void allgather(payload::base *, payload::base *) const;
-                void scatter(payload::base *, payload::base *, const node&) const;
-
+                
                 /**
                  * Builds up a new communicator instance from built-in type.
                  * @param ref The internal communicator reference.
@@ -808,7 +796,7 @@ namespace msa
                  * @param key The key used to assigned a node id in new communicator.
                  * @return The obtained communicator from split operation.
                  */
-                inline static auto split(const communicator& comm, int32_t color, int32_t key = any)
+                inline static auto split(const communicator &comm, int32_t color, int32_t key = any)
                 -> communicator
                 {
                     raw_type new_ref;
@@ -816,11 +804,22 @@ namespace msa
                     return communicator {new_ref};
                 }
 
+                static void barrier(const communicator&);
+                static void broadcast(const communicator&, payload::base&, const node&);
+                static void send(const communicator&, payload::base&, const node&, const tag&);
+                static auto receive(const communicator&, payload::base&, const node&, const tag&) -> status;
+                static auto probe(const communicator&, const node&, const tag&) -> status;
+                static void gather(const communicator&, payload::base&, payload::base&, const node&);
+                static void allgather(const communicator&, payload::base&, payload::base&);
+                static void scatter(const communicator&, payload::base&, payload::base&, const node&);
+                static void reduce(const communicator&, payload::base&, payload::base&, const op::id&, const node&);
+                static void allreduce(const communicator&, payload::base&, payload::base&, const op::id&);
+
                 /**
                  * Cleans up resources used by communicator.
                  * @param comm The communicator to be destroyed.
                  */
-                inline static void free(const communicator& comm)
+                inline static void free(communicator &comm)
                 {
                     check(MPI_Comm_free(&comm.m_ref));
                     comm.m_ref = MPI_COMM_NULL;
@@ -850,7 +849,7 @@ namespace msa
          */
         inline void barrier(const communicator& comm = world)
         {
-            comm.barrier();
+            communicator::barrier(comm);
         }
 
         /**#@+
@@ -870,7 +869,7 @@ namespace msa
             )
         {
             auto load = payload::make(data, size);
-            comm.broadcast(&load, root);
+            communicator::broadcast(comm, load, root);
         }
 
         template <typename T>
@@ -883,8 +882,8 @@ namespace msa
             auto load = payload::make(data);
             auto size = load.size();
 
-            broadcast(&size, 1, root, comm);
-            broadcast(load.resize(size), size, root, comm);
+            mpi::broadcast(&size, 1, root, comm);
+            mpi::broadcast(load.resize(size), size, root, comm);
         }
         /**#@-*/
 
@@ -908,7 +907,7 @@ namespace msa
             )
         {
             auto load = payload::make(data, size);
-            comm.send(&load, dest, tag);
+            communicator::send(comm, load, dest, tag);
         }
 
         template <typename T>
@@ -920,7 +919,7 @@ namespace msa
             )
         {
             auto load = payload::make(data);
-            comm.send(&load, dest, tag);
+            communicator::send(comm, load, dest, tag);
         }
         /**#@-*/
 
@@ -941,11 +940,11 @@ namespace msa
             ,   int size = 1
             ,   const node& src = any
             ,   const mpi::tag& tag = MPI_TAG_UB
-            ,   const communicator::id& comm = world
+            ,   const communicator& comm = world
             )
         {
             auto load = payload::make(data, size);
-            return comm.receive(&load, src, tag);
+            return communicator::receive(comm, load, src, tag);
         }
 
         template <typename T>
@@ -953,14 +952,16 @@ namespace msa
                 T& data
             ,   const node& src = any
             ,   const mpi::tag& tag = MPI_TAG_UB
-            ,   const communicator::id& comm = world
+            ,   const communicator& comm = world
             )
         {
-            auto load = payload::make(load);
+            auto load = payload::make(data);
             using P = typename decltype(load)::element_type;
 
-            auto size = comm.probe(src, tag).count<P>();
-            return receive(load.resize(size), size, src, tag, comm);
+            auto status = communicator::probe(comm, src, tag);
+            auto size = status.count<P>();
+
+            return mpi::receive(load.resize(size), size, src, tag, comm);
         }
         /**#@-*/
 
@@ -973,17 +974,59 @@ namespace msa
          */
         status probe(const node& src = any, const mpi::tag& tag = any, const communicator& comm = world)
         {
-            return comm.probe(src, tag);
+            return communicator::probe(comm, src, tag);
+        }
+
+        /**#@+
+         * Reduces values from all processes to a single value.
+         * @tparam T The type of buffer data to reduce.
+         * @tparam U The type of buffer data to reduce.
+         * @param odata The node's outgoing buffer.
+         * @param idata The root's incoming reduced buffer.
+         * @param func The reduce function to apply to the node's data.
+         * @param size The outgoing and incoming buffers' sizes.
+         * @param dest The operation's final destination node.
+         * @param comm The communicator this operation applies to.
+         */
+        template <typename T>
+        inline void reduce(
+                T *odata
+            ,   T *idata
+            ,   const op::id& func
+            ,   int osize = 1
+            ,   const node& dest = msa::node::master
+            ,   const communicator& comm = world
+            )
+        {
+            auto outgoing = payload::make(odata, size);
+            auto incoming = payload::make(idata, size);
+            communicator::reduce(comm, outgoing, incoming, func, dest);
+        }
+
+        template <typename T, typename U>
+        inline void reduce(
+                T& odata
+            ,   U& idata
+            ,   const op::id& func
+            ,   const node& dest = msa::node::master
+            ,   const communicator& comm = world
+            )
+        {
+            auto outgoing = payload::make(odata);
+            auto incoming = payload::make(idata);
+
+            incoming.resize(outgoing.size());
+            communicator::reduce(comm, outgoing, incoming, func, dest);
         }
 
         /**#@+
          * Gather data from nodes according to given distribution.
          * @tparam T The type of buffer data to gather.
          * @tparam U The type of buffer data to gather.
-         * @param out The outgoing buffer.
-         * @param in The incoming buffer.
-         * @param osz The outgoing buffer size.
-         * @param isz The size of incoming buffer from each node.
+         * @param odata The outgoing buffer.
+         * @param idata The incoming buffer.
+         * @param osize The outgoing buffer size.
+         * @param isize The size of incoming buffer from each node.
          * @param displ The data displacement of each node.
          * @param root The operation's root node.
          * @param comm The communicator this operation applies to.
@@ -996,14 +1039,14 @@ namespace msa
             ,   const communicator& comm = world
             )
         {
-            auto oload = payload::make(odata, osize);
-            auto iload = payload::make(idata, isize);
-            comm.gather(&oload, &iload, root);
+            auto outgoing = payload::make(odata, osize);
+            auto incoming = payload::make(idata, isize);
+            communicator::gather(comm, outgoing, incoming, root);
         }
 
         template <typename T, typename U>
         inline void gather(
-                T *odata, int osize,
+                T *odata, int osize
             ,   U *idata, int isize, int *idispl
             ,   const node& root = msa::node::master
             ,   const communicator& comm = world
@@ -1067,7 +1110,7 @@ namespace msa
                 T& out, int osz, int displ
             ,   U& in
             ,   const node& root = ::node::master
-            ,   const communicator::id& comm = world
+            ,   const communicator& comm = world
             )
         {
             auto oload = payload(out);
@@ -1090,7 +1133,7 @@ namespace msa
                 T& out
             ,   U& in
             ,   const node& root = ::node::master
-            ,   const communicator::id& comm = world
+            ,   const communicator& comm = world
             )
         {
             auto oload = payload(out);
