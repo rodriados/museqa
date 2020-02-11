@@ -463,20 +463,17 @@ namespace msa
              * Represents an incoming or outcoming message payload of collective
              * communication operations. In practice, this object serves as the
              * base of a neutral context state for messages.
+             * @tparam T The payload's element type.
              * @since 0.1.1
              */
             template <typename T>
-            class payload
+            class payload : public buffer<T>
             {
                 public:
-                    using element_type = pure<T>;   /// The payload's elementary type.
-
-                protected:
-                    element_type *m_ptr = nullptr;  /// The payload's raw pointer.
-                    size_t m_size = 0;              /// The payload's buffer size.
+                    using element_type = T;     /// The payload's element type.
 
                 public:
-                    inline payload() noexcept = delete;
+                    inline payload() noexcept = default;
                     inline payload(const payload&) noexcept = default;
                     inline payload(payload&&) noexcept = default;
 
@@ -485,8 +482,7 @@ namespace msa
                      * @param value The payload's value.
                      */
                     inline payload(element_type& value) noexcept
-                    :   m_ptr {&value}
-                    ,   m_size {1}
+                    :   buffer<T> {&value, 1}
                     {}
 
                     /**
@@ -495,8 +491,7 @@ namespace msa
                      * @param size The payload's buffer size.
                      */
                     inline payload(element_type *ptr, size_t size = 1) noexcept
-                    :   m_ptr {ptr}
-                    ,   m_size {size}
+                    :   buffer<T> {ptr, size}
                     {}
 
                     /**
@@ -509,21 +504,23 @@ namespace msa
                     inline payload& operator=(payload&&) noexcept = default;
 
                     /**
-                     * Retrieves the payload's buffer pointer.
-                     * @return The payload's buffer pointer.
+                     * Converts the payload into an instance of the element type,
+                     * this is specially useful for operations with singletons.
+                     * @return The converted payload to the element type.
                      */
-                    inline element_type *raw() const noexcept
+                    inline operator element_type() noexcept
                     {
-                        return m_ptr;
+                        return this->operator[](0);
                     }
 
                     /**
-                     * Retrieves the payload's buffer capacity.
-                     * @return The payload's size or capacity.
+                     * Converts the payload into an instance of the element type,
+                     * this is specially useful for operations with singletons.
+                     * @return The converted payload to the element type.
                      */
-                    inline size_t size() const noexcept
+                    inline operator const element_type() const noexcept
                     {
-                        return m_size;
+                        return this->operator[](0);
                     }
 
                     /**
@@ -533,17 +530,6 @@ namespace msa
                     inline auto type() const noexcept -> msa::mpi::datatype::id
                     {
                         return msa::mpi::datatype::get<element_type>();
-                    }
-
-                    /**
-                     * Creates a new pointer with given size and swaps buffers. This allow
-                     * the payload to receive an incoming message.
-                     * @param (ignored) The new minimum payload size.
-                     * @return The resized buffer pointer.
-                     */
-                    inline virtual auto resize(size_t) -> element_type *
-                    {
-                        throw msa::mpi::exception {"cannot resize simple pointers"};
                     }
             };
 
@@ -555,9 +541,6 @@ namespace msa
             template <typename T>
             class payload<std::vector<T>> : public payload<T>
             {
-                protected:
-                    std::vector<T>& m_ref;          /// The original vector's reference.
-
                 public:
                     /**
                      * Creates a new payload from STL vector.
@@ -565,33 +548,17 @@ namespace msa
                      */
                     inline payload(std::vector<T>& ref) noexcept
                     :   payload<T> {ref.data(), ref.size()}
-                    ,   m_ref {ref}
                     {}
-
-                    /**
-                     * Creates a new vector and swaps buffers.
-                     * @param size The new minimum payload capacity.
-                     * @return The resized buffer pointer.
-                     */
-                    inline auto resize(size_t size) -> element_type * override
-                    {
-                        if(this->m_size < size)
-                            m_ref.resize(this->m_size = size);
-                        return (this->m_ptr = m_ref.data());
-                    }
             };
 
             /**
-             * A message payload buffer context for MSA buffers.
+             * A message payload buffer context for... buffers.
              * @tparam T The message payload type.
              * @since 0.1.1
              */
             template <typename T>
             class payload<buffer<T>> : public payload<T>
             {
-                protected:
-                    buffer<T>& m_ref;               /// The original buffer's reference.
-
                 public:
                     /**
                      * Creates a new payload from buffer.
@@ -599,20 +566,7 @@ namespace msa
                      */
                     inline payload(buffer<T>& ref) noexcept
                     :   payload<T> {ref.raw(), ref.size()}
-                    ,   m_ref {ref}
                     {}
-
-                    /**
-                     * Creates a new buffer object and swaps contents.
-                     * @param size The new minimum payload capacity.
-                     * @return The new buffer pointer
-                     */
-                    inline auto resize(size_t size) -> element_type * override
-                    {
-                        if(this->m_size != size)
-                            m_ref = msa::buffer<T>::make(m_ref.allocator(), this->m_size = size);
-                        return (this->m_ptr = m_ref.raw());
-                    }
             };
         }
     }
@@ -813,30 +767,28 @@ namespace msa
          * @param comm The communicator this operation applies to.
          */
         template <typename T>
-        inline payload<T> broadcast(
+        inline void broadcast(
                 T *data
             ,   int size = 1
             ,   const node& root = msa::node::master
             ,   const communicator::id& comm = world
             )
         {
-            auto recv = payload<T>::copy(data, size);
-            check(MPI_Bcast(recv.raw(), recv.size(), recv.type(), root, comm.raw));
-            return recv;
+            auto load = payload(data, size);
+            check(MPI_Bcast(load.raw(), load.size(), load.type(), root, comm.raw));
         }
 
         template <typename T>
-        inline payload<T> broadcast(
+        inline void broadcast(
                 T& data
             ,   const node& root = msa::node::master
             ,   const communicator::id& comm = world
             )
         {
-            auto recv = payload<T>::copy(data);
-            auto size = recv.size();
+            auto load = payload(data);
+            auto size = load.size();
             mpi::broadcast(&size, 1, root, comm);
-            check(MPI_Bcast(recv.raw(), recv.size(), recv.type(), root, comm.raw));
-            return recv;
+            mpi::broadcast(load.resize(size), size, root, comm);
         }
         /**#@-*/
 
@@ -1035,7 +987,7 @@ namespace msa
             auto lsize  = buffer<int>::make(comm.size);
             auto ldispl = buffer<int>::make(comm.size + 1);
 
-            auto value = mpi::allgather();
+
 
 
             auto to_send = mpi::payload(out_data);
