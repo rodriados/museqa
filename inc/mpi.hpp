@@ -383,6 +383,7 @@ namespace msa
             public:
                 inline status() noexcept = default;
                 inline status(const status&) noexcept = default;
+                inline status(status&&) noexcept = default;
 
                 /**
                  * Instatiates a new status object.
@@ -391,6 +392,9 @@ namespace msa
                 inline status(const raw_type& builtin) noexcept
                 :   m_raw {builtin}
                 {}
+
+                inline status& operator=(const status&) noexcept = default;
+                inline status& operator=(status&&) noexcept = default;
 
                 /**
                  * Converts to the built-in status object.
@@ -453,139 +457,226 @@ namespace msa
                     return (flag != 0);
                 }
         };
-    }
 
-    namespace detail
-    {
-        namespace mpi
+        /**
+         * The last operation's status.
+         * @see mpi::status
+         */
+        extern status last_status;
+
+        /**
+         * Represents an incoming or outcoming message payload of collective
+         * communication operations. In practice, this object serves as the
+         * base of a neutral context state for messages.
+         * @tparam T The payload's element type.
+         * @since 0.1.1
+         */
+        template <typename T>
+        class payload : public buffer<T>
         {
-            /**
-             * Represents an incoming or outcoming message payload of collective
-             * communication operations. In practice, this object serves as the
-             * base of a neutral context state for messages.
-             * @tparam T The payload's element type.
-             * @since 0.1.1
-             */
-            template <typename T>
-            class payload : public buffer<T>
-            {
-                public:
-                    using element_type = T;     /// The payload's element type.
+            protected:
+                using underlying_type = buffer<T>;                      /// The payload's underlying type.
 
-                public:
-                    inline payload() noexcept = default;
-                    inline payload(const payload&) noexcept = default;
-                    inline payload(payload&&) noexcept = default;
+            public:
+                using element_type = typename buffer<T>::element_type;  /// The payload's element type.
+                using pointer_type = typename buffer<T>::pointer_type;  /// The buffer's pointer type.
+                using return_type = payload<T>; /// The payload's return type of collective operations.
 
-                    /**
-                     * Creates a new payload from simple object value.
-                     * @param value The payload's value.
-                     */
-                    inline payload(element_type& value) noexcept
-                    :   buffer<T> {&value, 1}
-                    {}
+            public:
+                inline payload() noexcept = default;
+                inline payload(const payload&) noexcept = default;
+                inline payload(payload&&) noexcept = default;
 
-                    /**
-                     * Creates a new payload from already existing buffer.
-                     * @param ptr The payload's buffer pointer.
-                     * @param size The payload's buffer size.
-                     */
-                    inline payload(element_type *ptr, size_t size = 1) noexcept
-                    :   buffer<T> {ptr, size}
-                    {}
+                /**
+                 * Creates a new payload from simple object value.
+                 * @param value The payload's value.
+                 */
+                inline payload(element_type& value) noexcept
+                :   underlying_type {pointer_type::weak(&value), 1}
+                {}
 
-                    /**
-                     * Handles any memory transfers, swaps or deallocations needed
-                     * for an effective clean-up of this payload object.
-                     */
-                    inline virtual ~payload() noexcept = default;
+                /**
+                 * Creates a new payload from already existing buffer.
+                 * @param ptr The payload's buffer pointer.
+                 * @param size The payload's buffer size.
+                 */
+                inline payload(element_type *ptr, size_t size = 1) noexcept
+                :   underlying_type {pointer_type::weak(ptr), size}
+                {}
 
-                    inline payload& operator=(const payload&) noexcept = default;
-                    inline payload& operator=(payload&&) noexcept = default;
+                /**
+                 * Creates a new payload based on a pre-allocated buffer.
+                 * @param buf The buffer to create payload from.
+                 */
+                inline payload(underlying_type&& buf) noexcept
+                :   underlying_type {std::move(buf)}
+                {}
 
-                    /**
-                     * Converts the payload into an instance of the element type,
-                     * this is specially useful for operations with singletons.
-                     * @return The converted payload to the element type.
-                     */
-                    inline operator element_type() noexcept
-                    {
-                        return this->operator[](0);
-                    }
+                /**
+                 * Handles any memory transfers, swaps or deallocations needed
+                 * for an effective clean-up of this payload object.
+                 */
+                inline virtual ~payload() noexcept = default;
 
-                    /**
-                     * Converts the payload into an instance of the element type,
-                     * this is specially useful for operations with singletons.
-                     * @return The converted payload to the element type.
-                     */
-                    inline operator const element_type() const noexcept
-                    {
-                        return this->operator[](0);
-                    }
+                inline payload& operator=(const payload&) = default;
+                inline payload& operator=(payload&&) = default;
 
-                    /**
-                     * Gets the type identification of the payload's element type.
-                     * @return The payload's element type id.
-                     */
-                    inline auto type() const noexcept -> msa::mpi::datatype::id
-                    {
-                        return msa::mpi::datatype::get<element_type>();
-                    }
-            };
+                /**
+                 * Converts the payload into an instance of the element type,
+                 * this is specially useful for operations with singletons.
+                 * @return The converted payload to the element type.
+                 */
+                inline operator element_type() noexcept
+                {
+                    return *(raw());
+                }
 
-            /**
-             * A message payload buffer context for STL vectors.
-             * @tparam T The message payload type.
-             * @since 0.1.1
-             */
-            template <typename T>
-            class payload<std::vector<T>> : public payload<T>
-            {
-                public:
-                    /**
-                     * Creates a new payload from STL vector.
-                     * @param ref The payload as a STL vector.
-                     */
-                    inline payload(std::vector<T>& ref) noexcept
-                    :   payload<T> {ref.data(), ref.size()}
-                    {}
-            };
+                /**
+                 * Converts the payload into an instance of the element type,
+                 * this is specially useful for operations with singletons.
+                 * @return The converted payload to the element type.
+                 */
+                inline operator const element_type() const noexcept
+                {
+                    return *(raw());
+                }
 
-            /**
-             * A message payload buffer context for... buffers.
-             * @tparam T The message payload type.
-             * @since 0.1.1
-             */
-            template <typename T>
-            class payload<buffer<T>> : public payload<T>
-            {
-                public:
-                    /**
-                     * Creates a new payload from buffer.
-                     * @param ref The buffer to use as payload.
-                     */
-                    inline payload(buffer<T>& ref) noexcept
-                    :   payload<T> {ref.raw(), ref.size()}
-                    {}
-            };
-        }
-    }
+                /**
+                 * Gives access to raw payload buffer's data. This is needed because
+                 * unfortunatelly, all MPI functions take non-const pointers.
+                 * @return The payload buffer's internal pointer.
+                 */
+                inline auto raw() const noexcept -> element_type *
+                {
+                    return const_cast<element_type *>(&this->m_ptr);
+                }
 
-    namespace mpi
-    {
+                /**
+                 * Unfortunately, all MPI functions take a simple integer as their
+                 * arguments. Therefore, we must return an integer to satisfy them.
+                 * @return The payload's buffer length.
+                 */
+                inline auto size() const noexcept -> int
+                {
+                    return static_cast<int>(underlying_type::size());
+                }
+
+                /**
+                 * Gets the type identification of the payload's element type.
+                 * @return The payload's element type id.
+                 */
+                inline auto type() const noexcept -> msa::mpi::datatype::id
+                {
+                    return msa::mpi::datatype::get<element_type>();
+                }
+
+                /**
+                 * Copies data from an existing buffer instance.
+                 * @param buf The target buffer to copy data from.
+                 * @return A newly created payload instance.
+                 */
+                static inline payload copy(const underlying_type& buf)
+                {
+                    return payload {underlying_type::copy(buf)};
+                }
+
+                /**
+                 * Copies data from a vector instance.
+                 * @param vector The target vector instance to copy data from.
+                 * @return A newly created payload instance.
+                 */
+                static inline payload copy(const std::vector<element_type>& vector)
+                {
+                    return payload {underlying_type::copy(vector)};
+                }
+
+                /**
+                 * Copies data from an existing pointer.
+                 * @param ptr The target pointer to copy from.
+                 * @param count The number of elements to copy.
+                 * @return A newly created payload instance.
+                 */
+                static inline payload copy(const element_type *ptr, size_t count)
+                {
+                    return payload {underlying_type::copy(ptr, count)};
+                }
+
+                /**
+                 * Creates a new payload by copying a single value.
+                 * @param value The value to be copied to new payload.
+                 * @return A newly created payload instance.
+                 */
+                static inline payload copy(const element_type& value)
+                {
+                    return copy(&value, 1);
+                }
+
+                /**
+                 * Creates a new payload of given size.
+                 * @param size The payload's number of elements.
+                 * @return The newly created payload instance.
+                 */
+                static inline payload make(size_t size = 1) noexcept
+                {
+                    return payload {underlying_type::make(size)};
+                }
+        };
+
+        /**
+         * A message payload buffer context for STL vectors.
+         * @tparam T The message payload type.
+         * @since 0.1.1
+         */
+        template <typename T>
+        class payload<std::vector<T>> : public payload<T>
+        {
+            public:
+                using return_type = payload<T>; /// The payload's return type of collective operations.
+
+            public:
+                /**
+                 * Creates a new payload from STL vector.
+                 * @param ref The payload as a STL vector.
+                 */
+                inline payload(std::vector<T>& ref) noexcept
+                :   payload<T> {ref.data(), ref.size()}
+                {}
+        };
+
+        /**
+         * A message payload buffer context for... buffers.
+         * @tparam T The message payload type.
+         * @since 0.1.1
+         */
+        template <typename T>
+        class payload<buffer<T>> : public payload<T>
+        {
+            public:
+                using return_type = payload<T>; /// The payload's return type of collective operations.
+
+            public:
+                /**
+                 * Creates a new payload from buffer.
+                 * @param ref The buffer to use as payload.
+                 */
+                inline payload(buffer<T>& ref) noexcept
+                :   payload<T> {ref.raw(), ref.size()}
+                {}
+        };
+
         namespace op
         {
             /**
              * Identifies an operator for MPI collective operations.
              * @since 0.1.1
              */
-            using id = MPI_Op;
+            using functor = MPI_Op;
 
             /**
-             * Keeps track of all user defined operator's ids created during execution.
+             * Keeps track of all user defined operator's functors created during execution.
              * @since 0.1.1
              */
-            extern std::vector<id> ref_op;
+            extern std::vector<functor> ref_op;
 
             /**
              * Maps a datatype to an user-created operator. This is necessary because
@@ -593,14 +684,14 @@ namespace msa
              * wrapper without an extremelly convoluted mechanism.
              * @since 0.1.1
              */
-            extern std::map<id, void *> op_list;
+            extern std::map<functor, void *> op_list;
 
             /**
              * Informs the currently active operator. This will be useful for injecting
              * the correct operator inside the wrapper.
              * @since 0.1.1
              */
-            extern id active;
+            extern functor active;
 
             /**
              * Wraps an operator transforming it into an MPI operator.
@@ -610,9 +701,9 @@ namespace msa
              * @param len The number of elements in given operation.
              */
             template <typename T>
-            void fwrap(const void *a, void *b, int *len, MPI_Datatype *)
+            void fwrap(void *a, void *b, int *len, MPI_Datatype *)
             {
-                using function_type = typename utils::op<T>::functor;
+                using function_type = typename utils::op<T>::function_type;
                 auto f = reinterpret_cast<function_type>(op_list[active]);
 
                 for(int i = 0; i < *len; ++i)
@@ -622,16 +713,16 @@ namespace msa
             /**
              * Creates a new MPI operator from user function.
              * @tparam T The type the operator works onto.
-             * @param func The functor of operator to be created.
+             * @param fop The functor of operator to be created.
              * @param commutative Is the operator commutative?
              * @return The identifier for operator created.
              */
             template <typename T>
-            inline id create(utils::op<T> func, bool commutative = true)
+            inline functor create(const utils::op<T>& fop, bool commutative = true)
             {
-                id result;
+                functor result;
                 check(MPI_Op_create(fwrap<T>, commutative, &result));
-                op_list[result] = reinterpret_cast<void *>(&func);
+                op_list[result] = reinterpret_cast<void *>(&fop);
                 ref_op.push_back(result);
                 return result;
             }
@@ -641,85 +732,129 @@ namespace msa
              * new operators is highly recommended.
              * @since 0.1.1
              */
-            static id const& max      = MPI_MAX;
-            static id const& min      = MPI_MIN;
-            static id const& add      = MPI_SUM;
-            static id const& mul      = MPI_PROD;
-            static id const& andl     = MPI_LAND;
-            static id const& andb     = MPI_BAND;
-            static id const& orl      = MPI_LOR;
-            static id const& orb      = MPI_BOR;
-            static id const& xorl     = MPI_LXOR;
-            static id const& xorb     = MPI_BXOR;
-            static id const& minloc   = MPI_MINLOC;
-            static id const& maxloc   = MPI_MAXLOC;
-            static id const& replace  = MPI_REPLACE;
+            static functor const& max      = MPI_MAX;
+            static functor const& min      = MPI_MIN;
+            static functor const& add      = MPI_SUM;
+            static functor const& mul      = MPI_PROD;
+            static functor const& andl     = MPI_LAND;
+            static functor const& andb     = MPI_BAND;
+            static functor const& orl      = MPI_LOR;
+            static functor const& orb      = MPI_BOR;
+            static functor const& xorl     = MPI_LXOR;
+            static functor const& xorb     = MPI_BXOR;
+            static functor const& minloc   = MPI_MINLOC;
+            static functor const& maxloc   = MPI_MAXLOC;
+            static functor const& replace  = MPI_REPLACE;
             /**#@-*/
         }
 
-        namespace communicator
+        /**
+         * Represents an internal MPI communicator, which allows communication
+         * and synchronization among a set of nodes and processes.
+         * @since 0.1.1
+         */
+        class communicator
         {
-            /**
-             * Represents an internal MPI communicator, which allows communication
-             * and synchronization among a set of nodes and processes.
-             * @since 0.1.1
-             */
-            struct id
-            {
-                uint32_t size = 0;              /// The number of nodes in communicator.
-                mpi::node rank = 0;             /// The current node's rank in communicator.
-                MPI_Comm raw = MPI_COMM_NULL;   /// The internal MPI communicator reference.
-            };
+            protected:
+                using raw_type = MPI_Comm;      /// The internal MPI communicator type.
 
-            /**
-             * Represents a false, non-existent or invalid communicator.
-             * @since 0.1.1
-             */
-            static constexpr id null;
+            private:
+                uint32_t m_size = 0;            /// The number of nodes in communicator.
+                mpi::node m_rank = 0;           /// The current node's rank in communicator.
+                MPI_Comm m_raw = MPI_COMM_NULL; /// The internal MPI communicator reference.
 
-            /**
-             * Builds up a new communicator instance from built-in type.
-             * @param comm Built-in communicator instance.
-             * @return The new communicator instance.
-             */
-            inline auto build(MPI_Comm comm) -> id
-            {
-                int rank, size;
-                check(MPI_Comm_rank(comm, &rank));
-                check(MPI_Comm_size(comm, &size));
-                return {static_cast<uint32_t>(size), rank, comm};
-            }
+            public:
+                inline communicator() noexcept = default;
+                inline communicator(const communicator&) noexcept = default;
+                inline communicator(communicator&&) noexcept = default;
 
-            /**
-             * Splits nodes into different communicators according to selected color.
-             * @param comm The original communicator to be split.
-             * @param color The color selected by current node.
-             * @param key The key used to assigned a node id in new communicator.
-             * @return The obtained communicator from split operation.
-             */
-            inline auto split(const id& comm, int color, int key = any) -> id
-            {
-                MPI_Comm newcomm;
-                check(MPI_Comm_split(comm.raw, color, (key > 0 ? key : comm.rank), &newcomm));
-                return build(newcomm);
-            }
+                inline communicator& operator=(const communicator&) noexcept = default;
+                inline communicator& operator=(communicator&&) noexcept = default;
 
-            /**
-             * Cleans up the resources used by communicator.
-             * @param comm The communicator to be destroyed.
-             */
-            inline void free(id& comm)
-            {
-                check(MPI_Comm_free(&comm.raw));
-                comm = null;
-            }
-        }
+                /**
+                 * Allows the communicator instance to be seen as an internal MPI
+                 * communicator type seamlessly.
+                 * @return The interal communicator pointer.
+                 */
+                inline operator raw_type() const noexcept
+                {
+                    return m_raw;
+                }
+
+                /**
+                 * Informs the current node's rank in relation to current communicator.
+                 * @return The node's rank in communicator.
+                 */
+                inline const mpi::node& rank() const noexcept
+                {
+                    return m_rank;
+                }
+
+                /**
+                 * Informs the total number of nodes in current communicator.
+                 * @return The number of nodes in communicator.
+                 */
+                inline const uint32_t& size() const noexcept
+                {
+                    return m_size;
+                }
+
+                /**
+                 * Builds up a new communicator instance from built-in type.
+                 * @param comm Built-in communicator instance.
+                 * @return The new communicator instance.
+                 */
+                static inline auto build(MPI_Comm comm) -> communicator
+                {
+                    int rank, size;
+                    check(MPI_Comm_rank(comm, &rank));
+                    check(MPI_Comm_size(comm, &size));
+                    return {static_cast<uint32_t>(size), rank, comm};
+                }
+
+                /**
+                 * Splits nodes into different communicators according to selected color.
+                 * @param comm The original communicator to be split.
+                 * @param color The color selected by current node.
+                 * @param key The key used to assigned a node id in new communicator.
+                 * @return The obtained communicator from split operation.
+                 */
+                static inline auto split(const communicator& comm, int color, int key = any) -> communicator
+                {
+                    MPI_Comm newcomm;
+                    check(MPI_Comm_split(comm, color, (key > 0 ? key : comm.m_rank), &newcomm));
+                    return build(newcomm);
+                }
+
+                /**
+                 * Cleans up the resources used by communicator.
+                 * @param comm The communicator to be destroyed.
+                 */
+                static inline void free(communicator& comm)
+                {
+                    check(MPI_Comm_free(&comm.m_raw));
+                    comm.m_raw = MPI_COMM_NULL;
+                }
+
+            private:
+                /**
+                 * Initializes a new communicator instance.
+                 * @param size The number of nodes in given communicator.
+                 * @param rank The current node's rank in communicator.
+                 * @param raw The internal communicator reference.
+                 */
+                inline communicator(const uint32_t& size, const mpi::node& rank, raw_type raw)
+                :   m_size {size}
+                ,   m_rank {rank}
+                ,   m_raw {raw}
+                {}
+        };
 
         /**
          * The default communicator instance.
-         * @see mpi::communicator::id
+         * @see mpi::communicator
          */
-        extern communicator::id world;
+        extern communicator world;
 
         /**
          * Global MPI initialization and finalization routines. These functions
@@ -729,33 +864,13 @@ namespace msa
         extern void init(int&, char **&);
         extern void finalize();
 
-        /**#@+
-         * Creates a new payload from given buffer.
-         * @tparam T The given buffer content type.
-         * @param data The base payload buffer.
-         * @param size The payload buffer's size.
-         * @return The new payload.
-         */
-        template <typename T>
-        inline auto payload(T& data) noexcept -> detail::mpi::payload<T>
-        {
-            return {data};
-        }
-
-        template <typename T>
-        inline auto payload(T *data, size_t size) noexcept -> detail::mpi::payload<T>
-        {
-            return {data, size};
-        }
-        /**#@-*/
-
         /**
          * Synchronizes all nodes in a communicator.
          * @param comm The communicator the operation should apply to.
          */
-        inline void barrier(const communicator::id& comm = world)
+        inline void barrier(const communicator& comm = world)
         {
-            check(MPI_Barrier(comm.raw));
+            check(MPI_Barrier(comm));
         }
 
         /**#@+
@@ -765,30 +880,47 @@ namespace msa
          * @param size The number of buffer's elements to broadcast.
          * @param root The operation's root node.
          * @param comm The communicator this operation applies to.
+         * @return The broadcast message payload.
          */
         template <typename T>
-        inline void broadcast(
-                T *data
-            ,   int size = 1
+        inline typename payload<T>::return_type broadcast(
+                payload<T>& load
             ,   const node& root = msa::node::master
-            ,   const communicator::id& comm = world
+            ,   const communicator& comm = world
             )
         {
-            auto load = payload(data, size);
-            check(MPI_Bcast(load.raw(), load.size(), load.type(), root, comm.raw));
+            check(MPI_Bcast(load.raw(), load.size(), load.type(), root, comm));
+            return load;
         }
 
         template <typename T>
-        inline void broadcast(
-                T& data
+        inline typename payload<T>::return_type broadcast(
+                T *data
+            ,   size_t size = 1
             ,   const node& root = msa::node::master
-            ,   const communicator::id& comm = world
+            ,   const communicator& comm = world
             )
         {
-            auto load = payload(data);
+            auto load = payload<T>::copy(data, size);
+            return mpi::broadcast(load, root, comm);
+        }
+
+        template <typename T>
+        inline typename payload<T>::return_type broadcast(
+                T& data
+            ,   const node& root = msa::node::master
+            ,   const communicator& comm = world
+            )
+        {
+            auto load = payload<T> {data};
             auto size = load.size();
-            mpi::broadcast(&size, 1, root, comm);
-            mpi::broadcast(load.resize(size), size, root, comm);
+
+            size = mpi::broadcast(&size, 1, root, comm);
+
+            if(comm.rank() != root)
+                load = payload<T>::make(size);
+
+            return mpi::broadcast(load, root, comm);
         }
         /**#@-*/
 
@@ -799,11 +931,11 @@ namespace msa
          * @param comm The communicator this operation applies to.
          * @return The inspected message status.
          */
-        inline status probe(const node& src = any, const mpi::tag& tag = any, const communicator::id& comm = world)
+        inline status probe(const node& src = any, const mpi::tag& tag = any, const communicator& comm = world)
         {
-            status::raw_type raw_status;
-            check(MPI_Probe(src, tag, comm.raw, &raw_status));
-            return {raw_status};
+            status::raw_type stt;
+            check(MPI_Probe(src, tag, comm, &stt));
+            return last_status = status {stt};
         }
 
         /**#@+
@@ -814,421 +946,369 @@ namespace msa
          * @param dest The destination node.
          * @param tag The identifying message tag.
          * @param comm The communicator this operation applies to.
-         * @return MPI error code if not successful.
          */
         template <typename T>
         inline void send(
-                T *data
-            ,   int size = 1
+                const payload<T>& load
             ,   const node& dest = msa::node::master
-            ,   const mpi::tag& tag = any,
-            ,   const communicator::id& comm = world
+            ,   const mpi::tag& tag = any
+            ,   const communicator& comm = world
             )
         {
-            auto load = payload(data, size);
-            check(MPI_Send(load.raw(), load.size(), load.type(), dest, tag < 0 ? MPI_TAG_UB : tag, comm.raw));
+            check(MPI_Send(load.raw(), load.size(), load.type(), dest, tag < 0 ? MPI_TAG_UB : tag, comm));
+        }
+
+        template <typename T>
+        inline void send(
+                T *data
+            ,   size_t size = 1
+            ,   const node& dest = msa::node::master
+            ,   const mpi::tag& tag = any
+            ,   const communicator& comm = world
+            )
+        {
+            mpi::send(payload<T> {data, size}, dest, tag, comm);
         }
 
         template <typename T>
         inline void send(
                 T& data
             ,   const node& dest = msa::node::master
-            ,   const mpi::tag& tag = any,
-            ,   const communicator::id& comm = world
+            ,   const mpi::tag& tag = any
+            ,   const communicator& comm = world
             )
         {
-            auto load = payload(data);
-            mpi::send(load.raw(), load.size(), dest, tag, comm);
+            mpi::send(payload<T> {data}, dest, tag, comm);
         }
         /**#@-*/
 
         /**#@+
          * Receives data from a node connected to the cluster.
          * @tparam T Type of buffer data to receive.
-         * @param data The buffer to receive data into.
-         * @param size The number of buffer's elements to receive.
          * @param src The source node.
          * @param tag The identifying tag.
          * @param comm The communicator this operation applies to.
-         * @return The message status
+         * @return The received message payload.
          */
         template <typename T>
-        inline status receive(
-                T *data
-            ,   int size = 1
+        inline typename payload<T>::return_type receive(
+                payload<T>& load
             ,   const node& src = any
             ,   const mpi::tag& tag = any
-            ,   const communicator::id& comm = world
+            ,   const communicator& comm = world
             )
         {
-            status::raw_type raw_status;
-            auto load = payload(data, size);
-            check(MPI_Recv(load.raw(), load.size(), load.type(), src, tag, comm.raw, &raw_status));
-            return {raw_status};
+            status::raw_type stt;
+            check(MPI_Recv(load.raw(), load.size(), load.type(), src, tag, comm, &stt));
+            last_status = status {stt};
+            return load;
         }
 
         template <typename T>
-        inline status receive(
-                T& data
-            ,   const node& src = any
+        inline typename payload<T>::return_type receive(
+                const node& src = any
             ,   const mpi::tag& tag = any
-            ,   const communicator::id& comm = world
+            ,   const communicator& comm = world
             )
         {
-            auto load = payload(data);
-            using P = typename decltype(load)::element_type;
-            auto size = mpi::probe(src, tag, comm).count<P>();
-            return mpi::receive(load.resize(size), size, src, tag, comm);
+            auto info = mpi::probe(src, tag, comm);
+            using E = typename payload<T>::element_type;
+            auto load = payload<T>::make(info.count<E>());
+            return mpi::receive(load, src, tag, comm);
         }
         /**#@-*/
 
         /**#@+
-         * Reduces values from all processes to a single value.
+         * Gathers value from all processes to a single value and send to all processes.
          * @tparam T The type of buffer data to reduce.
-         * @tparam U The type of buffer data to reduce.
-         * @param odata The node's outgoing buffer.
-         * @param idata The root's incoming reduced buffer.
-         * @param func The reduce function to apply to the node's data.
+         * @param data The node's outgoing buffer.
          * @param size The outgoing and incoming buffers' sizes.
-         * @param dest The operation's final destination node.
+         * @param fop The operation's reducing function.
          * @param comm The communicator this operation applies to.
+         * @return The reduced value payload.
          */
-        /*template <typename T>
-        inline void reduce(
-                T *odata
-            ,   T *idata
-            ,   const op::id& func
-            ,   int osize = 1
-            ,   const node& dest = msa::node::master
+        template <typename T>
+        inline typename payload<T>::return_type allreduce(
+                const payload<T>& out
+            ,   const op::functor& fop
             ,   const communicator& comm = world
             )
         {
-            auto outgoing = payload::make(odata, size);
-            auto incoming = payload::make(idata, size);
-            communicator::reduce(comm, outgoing, incoming, func, dest);
+            auto in = payload<T>::make(out.size());
+            check(MPI_Allreduce(out.raw(), in.raw(), out.size(), out.type(), op::active = fop, comm));
+            return in;
         }
 
-        template <typename T, typename U>
-        inline void reduce(
-                T& odata
-            ,   U& idata
-            ,   const op::id& func
-            ,   const node& dest = msa::node::master
+        template <typename T>
+        inline typename payload<T>::return_type allreduce(
+                T *data
+            ,   size_t size
+            ,   const op::functor& fop
             ,   const communicator& comm = world
             )
         {
-            auto outgoing = payload::make(odata);
-            auto incoming = payload::make(idata);
-
-            incoming.resize(outgoing.size());
-            communicator::reduce(comm, outgoing, incoming, func, dest);
+            return mpi::allreduce(payload<T> {data, size}, fop, comm);
         }
+
+        template <typename T>
+        inline typename payload<T>::return_type allreduce(
+                T& data
+            ,   const op::functor& fop
+            ,   const communicator& comm = world
+            )
+        {
+            return mpi::allreduce(payload<T> {data}, fop, comm);
+        }
+        /**#@-*/
+
+        /**#@+
+         * Gathers value from all processes to a single value and send to root process.
+         * @tparam T The type of buffer data to reduce.
+         * @param data The node's outgoing buffer.
+         * @param size The outgoing and incoming buffers' sizes.
+         * @param fop The operation's reducing function.
+         * @param root The operation's root process.
+         * @param comm The communicator this operation applies to.
+         * @return The reduced value payload.
+         */
+        template <typename T>
+        inline typename payload<T>::return_type reduce(
+                const payload<T>& out
+            ,   const op::functor& fop
+            ,   const node& root = msa::node::master
+            ,   const communicator& comm = world
+            )
+        {
+            auto in = payload<T>::make(out.size());
+            check(MPI_Reduce(out.raw(), in.raw(), out.size(), out.type(), op::active = fop, root, comm));
+            return in;
+        }
+
+        template <typename T>
+        inline typename payload<T>::return_type reduce(
+                T *data
+            ,   size_t size
+            ,   const op::functor& fop
+            ,   const node& root = msa::node::master
+            ,   const communicator& comm = world
+            )
+        {
+            return mpi::reduce(payload<T> {data, size}, fop, root, comm);
+        }
+
+        template <typename T>
+        inline typename payload<T>::return_type reduce(
+                T& data
+            ,   const op::functor& fop
+            ,   const node& root = msa::node::master
+            ,   const communicator& comm = world
+            )
+        {
+            return mpi::reduce(payload<T> {data}, fop, root, comm);
+        }
+        /**#@-*/
 
         /**#@+
          * Gathers data from all nodes and deliver combined data to all nodes
          * @tparam T The type of buffer data to gather.
-         * @tparam U The type of buffer data to gather.
-         * @param odata The outgoing buffer.
-         * @param idata The incoming buffer.
-         * @param osize The outgoing buffer size.
-         * @param isize The size of incoming buffer from each node.
-         * @param displ The data displacement of each node.
+         * @param data The outgoing buffer.
+         * @param size The outgoing buffer's size.
          * @param comm The communicator this operation applies to.
+         * @return The gathered message payload.
          */
-        template <typename T, typename U>
-        inline void allgather(
-                T *odata, int osize
-            ,   U *idata, int isize
-            ,   const communicator::id& comm = world
-            )
-        {
-            auto o = payload(odata, osize);
-            auto i = payload(idata, isize);
-            check(MPI_Allgather(o.raw(), o.size(), o.type(), i.raw(), i.size(), i.type(), comm.raw));
-        }
-
-        template <typename T, typename U>
-        inline void allgather(
-                T *odata, int osize
-            ,   U *idata, int *isize, int *displ
-            ,   const communicator::id& comm = world
-            )
-        {
-            auto o = payload(odata, osize);
-            check(MPI_Allgatherv(o.raw(), o.size(), o.type(), idata, isize, displ, datatype::get<T>(), comm.raw));
-        }
-
-        template <typename T, typename U>
-        inline void allgather(
-                T& odata, int osize, int displ
-            ,   U& idata
-            ,   const communicator::id& comm = world
-            )
-        {
-            auto o = payload(odata);
-            auto i = payload(idata);
-
-            auto lsize  = buffer<int>::make(comm.size);
-            auto ldispl = buffer<int>::make(comm.size);
-            mpi::allgather(&osize, 1, lsize.raw(), 1, comm);
-            mpi::allgather(&displ, 1, ldispl.raw(), 1, comm);
-
-            i.resize(std::accumulate(lsize.begin(), lsize.end(), 0));
-            mpi::allgather(o.raw(), o.size(), i.raw(), i.size(), lsize.raw(), ldispl.raw(), comm);
-        }
-
-        template <typename T, typename U>
-        inline void allgather(T& out_data, U& in_data, const communicator::id& comm = world)
-        {
-            auto o = payload(odata);
-            auto i = payload(idata);
-
-            auto isize  = i.size();
-            auto lsize  = buffer<int>::make(comm.size);
-            auto ldispl = buffer<int>::make(comm.size + 1);
-
-
-
-
-            auto to_send = mpi::payload(out_data);
-            auto to_recv = mpi::payload(in_data);
-            using S = typename decltype(to_send)::element_type;
-            using R = typename decltype(to_recv)::element_type;
-            static_assert(std::is_same<S, R>::value, "cannot gather with different types");
-
-            int count = to_send.size();
-            std::vector<int> all_count(comm.size), all_displ(comm.size + 1);
-
-            allgather(&count, 1, all_count.data(), 1, comm);
-
-            bool equal = std::all_of(all_count.begin(), all_count.end(), [&count](int i) { return i == count; });
-            std::partial_sum(all_count.begin(), all_count.end(), all_displ.begin() + 1);
-
-            to_recv.resize(all_displ.back());
-
-            if(equal) allgather(to_send.data(), count, to_recv.data(), count, comm);
-            else allgather(to_send.data(), count, to_recv.data(), all_count.data(), all_displ.data(), comm);
-        }
-        /**#@-*/
-
-        /**#@+
-         * Gather data from nodes according to given distribution.
-         * @tparam T The type of buffer data to gather.
-         * @tparam U The type of buffer data to gather.
-         * @param odata The outgoing buffer.
-         * @param idata The incoming buffer.
-         * @param osize The outgoing buffer size.
-         * @param isize The size of incoming buffer from each node.
-         * @param displ The data displacement of each node.
-         * @param root The operation's root node.
-         * @param comm The communicator this operation applies to.
-         */
-        template <typename T, typename U>
-        inline void gather(
-                T *odata, int osize
-            ,   U *idata, int isize
-            ,   const node& root = msa::node::master
+        template <typename T>
+        inline typename payload<T>::return_type allgather(
+                const payload<T>& out
             ,   const communicator& comm = world
             )
         {
-            auto outgoing = payload::make(odata, osize);
-            auto incoming = payload::make(idata, isize);
-            communicator::gather(outgoing, incoming, root, comm);
+            auto in = payload<T>::make(out.size() * comm.size());
+            check(MPI_Allgather(out.raw(), out.size(), out.type(), in.raw(), out.size(), out.type(), comm));
+            return in;
         }
 
-        template <typename T, typename U>
-        inline void gather(
-                T *odata, int osize, int odispl
-            ,   U *idata, int isize
-            ,   const node& root = msa::node::master
+        template <typename T>
+        inline typename payload<T>::return_type allgather(
+                const payload<T>& out
+            ,   const payload<int>& size
+            ,   const payload<int>& displ
             ,   const communicator& comm = world
             )
         {
-            auto outgoing = payload::make(odata, osize);
-            auto incoming = payload::make(idata, isize);
-            communicator::gatherv(outgoing, odispl, incoming, root, comm);
+            auto type = out.type();
+            auto in = payload<T>::make(std::accumulate(size.begin(), size.end(), 0));
+            check(MPI_Allgatherv(out.raw(), out.size(), type, in.raw(), size.raw(), displ.raw(), type, comm));
+            return in;
         }
 
-        template <typename T, typename U>
-        inline void gather(
-                T& odata
-            ,   U& idata
-            ,   const node& root = msa::node::master
+        template <typename T>
+        inline typename payload<T>::return_type allgather(
+                T *data
+            ,   size_t size = 1
             ,   const communicator& comm = world
             )
         {
-            auto oload = payload::make(odata);
-            auto iload = payload::make(idata);
-            comm.gather(&oload, &iload, root);
-        }
-
-        template <typename T, typename U>
-        inline void gather(
-                T& odata
-            ,   U& idata, int *idispl
-            ,   const node& root = msa::node::master
-            ,   const communicator& comm = world
-            )
-        {
-            auto oload = payload::make(odata);
-            auto iload = payload::make(idata);
-            comm.gatherv(&oload, &iload, idispl, root);
-        }
-
-
-
-
-        template <typename T, typename U>
-        inline void gather(
-                T& odata, int osize, int odispl
-            ,   U& idata
-            ,   const node& root = msa::node::master
-            ,   const communicator& comm = world
-            )
-        {
-            int32_t isize;
-            auto oload = payload::make(odata);
-            auto iload = payload::make(idata);
+            auto load = payload<T> {data, size};
+            auto sizeall = mpi::allgather(payload<int>::copy(size), comm);
             
-            reduce(osize, isize, mpi::op::add, root, comm);
-            gather(&odispl, 1, ldispl.data(), 1, root, comm);
+            if(std::all_of(sizeall.begin(), sizeall.end(), [size](int i) { return i == size; }))
+                return mpi::allgather(load, comm);
+
+            auto dispall = std::vector<int> (comm.size() + 1);
+            std::partial_sum(sizeall.begin(), sizeall.end(), dispall.begin() + 1);
+            return mpi::allgather(load, sizeall, payload<decltype(dispall)> {dispall}, comm);
         }
 
-        
-
-
-        template <typename T, typename U>
-        inline void gather(
-                T& out, int osz, int displ
-            ,   U& in
-            ,   const node& root = ::node::master
+        template <typename T>
+        inline typename payload<T>::return_type allgather(
+                T& data
             ,   const communicator& comm = world
             )
         {
-            auto oload = payload(out);
-            auto iload = payload(in);
-            using O = typename decltype(oload)::element_type;
-            using I = typename decltype(iload)::element_type;
-            static_assert(std::is_same<O, I>::value, "cannot gather with different types");
-
-            std::vector<int> lsize(comm.size), ldispl(comm.size);
-
-            gather(&osz, 1, lsize.data(), 1, root, comm);
-            gather(&displ, 1, ldispl.data(), 1, root, comm);
-
-            if(comm.rank == root) iload.resize(std::accumulate(lsize.begin(), lsize.end(), 0));
-            gather(oload.data(), oload.size(), iload.data(), lsize.data(), ldispl.data(), root, comm);
-        }
-
-        template <typename T, typename U>
-        inline void gather(
-                T& out
-            ,   U& in
-            ,   const node& root = ::node::master
-            ,   const communicator& comm = world
-            )
-        {
-            auto oload = payload(out);
-            auto iload = payload(in);
-            using O = typename decltype(oload)::element_type;
-            using I = typename decltype(iload)::element_type;
-            static_assert(std::is_same<O, I>::value, "cannot gather with different types");
-
-            int size = oload.size();
-            std::vector<int> lsize(comm.size), ldispl(comm.size + 1);
-
-            allgather(&size, 1, lsize.data(), 1, comm);
-
-            bool equal = std::all_of(lsize.begin(), lsize.end(), [&size](int i) { return i == size; });
-            std::partial_sum(lsize.begin(), lsize.end(), ldispl.begin() + 1);
-
-            if(comm.rank == root) iload.resize(ldispl.back());
-
-            if(equal) gather(oload.data(), size, iload.data(), size, root, comm);
-            else gather(oload.data(), size, iload.data(), lsize.data(), ldispl.data(), root, comm);
+            auto load = payload<T> {data};
+            return mpi::allgather(load.raw(), load.size(), comm);
         }
         /**#@-*/
 
         /**#@+
-         * Scatters data to nodes according to given distribution.
-         * @tparam T The type of buffer data to scatter.
-         * @tparam U The type of buffer data to gather.
-         * @param out The outgoing buffer.
-         * @param in The incoming buffer.
-         * @param osz The outgoing buffer size.
-         * @param isz The size of incoming buffer from each node.
-         * @param displ The data displacement of each node.
-         * @param root The operation's root node.
+         * Gathers together values from a group of processes
+         * @tparam T The type of buffer data to gather.
+         * @param data The outgoing buffer.
+         * @param size The outgoing buffer's size.
+         * @param root The operation's target node.
          * @param comm The communicator this operation applies to.
+         * @return The gathered message payload.
          */
         template <typename T>
-        inline void scatter(
-                T *out, int osz
-            ,   T *in, int isz
-            ,   const node& root = ::node::master
-            ,   const communicator::id& comm = world
+        inline typename payload<T>::return_type gather(
+                const payload<T>& out
+            ,   const node& root = msa::node::master
+            ,   const communicator& comm = world
             )
         {
-            check(MPI_Scatter(out, osz, datatype::get<T>(), in, isz, datatype::get<T>(), root, comm.ref));
+            auto in = payload<T>::make(out.size() * comm.size());
+            check(MPI_Gather(out.raw(), out.size(), out.type(), in.raw(), out.size(), out.type(), root, comm));
+            return in;
         }
 
         template <typename T>
-        inline void scatter(
-                T *out, int *osz, int *displ
-            ,   T *in, int isz
-            ,   const node& root = ::node::master
-            ,   const communicator::id& comm = world
+        inline typename payload<T>::return_type gather(
+                const payload<T>& out
+            ,   const payload<int>& size
+            ,   const payload<int>& displ
+            ,   const node& root = msa::node::master
+            ,   const communicator& comm = world
             )
         {
-            check(MPI_Scatterv(out, osz, displ, datatype::get<T>(), in, isz, datatype::get<T>(), root, comm.ref));
+            auto type = out.type();
+            auto in = payload<T>::make(std::accumulate(size.begin(), size.end(), 0));
+            check(MPI_Gatherv(out.raw(), out.size(), type, in.raw(), size.raw(), displ.raw(), type, root, comm));
+            return in;
         }
 
-        template <typename T, typename U>
-        inline void scatter(
-                T& out
-            ,   U& in, int isz, int displ
-            ,   const node& root = ::node::master
-            ,   const communicator::id& comm = world
+        template <typename T>
+        inline typename payload<T>::return_type gather(
+                T *data
+            ,   size_t size = 1
+            ,   const node& root = msa::node::master
+            ,   const communicator& comm = world
             )
         {
-            auto oload = payload(out);
-            auto iload = payload(in);
-            using O = typename decltype(oload)::element_type;
-            using I = typename decltype(iload)::element_type;
-            static_assert(std::is_same<O, I>::value, "cannot scatter with different types");
+            auto load = payload<T> {data, size};
+            auto sizeall = mpi::allgather(payload<int>::copy(size), comm);
 
-            std::vector<int> lsize, ldispl;
+            if(std::all_of(sizeall.begin(), sizeall.end(), [size](int i) { return i == size; }))
+                return mpi::gather(load, root, comm);
 
-            gather(isz, lsize, root, comm);
-            gather(displ, ldispl, root, comm);
-
-            scatter(oload.data(), lsize.data(), ldispl.data(), iload.resize(isz), isz, root, comm);
+            auto dispall = std::vector<int> (comm.size() + 1);
+            std::partial_sum(sizeall.begin(), sizeall.end(), dispall.begin() + 1);
+            return mpi::gather(load, sizeall, payload<decltype(dispall)> {dispall}, root, comm);
         }
 
-        template <typename T, typename U>
-        inline void scatter(
-                T& out
-            ,   U& in
-            ,   const node& root = ::node::master
-            ,   const communicator::id& comm = world
+        template <typename T>
+        inline typename payload<T>::return_type gather(
+                T& data
+            ,   const node& root = msa::node::master
+            ,   const communicator& comm = world
             )
         {
-            auto oload = payload(out);
-            auto iload = payload(in);
-            using O = typename decltype(oload)::element_type;
-            using I = typename decltype(iload)::element_type;
-            static_assert(std::is_same<O, I>::value, "cannot scatter with different types");
+            auto load = payload<T> {data};
+            return mpi::gather(load.raw(), load.size(), root, comm);
+        }
+        /**#@-*/
 
-            int size = oload.size();
-            broadcast(size, root, comm);
+        /**#@+
+         * Sends data from one process to all other processes in a communicator
+         * @tparam T The type of buffer data to scatter.
+         * @param data The outgoing buffer.
+         * @param size The outgoing buffer's size.
+         * @param root The operation's root node.
+         * @param comm The communicator this operation applies to.
+         * @return The scathered message payload.
+         */
+        template <typename T>
+        inline typename payload<T>::return_type scatter(
+                const payload<T>& out
+            ,   const node& root = msa::node::master
+            ,   const communicator& comm = world
+            )
+        {
+            auto in = payload<T>::make(out.size());
+            check(MPI_Scatter(out.raw(), in.size(), out.type(), in.raw(), in.size(), out.type(), root, comm));
+            return in;
+        }
 
-            int quo = size / comm.size;
-            int rem = size % comm.size;
+        template <typename T>
+        inline typename payload<T>::return_type scatter(
+                const payload<T>& out
+            ,   const payload<int>& size
+            ,   const payload<int>& displ
+            ,   const node& root = msa::node::master
+            ,   const communicator& comm = world
+            )
+        {
+            auto type = out.type();
+            auto in = payload<T>::make(size[comm.rank()]);
+            check(MPI_Scatterv(out.raw(), size.raw(), displ.raw(), type, in.raw(), in.size(), type, root, comm));
+            return in;
+        }
 
-            iload.resize(size = quo + (rem > comm.rank));
+        template <typename T>
+        inline typename payload<T>::return_type scatter(
+                T *data
+            ,   size_t size
+            ,   const node& root = msa::node::master
+            ,   const communicator& comm = world
+            )
+        {
+            size = mpi::broadcast(size, root, comm);
 
-            if(!rem) scatter(oload.data(), size, iload.data(), size, root, comm);
-            else scatter(out, in, size, quo * comm.rank + utils::min(comm.rank, rem), root, comm);
+            size_t quotient  = size / comm.size();
+            int remainder = size % comm.size();
+
+            if(remainder == 0)
+                return mpi::scatter(payload<T> {data, quotient}, root, comm);
+
+            auto sizeall = payload<int>::make(comm.size());
+            auto dispall = payload<int>::make(comm.size());
+
+            for(int i = 0; i < comm.size(); ++i) {
+                sizeall[i] = quotient + (remainder > i);
+                dispall[i] = quotient * i + utils::min(i, remainder);
+            }
+
+            return mpi::scatter(payload<T> {data}, sizeall, dispall, root, comm);
+        }
+
+        template <typename T>
+        inline typename payload<T>::return_type scatter(
+                T& data
+            ,   const node& root = msa::node::master
+            ,   const communicator& comm = world
+            )
+        {
+            auto load = payload<T> {data};
+            return mpi::scatter(load.raw(), load.size(), root, comm);
         }
         /**#@-*/
     }
@@ -1239,9 +1319,9 @@ namespace msa
      * @param b The second communicator to compare.
      * @return Are both communicators the same?
      */
-    inline bool operator==(const mpi::communicator::id& a, const mpi::communicator::id& b) noexcept
+    inline bool operator==(const mpi::communicator& a, const mpi::communicator& b) noexcept
     {
-        return a.ref == b.ref;
+        return ((MPI_Comm)(a)) == ((MPI_Comm)(b));
     }
 
     /**
@@ -1250,9 +1330,9 @@ namespace msa
      * @param b The second communicator to compare.
      * @return Are both communicators different?
      */
-    inline bool operator!=(const mpi::communicator::id& a, const mpi::communicator::id& b) noexcept
+    inline bool operator!=(const mpi::communicator& a, const mpi::communicator& b) noexcept
     {
-        return a.ref != b.ref;
+        return ((MPI_Comm)(a)) != ((MPI_Comm)(b));
     }
 }
 

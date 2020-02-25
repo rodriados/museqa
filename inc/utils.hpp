@@ -213,8 +213,11 @@ namespace msa
         template <typename T>
         struct op : public functor<T(const T&, const T&)>
         {
-            using functor<T(const T&, const T&)>::functor;
-            using functor<T(const T&, const T&)>::operator=;
+            using underlying_type = functor<T(const T&, const T&)>;
+            using function_type = typename underlying_type::function_type;
+
+            using underlying_type::functor;
+            using underlying_type::operator=;
         };
 
         /**

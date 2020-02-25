@@ -15,7 +15,7 @@ namespace msa
      * The default communicator instance.
      * @see mpi::Communicator
      */
-    mpi::communicator::id mpi::world;
+    mpi::communicator mpi::world;
 
     /**
      * Keeps track of all generated datatypes throughout execution.
@@ -27,7 +27,7 @@ namespace msa
      * Keeps track of all user defined operators created during execution.
      * @since 0.1.1
      */
-    std::vector<mpi::op::id> mpi::op::ref_op;
+    std::vector<mpi::op::functor> mpi::op::ref_op;
 
     /**
      * Maps a datatype to an user-created operator. This is necessary because
@@ -35,22 +35,29 @@ namespace msa
      * wrapper without an extremelly convoluted mechanism.
      * @since 0.1.1
      */
-    std::map<mpi::op::id, void *> mpi::op::op_list;
+    std::map<mpi::op::functor, void *> mpi::op::op_list;
 
     /**
      * Informs the currently active operator. This will be useful for injecting
      * the correct operator inside the wrapper.
      * @since 0.1.1
      */
-    mpi::op::id mpi::op::active;
+    mpi::op::functor mpi::op::active;
 
     /**#@+
      * Node identification values in cluster.
      * @see mpi::init
      */
-    const node::id& node::rank = mpi::world.rank;
-    const int32_t& node::count = mpi::world.size;
+    const node::id& node::rank = mpi::world.rank();
+    const int32_t& node::count = mpi::world.size();
     /**#@-*/
+
+    /**
+     * Stores the last operation's status. As our collective operation functions
+     * return their payloads, we need this so we can recover these operations statuses.
+     * @since 0.1.1
+     */
+    mpi::status mpi::last_status;
 
     /**
      * Initializes the cluster's communication and identifies the node in the cluster.
@@ -72,7 +79,7 @@ namespace msa
         for(mpi::datatype::id& typeref : mpi::datatype::ref_type)
             mpi::check(MPI_Type_free(&typeref));
      
-        for(mpi::op::id& opref : mpi::op::ref_op)
+        for(mpi::op::functor& opref : mpi::op::ref_op)
             mpi::check(MPI_Op_free(&opref));
      
         MPI_Finalize();
