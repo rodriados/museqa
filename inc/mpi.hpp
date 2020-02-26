@@ -528,7 +528,7 @@ namespace msa
                  */
                 inline operator element_type() noexcept
                 {
-                    return *(raw());
+                    return underlying_type::operator[](0);
                 }
 
                 /**
@@ -538,7 +538,7 @@ namespace msa
                  */
                 inline operator const element_type() const noexcept
                 {
-                    return *(raw());
+                    return underlying_type::operator[](0);
                 }
 
                 /**
@@ -548,7 +548,7 @@ namespace msa
                  */
                 inline auto raw() const noexcept -> element_type *
                 {
-                    return const_cast<element_type *>(&this->m_ptr);
+                    return const_cast<element_type *>(underlying_type::raw());
                 }
 
                 /**
@@ -1292,7 +1292,7 @@ namespace msa
             auto sizeall = payload<int>::make(comm.size());
             auto dispall = payload<int>::make(comm.size());
 
-            for(int i = 0; i < comm.size(); ++i) {
+            for(int i = 0, n = comm.size(); i < n; ++i) {
                 sizeall[i] = quotient + (remainder > i);
                 dispall[i] = quotient * i + utils::min(i, remainder);
             }
