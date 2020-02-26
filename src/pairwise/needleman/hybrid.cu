@@ -291,9 +291,9 @@ namespace
         input target;
         const size_t count = jobs.size();
 
-        std::map<ptrdiff_t, sequenceref> transform;
+        std::map<ptrdiff_t, seqref> transform;
         auto jobs_buffer = buffer<job>::copy(jobs);
-        sequenceref index = 0;
+        seqref index = 0;
 
         for(const auto& selected : used)
             transform[selected] = index++;

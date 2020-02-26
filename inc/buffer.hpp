@@ -30,7 +30,7 @@ namespace msa
         static_assert(!std::is_array<T>::value, "buffer element cannot be of array type");
 
         public:
-            using element_type = T;                         /// The buffer's element size.
+            using element_type = T;                         /// The buffer's element type.
             using pointer_type = pointer<element_type[]>;   /// The buffer's pointer type.
 
         protected:

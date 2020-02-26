@@ -9,68 +9,88 @@
 #define PG_PHYLOGENY_CUH_INCLUDED
 
 #include <string>
-#include <utility>
 
-#include "utils.hpp"
-#include "pairwise.cuh"
+#include <utils.hpp>
+#include <pairwise.cuh>
 
-#include "phylogeny/tree.cuh"
+#include <phylogeny/tree.cuh>
+#include <phylogeny/matrix.cuh>
 
 namespace phylogeny
 {
     /**
-     * Manages and encapsulates all configurable aspects of the pairwise module.
+     * Manages and encapsulates all configurable aspects of the phylogeny module.
      * @since 0.1.1
      */
-    struct Configuration
+    struct configuration
     {
-        const Pairwise& pw;         /// The pairwise module instance.
-        std::string algorithm;      /// The chosen phylogeny algorithm.
+        const pairwise::manager& pw;        /// The pairwise module manager instance.
+        std::string algorithm;              /// The selected phylogeny algorithm.
     };
 
     /**
      * Represents a phylogeny module algorithm.
      * @since 0.1.1
      */
-    struct Algorithm
+    struct algorithm
     {
-        inline Algorithm() noexcept = default;
-        inline Algorithm(const Algorithm&) noexcept = default;
-        inline Algorithm(Algorithm&&) noexcept = default;
+        matrix<score> mat;                  /// The alignments' distance matrix.
 
-        virtual ~Algorithm() = default;
+        inline algorithm() noexcept = default;
+        inline algorithm(const algorithm&) noexcept = default;
+        inline algorithm(algorithm&&) noexcept = default;
 
-        inline Algorithm& operator=(const Algorithm&) noexcept = default;
-        inline Algorithm& operator=(Algorithm&&) noexcept = default;
+        virtual ~algorithm() = default;
 
-        virtual Tree run(const Configuration&) = 0;
+        inline algorithm& operator=(const algorithm&) = default;
+        inline algorithm& operator=(algorithm&&) = default;
+
+        virtual auto populate(const pairwise::manager&) -> matrix<score>&;
+        virtual auto run(const configuration&) -> tree = 0;
     };
 
     /**
      * Functor responsible for instantiating an algorithm.
-     * @see Phylogeny::run
+     * @see phylogeny::manager::run
      * @since 0.1.1
      */
-    using Factory = Functor<Algorithm *()>;
+    using factory = functor<algorithm *()>;
 
     /**
-     * Manages all data and execution of the pgenetic module.
+     * Manages all data and execution of the phylogeny module.
      * @since 0.1.1
      */
-    class Phylogeny final : public Tree
+    class manager final : public tree
     {
+        protected:
+            using underlying_type = tree;       /// The manager's underlying type.
+
         public:
-            inline Phylogeny() = default;
-            inline Phylogeny(const Phylogeny&) = default;
-            inline Phylogeny(Phylogeny&&) = default;
+            inline manager() noexcept = default;
+            inline manager(const manager&) noexcept = default;
+            inline manager(manager&&) noexcept = default;
 
-            inline Phylogeny& operator=(const Phylogeny&) = default;
-            inline Phylogeny& operator=(Phylogeny&&) = default;
+            inline manager& operator=(const manager&) = default;
+            inline manager& operator=(manager&&) = default;
 
-            using Tree::operator=;
+            using underlying_type::operator=;
 
-            void run(const Configuration&);
+            static auto run(const configuration&) -> manager;
     };
-};
+
+    /**
+     * Creates a module's configuration instance.
+     * @param pw The pairwise module manager instance reference.
+     * @param algorithm The chosen phylogeny algorithm.
+     * @return The module's configuration instance.
+     */
+    inline configuration configure(
+            const pairwise::manager& pw
+        ,   const std::string& algorithm = {}
+        )
+    {
+        return {pw, algorithm};
+    }
+}
 
 #endif

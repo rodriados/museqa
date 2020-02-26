@@ -10,7 +10,7 @@ cdef extern from "sequence.hpp":
     # Creates an sequence. This sequence is a buffer an any modification to
     # it shall be implemented by inherited methods.
     # @since 0.1.1
-    cdef cppclass cSequence "Sequence":
+    cdef cppclass cSequence "sequence":
         cSequence() except +
         cSequence(const cSequence&) except +
         cSequence(const string&) except +
@@ -18,8 +18,8 @@ cdef extern from "sequence.hpp":
         cSequence& operator=(const cSequence&)
         char operator[](ptrdiff_t) except +RuntimeError
 
-        size_t getLength()
-        string toString()
+        size_t length()
+        string decode()
 
 cdef extern from "encoder.hpp" namespace "encoder":
     cdef char cencode "encoder::encode"(char)

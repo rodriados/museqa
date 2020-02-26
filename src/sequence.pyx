@@ -26,10 +26,10 @@ cdef class Sequence:
     # Transforms the sequence into a string.
     # @return The sequence representation as a string.
     def __str__(self):
-        return self.cRef.toString().decode()
+        return self.cRef.decode().decode()
 
     # Informs the length of the sequence.
     # @return int The sequence's length.
     @property
     def length(self):
-        return self.cRef.getLength()
+        return self.cRef.length()

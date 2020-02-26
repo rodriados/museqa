@@ -4,37 +4,43 @@
  * @copyright 2019 Rodrigo Siqueira
  */
 #include <map>
+#include <string>
 
-#include "msa.hpp"
-#include "exception.hpp"
+#include <msa.hpp>
+#include <exception.hpp>
 
-#include "phylogeny/phylogeny.cuh"
-#include "phylogeny/njoining.cuh"
+#include <phylogeny/phylogeny.cuh>
+#include <phylogeny/njoining.cuh>
 
 /*
  * Keeps the list of available algorithms and their respective factories.
+ * @since 0.1.1
  */
-static const std::map<std::string, phylogeny::Factory> dispatcher = {
-    {"njoining",                phylogeny::njoining::hybrid}
+static const std::map<std::string, phylogeny::factory> dispatcher = {
+    /*{"njoining",                phylogeny::njoining::hybrid}
 ,   {"njoining-hybrid",         phylogeny::njoining::hybrid}
-,   {"njoining-sequential",     phylogeny::njoining::sequential}
+,*/ {"njoining-sequential",     phylogeny::njoining::sequential}
+/*,   {"njoining-distributed",    phylogeny::njoining::distributed}*/
 };
 
 /**
- * Executes a phylogeny algorithm, transforming the distance matrix between
- * the sequences into a pseudo-phylogenitic tree.
+ * Executes a phylogeny algorithm, transforming the distance matrix between the
+ * sequences into a pseudo-phylogenetic tree.
  * @param config The module's configuration.
+ * @return The new module manager instance.
  */
-void phylogeny::Phylogeny::run(const phylogeny::Configuration& config)
+auto phylogeny::manager::run(const phylogeny::configuration& config) -> phylogeny::manager
 {
-    const auto& selection = dispatcher.find(config.algorithm);
+    const auto& selected = dispatcher.find(config.algorithm);
 
-    enforce(selection != dispatcher.end(), "unknown phylogeny algorithm: %s", config.algorithm.c_str());
-    onlymaster msa::info("chosen phylogeny algorithm: %s", config.algorithm.c_str());
+    enforce(selected != dispatcher.end(), "unknown phylogeny algorithm <bold>%s</>", config.algorithm);
+    onlymaster watchdog::info("chosen phylogeny algorithm <bold>%s</>", config.algorithm);
 
-    phylogeny::Algorithm *algorithm = selection->second();
+    onlymaster watchdog::init("phylogeny", "building the phylogenetic tree");
+    phylogeny::algorithm *worker = (selected->second)();
+    phylogeny::manager result {worker->run(config)};
+    onlymaster watchdog::finish("phylogeny", "phylogenetic tree fully constructed");
+    delete worker;
 
-    *this = algorithm->run(config);
-
-    delete algorithm;
+    return result;
 }

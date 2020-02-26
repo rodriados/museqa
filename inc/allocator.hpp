@@ -102,8 +102,8 @@ namespace msa
             {
                 return {
                     std::is_same<pure<T>, T>::value
-                        ? [](void **ptr, size_t _, size_t n) { *ptr = new pure<T>; }
-                        : [](void **ptr, size_t _, size_t n) { *ptr = new pure<T> [n]; }
+                        ? [](void **ptr, size_t, size_t n) { *ptr = new pure<T>; }
+                        : [](void **ptr, size_t, size_t n) { *ptr = new pure<T> [n]; }
                 ,   std::is_same<pure<T>, T>::value
                         ? [](void *ptr) { delete (static_cast<pure<T> *>(ptr)); }
                         : [](void *ptr) { delete[] (static_cast<pure<T> *>(ptr)); }

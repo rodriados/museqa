@@ -111,9 +111,7 @@ namespace msa
             watchdog::report("pairwise", benchmark::run(pw, rpairwise, db));
             //watchdog::report("phylogeny", benchmark::run(pg, rphylogeny, pw));
         }));
-    }
-
-    catch(const exception& e) {
+    } catch(const exception& e) {
         watchdog::error(e.what());
     }
 
