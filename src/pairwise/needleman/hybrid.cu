@@ -21,10 +21,11 @@
 #include <pairwise/pairwise.cuh>
 #include <pairwise/needleman.cuh>
 
-using namespace pairwise;
-
 namespace
 {
+    using namespace msa;
+    using namespace pairwise;
+
     /**
      * Identifies a pair of sequences to process as a unit.
      * @since 0.1.1
@@ -415,11 +416,14 @@ namespace
     };
 }
 
-/**
- * Instantiates a new hybrid needleman instance.
- * @return The new algorithm instance.
- */
-extern pairwise::algorithm *needleman::hybrid()
+namespace msa
 {
-    return new ::hybrid;
+    /**
+     * Instantiates a new hybrid needleman instance.
+     * @return The new algorithm instance.
+     */
+    extern auto pairwise::needleman::hybrid() -> pairwise::algorithm *
+    {
+        return new ::hybrid;
+    }
 }

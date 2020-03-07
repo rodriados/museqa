@@ -1,7 +1,7 @@
 /**
  * Multiple Sequence Alignment sequential needleman file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018 Rodrigo Siqueira
+ * @copyright 2018-2020 Rodrigo Siqueira
  */
 #include <cstdint>
 
@@ -15,10 +15,11 @@
 #include <pairwise/pairwise.cuh>
 #include <pairwise/needleman.cuh>
 
-using namespace pairwise;
-
 namespace
 {
+    using namespace msa;
+    using namespace pairwise;
+
     /**
      * Sequentially aligns two sequences using Needleman-Wunsch algorithm.
      * @param one The first sequence to align.
@@ -122,11 +123,14 @@ namespace
     };
 }
 
-/**
- * Instantiates a new sequential needleman instance.
- * @return The new algorithm instance.
- */
-extern pairwise::algorithm *needleman::sequential()
+namespace msa
 {
-    return new ::sequential;
+    /**
+     * Instantiates a new sequential needleman instance.
+     * @return The new algorithm instance.
+     */
+    extern auto pairwise::needleman::sequential() -> pairwise::algorithm *
+    {
+        return new ::sequential;
+    }
 }

@@ -1,39 +1,38 @@
 /**
  * Multiple Sequence Alignment needleman header file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018-2019 Rodrigo Siqueira
+ * @copyright 2018-2020 Rodrigo Siqueira
  */
 #pragma once
-
-#ifndef PW_NEEDLEMAN_CUH_INCLUDED
-#define PW_NEEDLEMAN_CUH_INCLUDED
 
 #include <buffer.hpp>
 #include <pointer.hpp>
 
 #include <pairwise/pairwise.cuh>
 
-namespace pairwise
+namespace msa
 {
-    namespace needleman
+    namespace pairwise
     {
-        /**
-         * Represents a general needleman algorithm.
-         * @since 0.1.1
-         */
-        struct algorithm : public pairwise::algorithm
+        namespace needleman
         {
-            virtual auto scatter() -> buffer<pair>;
-            virtual auto gather(buffer<score>&) const -> buffer<score>;            
-            virtual auto run(const configuration&) -> buffer<score> = 0;
-        };
+            /**
+             * Represents a general needleman algorithm for solving the heuristic's
+             * pairwise alignment step.
+             * @since 0.1.1
+             */
+            struct algorithm : public pairwise::algorithm
+            {
+                virtual auto scatter(buffer<pair>&) -> buffer<pair>;
+                virtual auto gather(buffer<score>&) const -> buffer<score>;            
+                virtual auto run(const configuration&) -> buffer<score> = 0;
+            };
 
-        /*
-         * The list of available needleman algorithm implementations.
-         */
-        extern pairwise::algorithm *hybrid();
-        extern pairwise::algorithm *sequential();
+            /*
+             * The list of all available needleman algorithm implementations.
+             */
+            extern auto hybrid() -> pairwise::algorithm *;
+            extern auto sequential() -> pairwise::algorithm *;
+        }
     }
 }
-
-#endif

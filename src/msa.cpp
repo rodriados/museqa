@@ -40,25 +40,25 @@ namespace msa
     static auto load() -> database
     {
         database db;
-        std::vector<size_t> lsize;
-        std::vector<encoder::block> lblock;
+        std::vector<size_t> size;
+        std::vector<encoder::block> block;
 
         onlymaster for(size_t i = 0, n = cmdline::count(); i < n; ++i)
             db.add_many(parser::parse(cmdline::get(i)));
 
-        onlymaster for(size_t i = 0, n = db.count(); i < n; ++i) {
-            lsize.push_back(db[i].size());
-            lblock.insert(lblock.end(), db[i].begin(), db[i].end());
+        onlymaster for(const auto& sequence : db) {
+            size.push_back(sequence.size());
+            block.insert(block.end(), sequence.begin(), sequence.end());
         }
 
-        mpi::broadcast(lsize);
-        mpi::broadcast(lblock);
+        size = mpi::broadcast(size);
+        block = mpi::broadcast(block);
 
         onlymaster watchdog::info("loaded a total of <bold>%d</> sequences", db.count());
 
-        onlyslaves for(size_t i = 0, j = 0, n = lsize.size(); i < n; ++i) {
-            db.add(sequence::copy(&lblock[j], lsize[i]));
-            j += lsize[i];
+        onlyslaves for(size_t i = 0, j = 0, n = size.size(); i < n; ++i) {
+            db.add(sequence::copy(&block[j], size[i]));
+            j += size[i];
         }
 
         return db;
