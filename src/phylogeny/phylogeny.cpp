@@ -9,19 +9,19 @@
 #include <msa.hpp>
 #include <exception.hpp>
 
-#include <phylogeny/phylogeny.cuh>
-#include <phylogeny/njoining.cuh>
+/*#include <phylogeny/phylogeny.cuh>
+#include <phylogeny/njoining.cuh>*/
 
 /*
  * Keeps the list of available algorithms and their respective factories.
  * @since 0.1.1
  */
-static const std::map<std::string, phylogeny::factory> dispatcher = {
+//static const std::map<std::string, phylogeny::factory> dispatcher = {
     /*{"njoining",                phylogeny::njoining::hybrid}
 ,   {"njoining-hybrid",         phylogeny::njoining::hybrid}
-,*/ {"njoining-sequential",     phylogeny::njoining::sequential}
+,*/// {"njoining-sequential",     phylogeny::njoining::sequential}
 /*,   {"njoining-distributed",    phylogeny::njoining::distributed}*/
-};
+//};
 
 /**
  * Executes a phylogeny algorithm, transforming the distance matrix between the
@@ -29,7 +29,7 @@ static const std::map<std::string, phylogeny::factory> dispatcher = {
  * @param config The module's configuration.
  * @return The new module manager instance.
  */
-auto phylogeny::manager::run(const phylogeny::configuration& config) -> phylogeny::manager
+/*auto phylogeny::manager::run(const phylogeny::configuration& config) -> phylogeny::manager
 {
     const auto& selected = dispatcher.find(config.algorithm);
 
@@ -44,3 +44,4 @@ auto phylogeny::manager::run(const phylogeny::configuration& config) -> phylogen
 
     return result;
 }
+*/

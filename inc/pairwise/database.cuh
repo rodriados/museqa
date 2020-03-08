@@ -84,8 +84,8 @@ namespace msa
                 ,   m_views {views}
                 {}
 
-                static auto init(underlying_type&, const ::database&) -> entry_buffer;
-                static auto merge(const ::database&) -> underlying_type;
+                static auto init(underlying_type&, const msa::database&) -> entry_buffer;
+                static auto merge(const msa::database&) -> underlying_type;
         };
     }
 }

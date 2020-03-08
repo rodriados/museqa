@@ -532,6 +532,16 @@ namespace msa
                 }
 
                 /**
+                 * Converts the payload into a vector instance with the payload's
+                 * elements. Thus, one can use vectors through MPI seamlessly.
+                 * @return The converted payload to a vector.
+                 */
+                inline operator std::vector<element_type>() noexcept
+                {
+                    return std::vector<element_type> (this->begin(), this->end());
+                }
+
+                /**
                  * Converts the payload into an instance of the element type,
                  * this is specially useful for operations with singletons.
                  * @return The converted payload to the element type.
@@ -641,6 +651,9 @@ namespace msa
                 inline payload(std::vector<T>& ref) noexcept
                 :   payload<T> {ref.data(), ref.size()}
                 {}
+
+                using payload<T>::payload;
+                using payload<T>::operator=;
         };
 
         /**
@@ -662,6 +675,9 @@ namespace msa
                 inline payload(buffer<T>& ref) noexcept
                 :   payload<T> {ref.raw(), ref.size()}
                 {}
+
+                using payload<T>::payload;
+                using payload<T>::operator=;
         };
 
         namespace op
@@ -1151,7 +1167,7 @@ namespace msa
             auto load = payload<T> {data, size};
             auto sizeall = mpi::allgather(payload<int>::copy(size), comm);
             
-            if(std::all_of(sizeall.begin(), sizeall.end(), [size](int i) { return i == size; }))
+            if(std::all_of(sizeall.begin(), sizeall.end(), [size](size_t i) { return i == size; }))
                 return mpi::allgather(load, comm);
 
             auto dispall = std::vector<int> (comm.size() + 1);
@@ -1217,7 +1233,7 @@ namespace msa
             auto load = payload<T> {data, size};
             auto sizeall = mpi::allgather(payload<int>::copy(size), comm);
 
-            if(std::all_of(sizeall.begin(), sizeall.end(), [size](int i) { return i == size; }))
+            if(std::all_of(sizeall.begin(), sizeall.end(), [size](size_t i) { return i == size; }))
                 return mpi::gather(load, root, comm);
 
             auto dispall = std::vector<int> (comm.size() + 1);

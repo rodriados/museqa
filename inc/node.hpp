@@ -23,8 +23,8 @@ namespace msa
              * global identification.
              * @see mpi::init
              */
-            extern const id& rank;
-            extern const int32_t& count;
+            extern id rank;
+            extern int32_t count;
             /**#@-*/
         #endif
 

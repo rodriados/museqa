@@ -251,7 +251,7 @@ namespace
      * @return The total memory requested for this work case execution.
      */
     static size_t required_memory(
-            const ::database& db
+            const msa::database& db
         ,   const std::set<ptrdiff_t>& used
         ,   const pair& target
         ,   size_t *pair_cache
@@ -259,14 +259,14 @@ namespace
     {
         // Calculating the cache size required for processing the current work pair.
         // The memory required by the cache is the size of a score type array.
-        *pair_cache = utils::max(db[target.id[0]].length(), db[target.id[1]].length());
+        *pair_cache = utils::max(db[target.id[0]].contents.length(), db[target.id[1]].contents.length());
         size_t total_mem = sizeof(score) * (*pair_cache);
 
         // The amount of memory required by the sequences themselves are defined
         // by their sizes and whether they are already "loaded" or not.
         total_mem += sizeof(encoder::block) * (
-                (used.find(target.id[0]) == used.end()) * db[target.id[0]].size()
-            +   (used.find(target.id[1]) == used.end()) * db[target.id[1]].size()
+                (used.find(target.id[0]) == used.end()) * db[target.id[0]].contents.size()
+            +   (used.find(target.id[1]) == used.end()) * db[target.id[1]].contents.size()
             );
 
         // Besides the cache and the sequences, a work pair also requires memory
@@ -283,7 +283,7 @@ namespace
      * @return The new loaded input instance.
      */
     static input load_input(
-            const ::database& db
+            const msa::database& db
         ,   const std::set<ptrdiff_t>& used
         ,   const std::vector<job>& jobs
         ,   const size_t cache_size
@@ -306,8 +306,8 @@ namespace
                 };
 
         target.db = pairwise::database(db.only(used)).to_device();
-        target.jobs = buffer<job>::make(cuda::memory::global<job[]>(), count);
-        target.cache = buffer<score>::make(cuda::memory::global<score[]>(), cache_size);
+        target.jobs = buffer<job>::make(cuda::allocator::device, count);
+        target.cache = buffer<score>::make(cuda::allocator::device, cache_size);
 
         cuda::memory::copy(target.jobs.raw(), jobs_buffer.raw(), count);
 
@@ -321,7 +321,7 @@ namespace
      * @param done The number of already processed pairs.
      * @return Input object instance with the selected pairs.
      */
-    static input make_input(const buffer<pair>& pairs, const ::database& db, const size_t done)
+    static input make_input(const buffer<pair>& pairs, const msa::database& db, const size_t done)
     {
         const auto device_props = cuda::device::properties();
         const size_t count = pairs.size();
@@ -361,7 +361,7 @@ namespace
      * @param table The scoring table to use.
      * @return The score of aligned pairs.
      */
-    static auto align_db(const buffer<pair>& pairs, const ::database& db, const scoring_table& table)
+    static auto align_db(const buffer<pair>& pairs, const msa::database& db, const scoring_table& table)
     -> buffer<score>
     {
         const size_t count = pairs.size();
@@ -371,7 +371,7 @@ namespace
 
         for(size_t done = 0; done < count; ) {
             input in = make_input(pairs, db, done);
-            auto out = buffer<score>::make(cuda::memory::global<score[]>(), in.jobs.size());
+            auto out = buffer<score>::make(cuda::allocator::device, in.jobs.size());
 
             enforce(in.jobs.size(), "not enough memory in device");
 
@@ -410,7 +410,7 @@ namespace
             const auto table = scoring_table::make(config.table);
             this->generate(config.db.count());
 
-            onlyslaves result = align_db(this->scatter(), config.db, table.to_device());
+            onlyslaves result = align_db(this->scatter(this->pairs), config.db, table.to_device());
             return this->gather(result);
         }
     };

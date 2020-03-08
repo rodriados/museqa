@@ -20,14 +20,14 @@ namespace msa
      * @param seq The merged sequence to have its internal parts splitted.
      * @param db The database to have its sequences mapped.
      */
-    auto pairwise::database::init(underlying_type& merged, const database& db) -> entry_buffer
+    auto pairwise::database::init(underlying_type& merged, const msa::database& db) -> entry_buffer
     {
-        const size_t count = db.count();
+        auto const count = db.count();
         auto result = entry_buffer::make(count);
 
         for(size_t i = 0, j = 0; i < count; ++i) {
-            result[i] = sequence_view {merged, ptrdiff_t(j), db[i].size()};
-            j += db[i].size();
+            result[i] = sequence_view {merged, ptrdiff_t(j), db[i].contents.size()};
+            j += db[i].contents.size();
         }
 
         return result;
@@ -38,12 +38,12 @@ namespace msa
      * @param db The database to have its sequences merged.
      * @return The merged sequences blocks.
      */
-    auto pairwise::database::merge(const database& db) -> underlying_type
+    auto pairwise::database::merge(const msa::database& db) -> underlying_type
     {
         std::vector<encoder::block> merged;
 
         for(const auto& entry : db)
-            merged.insert(merged.end(), entry.begin(), entry.end());
+            merged.insert(merged.end(), entry.contents.begin(), entry.contents.end());
 
         return underlying_type::copy(merged);
     }

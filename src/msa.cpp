@@ -19,6 +19,8 @@
 #include <pairwise.cuh>
 //#include <phylogeny.cuh>
 
+using namespace msa;
+
 /**
  * The list of command line options available. This list might be increased
  * depending on the options available for the different steps of the software.
@@ -44,11 +46,11 @@ namespace msa
         std::vector<encoder::block> block;
 
         onlymaster for(size_t i = 0, n = cmdline::count(); i < n; ++i)
-            db.add_many(parser::parse(cmdline::get(i)));
+            db.merge(parser::parse(cmdline::get(i)));
 
-        onlymaster for(const auto& sequence : db) {
-            size.push_back(sequence.size());
-            block.insert(block.end(), sequence.begin(), sequence.end());
+        onlymaster for(const auto& entry : db) {
+            size.push_back(entry.contents.size());
+            block.insert(block.end(), entry.contents.begin(), entry.contents.end());
         }
 
         size = mpi::broadcast(size);

@@ -9,28 +9,28 @@
 #include <msa.hpp>
 #include <buffer.hpp>
 
-#include <phylogeny/tree.cuh>
+/*#include <phylogeny/tree.cuh>
 #include <phylogeny/phylogeny.cuh>
 #include <phylogeny/njoining.cuh>
+*/
+//using namespace phylogeny;
 
-using namespace phylogeny;
-
-namespace
-{
+//namespace
+//{
     /**
      * The sequential neighbor-joining algorithm object. This algorithm uses no
      * parallelism at all.
      * @since 0.1.1
      */
-    struct sequential : public njoining::algorithm
-    {
+  //  struct sequential : public njoining::algorithm
+    //{
         /**
          * Executes the sequential neighbor-joining algorithm for the phylogeny
          * step. This method executes it completely sequentially.
          * @param config The module's configuration.
          * @return The module's result value.
          */
-        auto run(const configuration& config) -> tree override
+      /*  auto run(const configuration& config) -> tree override
         {
             auto& mat = this->populate(config.pw);
             auto& nodes = this->leaves(config.pw.count());
@@ -39,19 +39,19 @@ namespace
         }
     };
 }
-
+*/
 /**
  * Instantiates a new sequential neighbor-joining instance.
  * @return The new algorithm instance.
  */
-extern phylogeny::algorithm *njoining::sequential()
+/*extern phylogeny::algorithm *njoining::sequential()
 {
     return new ::sequential;
 }
 
 
 namespace
-{
+{*/
     /**
      * Initializes the cache of matrix's line sums.
      * @param matrix The matrix from which sums will be taken from.
@@ -162,7 +162,7 @@ namespace
             return buildTree(matrix, lineCache);
         }
     };*/
-}
+//}
 
 /**
  * Instantiates a new sequential neighbor-joining instance.

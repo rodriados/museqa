@@ -11,6 +11,14 @@
 
 namespace msa
 {
+    /**#@+
+     * Node identification values in cluster.
+     * @see mpi::init
+     */
+    node::id node::rank;
+    int32_t node::count;
+    /**#@-*/
+
     /**
      * The default communicator instance.
      * @see mpi::Communicator
@@ -44,14 +52,6 @@ namespace msa
      */
     mpi::op::functor mpi::op::active;
 
-    /**#@+
-     * Node identification values in cluster.
-     * @see mpi::init
-     */
-    const node::id& node::rank = mpi::world.rank();
-    const int32_t& node::count = mpi::world.size();
-    /**#@-*/
-
     /**
      * Stores the last operation's status. As our collective operation functions
      * return their payloads, we need this so we can recover these operations statuses.
@@ -67,7 +67,10 @@ namespace msa
     void mpi::init(int& argc, char **& argv)
     {
         mpi::check(MPI_Init(&argc, &argv));
-        mpi::world = mpi::communicator::build(MPI_COMM_WORLD);
+        auto comm = mpi::communicator::build(MPI_COMM_WORLD);
+        new (&mpi::world) mpi::communicator {comm};
+        node::count = comm.size();
+        node::rank = comm.rank();
     }
 
     /**
