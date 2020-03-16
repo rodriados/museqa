@@ -47,7 +47,7 @@ namespace msa
              * @param ptr The buffer pointer to acquire.
              * @param size The size of buffer to acquire.
              */
-            inline explicit buffer(element_type *ptr, size_t size)
+            inline explicit buffer(element_type *ptr, size_t size) noexcept
             :   m_ptr {ptr}
             ,   m_size {size}
             {}
@@ -57,7 +57,7 @@ namespace msa
              * @param ptr The buffer pointer to acquire.
              * @param size The size of buffer to acquire.
              */
-            inline explicit buffer(pointer_type&& ptr, size_t size)
+            inline explicit buffer(pointer_type&& ptr, size_t size) noexcept
             :   m_ptr {std::forward<decltype(ptr)>(ptr)}
             ,   m_size {size}
             {}
@@ -146,7 +146,7 @@ namespace msa
              * @param offset The requested buffer offset.
              * @return The buffer's offset pointer.
              */
-            __host__ __device__ inline pointer_type offset(ptrdiff_t offset)
+            __host__ __device__ inline pointer_type offset(ptrdiff_t offset) noexcept
             {
                 enforce(offset >= 0 && size_t(offset) < size(), "buffer offset out of range");
                 return m_ptr.offset(offset);
@@ -175,7 +175,7 @@ namespace msa
              * @param buf The target buffer to copy data from.
              * @return A newly created buffer instance.
              */
-            static inline buffer copy(const buffer& buf)
+            static inline buffer copy(const buffer& buf) noexcept
             {
                 return make(buf.size()).copy_from(buf.raw());
             }
@@ -185,7 +185,7 @@ namespace msa
              * @param vector The target vector instance to copy data from.
              * @return A newly created buffer instance.
              */
-            static inline buffer copy(const std::vector<element_type>& vector)
+            static inline buffer copy(const std::vector<element_type>& vector) noexcept
             {
                 return make(vector.size()).copy_from(vector.data());
             }
@@ -196,7 +196,7 @@ namespace msa
              * @param count The number of elements to copy.
              * @return A newly created buffer instance.
              */
-            static inline buffer copy(const element_type *ptr, size_t count)
+            static inline buffer copy(const element_type *ptr, size_t count) noexcept
             {
                 return make(count).copy_from(ptr);
             }
