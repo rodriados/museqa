@@ -1,6 +1,6 @@
 # Multiple Sequence Alignment makefile.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
-# @copyright 2018-2019 Rodrigo Siqueira
+# @copyright 2018-2020 Rodrigo Siqueira
 NAME = msa
 
 INCDIR = inc
@@ -14,12 +14,12 @@ NVCC ?= nvcc
 PYCC ?= g++
 PYXC ?= cython
 
-# Target architecture for CUDA compilation. This indicates the minimum
-# support required for the codebase.
+# Target architecture for CUDA compilation. This indicates the minimum support required
+# for the codebase but can be changed with environment variables.
 NVARCH ?= sm_30
 
-# Defining language standards to be used. These can be overriden by
-# environment variables.
+# Defining language standards to be used. These can be overriden by environment
+# variables. We recommend using the default settings, though.
 STDC   ?= c99
 STDCPP ?= c++14
 STDCU  ?= c++11
@@ -28,27 +28,26 @@ MPILIBDIR ?= /usr/lib/openmpi/lib
 PY2INCDIR ?= /usr/include/python3.5
 MPILKFLAG ?= -lmpi_cxx -lmpi
 
-# Defining macros inside code at compile time. This can be used to enable
-# or disable certain marked features on code.
+# Defining macros inside code at compile time. This can be used to enable or disable
+# certain features on code or affect the projects compilation.
 DEFS ?= 
 
 MPCCFLAGS = -std=$(STDC) -I$(INCDIR) -g -Wall -lm -fPIC -O3 $(DEFS)
 MPPPFLAGS = -std=$(STDCPP) -I$(INCDIR) -g -Wall -fPIC -O3 $(DEFS)
 NVCCFLAGS = -std=$(STDCU) -I$(INCDIR) -g -arch $(NVARCH) -lmpi -lcuda -lcudart -w -O3               \
 		-D_MWAITXINTRIN_H_INCLUDED -Xptxas -O3 -Xcompiler -O3 $(DEFS)
-PYCCFLAGS = -std=$(STDCPP) -I$(INCDIR) -I$(PY2INCDIR) -shared -pthread -fPIC -fwrapv -O2 -Wall      \
-		-fno-strict-aliasing $(DEFS)
-PYXCFLAGS = --cplus -I$(INCDIR)
+PYCCFLAGS = -std=$(STDCPP) -I$(INCDIR) -I$(SRCDIR) -I$(PY2INCDIR) -shared -pthread -fPIC -fwrapv	\
+		-O2 -Wall -fno-strict-aliasing $(DEFS)
+PYXCFLAGS = --cplus -I$(INCDIR) -I$(SRCDIR) -3
 LINKFLAGS = -L$(MPILIBDIR) $(MPILKFLAG) -g
 
-# Lists all files to be compiled and separates them according to their
-# corresponding compilers.
+# Lists all files to be compiled and separates them according to their corresponding
+# compilers. Changes in any of these files in will trigger conditional recompilation.
 MPCCFILES := $(shell find $(SRCDIR) -name '*.c')
 MPPPFILES := $(shell find $(SRCDIR) -name '*.cpp')
 NVCCFILES := $(shell find $(SRCDIR) -name '*.cu')
 PYXCFILES := $(shell find $(SRCDIR) -name '*.pyx')
-TDEPFILES := $(shell find $(TESTDIR)/$(NAME) -name '*.d')                                           \
-             $(shell find $(OBJDIR)/$(TESTDIR) -name '*.d' 2>/dev/null)
+TDEPFILES := $(shell find $(OBJDIR)/$(TESTDIR) -name '*.d' 2>/dev/null)
 
 SRCINTERNAL = $(sort $(dir $(wildcard $(SRCDIR)/*/. $(SRCDIR)/*/*/.)))
 OBJINTERNAL = $(SRCINTERNAL:$(SRCDIR)/%=$(OBJDIR)/%)                                                \
@@ -84,8 +83,8 @@ clean:
 $(OBJDIR)/$(NAME): $(ODEPS)
 	$(NVCC) $(LINKFLAGS) $^ -o $@
 
-# Creates dependency on header files. This is valuable so that whenever
-# a header file is changed, all objects depending on it will be recompiled.
+# Creates dependency on header files. This is valuable so that whenever a header
+# file is changed, all objects depending on it will be recompiled.
 -include $(HDEPS) $(TDEPFILES)
 
 # Compiling C files.

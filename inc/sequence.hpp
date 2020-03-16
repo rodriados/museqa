@@ -36,7 +36,7 @@ namespace msa
              * Initializes a new sequence from an instance of its underlying buffer.
              * @param buf The buffer to create the new sequence from.
              */
-            inline sequence(const underlying_buffer& buf)
+            inline sequence(const underlying_buffer& buf) noexcept
             :   underlying_buffer {buf}
             {}
 
@@ -45,7 +45,7 @@ namespace msa
              * @param ptr The pointer to buffer to be encoded.
              * @param size The buffer's size.
              */
-            inline sequence(const char *ptr, size_t size)
+            inline sequence(const char *ptr, size_t size) noexcept
             :   underlying_buffer {encoder::encode(ptr, size)}
             {}
 
@@ -53,7 +53,7 @@ namespace msa
              * Instantiates a new sequence.
              * @param str The string containing this sequence's data.
              */
-            inline sequence(const std::string& str)
+            inline sequence(const std::string& str) noexcept
             :   sequence {str.data(), str.size()}
             {}
 
@@ -63,7 +63,7 @@ namespace msa
              * @param str The string to initialize the new sequence.
              */
             template <size_t N>
-            inline sequence(const char (&str)[N])
+            inline sequence(const char (&str)[N]) noexcept
             :   sequence {str, N}
             {}
 
@@ -94,7 +94,7 @@ namespace msa
              * Informs the length of the sequence.
              * @return The sequence's length.
              */
-            __host__ __device__ inline size_t length() const
+            __host__ __device__ inline size_t length() const noexcept
             {
                 return size() * encoder::block_size;
             }
@@ -153,7 +153,7 @@ namespace msa
              * Informs the length of the sequence.
              * @return The sequence's length.
              */
-            __host__ __device__ inline size_t length() const
+            __host__ __device__ inline size_t length() const noexcept
             {
                 return size() * encoder::block_size;
             }
