@@ -350,7 +350,7 @@ namespace msa
             }
 
             /**
-             * Retrieves references to an instance of the reflected object's properties.
+             * Retrieves references to the properties of a reflected object.
              * @tparam U The list of types on reflected object.
              * @tparam I The types index sequence.
              * @param obj The object instance to gather references from.
