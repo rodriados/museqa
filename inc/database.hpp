@@ -24,27 +24,31 @@ namespace msa
     class database
     {
         public:
-            using element_type = sequence;          /// The type of database's elements.
+            using element_type = sequence;                      /// The type of database's elements.
 
-        protected:
+        public:
             /**
-             * Groups up a sequence's contents with its respective description.
+             * Exposes an entry sequence with its description.
              * @since 0.1.1
              */
-            struct entry_type
-            {
+            using entry_type = struct {
                 std::string description;
                 element_type contents;
             };
 
         protected:
-            using underlying_type = std::vector<entry_type>;    /// The database's underlying type.
+            using underlying_type = std::vector<entry_type>;
+            using mapping_type = std::map<std::string, ptrdiff_t>;
+
+        private:
+            static int anonymous;                               /// Unique global IDs for anonymous sequences.
 
         protected:
-            underlying_type m_db;                   /// The map of database's elements.
+            underlying_type m_entries;                          /// The database's element storage.
+            mapping_type m_indeces;                             /// The elements' indeces mapping.
 
         public:
-            inline database() = default;
+            inline database() noexcept = default;
             inline database(const database&) = default;
             inline database(database&&) = default;
 
@@ -52,14 +56,26 @@ namespace msa
             inline database& operator=(database&&) = default;
 
             /**
-             * Gives access to a specific entry in database.
+             * Gives access to a specific entry in database via its offset.
              * @param offset The requested entry in given offset.
              * @return The retrieved entry.
              */
             inline const entry_type& operator[](ptrdiff_t offset) const
             {
                 enforce(offset >= 0 && size_t(offset) < count(), "database offset out of range");
-                return m_db[offset];
+                return m_entries[offset];
+            }
+
+            /**
+             * Gives access to a specific entry in database via its key.
+             * @param key The requested key to be retrieved from database.
+             * @return The retrieved entry.
+             */
+            inline const entry_type& operator[](const std::string& key) const
+            {
+                const auto entry = m_indeces.find(key);
+                enforce(entry != m_indeces.end(), "cannot find key in database");
+                return m_entries[entry->second];
             }
 
             /**
@@ -71,7 +87,8 @@ namespace msa
              */
             inline void add(const std::string& description, const element_type& elem)
             {
-                m_db.push_back({description, elem});
+                m_indeces[description] = m_entries.size();
+                m_entries.push_back({description, elem});
             }
 
             /**
@@ -80,7 +97,7 @@ namespace msa
              */
             inline void add(const element_type& elem)
             {
-                add(fmt::format("anonymous#%d", count() + 1), elem);
+                add(fmt::format("anonymous#%d", ++anonymous), elem);
             }
 
             /**
@@ -94,50 +111,15 @@ namespace msa
             }
 
             /**
-             * Adds all elements from another database into this instance.
-             * @param db The database to merge into this instance.
-             */
-            inline void merge(const database& db)
-            {
-                m_db.insert(m_db.end(), db.begin(), db.end());
-            }
-
-            /**
-             * Merges all elements from another database by moving into this instance.
-             * @param db The database to be moved into this instance.
-             */
-            inline void merge(database&& db)
-            {
-                m_db.insert(m_db.end(), std::make_move_iterator(db.begin()), std::make_move_iterator(db.end()));
-            }
-
-            /**
              * Creates a new database with only a set of selected elements.
-             * @param entries The entries to be included in new database.
+             * @tparam T The type of key used to select elements in database.
+             * @param keys The sequence keys to be included in new database.
              * @return The new database containing only the selected elements.
              */
-            inline database only(const std::set<ptrdiff_t>& entries) const
+            template <typename T>
+            inline database only(const std::set<T>& keys) const
             {
-                return database {*this, entries};
-            }
-
-            /**
-             * Removes an element from database.
-             * @param offset Element offset to be removed from database.
-             */
-            inline void remove(ptrdiff_t offset)
-            {
-                m_db.erase(m_db.begin() + offset);
-            }
-
-            /**
-             * Removes many elements from database.
-             * @param entries Element entries to be removed from database.
-             */
-            inline void remove(const std::set<ptrdiff_t>& entries)
-            {
-                for(ptrdiff_t entry : entries)
-                    remove(entry);
+                return database {*this, keys};
             }
 
             /**
@@ -146,7 +128,7 @@ namespace msa
              */
             inline auto begin() noexcept -> underlying_type::iterator
             {
-                return m_db.begin();
+                return m_entries.begin();
             }
 
             /**
@@ -155,7 +137,7 @@ namespace msa
              */
             inline auto begin() const noexcept -> const underlying_type::const_iterator
             {
-                return m_db.begin();
+                return m_entries.begin();
             }
 
             /**
@@ -164,7 +146,7 @@ namespace msa
              */
             inline auto end() noexcept -> underlying_type::iterator
             {
-                return m_db.end();
+                return m_entries.end();
             }
 
             /**
@@ -173,7 +155,7 @@ namespace msa
              */
             inline auto end() const noexcept -> const underlying_type::const_iterator
             {
-                return m_db.end();
+                return m_entries.end();
             }
 
             /**
@@ -182,8 +164,11 @@ namespace msa
              */
             inline size_t count() const noexcept
             {
-                return m_db.size();
+                return m_entries.size();
             }
+
+            void merge(const database& db);
+            void merge(database&&);
 
         private:
             /**
@@ -191,10 +176,23 @@ namespace msa
              * @param db The database to copy elements from.
              * @param entries The selected entries to copy.
              */
-            inline explicit database(const database& db, const std::set<ptrdiff_t>& entries)
+            template <typename T>
+            inline explicit database(const database& db, const std::set<T>& entries)
             {
-                for(ptrdiff_t entry : entries)
-                    m_db.push_back(db[entry]);
+                for(const auto& entry : entries)
+                    add(db[entry]);
             }
+
+            /**
+             * Adds a new entry to database. If an entry with equal description
+             * already exists in the database, it'll be overriden.
+             * @param entry The entry to be added to database.
+             */
+            inline void add(const entry_type& entry)
+            {
+                add(entry.description, entry.contents);
+            }
+
+            void update_keys(size_t);
     };
 }

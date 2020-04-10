@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # Multiple Sequence Alignment test package file.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
-# @copyright 2018-2019 Rodrigo Siqueira
+# @copyright 2018-2020 Rodrigo Siqueira
 import sys
 import os
 
@@ -27,7 +27,7 @@ from . import *
 # @param str ext Parse all files using this parser.
 # @return list List containing all entries parsed from files.
 def parse(*filenames, **kwargs):
-    return parser.any(*filenames, **kwargs)
+    return parser.parse(*filenames, **kwargs)
 
 del fname
 del path

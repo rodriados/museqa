@@ -62,7 +62,7 @@ if [[ ! -f "$hostfile" || ! -s "$hostfile" ]]; then
 fi
 
 # Run the main project software
-mpirun -q --hostfile $hostfile obj/msa ${positional[@]} > $pipe &
+mpirun -q --hostfile $hostfile bin/msa ${positional[@]} > $pipe &
 src/watchdog.sh $! < $pipe
 
 # Waits up for any undesired killed-process report message and throws it away.

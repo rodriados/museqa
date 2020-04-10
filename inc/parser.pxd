@@ -1,18 +1,17 @@
 #!/usr/bin/env python
-# cython: language_level = 3
 # Multiple Sequence Alignment parser export file.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
-# @copyright 2018-2019 Rodrigo Siqueira
+# @copyright 2018-2020 Rodrigo Siqueira
 from libcpp.vector cimport vector
 from libcpp.string cimport string
-from database cimport cDatabaseEntry
+from database cimport *
 
-cdef extern from "parser.hpp" namespace "parser":
-    cdef vector[cDatabaseEntry] parse(const string&, const string&) except +RuntimeError
-    cdef vector[cDatabaseEntry] parse(const string&) except +RuntimeError
+cdef extern from "parser.hpp" namespace "msa::parser":
+    cdef cDatabase cparse "msa::parser::parse"(string&) except +RuntimeError
+    cdef cDatabase cparse "msa::parser::parse"(string&, string&) except +RuntimeError
 
-    cdef vector[cDatabaseEntry] parse_many(const vector[string]&, const string&) except +RuntimeError
-    cdef vector[cDatabaseEntry] parse_many(const vector[string]&) except +RuntimeError 
+    cdef cDatabase cparse "msa::parser::parse"(vector[string]&) except +RuntimeError
+    cdef cDatabase cparse "msa::parser::parse"(vector[string]&, string&) except +RuntimeError
 
-cdef extern from "parser/fasta.hpp" namespace "parser":
-    cdef vector[cDatabaseEntry] parse_fasta "parser::fasta"(const string&) except +RuntimeError
+cdef extern from "parser/fasta.hpp" namespace "msa::parser":
+    cdef cDatabase cfasta "msa::parser::fasta"(string&) except +RuntimeError

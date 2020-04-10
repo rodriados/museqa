@@ -107,7 +107,7 @@
   #define __msa_runtime_cython 0
   #define __msa_runtime_device 1
   #define __msa_runtime_host 0
-#elif defined(CYTHON_ABI) || defined(__msa_target_cython)
+#elif defined(CYTHON_ABI) || defined(msa_target_cython)
   #define __msa_runtime_cython 1
   #define __msa_runtime_device 0
   #define __msa_runtime_host 1

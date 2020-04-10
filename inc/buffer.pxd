@@ -10,14 +10,14 @@ cdef extern from "buffer.hpp" namespace "msa" nogil:
     # data contiguously in memory. Originally, the buffer is not growable.
     # @tparam T The buffer contents type.
     # @since 0.1.1
-    cdef cppclass c_buffer "msa::buffer" [T]:
+    cdef cppclass cBuffer "msa::buffer" [T]:
         ctypedef T element_type
 
-        c_buffer()
-        c_buffer(c_buffer&)
-        c_buffer(element_type *, size_t)
+        cBuffer()
+        cBuffer(cBuffer&)
+        cBuffer(element_type *, size_t)
 
-        c_buffer& operator=(c_buffer&) except +RuntimeError
+        cBuffer& operator=(cBuffer&) except +RuntimeError
         element_type& operator[](ptrdiff_t) except +RuntimeError
 
         element_type *begin()
@@ -27,26 +27,26 @@ cdef extern from "buffer.hpp" namespace "msa" nogil:
         size_t size()
 
         @staticmethod
-        c_buffer copy(c_buffer&)
+        cBuffer copy(cBuffer&)
         @staticmethod
-        c_buffer copy(vector[element_type]&)
+        cBuffer copy(vector[element_type]&)
         @staticmethod
-        c_buffer copy(element_type *, size_t)
+        cBuffer copy(element_type *, size_t)
         @staticmethod
-        c_buffer make()
+        cBuffer make()
         @staticmethod
-        c_buffer make(size_t)
+        cBuffer make(size_t)
 
     # Manages a slice of a buffer. The buffer must have already been initialized
     # and will have boundaries checked according to slice pointers.
     # @tparam T The buffer contents type.
     # @since 0.1.1
-    cdef cppclass c_slice_buffer "msa::slice_buffer" [T] (c_buffer[T]):
-        c_slice_buffer()
-        c_slice_buffer(c_slice_buffer&)
-        c_slice_buffer(c_buffer[T]&, ptrdiff_t, size_t) except +RuntimeError
-        c_slice_buffer(c_buffer[T]&, c_slice_buffer&) except +RuntimeError
+    cdef cppclass cSliceBuffer "msa::slice_buffer" [T] (cBuffer[T]):
+        cSliceBuffer()
+        cSliceBuffer(cSliceBuffer&)
+        cSliceBuffer(cBuffer[T]&, ptrdiff_t, size_t) except +RuntimeError
+        cSliceBuffer(cBuffer[T]&, cSliceBuffer&) except +RuntimeError
 
-        c_slice_buffer& operator=(c_slice_buffer&) except +RuntimeError
+        cSliceBuffer& operator=(cSliceBuffer&) except +RuntimeError
 
         ptrdiff_t displ()

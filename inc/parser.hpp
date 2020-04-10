@@ -17,8 +17,8 @@ namespace msa
     namespace parser
     {
         /**
-         * A parser is a function resposible for reading a file and converting
-         * its data to sequences that can be added to the database.
+         * A parser is a function resposible for reading a file and converting all
+         * of its data to sequences added into a database.
          * @since 0.1.1
          */
         using functor = msa::functor<auto(const std::string&) -> database>;

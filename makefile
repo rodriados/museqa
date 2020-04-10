@@ -3,15 +3,16 @@
 # @copyright 2018-2020 Rodrigo Siqueira
 NAME = msa
 
-INCDIR = inc
-SRCDIR = src
-OBJDIR = obj
+INCDIR  = inc
+SRCDIR  = src
+OBJDIR  = obj
+TGTDIR  = bin
 TESTDIR = test
 
-MPCC ?= mpicc
-MPPP ?= mpic++
+GCCC ?= mpicc
+GC++ ?= mpic++
 NVCC ?= nvcc
-PYCC ?= g++
+PY++ ?= g++
 PYXC ?= cython
 
 # Target architecture for CUDA compilation. This indicates the minimum support required
@@ -21,102 +22,113 @@ NVARCH ?= sm_30
 # Defining language standards to be used. These can be overriden by environment
 # variables. We recommend using the default settings, though.
 STDC   ?= c99
-STDCPP ?= c++14
+STDC++ ?= c++14
 STDCU  ?= c++11
 
 MPILIBDIR ?= /usr/lib/openmpi/lib
-PY2INCDIR ?= /usr/include/python3.5
+PY3INCDIR ?= /usr/include/python3.5
 MPILKFLAG ?= -lmpi_cxx -lmpi
 
 # Defining macros inside code at compile time. This can be used to enable or disable
 # certain features on code or affect the projects compilation.
-DEFS ?= 
+FLAGS ?=
 
-MPCCFLAGS = -std=$(STDC) -I$(INCDIR) -g -Wall -lm -fPIC -O3 $(DEFS)
-MPPPFLAGS = -std=$(STDCPP) -I$(INCDIR) -g -Wall -fPIC -O3 $(DEFS)
-NVCCFLAGS = -std=$(STDCU) -I$(INCDIR) -g -arch $(NVARCH) -lmpi -lcuda -lcudart -w -O3               \
-		-D_MWAITXINTRIN_H_INCLUDED -Xptxas -O3 -Xcompiler -O3 $(DEFS)
-PYCCFLAGS = -std=$(STDCPP) -I$(INCDIR) -I$(SRCDIR) -I$(PY2INCDIR) -shared -pthread -fPIC -fwrapv	\
-		-O2 -Wall -fno-strict-aliasing $(DEFS)
+GCCCFLAGS = -std=$(STDC) -I$(INCDIR) -Wall -lm -fPIC -O3 $(FLAGS) $(DEBUG)
+GC++FLAGS = -std=$(STDC++) -I$(INCDIR) -Wall -fPIC -O3 $(FLAGS) $(DEBUG)
+NVCCFLAGS = -std=$(STDCU) -I$(INCDIR) -arch $(NVARCH) -lmpi -lcuda -lcudart -w -O3 -Xptxas -O3      \
+        -Xcompiler -O3 -D_MWAITXINTRIN_H_INCLUDED $(FLAGS) $(DEBUG)
+PY++FLAGS = -std=$(STDC++) -I$(INCDIR) -I$(SRCDIR) -I$(PY3INCDIR) -shared -pthread -fPIC -fwrapv    \
+        -O2 -Wall -fno-strict-aliasing $(FLAGS) $(DEBUG)
 PYXCFLAGS = --cplus -I$(INCDIR) -I$(SRCDIR) -3
-LINKFLAGS = -L$(MPILIBDIR) $(MPILKFLAG) -g
+LINKFLAGS = -L$(MPILIBDIR) $(MPILKFLAG) $(FLAGS) $(DEBUG)
 
 # Lists all files to be compiled and separates them according to their corresponding
 # compilers. Changes in any of these files in will trigger conditional recompilation.
-MPCCFILES := $(shell find $(SRCDIR) -name '*.c')
-MPPPFILES := $(shell find $(SRCDIR) -name '*.cpp')
+GCCCFILES := $(shell find $(SRCDIR) -name '*.c')
+GC++FILES := $(shell find $(SRCDIR) -name '*.cpp')
 NVCCFILES := $(shell find $(SRCDIR) -name '*.cu')
 PYXCFILES := $(shell find $(SRCDIR) -name '*.pyx')
-TDEPFILES := $(shell find $(OBJDIR)/$(TESTDIR) -name '*.d' 2>/dev/null)
+PYFILES   := $(shell find $(SRCDIR) -name '*.py')
 
-SRCINTERNAL = $(sort $(dir $(wildcard $(SRCDIR)/*/. $(SRCDIR)/*/*/.)))
-OBJINTERNAL = $(SRCINTERNAL:$(SRCDIR)/%=$(OBJDIR)/%)                                                \
-              $(SRCINTERNAL:$(SRCDIR)/%=$(OBJDIR)/$(TESTDIR)/%)
+OBJFILES     = $(GCCCFILES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)                                             \
+               $(GC++FILES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)                                           \
+               $(NVCCFILES:$(SRCDIR)/%.cu=$(OBJDIR)/%.o)
+TESTFILES    = $(PYXCFILES:$(SRCDIR)/%.pyx=$(TGTDIR)/%.so)                                          \
+               $(PYFILES:$(SRCDIR)/%.py=$(TGTDIR)/%.py)
+STATICFILES  = $(filter $(PYXCFILES:$(SRCDIR)/%.pyx=$(OBJDIR)/%.pya.a),$(OBJFILES:%.o=%.pya.a))
 
-ODEPS = $(MPCCFILES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)                                                    \
-        $(MPPPFILES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)                                                  \
-        $(NVCCFILES:$(SRCDIR)/%.cu=$(OBJDIR)/%.o)
-TDEPS = $(PYXCFILES:$(SRCDIR)/%.pyx=$(OBJDIR)/$(TESTDIR)/%.so)                                      \
-        $(PYXCFILES:$(SRCDIR)/%.pyx=$(TESTDIR)/$(NAME)/%.so)
-HDEPS = $(ODEPS:$(OBJDIR)/%.o=$(OBJDIR)/%.d)
+SRCHIERARCHY = $(sort $(dir $(wildcard $(SRCDIR)/*/. $(SRCDIR)/*/*/.)))
+OBJHIERARCHY = $(SRCHIERARCHY:$(SRCDIR)/%=$(OBJDIR)/%)
 
-all: production
+all: debug
 
 install:
-	@mkdir -p $(OBJINTERNAL)
-
-production: install $(OBJDIR)/$(NAME)
+	@mkdir -p $(OBJHIERARCHY)
 	@chmod +x src/hostfinder.sh
 	@chmod +x src/watchdog.sh
 	@chmod +x msarun
 
-testing: override MPPP = $(PYCC)
-testing: override DEFS = -Dmsa_compile_cython
+production: install $(TGTDIR)/$(NAME)
+
+debug: override DEBUG = -g
+debug: install $(TGTDIR)/$(NAME)
+
+testing: override GC++ = $(PY++)
+testing: override DEBUG = -g -Dmsa_target_cython
 testing: override NVCCFLAGS = -std=$(STDCU) -I$(INCDIR) -g -arch $(NVARCH) -lcuda -lcudart -w       \
-							-D_MWAITXINTRIN_H_INCLUDED $(DEFS) --compiler-options -fPIC
-testing: install $(TDEPS)
+        -D_MWAITXINTRIN_H_INCLUDED $(DEBUG) --compiler-options -fPIC
+testing: install $(TESTFILES) $(TESTDIR)/$(NAME)
 
 clean:
-	@rm -rf $(NAME) $(OBJDIR) $(SRCDIR)/*~ *~
-	@rm -rf $(TSTINTERNAL) $(TESTDIR)/$(NAME)/*.so $(TESTDIR)/$(NAME)/*.pyc
-
-$(OBJDIR)/$(NAME): $(ODEPS)
-	$(NVCC) $(LINKFLAGS) $^ -o $@
+	@rm -rf $(TESTDIR)/$(NAME)
+	@rm -rf $(OBJDIR) $(SRCDIR)/*~ *~
+	@rm -rf $(TGTDIR)/*.so $(TGTDIR)/$(NAME)
 
 # Creates dependency on header files. This is valuable so that whenever a header
 # file is changed, all objects depending on it will be recompiled.
--include $(HDEPS) $(TDEPFILES)
+ifneq ($(wildcard $(OBJDIR)/.),)
+-include testing.d $(shell find $(OBJDIR) -name '*.d')
+endif
 
-# Compiling C files.
-$(OBJDIR)/%.o: $(SRCDIR)/%.c
-	$(MPCC) $(MPCCFLAGS) -MMD -c $< -o $@
+# The step rules to generate the main production executable. These rules can be
+# parallelized to improve compiling time.
+$(TGTDIR)/$(NAME): $(OBJFILES)
+	$(NVCC) $(LINKFLAGS) $^ -o $@
 
-# Compiling C++ files.
-$(OBJDIR)/%.o $(OBJDIR)/$(TESTDIR)/%.so: $(SRCDIR)/%.cpp
-	$(MPPP) $(MPPPFLAGS) -MMD -c $< -o $@
+$(OBJDIR)/%.o $(OBJDIR)/%.pya.a: $(SRCDIR)/%.c
+	$(GCCC) $(GCCCFLAGS) -MMD -c $< -o $@
 
-# Compiling CUDA files.
-$(OBJDIR)/%.o $(OBJDIR)/$(TESTDIR)/%.so: $(SRCDIR)/%.cu
+$(OBJDIR)/%.o $(OBJDIR)/%.pya.a: $(SRCDIR)/%.cpp
+	$(GC++) $(GC++FLAGS) -MMD -c $< -o $@
+
+$(OBJDIR)/%.o $(OBJDIR)/%.pya.a: $(SRCDIR)/%.cu
 	@$(NVCC) $(NVCCFLAGS) -M $< -odir $(patsubst %/,%,$(dir $@)) > $(@:%.o=%.d)
 	$(NVCC) $(NVCCFLAGS) -dc $< -o $@
 
-# Converting Cython files to C++
-$(OBJDIR)/$(TESTDIR)/%.cxx: $(SRCDIR)/%.pyx
+# The step rules to build the testing environment modules. This setting will result
+# into many modules that can be directly imported used into a python module.
+$(TGTDIR)/%.so: $(OBJDIR)/%.pyo.so $(OBJDIR)/libmodules.a
+	$(NVCC) -shared -L$(OBJDIR) -lmodules $< -o $@
+
+$(TGTDIR)/%.py: $(SRCDIR)/%.py
+	cp $< $@
+
+$(OBJDIR)/%.cxx: $(SRCDIR)/%.pyx $(INCDIR)/*.pxd
 	$(PYXC) $(PYXCFLAGS) $< -o $@
 
-# Compiling Cython generated files.
-$(OBJDIR)/$(TESTDIR)/%.py.o: $(OBJDIR)/$(TESTDIR)/%.cxx
-	$(PYCC) $(PYCCFLAGS) -MMD -c $< -o $@
+$(OBJDIR)/%.pyo.so: $(OBJDIR)/%.cxx
+	$(PY++) $(PY++FLAGS) -MMD -c $< -o $@
 
-# If no correspondent file has been found, simply ignore.
-$(OBJDIR)/$(TESTDIR)/%.so: ;
+$(OBJDIR)/libmodules.a:                                                                             \
+    $(OBJDIR)/encoder.pya.a                                                                         \
+    $(OBJDIR)/parser/fasta.pya.a
 
-# Linking Python modules.
-# Here, we use nvcc so we can access the GPU from Python modules.
-.SECONDEXPANSION:
-$(TESTDIR)/$(NAME)/%.so: $(OBJDIR)/$(TESTDIR)/%.py.o $$(wildcard $(OBJDIR)/$(TESTDIR)/%.so)
-	$(NVCC) -shared $^ -o $@
+$(OBJDIR)/libmodules.a: $(STATICFILES)
+	ar rcs $@ $^
 
-.PHONY: all clean install production testing
+$(TESTDIR)/$(NAME):
+	@ln -r -s $(TGTDIR) $@
 
-.PRECIOUS: $(OBJDIR)/$(TESTDIR)/%.cxx $(OBJDIR)/$(TESTDIR)/%.py.o $(OBJDIR)/$(TESTDIR)/%.so
+.PHONY: all install production debug testing clean
+
+.PRECIOUS: $(OBJDIR)/%.cxx $(OBJDIR)/%.pyo.so $(OBJDIR)/%.pya.a

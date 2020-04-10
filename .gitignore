@@ -1,6 +1,8 @@
 obj/
 tex/
 .idea/
+bin/msa
+test/msa
 
 *.o
 *.so
