@@ -10,9 +10,9 @@ TGTDIR  = bin
 TESTDIR = test
 
 GCCC ?= mpicc
-GC++ ?= mpic++
+GCPP ?= mpic++
 NVCC ?= nvcc
-PY++ ?= g++
+PYPP ?= g++
 PYXC ?= cython
 
 # Target architecture for CUDA compilation. This indicates the minimum support required
@@ -22,7 +22,7 @@ NVARCH ?= sm_30
 # Defining language standards to be used. These can be overriden by environment
 # variables. We recommend using the default settings, though.
 STDC   ?= c99
-STDC++ ?= c++14
+STDCPP ?= c++14
 STDCU  ?= c++11
 
 MPILIBDIR ?= /usr/lib/openmpi/lib
@@ -34,10 +34,10 @@ MPILKFLAG ?= -lmpi_cxx -lmpi
 FLAGS ?=
 
 GCCCFLAGS = -std=$(STDC) -I$(INCDIR) -Wall -lm -fPIC -O3 $(FLAGS) $(DEBUG)
-GC++FLAGS = -std=$(STDC++) -I$(INCDIR) -Wall -fPIC -O3 $(FLAGS) $(DEBUG)
+GCPPFLAGS = -std=$(STDCPP) -I$(INCDIR) -Wall -fPIC -O3 $(FLAGS) $(DEBUG)
 NVCCFLAGS = -std=$(STDCU) -I$(INCDIR) -arch $(NVARCH) -lmpi -lcuda -lcudart -w -O3 -Xptxas -O3      \
         -Xcompiler -O3 -D_MWAITXINTRIN_H_INCLUDED $(FLAGS) $(DEBUG)
-PY++FLAGS = -std=$(STDC++) -I$(INCDIR) -I$(SRCDIR) -I$(PY3INCDIR) -shared -pthread -fPIC -fwrapv    \
+PYPPFLAGS = -std=$(STDCPP) -I$(INCDIR) -I$(SRCDIR) -I$(PY3INCDIR) -shared -pthread -fPIC -fwrapv    \
         -O2 -Wall -fno-strict-aliasing $(FLAGS) $(DEBUG)
 PYXCFLAGS = --cplus -I$(INCDIR) -I$(SRCDIR) -3
 LINKFLAGS = -L$(MPILIBDIR) $(MPILKFLAG) $(FLAGS) $(DEBUG)
@@ -45,13 +45,13 @@ LINKFLAGS = -L$(MPILIBDIR) $(MPILKFLAG) $(FLAGS) $(DEBUG)
 # Lists all files to be compiled and separates them according to their corresponding
 # compilers. Changes in any of these files in will trigger conditional recompilation.
 GCCCFILES := $(shell find $(SRCDIR) -name '*.c')
-GC++FILES := $(shell find $(SRCDIR) -name '*.cpp')
+GCPPFILES := $(shell find $(SRCDIR) -name '*.cpp')
 NVCCFILES := $(shell find $(SRCDIR) -name '*.cu')
 PYXCFILES := $(shell find $(SRCDIR) -name '*.pyx')
 PYFILES   := $(shell find $(SRCDIR) -name '*.py')
 
 OBJFILES     = $(GCCCFILES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)                                             \
-               $(GC++FILES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)                                           \
+               $(GCPPFILES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)                                           \
                $(NVCCFILES:$(SRCDIR)/%.cu=$(OBJDIR)/%.o)
 TESTFILES    = $(PYXCFILES:$(SRCDIR)/%.pyx=$(TGTDIR)/%.so)                                          \
                $(PYFILES:$(SRCDIR)/%.py=$(TGTDIR)/%.py)
@@ -73,7 +73,7 @@ production: install $(TGTDIR)/$(NAME)
 debug: override DEBUG = -g
 debug: install $(TGTDIR)/$(NAME)
 
-testing: override GC++ = $(PY++)
+testing: override GCPP = $(PYPP)
 testing: override DEBUG = -g -Dmsa_target_cython
 testing: override NVCCFLAGS = -std=$(STDCU) -I$(INCDIR) -g -arch $(NVARCH) -lcuda -lcudart -w       \
         -D_MWAITXINTRIN_H_INCLUDED $(DEBUG) --compiler-options -fPIC
@@ -99,7 +99,7 @@ $(OBJDIR)/%.o $(OBJDIR)/%.pya.a: $(SRCDIR)/%.c
 	$(GCCC) $(GCCCFLAGS) -MMD -c $< -o $@
 
 $(OBJDIR)/%.o $(OBJDIR)/%.pya.a: $(SRCDIR)/%.cpp
-	$(GC++) $(GC++FLAGS) -MMD -c $< -o $@
+	$(GCPP) $(GCPPFLAGS) -MMD -c $< -o $@
 
 $(OBJDIR)/%.o $(OBJDIR)/%.pya.a: $(SRCDIR)/%.cu
 	@$(NVCC) $(NVCCFLAGS) -M $< -odir $(patsubst %/,%,$(dir $@)) > $(@:%.o=%.d)
@@ -117,7 +117,7 @@ $(OBJDIR)/%.cxx: $(SRCDIR)/%.pyx $(INCDIR)/*.pxd
 	$(PYXC) $(PYXCFLAGS) $< -o $@
 
 $(OBJDIR)/%.pyo.so: $(OBJDIR)/%.cxx
-	$(PY++) $(PY++FLAGS) -MMD -c $< -o $@
+	$(PYPP) $(PYPPFLAGS) -MMD -c $< -o $@
 
 $(OBJDIR)/libmodules.a: $(OBJDIR)/cuda.pya.a
 $(OBJDIR)/libmodules.a: $(OBJDIR)/encoder.pya.a
