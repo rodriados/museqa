@@ -119,10 +119,15 @@ $(OBJDIR)/%.cxx: $(SRCDIR)/%.pyx $(INCDIR)/*.pxd
 $(OBJDIR)/%.pyo.so: $(OBJDIR)/%.cxx
 	$(PY++) $(PY++FLAGS) -MMD -c $< -o $@
 
-$(OBJDIR)/libmodules.a:                                                                             \
-    $(OBJDIR)/encoder.pya.a                                                                         \
-    $(OBJDIR)/parser/fasta.pya.a
-
+$(OBJDIR)/libmodules.a: $(OBJDIR)/cuda.pya.a
+$(OBJDIR)/libmodules.a: $(OBJDIR)/encoder.pya.a
+$(OBJDIR)/libmodules.a: $(OBJDIR)/parser/fasta.pya.a
+$(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/pairwise.pya.a
+$(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/table.pya.a
+$(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/database.pya.a
+$(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/needleman/distribute.pya.a
+$(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/needleman/hybrid.pya.a
+$(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/needleman/sequential.pya.a
 $(OBJDIR)/libmodules.a: $(STATICFILES)
 	ar rcs $@ $^
 

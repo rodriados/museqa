@@ -5,12 +5,7 @@
  */
 #pragma once
 
-#include <environment.h>
-
-#if !__msa(runtime, cython)
-
 #include <map>
-#include <mpi.h>
 #include <string>
 #include <vector>
 #include <cstdint>
@@ -25,6 +20,11 @@
 #include <buffer.hpp>
 #include <exception.hpp>
 #include <reflection.hpp>
+#include <environment.h>
+
+#if !__msa(runtime, cython)
+
+#include <mpi.h>
 
 namespace msa
 {

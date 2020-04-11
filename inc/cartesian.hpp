@@ -76,8 +76,7 @@ namespace msa
                  * @return The new cartesian value.
                  */
                 template <typename U>
-                __host__ __device__ inline constexpr base operator+(const base<D, U>& other)
-                    const noexcept
+                __host__ __device__ inline constexpr base operator+(const base<D, U>& other) const noexcept
                 {
                     using namespace utils;
                     return from_tuple(zipwith(add<element_type>, tie(dim), tie(other.dim)));
@@ -104,8 +103,7 @@ namespace msa
                  * @return The 1-dimensional collapsed cartesian value.
                  */
                 template <typename U = T>
-                __host__ __device__ inline constexpr element_type collapse(const base<D, U>& other)
-                    const noexcept
+                __host__ __device__ inline constexpr element_type collapse(const base<D, U>& other) const noexcept
                 {
                     using namespace utils;
                     return foldl(add<element_type>, 0, zipwith(mul<element_type>, tie(other.dim), 

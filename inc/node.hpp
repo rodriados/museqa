@@ -17,16 +17,19 @@ namespace msa
          */
         using id = int32_t;
 
+        /**#@+
+         * Informs the number of total nodes in the cluster and the current node's
+         * global identification.
+         * @see mpi::init
+         */
         #if !__msa(runtime, cython)
-            /**#@+
-             * Informs the number of total nodes in the cluster and the current node's
-             * global identification.
-             * @see mpi::init
-             */
             extern id rank;
             extern int32_t count;
-            /**#@-*/
+        #else
+            constexpr id rank = 0;
+            constexpr int32_t count = 1;
         #endif
+        /**#@-*/
 
         /*
          * Defining the master node rank value. It is recommended not to change the

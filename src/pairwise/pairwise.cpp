@@ -23,7 +23,8 @@ namespace msa
          * @since 0.1.1
          */
         static const std::map<std::string, factory> dispatcher = {
-            {"needleman",               needleman::hybrid}
+            {"default",                 needleman::hybrid}
+        ,   {"needleman",               needleman::hybrid}
         ,   {"needleman-hybrid",        needleman::hybrid}
         ,   {"needleman-sequential",    needleman::sequential}
         ,   {"needleman-distributed",   needleman::sequential}

@@ -87,8 +87,10 @@ namespace msa
          */
         class manager final : public buffer<score>
         {
-            protected:
+            public:
                 using element_type = score;                 /// The object's element type.
+
+            protected:
                 using underlying_buffer = buffer<score>;    /// The object's underlying buffer.
 
             protected:
@@ -192,7 +194,7 @@ namespace msa
                     return m_penalty;
                 }
 
-                auto to_device() const -> scoring_table;
+                scoring_table to_device() const;
 
                 static auto make(const std::string&) -> scoring_table;
                 static auto list() noexcept -> const std::vector<std::string>&;
