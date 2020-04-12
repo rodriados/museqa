@@ -9,60 +9,72 @@
  * The software's authorship information. If you need to get in touch with this
  * software's author, please use the info available below.
  */
-#define __msa_appname "Multiple Sequence Alignment using hybrid parallel computing"
-#define __msa_author  "Rodrigo Albuquerque de Oliveira Siqueira"
-#define __msa_email   "rodriados at gmail dot com"
+#define msa_appname() "Multiple Sequence Alignment using hybrid parallel computing"
+#define msa_author()  "Rodrigo Albuquerque de Oliveira Siqueira"
+#define msa_email()   "rodriados at gmail dot com"
 
 /*
  * The software version is in the form (major * 10000 + minor * 100 + patch).
  */
-#define __msa_version 00101
+#define msa_version() 101
+
+/*
+ * Indicates the environment mode in which the compilation is taking place. The
+ * compilation mode may affect some features' availability and performance.
+ */
+#if defined(DEBUG)
+  #define msa_debug() 1
+#else
+  #define msa_debug() 0
+#endif
+
+#if defined(TESTING)
+  #define msa_testing() 1
+#else
+  #define msa_testing() 0
+#endif
+
+#if !defined(DEBUG) && !defined(TESTING)
+  #define msa_production() 1
+#else
+  #define msa_production() 0
+#endif
 
 /*
  * Finds the version of compiler being used. Some features might change or be unavailable
  * depending on the compiler configuration.
  */
 #if defined(__GNUC__)
-  #define __msa_compiler_gnuc 1
   #if !defined(__clang__)
-    #define __msa_compiler_gcc 1
-    #define __msa_compiler_clang 0
-    #define __msa_compiler_tested 1
+    #define msa_compiler_gcc() 1
+    #define msa_compiler_clang() 0
   #else
-    #define __msa_compiler_clang 1
-    #define __msa_compiler_gcc 0
+    #define msa_compiler_gcc() 0
+    #define msa_compiler_clang() 1
   #endif
+  #define msa_compiler_gnuc() 1
 #else
-  #define __msa_compiler_gcc 0
-  #define __msa_compiler_gnuc 0
-  #define __msa_compiler_clang 0
+  #define msa_compiler_gcc() 0
+  #define msa_compiler_clang() 0
+  #define msa_compiler_gnuc() 0
 #endif
 
 #if defined(__NVCC__) || defined(__CUDACC__)
-  #define __msa_compiler_nvcc 1
-  #define __msa_compiler_tested 1
+  #define msa_compiler_nvcc() 1
 #else
-  #define __msa_compiler_nvcc 0
+  #define msa_compiler_nvcc() 0
 #endif
 
 #if defined(__INTEL_COMPILER) || defined(__ICL)
-  #define __msa_compiler_icc 1
+  #define msa_compiler_icc() 1
 #else
-  #define __msa_compiler_icc 0
+  #define msa_compiler_icc() 0
 #endif
 
 #if defined(_MSC_VER)
-  #define __msa_compiler_msc 1
+  #define msa_compiler_msc() 1
 #else
-  #define __msa_compiler_msc 0
-#endif
-
-/*
- * Checks whether the current compiler is compatible with the software's prerequisites.
- * Should it not be compatible, then we emit a warning and try compiling anyway.
- */
-#if !defined(__msa_compiler_tested)
-  #warning this software has not been tested with the current compiler
+  #define msa_compiler_msc() 0
 #endif
 
 /* 
@@ -70,33 +82,46 @@
  * conditional compiling may take place depending on the environment.
  */
 #if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
-  #define __msa_env_unix 1
   #if defined(__linux__) || defined(__gnu_linux__)
-    #define __msa_env_apple 0
-    #define __msa_env_linux 1
-    #define __msa_env_tested 1
+    #define msa_os_linux() 1
+    #define msa_os_apple() 0
   #else
-    #define __msa_env_apple 1
-    #define __msa_env_linux 0
+    #define msa_os_linux() 0
+    #define msa_os_apple() 1
   #endif
+  #define msa_os_unix() 1
 #else
-  #define __msa_env_apple 0
-  #define __msa_env_linux 0
-  #define __msa_env_unix 0
+  #define msa_os_linux() 0
+  #define msa_os_apple() 0
+  #define msa_os_unix() 0
 #endif
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32)
-  #define __msa_env_windows 1
+  #define msa_os_windows() 1
 #else
-  #define __msa_env_windows 0
+  #define msa_os_windows() 0
+#endif
+
+/*
+ * Checks whether the current compiler is compatible with the software's prerequisites.
+ * Should it not be compatible, then we emit a warning and try compiling anyway.
+ */
+#if !msa_compiler_gcc() && !msa_compiler_nvcc()
+  #define msa_compiler_tested() 0
+  #warning this software has not been tested with the current compiler
+#else
+  #define msa_compiler_tested() 1
 #endif
 
 /*
  * Checks whether the software has been tested in the current compilation environment.
  * Were it not tested, we emit a warning and try compiling anyway.
  */
-#if !defined(__msa_env_tested)
+#if !msa_os_linux()
+  #define msa_os_tested() 0
   #warning this software has not been tested under the current environment
+#else
+  #define msa_os_tested() 1
 #endif
 
 /*
@@ -104,17 +129,17 @@
  * on, we need to know, at times, whether the code is being executed in CPU or GPU.
  */
 #if defined(__CUDACC__) && defined(__CUDA_ARCH__)
-  #define __msa_runtime_cython 0
-  #define __msa_runtime_device 1
-  #define __msa_runtime_host 0
-#elif defined(CYTHON_ABI) || defined(msa_target_cython)
-  #define __msa_runtime_cython 1
-  #define __msa_runtime_device 0
-  #define __msa_runtime_host 1
+  #define msa_runtime_device() 1
+  #define msa_runtime_host() 0
 #else
-  #define __msa_runtime_cython 0
-  #define __msa_runtime_device 0
-  #define __msa_runtime_host 1
+  #define msa_runtime_device() 0
+  #define msa_runtime_host() 1
+#endif
+
+#if msa_testing() || defined(CYTHON_ABI)
+  #define msa_runtime_cython() 1
+#else
+  #define msa_runtime_cython() 0
 #endif
 
 /**
@@ -123,7 +148,7 @@
  * @since 0.1.1
  */
 #define __msa_concat_value(value)                                                   \
-    __msa_##value
+    msa_##value
 
 /**
  * Gets a macro organized in one group.
@@ -132,7 +157,7 @@
  * @since 0.1.1
  */
 #define __msa_concat_group(group, value)                                            \
-    __msa_concat_value(group##_##value)
+    __msa_concat_value(group##_##value)()
 
 /**
  * Effectively implements optional macro arguments and picks concatenator.

@@ -222,7 +222,7 @@ wnotify()
 }
 
 # Checks whether this file is being sourced. If it is being sourced, then we should
-# not execute any action as this is undesirable.
+# not execute any action as this might be undesirable.
 if [ "$0" = "$BASH_SOURCE" ]; then
     # Execute the watchdog process on the given PID.
     watchdog $1 <&0

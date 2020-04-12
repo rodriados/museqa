@@ -70,11 +70,11 @@ install:
 
 production: install $(TGTDIR)/$(NAME)
 
-debug: override DEBUG = -g
+debug: override DEBUG = -g -DDEBUG
 debug: install $(TGTDIR)/$(NAME)
 
 testing: override GCPP = $(PYPP)
-testing: override DEBUG = -g -Dmsa_target_cython
+testing: override DEBUG = -g -DTESTING
 testing: override NVCCFLAGS = -std=$(STDCU) -I$(INCDIR) -g -arch $(NVARCH) -lcuda -lcudart -w       \
         -D_MWAITXINTRIN_H_INCLUDED $(DEBUG) --compiler-options -fPIC
 testing: install $(TESTFILES) $(TESTDIR)/$(NAME)
