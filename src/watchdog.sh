@@ -140,7 +140,7 @@ watchdog()
         local contents="${unparsed_input}${1}"
 
         # Check whether the current input is a watchdog line and captures its info.
-        if [[ $contents =~ ^(.*)\[_WTCHDG_\|(info|error|warning|init|update|finish)\|(.*)\]$ ]]; then
+        if [[ $contents =~ ^(.*)\[watchdog\|(info|error|warning|init|update|finish)\|(.*)\]$ ]]; then
             # Save the unparsed contents so it may be useful for the next line.
             unparsed_input="${BASH_REMATCH[1]}"
 
@@ -215,7 +215,7 @@ wnotify()
 {
     # The variable containing the nofitication's constructed string. This is will
     # be the function's final and returned result.
-    local notification="[_WTCHDG_"$(printf "|%s" "${@:1}")"]"
+    local notification="[watchdog"$(printf "|%s" "${@:1}")"]"
 
     # Returning the built notification.
     printf "$notification\n"

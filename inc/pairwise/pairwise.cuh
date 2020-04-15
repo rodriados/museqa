@@ -54,34 +54,6 @@ namespace msa
         };
 
         /**
-         * Represents a pairwise module algorithm.
-         * @since 0.1.1
-         */    
-        struct algorithm
-        {
-            buffer<pair> pairs;             /// The sequence pairs to be aligned.
-
-            inline algorithm() noexcept = default;
-            inline algorithm(const algorithm&) noexcept = default;
-            inline algorithm(algorithm&&) noexcept = default;
-
-            virtual ~algorithm() = default;
-
-            inline algorithm& operator=(const algorithm&) = default;
-            inline algorithm& operator=(algorithm&&) = default;
-
-            virtual auto generate(size_t) -> buffer<pair>&;
-            virtual auto run(const configuration&) -> buffer<score> = 0;
-        };
-
-        /**
-         * Functor responsible for instantiating an algorithm.
-         * @see pairwise::manager::run
-         * @since 0.1.1
-         */
-        using factory = functor<algorithm *()>;
-
-        /**
          * Manages all data and execution of the pairwise module.
          * @since 0.1.1
          */
@@ -199,6 +171,34 @@ namespace msa
                 static auto make(const std::string&) -> scoring_table;
                 static auto list() noexcept -> const std::vector<std::string>&;
         };
+
+        /**
+         * Represents a pairwise module algorithm.
+         * @since 0.1.1
+         */
+        struct algorithm
+        {
+            buffer<pair> pairs;             /// The sequence pairs to be aligned.
+
+            inline algorithm() noexcept = default;
+            inline algorithm(const algorithm&) noexcept = default;
+            inline algorithm(algorithm&&) noexcept = default;
+
+            virtual ~algorithm() = default;
+
+            inline algorithm& operator=(const algorithm&) = default;
+            inline algorithm& operator=(algorithm&&) = default;
+
+            virtual auto generate(size_t) -> buffer<pair>&;
+            virtual auto run(const configuration&) -> buffer<score> = 0;
+        };
+
+        /**
+         * Functor responsible for instantiating an algorithm.
+         * @see pairwise::manager::run
+         * @since 0.1.1
+         */
+        using factory = functor<algorithm *()>;
 
         /**
          * Creates a module's configuration instance.

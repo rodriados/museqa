@@ -68,20 +68,24 @@ install:
 	@chmod +x src/watchdog.sh
 	@chmod +x msarun
 
-production: install $(TGTDIR)/$(NAME)
+production: install
+production: $(TGTDIR)/$(NAME)
 
+debug: install
 debug: override DEBUG = -g -DDEBUG
-debug: install $(TGTDIR)/$(NAME)
+debug: $(TGTDIR)/$(NAME)
 
+testing: install
 testing: override GCPP = $(PYPP)
 testing: override DEBUG = -g -DTESTING
 testing: override NVCCFLAGS = -std=$(STDCU) -I$(INCDIR) -g -arch $(NVARCH) -lcuda -lcudart -w       \
         -D_MWAITXINTRIN_H_INCLUDED $(DEBUG) --compiler-options -fPIC
-testing: install $(TESTFILES) $(TESTDIR)/$(NAME)
+testing: $(TESTFILES) $(TESTDIR)/$(NAME)
 
 clean:
+	@rm -rf $(OBJDIR)
+	@rm -rf $(SRCDIR)/*~ *~
 	@rm -rf $(TESTDIR)/$(NAME)
-	@rm -rf $(OBJDIR) $(SRCDIR)/*~ *~
 	@rm -rf $(TGTDIR)/*.so $(TGTDIR)/$(NAME)
 
 # Creates dependency on header files. This is valuable so that whenever a header

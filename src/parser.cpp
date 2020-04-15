@@ -21,7 +21,8 @@ namespace msa
      * file extensions correspondence.
      */
     static const std::map<std::string, parser::functor> dispatcher = {
-        {"fasta", parser::fasta}
+        {"fa", parser::fasta}
+    ,   {"fasta", parser::fasta}
     };
 
     /**
@@ -35,7 +36,7 @@ namespace msa
         const std::string extension = ext.size() ? ext : filename.substr(filename.find_last_of('.') + 1);
         const auto& pair = dispatcher.find(extension);
 
-        enforce(pair != dispatcher.end(), "unknown parser for extension '<bold>%s</>'", extension);
+        enforce(pair != dispatcher.end(), "unknown parser for extension '%s'", extension);
         watchdog::info("parsing sequence file '<bold>%s</>'", filename);
 
         return pair->second(filename);

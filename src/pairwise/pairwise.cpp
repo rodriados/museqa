@@ -37,8 +37,8 @@ namespace msa
          */
         auto algorithm::generate(size_t num) -> buffer<pair>&
         {
-            const auto ntotal = utils::nchoose(num);
-            auto pairbuf = buffer<pair>::make(ntotal);
+            const auto total = utils::nchoose(num);
+            auto pairbuf = buffer<pair>::make(total);
 
             for(size_t i = 0, c = 0; i < num - 1; ++i)
                 for(size_t j = i + 1; j < num; ++j, ++c)

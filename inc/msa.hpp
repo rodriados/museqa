@@ -14,20 +14,24 @@
 #include <node.hpp>
 #include <utils.hpp>
 #include <format.hpp>
-#include <exception.hpp>
 
 namespace msa
 {
-    #if !__msa(runtime, cython)
-        /**
-         * Halts the whole software's execution and exits with given code.
-         * @param code The exit code.
-         */
-        [[noreturn]] extern void halt(uint8_t = 0) noexcept;
-    #endif
-
     namespace watchdog
     {
+        /**
+         * Notifies the watchdog about a general event.
+         * @tparam T The format template arguments' types.
+         * @param event The event type to send to watchdog.
+         * @param fmtstr The event's format string.
+         * @param args The format arguments.
+         */
+        template <typename ...T>
+        inline void notify(const char *event, const std::string& fmtstr, T&&... args) noexcept
+        {
+            fmt::print("[watchdog|%s|" + fmtstr + "]\n", event, args...);
+        }
+
         /**
          * Prints an informative log message.
          * @tparam T The message arguments' types.
@@ -37,9 +41,7 @@ namespace msa
         template <typename ...T>
         inline void info(const std::string& fmtstr, T&&... args) noexcept
         {
-            #if !__msa(runtime, cython)
-                fmt::print("[_WTCHDG_|info|" + fmtstr + "]\n", args...);
-            #endif
+            notify("info", fmtstr, args...);
         }
 
         /**
@@ -49,14 +51,9 @@ namespace msa
          * @param args The message parts to be printed.
          */
         template <typename ...T>
-        inline void error(const std::string& fmtstr, T&&... args)
+        inline void error(const std::string& fmtstr, T&&... args) noexcept
         {
-            #if !__msa(runtime, cython)
-                fmt::print("[_WTCHDG_|error|" + fmtstr + "]\n", args...);
-                msa::halt(1);
-            #else
-                throw exception {fmtstr, args...};
-            #endif
+            notify("error", fmtstr, args...);
         }
 
         /**
@@ -68,9 +65,7 @@ namespace msa
         template <typename ...T>
         inline void warning(const std::string& fmtstr, T&&... args) noexcept
         {
-            #if !__msa(runtime, cython)
-                fmt::print("[_WTCHDG_|warning|" + fmtstr + "]\n", args...);
-            #endif
+            notify("warning", fmtstr, args...);
         }
 
         /**
@@ -82,8 +77,8 @@ namespace msa
         template <typename ...T>
         inline void init(const char *task, const std::string& fmtstr, T&&... args) noexcept
         {
-            #if !__msa(runtime, cython)
-                fmt::print("[_WTCHDG_|init|%s|" + fmtstr + "]\n", task, args...);
+            #if !__msa(production)
+                notify("init", "%s|" + fmtstr, task, args...);
             #endif
         }
 
@@ -94,10 +89,10 @@ namespace msa
          * @param done The number of completed subtasks.
          * @param total The node's total number of subtasks.
          */
-        inline void update(const char *task, int id, size_t done, size_t total)
+        inline void update(const char *task, int id, size_t done, size_t total) noexcept
         {
-            #if !__msa(runtime, cython)
-                fmt::print("[_WTCHDG_|update|%s|%d|%llu|%llu]\n", task, id, done, total);
+            #if !__msa(production)
+                notify("update", "%s|%d|%llu|%llu", task, id, done, total);
             #endif
         }
 
@@ -110,20 +105,8 @@ namespace msa
         template <typename ...T>
         inline void finish(const char *task, const std::string& fmtstr, T&&... args) noexcept
         {
-            #if !__msa(runtime, cython)
-                fmt::print("[_WTCHDG_|finish|%s|" + fmtstr + "]\n", task, args...);
-            #endif
-        }
-
-        /**
-         * Prints a time report for given task.
-         * @param taskname The name of completed task.
-         * @param seconds The duration in seconds of given task.
-         */
-        inline void report(const char *taskname, double seconds) noexcept
-        {
-            #if !__msa(runtime, cython)
-                onlymaster watchdog::info("<bold green>%s</> done in <bold>%lf</> seconds", taskname, seconds);
+            #if !__msa(production)
+                notify("finish", "%s|" + fmtstr, task, args...);
             #endif
         }
     }
