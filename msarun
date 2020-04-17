@@ -33,9 +33,10 @@ showversion()
 }
 
 # Initializing command line variables and flags
+debug=
 hostfile=
+reportonly=
 positional=()
-reportonly=false
 
 # Parses the command line options and sets all respective variables. Any positional
 # value unlinked to any option sent will also be captured.
@@ -44,13 +45,14 @@ while [ $# -gt 0 ]; do
         -h | --help         ) showhelp;             exit  0 ;;
         -v | --version      ) showversion;          exit  0 ;;
         -f | --hostfile     ) hostfile="$2";        shift 2 ;;
-        -r | --report-only  ) reportonly=true;      shift   ;;
+        -r | --report-only  ) reportonly="$1";      shift   ;;
+        -D | --gdb          ) debug="$1";           shift   ;;
         *                   ) positional+=("$1");   shift   ;;
     esac
 done
 
 # Prints out the software's version information.
-if [[ "$reportonly" == false ]]; then
+if [[ -z "$reportonly" && -z "$debug" ]]; then
     showversion
 fi
 
@@ -73,13 +75,15 @@ if [[ ! -f "$hostfile" || ! -s "$hostfile" ]]; then
     src/watchdog.sh $! < $pipe
 fi
 
-# Run the main project software
-if [[ "$reportonly" == false ]]; then
-    mpirun -q --hostfile $hostfile bin/msa ${positional[@]} > $pipe &
-    src/watchdog.sh $! < $pipe
+# Run the main project software. If running in debug mode, an instance of gdb will
+# run with each process. Thus, one can see what each process does separately.
+if [[ -z "$debug" ]]; then
+    mpirun -q --hostfile $hostfile bin/msa $reportonly ${positional[@]} > $pipe &
+    src/watchdog.sh $reportonly $! < $pipe
 else
-    mpirun -q --hostfile $hostfile bin/msa --report-only ${positional[@]} > $pipe &
-    src/watchdog.sh $! --report-only < $pipe
+    mpirun -q --hostfile $hostfile                                                  \
+        xterm -fa 'Monospace' -fs 10 -e                                             \
+        gdb --args bin/msa --report-only ${positional[@]}
 fi
 
 # Waits up for any undesired killed-process report message and throws it away.

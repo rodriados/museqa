@@ -16,14 +16,14 @@ source src/utils.sh
 watchdog()
 {
     local pid=0
-    local report=false
+    local reportonly=
 
     # Parses the command line options and sets all respective variables. Any positional
     # values not linked to any option sent will be treated as PID.
     while [ $# -gt 0 ]; do
         case $1 in
-            --report-only   ) report=true;      shift ;;
-            *               ) pid="$1";         shift ;;
+            -r | --report-only  ) reportonly="$1";  shift ;;
+            *                   ) pid="$1";         shift ;;
         esac
     done
 
@@ -40,7 +40,7 @@ watchdog()
     # @param $1 The info message to be printed.
     info()
     {
-        if [[ "$report" == "false" ]]; then
+        if [[ -z "$reportonly" ]]; then
             printf "\r%27s · %s\n" "$(style clean bold blue info)" "$(markdown "$1")"
         fi
     }
@@ -49,7 +49,7 @@ watchdog()
     # @param $1 The error message to be printed.
     error()
     {
-        if [[ "$report" == "false" ]]; then
+        if [[ -z "$reportonly" ]]; then
             printf "\r%27s · %s\n" "$(style clean bold red error)" "$(markdown "$1")"
             prockill 1
         else
@@ -62,7 +62,7 @@ watchdog()
     # @param $1 The warning message to be printed.
     warning()
     {
-        if [[ "$report" == "false" ]]; then
+        if [[ -z "$reportonly" ]]; then
             printf "\r%27s · %s\n" "$(style clean bold yellow warning)" "$(markdown "$1")"
         else
             printf "warning: %s\n" "$1"
@@ -123,7 +123,7 @@ watchdog()
     {
         # We check whether the operation corresponds to the currently watched
         # process, just to be sure no parallel creepyness is going on.
-        if [[ "$1" == "$process_name" && "$report" == "false" ]]; then
+        if [[ -z "$reportonly" && "$1" == "$process_name" ]]; then
             process_done[$2]=$3
             process_total[$2]=$4
             recalculate
@@ -137,7 +137,7 @@ watchdog()
     {
         # We check whether the operation corresponds to the currently watched
         # process, just to be sure no parallel creepyness is going on.
-        if [[ "$1" == "$process_name" && "$report" == "false" ]]; then
+        if [[ -z "$reportonly" && "$1" == "$process_name" ]]; then
             printf "\r%27s · %12s · %s\n" "$(style clean bold green "$process_name")"       \
                 "$(style bold "100%%")"                                                     \
                 "$(markdown "$2")"
@@ -150,7 +150,7 @@ watchdog()
     # @param $2 The time spent by the process executing.
     report()
     {
-        if [[ "$report" == "false" ]]; then
+        if [[ -z "$reportonly" ]]; then
             printf "\r%27s · completed in %s seconds\n" "$(style clean bold green "$1")"    \
                 "$(style bold "$2")"
         else
