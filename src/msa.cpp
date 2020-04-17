@@ -54,8 +54,11 @@ namespace msa
             std::vector<size_t> size;
             std::vector<encoder::block> block;
 
-            onlymaster for(size_t i = 0, n = cmdline::count(); i < n; ++i)
-                db.merge(parser::parse(cmdline::get(i)));
+            onlymaster for(size_t i = 0, n = cmdline::count(); i < n; ++i) {
+                const auto& filename = cmdline::get(i);
+                watchdog::info("parsing sequence file '<bold>%s</>'", filename);
+                db.merge(parser::parse(filename));
+            }
 
             onlymaster for(const auto& entry : db) {
                 size.push_back(entry.contents.size());
@@ -112,11 +115,15 @@ namespace msa
      * execution time as well as all its steps.
      * @return Informs whether a failure has occurred during execution.
      */
-    static bool run() noexcept
+    static int run() noexcept
     try {
         watchdog::report("total", benchmark::run([]() {
             database db;
             pairwise::manager pw;
+
+            pairwise::scoring_table::make(cmdline::get("matrix", std::string ("default")));
+            pairwise::algorithm::retrieve(cmdline::get("pairwise", std::string ("default")));
+            //phylogeny::algorithm::retrieve(cmdline::get("phylogeny", std::string ("default")));
 
             watchdog::report("loading", benchmark::run(db, step::load));
             watchdog::report("pairwise", benchmark::run(pw, step::pairwise, db));

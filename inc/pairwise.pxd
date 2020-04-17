@@ -52,6 +52,12 @@ cdef extern from "pairwise/pairwise.cuh" namespace "msa::pairwise":
         @staticmethod
         vector[string]& list()
 
+    # Represents a pairwise module algorithm.
+    # @since 0.1.1
+    cdef cppclass cAlgorithm "msa::pairwise::algorithm":
+        @staticmethod
+        vector[string]& list()
+
     # Creates a module's configuration instance.
     cdef cConfiguration configure(cDatabase&, string&, string&)
 

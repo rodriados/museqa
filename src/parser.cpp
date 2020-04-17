@@ -7,7 +7,6 @@
 #include <string>
 #include <vector>
 
-#include <msa.hpp>
 #include <parser.hpp>
 #include <database.hpp>
 #include <exception.hpp>
@@ -37,7 +36,6 @@ namespace msa
         const auto& pair = dispatcher.find(extension);
 
         enforce(pair != dispatcher.end(), "unknown parser for extension '%s'", extension);
-        watchdog::info("parsing sequence file '<bold>%s</>'", filename);
 
         return pair->second(filename);
     }

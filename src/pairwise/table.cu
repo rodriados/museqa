@@ -294,10 +294,7 @@ namespace msa
     static const local_table& retrieve(const std::string& name)
     {
         const auto& pair = dispatcher.find(name);
-
-        enforce(pair != dispatcher.end(), "could not find scoring table <bold>%s</>", name);
-        onlymaster watchdog::info("selected pairwise scoring table <bold>%s</>", name);
-
+        enforce(pair != dispatcher.end(), "unknown pairwise scoring table '%s'", name);
         return pair->second;
     }
 

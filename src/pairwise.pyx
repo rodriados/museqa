@@ -5,6 +5,7 @@
 # @copyright 2018-2019 Rodrigo Siqueira
 from libc.stdint cimport *
 from libcpp.string cimport string
+from libcpp.vector cimport vector
 from cartesian cimport cCartesian
 from database cimport Database
 from encoder cimport cencode
@@ -75,7 +76,8 @@ cdef class ScoringTable:
     # @return The list of all scoring tables available.
     @staticmethod
     def list():
-        return cScoringTable.list()
+        cdef vector[string] result = cScoringTable.list()
+        return [elem.decode() for elem in result]
 
     # Wraps an existing scoring table instance.
     # @param target The scoring table to be wrapped.
@@ -91,6 +93,12 @@ cdef class ScoringTable:
     @property
     def penalty(self):
         return self.thisptr.penalty()
+
+# Lists all available algorithms to this module.
+# @return The list of all algorithms available.
+def algorithms():
+    cdef vector[string] result = cAlgorithm.list()
+    return [elem.decode() for elem in result]
 
 # Aligns every sequence in given database pairwise, thus calculating a similarity
 # score for every different permutation of sequence pairs.

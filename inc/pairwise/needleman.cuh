@@ -25,7 +25,7 @@ namespace msa
             {
                 virtual auto scatter(buffer<pair>&) -> buffer<pair>;
                 virtual auto gather(buffer<score>&) const -> buffer<score>;            
-                virtual auto run(const configuration&) -> buffer<score> = 0;
+                virtual auto run(const context&) -> buffer<score> = 0;
             };
 
             /*

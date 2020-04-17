@@ -173,6 +173,16 @@ namespace msa
         };
 
         /**
+         * Represents a common pairwise algorithm context.
+         * @since 0.1.1
+         */
+        struct context
+        {
+            const msa::database& db;
+            const scoring_table& table;
+        };
+
+        /**
          * Represents a pairwise module algorithm.
          * @since 0.1.1
          */
@@ -190,7 +200,10 @@ namespace msa
             inline algorithm& operator=(algorithm&&) = default;
 
             virtual auto generate(size_t) -> buffer<pair>&;
-            virtual auto run(const configuration&) -> buffer<score> = 0;
+            virtual auto run(const context&) -> buffer<score> = 0;
+
+            static auto retrieve(const std::string&) -> functor<algorithm *()>;
+            static auto list() noexcept -> const std::vector<std::string>&;
         };
 
         /**
@@ -209,8 +222,8 @@ namespace msa
          */
         inline configuration configure(
                 const msa::database& db
-            ,   const std::string& algorithm = {}
-            ,   const std::string& table = {}
+            ,   const std::string& algorithm = "default"
+            ,   const std::string& table = "default"
             )
         {
             return {db, algorithm, table};

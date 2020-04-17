@@ -400,17 +400,19 @@ namespace
         /**
          * Executes the hybrid needleman algorithm for the pairwise step. This method is
          * responsible for distributing and gathering workload from different cluster nodes.
-         * @param config The module's configuration.
+         * @param context The algorithm's context.
          * @return The module's result value.
          */
-        auto run(const configuration& config) -> buffer<score> override
+        auto run(const context& ctx) -> buffer<score> override
         {
+            this->generate(ctx.db.count());
+
             buffer<score> result;
+            buffer<pair> pairs = this->scatter(this->pairs);
+            const scoring_table table = ctx.table.to_device();
 
-            const auto table = scoring_table::make(config.table);
-            this->generate(config.db.count());
+            onlyslaves result = align_db(pairs, ctx.db, table);
 
-            onlyslaves result = align_db(this->scatter(this->pairs), config.db, table.to_device());
             return this->gather(result);
         }
     };
