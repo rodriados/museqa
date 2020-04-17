@@ -108,7 +108,9 @@
  */
 #if !msa_compiler_gcc() && !msa_compiler_nvcc()
   #define msa_compiler_tested() 0
-  #warning this software has not been tested with the current compiler
+  #if msa_production()
+    #warning this software has not been tested with the current compiler
+  #endif
 #else
   #define msa_compiler_tested() 1
 #endif
@@ -119,7 +121,9 @@
  */
 #if !msa_os_linux()
   #define msa_os_tested() 0
-  #warning this software has not been tested under the current environment
+  #if msa_production()
+    #warning this software has not been tested under the current environment
+  #endif
 #else
   #define msa_os_tested() 1
 #endif
@@ -157,7 +161,7 @@
  * @since 0.1.1
  */
 #define __msa_concat_group(group, value)                                            \
-    __msa_concat_value(group##_##value)()
+    __msa_concat_value(group##_##value)
 
 /**
  * Effectively implements optional macro arguments and picks concatenator.
@@ -176,4 +180,4 @@
  */
 #define __msa(m, ...)                                                               \
     __msa_optional_arg(m, ##__VA_ARGS__, __msa_concat_group, __msa_concat_value, )  \
-        (m, ##__VA_ARGS__)
+        (m, ##__VA_ARGS__)()

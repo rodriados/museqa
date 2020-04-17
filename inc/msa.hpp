@@ -20,6 +20,16 @@ namespace msa
     namespace watchdog
     {
         /**
+         * Informs whether we're working on a report-only status.
+         * @since 0.1.1
+         */
+        #if !__msa(runtime, cython)
+            extern bool report_only;
+        #else
+            constexpr bool report_only = false;
+        #endif
+
+        /**
          * Notifies the watchdog about a general event.
          * @tparam T The format template arguments' types.
          * @param event The event type to send to watchdog.
@@ -29,7 +39,9 @@ namespace msa
         template <typename ...T>
         inline void notify(const char *event, const std::string& fmtstr, T&&... args) noexcept
         {
-            fmt::print("[watchdog|%s|" + fmtstr + "]\n", event, args...);
+            #if !__msa(runtime, cython)
+                fmt::print("[watchdog|%s|" + fmtstr + "]\n", event, args...);
+            #endif
         }
 
         /**
@@ -41,7 +53,7 @@ namespace msa
         template <typename ...T>
         inline void info(const std::string& fmtstr, T&&... args) noexcept
         {
-            notify("info", fmtstr, args...);
+            if(!report_only) notify("info", fmtstr, args...);
         }
 
         /**
@@ -69,6 +81,16 @@ namespace msa
         }
 
         /**
+         * Prints a time report for given task.
+         * @param taskname The name of completed task.
+         * @param seconds The duration in seconds of given task.
+         */
+        inline void report(const char *taskname, double seconds) noexcept
+        {
+            onlymaster notify("report", "%s|%lf", taskname, seconds);
+        }
+
+        /**
          * Informs the watchdog about a new task to be watched.
          * @param task The name of task to be watched.
          * @param fmtstr The message formatting string.
@@ -78,7 +100,7 @@ namespace msa
         inline void init(const char *task, const std::string& fmtstr, T&&... args) noexcept
         {
             #if !__msa(production)
-                notify("init", "%s|" + fmtstr, task, args...);
+                if(!report_only) notify("init", "%s|" + fmtstr, task, args...);
             #endif
         }
 
@@ -89,10 +111,10 @@ namespace msa
          * @param done The number of completed subtasks.
          * @param total The node's total number of subtasks.
          */
-        inline void update(const char *task, int id, size_t done, size_t total) noexcept
+        inline void update(const char *task, size_t done, size_t total) noexcept
         {
             #if !__msa(production)
-                notify("update", "%s|%d|%llu|%llu", task, id, done, total);
+                if(!report_only) notify("update", "%s|%d|%llu|%llu", task, node::rank, done, total);
             #endif
         }
 
@@ -106,7 +128,7 @@ namespace msa
         inline void finish(const char *task, const std::string& fmtstr, T&&... args) noexcept
         {
             #if !__msa(production)
-                notify("finish", "%s|" + fmtstr, task, args...);
+                if(!report_only) notify("finish", "%s|" + fmtstr, task, args...);
             #endif
         }
     }

@@ -74,15 +74,15 @@ namespace
      * @param table The scoring table to use.
      * @return The score of aligned pairs.
      */
-    static auto align_db(const buffer<pair>& pairs, const std::vector<sequence>& db, const scoring_table& table)
+    static auto align_db(const buffer<pair>& pairs, const database& db, const scoring_table& table)
     -> buffer<score>
     {
         const size_t count = pairs.size();
         auto result = buffer<score>::make(count);
 
         for(size_t i = 0; i < count; ++i) {
-            const sequence& one = db[pairs[i].first];
-            const sequence& two = db[pairs[i].second];
+            const sequence& one = db[pairs[i].first].contents;
+            const sequence& two = db[pairs[i].second].contents;
 
             result[i] = align_pair(
                     one.size() > two.size() ? one : two
@@ -90,7 +90,7 @@ namespace
                 ,   table
                 );
 
-            watchdog::update("pairwise", 0, i, count);
+            watchdog::update("pairwise", i, count);
         }
 
         return result;
@@ -113,15 +113,11 @@ namespace
         auto run(const configuration& config) -> buffer<score> override
         {
             buffer<score> result;
-            std::vector<sequence> db (config.db.count());
-
-            for(const auto& entry : config.db)
-                db.push_back(entry.contents);
 
             const auto table = scoring_table::make(config.table);
-            this->generate(db.size());
+            this->generate(config.db.count());
 
-            onlyslaves result = align_db(this->scatter(this->pairs), db, table);
+            onlyslaves result = align_db(this->scatter(this->pairs), config.db, table);
             return this->gather(result);
         }
     };

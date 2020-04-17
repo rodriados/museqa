@@ -18,29 +18,41 @@ showhelp()
     echo "  -h, --help                  Prints this information."
     echo "  -v, --version               Prints the software version."
     echo "  -m, --multigpu              Try to use multiple devices in a single host."
+    echo "  -r, --report-only           Indicates whether only time reports should be printed"
     echo "  -x, --matrix    <matrix>    The scoring matrix to use for alignment."
     echo "  -f, --hostfile  <hostfile>  Use or generate the given cluster configuration file."
     echo "  -1, --pairwise  <algorithm> The algorithm to use in pairwise module."
     echo "  -2, --phylogeny <algorithm> The algorithm to use in phylogeny module."
 }
 
-# Prints out the software's header information.
-echo "$(style bold "Multiple Sequence Alignment ($version)")"
+# Shows the current software version. This message is always shown during the application's
+# startup, unless it's running on report only mode.
+showversion()
+{
+    echo "$(style bold "Multiple Sequence Alignment ($version)")"
+}
 
 # Initializing command line variables and flags
 hostfile=
 positional=()
+reportonly=false
 
 # Parses the command line options and sets all respective variables. Any positional
 # value unlinked to any option sent will also be captured.
 while [ $# -gt 0 ]; do
     case $1 in
-        -h | --help     ) showhelp;             exit  0 ;;
-        -v | --version  ) echo;                 exit  0 ;;
-        -f | --hostfile ) hostfile="$2";        shift 2 ;;
-        *               ) positional+=("$1");   shift   ;;
+        -h | --help         ) showhelp;             exit  0 ;;
+        -v | --version      ) showversion;          exit  0 ;;
+        -f | --hostfile     ) hostfile="$2";        shift 2 ;;
+        -r | --report-only  ) reportonly=true;      shift   ;;
+        *                   ) positional+=("$1");   shift   ;;
     esac
 done
+
+# Prints out the software's version information.
+if [[ "$reportonly" == false ]]; then
+    showversion
+fi
 
 # Discovers the name of hostfile to be used. If no valid file name is given,
 # the name is defaulted to "hostfile".
@@ -62,8 +74,13 @@ if [[ ! -f "$hostfile" || ! -s "$hostfile" ]]; then
 fi
 
 # Run the main project software
-mpirun -q --hostfile $hostfile bin/msa ${positional[@]} > $pipe &
-src/watchdog.sh $! < $pipe
+if [[ "$reportonly" == false ]]; then
+    mpirun -q --hostfile $hostfile bin/msa ${positional[@]} > $pipe &
+    src/watchdog.sh $! < $pipe
+else
+    mpirun -q --hostfile $hostfile bin/msa --report-only ${positional[@]} > $pipe &
+    src/watchdog.sh $! --report-only < $pipe
+fi
 
 # Waits up for any undesired killed-process report message and throws it away.
 wait $! 2> /dev/null

@@ -384,7 +384,7 @@ namespace
             cuda::memory::copy(result.raw() + done, out.raw(), in.jobs.size());
             done += in.jobs.size();
 
-            watchdog::update("pairwise", node::rank, done, count);
+            watchdog::update("pairwise", done, count);
         }
 
         return result;

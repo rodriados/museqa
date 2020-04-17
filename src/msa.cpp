@@ -27,15 +27,21 @@ using namespace msa;
  * @since 0.1.1
  */
 static const std::vector<cmdline::option> options = {
-    {"multigpu",    {"-m", "--multigpu"},   "Try to use multiple devices in a single host."}
-,   {"matrix",      {"-x", "--matrix"},     "Choose the scoring matrix to use in pairwise.", true}
-,   {"watchdog",    {"-w", "--watchdog"},   "The file to which watchdog notifications are sent to", true}
-,   {"pairwise",    {"-1", "--pairwise"},   "Choose the algorithm to use in pairwise module.", true}
-,   {"phylogeny",   {"-2", "--phylogeny"},  "Choose the algorithm to use in phylogeny module.", true}
+    {"multigpu",    {"-m", "--multigpu"},    "Try to use multiple devices in a single host."}
+,   {"matrix",      {"-x", "--matrix"},      "Choose the scoring matrix to use in pairwise.", true}
+,   {"pairwise",    {"-1", "--pairwise"},    "Choose the algorithm to use in pairwise module.", true}
+,   {"phylogeny",   {"-2", "--phylogeny"},   "Choose the algorithm to use in phylogeny module.", true}
+,   {"report",      {"-r", "--report-only"}, "Indicates whether should only print timing reports"}
 };
 
 namespace msa
 {
+    /**
+     * Keeps the state of whether we should only print time report statuses.
+     * @since 0.1.1
+     */
+    bool watchdog::report_only = false;
+
     namespace step
     {
         /**
@@ -102,32 +108,25 @@ namespace msa
     }
 
     /**
-     * Prints a time report for given task.
-     * @param taskname The name of completed task.
-     * @param seconds The duration in seconds of given task.
-     */
-    static void report(const char *taskname, double seconds) noexcept
-    {
-        #if !__msa(runtime, cython)
-            onlymaster watchdog::info("<bold green>%s</> done in <bold>%lf</> seconds", taskname, seconds);
-        #endif
-    }
-
-    /**
      * Runs the application. This function measures the application's total
      * execution time as well as all its steps.
-     * @see report
+     * @return Informs whether a failure has occurred during execution.
      */
-    static void run() noexcept
-    {
-        report("total", benchmark::run([]() {
+    static bool run() noexcept
+    try {
+        watchdog::report("total", benchmark::run([]() {
             database db;
             pairwise::manager pw;
 
-            report("loading", benchmark::run(db, step::load));
-            report("pairwise", benchmark::run(pw, step::pairwise, db));
-            //report("phylogeny", benchmark::run(pg, step::phylogeny, pw));
+            watchdog::report("loading", benchmark::run(db, step::load));
+            watchdog::report("pairwise", benchmark::run(pw, step::pairwise, db));
+            //watchdog::report("phylogeny", benchmark::run(pg, step::phylogeny, pw));
         }));
+
+        return 0;
+    } catch(const exception& e) {
+        watchdog::error(e.what());
+        return 1;
     }
 };
 
@@ -139,32 +138,32 @@ namespace msa
  */
 int main(int argc, char **argv)
 {
+    int code = 0;
+
     mpi::init(argc, argv);
 
-    cmdline::init(options);
-    cmdline::parse(argc, argv);
-
-    bool failure = false;
-
     try {
+        cmdline::init(options);
+        cmdline::parse(argc, argv);
+
+        watchdog::report_only = cmdline::has("report");
+
         enforce(cmdline::count(), "no input files to align");
         enforce(node::count >= 2, "at least one slave node is needed");
 
-        onlyslaves {
-            if(!cuda::device::count())
-                throw exception("no compatible device has been found");
+        onlyslaves if(!cuda::device::count())
+            throw exception("no compatible device has been found");
 
-            if(cmdline::has("multigpu"))
-                cuda::device::select(node::rank - 1);
-        }
+        onlyslaves if(cmdline::has("multigpu"))
+            cuda::device::select(node::rank - 1);
 
-        msa::run();
-    } catch(const exception& except) {
-        watchdog::error(except.what());
-        failure = true;
+        code = msa::run();
+    } catch(const exception& e) {
+        watchdog::error(e.what());
+        code = 1;
     }
 
     mpi::finalize();
 
-    return failure;
+    return code;
 }

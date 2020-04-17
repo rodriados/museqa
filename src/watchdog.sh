@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Multiple Sequence Alignment watchdog execution script.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
-# @copyright 2018-2019 Rodrigo Siqueira
+# @copyright 2018-2020 Rodrigo Siqueira
 
 # This script watches over the output of a process and exhibits the process's progress.
 # To interact with the watchdog, a process must use the format given in this file,
@@ -15,8 +15,17 @@ source src/utils.sh
 # @param $1 The PID of process to watch.
 watchdog()
 {
-    # Catch the PID of process to watch.
-    local pid=$1
+    local pid=0
+    local report=false
+
+    # Parses the command line options and sets all respective variables. Any positional
+    # values not linked to any option sent will be treated as PID.
+    while [ $# -gt 0 ]; do
+        case $1 in
+            --report-only   ) report=true;      shift ;;
+            *               ) pid="$1";         shift ;;
+        esac
+    done
 
     # Kills the target process with given status number.
     # @param $1 The status number to the quit the script with.
@@ -31,22 +40,33 @@ watchdog()
     # @param $1 The info message to be printed.
     info()
     {
-        printf "\r%27s · %s\n" "$(style clean bold blue info)" "$(markdown "$1")"
+        if [[ "$report" == "false" ]]; then
+            printf "\r%27s · %s\n" "$(style clean bold blue info)" "$(markdown "$1")"
+        fi
     }
 
     # Formats and prints an error message to the standard output.
     # @param $1 The error message to be printed.
     error()
     {
-        printf "\r%27s · %s\n" "$(style clean bold red error)" "$(markdown "$1")"
-        prockill 1
+        if [[ "$report" == "false" ]]; then
+            printf "\r%27s · %s\n" "$(style clean bold red error)" "$(markdown "$1")"
+            prockill 1
+        else
+            printf "error: %s\n" "$1"
+            prockill 1
+        fi
     }
 
     # Formats and prints a warning message to the standard output.
     # @param $1 The warning message to be printed.
     warning()
     {
-        printf "\r%27s · %s\n" "$(style clean bold yellow warning)" "$(markdown "$1")"
+        if [[ "$report" == "false" ]]; then
+            printf "\r%27s · %s\n" "$(style clean bold yellow warning)" "$(markdown "$1")"
+        else
+            printf "warning: %s\n" "$1"
+        fi
     }
 
     # Aborts the script execution and imediately halts the watched process execution.
@@ -103,7 +123,7 @@ watchdog()
     {
         # We check whether the operation corresponds to the currently watched
         # process, just to be sure no parallel creepyness is going on.
-        if [ "$1" == "$process_name" ]; then
+        if [[ "$1" == "$process_name" && "$report" == "false" ]]; then
             process_done[$2]=$3
             process_total[$2]=$4
             recalculate
@@ -117,11 +137,24 @@ watchdog()
     {
         # We check whether the operation corresponds to the currently watched
         # process, just to be sure no parallel creepyness is going on.
-        if [ "$1" == "$process_name" ]; then
-            printf "\r%27s · %12s · %s\n" "$(style clean bold green "$process_name")"   \
-                "$(style bold "100%%")"                                                 \
+        if [[ "$1" == "$process_name" && "$report" == "false" ]]; then
+            printf "\r%27s · %12s · %s\n" "$(style clean bold green "$process_name")"       \
+                "$(style bold "100%%")"                                                     \
                 "$(markdown "$2")"
             process_active=0
+        fi
+    }
+
+    # Reports the time spent by a step of the watched process to process.
+    # @param $1 The process name to report execution time.
+    # @param $2 The time spent by the process executing.
+    report()
+    {
+        if [[ "$report" == "false" ]]; then
+            printf "\r%27s · completed in %s seconds\n" "$(style clean bold green "$1")"    \
+                "$(style bold "$2")"
+        else
+            printf "report: %s: $2 seconds\n" "$1"
         fi
     }
 
@@ -140,7 +173,7 @@ watchdog()
         local contents="${unparsed_input}${1}"
 
         # Check whether the current input is a watchdog line and captures its info.
-        if [[ $contents =~ ^(.*)\[watchdog\|(info|error|warning|init|update|finish)\|(.*)\]$ ]]; then
+        if [[ $contents =~ ^(.*)\[watchdog\|(info|error|warning|init|update|finish|report)\|(.*)\]$ ]]; then
             # Save the unparsed contents so it may be useful for the next line.
             unparsed_input="${BASH_REMATCH[1]}"
 
@@ -171,10 +204,10 @@ watchdog()
     {
         # Checks whether there is any active process at the moment.
         if [ $process_active -eq 1 ]; then
-            printf "\r%27s · %12s %s %s"                            \
-                "$(style clean bold green "$process_name")"         \
-                "$(style bold "$process_percent%%")"                \
-                "$([ $blink_state -eq 0 ] && echo "·" || echo " ")" \
+            printf "\r%27s · %12s %s %s"                                                    \
+                "$(style clean bold green "$process_name")"                                 \
+                "$(style bold "$process_percent%%")"                                        \
+                "$([ $blink_state -eq 0 ] && echo "·" || echo " ")"                         \
                 "$process_message"
             blink_state=$((blink_state > 0 ? 0 : 1))
         fi
@@ -225,5 +258,5 @@ wnotify()
 # not execute any action as this might be undesirable.
 if [ "$0" = "$BASH_SOURCE" ]; then
     # Execute the watchdog process on the given PID.
-    watchdog $1 <&0
+    watchdog $@ <&0
 fi
