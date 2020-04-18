@@ -20,14 +20,14 @@ for fname in os.listdir(path):
 from .database import Database
 from .sequence import Sequence
 from .pairwise import Pairwise
-from . import parser
+from .parser import parse as parser
 
 # Parses a list of files and produces a list of database entries.
 # @param list filenames The list of files to parse.
 # @param str ext Parse all files using this parser.
 # @return list List containing all entries parsed from files.
 def parse(*filenames, **kwargs):
-    return parser.parse(list(filenames), **kwargs)
+    return parser(list(filenames), **kwargs)
 
 del fname
 del path

@@ -17,7 +17,8 @@ alphabet = {
 # @param length The length of sequence to generate.
 # @return The generated sequence of given length.
 def generate(alphabet, length):
-    return "".join([random.choice(alphabet) for i in range(length)])
+    letters = [random.choice(alphabet) for _ in range(length)]
+    return str.join("", letters)
 
 # Runs the generator with parameters given from command line.
 # @param $1 The alphabet to use in sequences.
@@ -31,13 +32,15 @@ if __name__ == '__main__':
     # @param length The length of each sequence.
     # @return The name of file to create.
     def genfilename(count, length):
-        return "".join(["generated", str(count) , "x", str(length), "l.fasta"])
+        return "generated%dxL%d.fasta" % (count, length)
 
-    # Wraps a long string into multiple lines of given length.
-    # @param string The string to be wrapped.
-    # @param linelen The maximum line length.
-    def wrap(string, linelen):
-        return [string[i : i + linelen] + "\n" for i in range(0, len(string), linelen)]
+    # Wraps a long sequence into multiple lines of given length.
+    # @param sequence The sequence to be wrapped.
+    # @param length The maximum line length.
+    def wrap(sequence, length):
+        return ["%s\n" % sequence[i:i + length] for i in range(0, len(sequence), length)]
+
+    assert len(argv) >= 4, "please inform alphabet, number and length of sequences"
 
     chars = alphabet[argv[1]]
     count = int(argv[2])
@@ -45,6 +48,6 @@ if __name__ == '__main__':
 
     with open(genfilename(count, length), "w") as file:
         for i in range(count):
-            file.write(">" + str(i) + "\n")
+            file.write(">anonymous#%d\n" % i)
             file.writelines(wrap(generate(chars, length), 70))
             file.write("\n")
