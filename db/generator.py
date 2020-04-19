@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # Multiple Sequence Alignment random sequence database generator file.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
-# @copyright 2019 Rodrigo Siqueira
+# @copyright 2019-2020 Rodrigo Siqueira
 import random
 
 # The list of available alphabets for sequence generation.
@@ -40,7 +40,9 @@ if __name__ == '__main__':
     def wrap(sequence, length):
         return ["%s\n" % sequence[i:i + length] for i in range(0, len(sequence), length)]
 
-    assert len(argv) >= 4, "please inform alphabet, number and length of sequences"
+    if len(argv) is not 4:
+        print("Usage: python3 generator.py alphabet nsequences length")
+        exit(1)
 
     chars = alphabet[argv[1]]
     count = int(argv[2])

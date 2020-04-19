@@ -12,7 +12,10 @@ test/msa
 *.dnd
 todo.*
 
+*.fa
+*.fasta
+*.zip
+
 run
 test.cpp
-test.fasta
 .hostfile
