@@ -275,6 +275,30 @@ namespace msa
     };
 
     /**
+     * Initializes a new scoring table by copying the contents of an already instantiated
+     * object into the giving pointer. Idealy, copies table to shared memory.
+     * @param ptr The target pointer to copy the table to.
+     * @param other The table to have its contents copied.
+     */
+    __device__ pairwise::scoring_table::scoring_table(
+            const pairwise::scoring_table::pointer_type& ptr
+        ,   const pairwise::scoring_table& other
+        ) noexcept
+    :   scoring_table {ptr, other.penalty()}
+    {
+        uint16_t x, y;
+        constexpr size_t total = (25 * 25);
+
+        for(uint16_t i = threadIdx.x; i < total; i += blockDim.x) {
+            asm volatile ("div.u16 %0, %1, %2;" : "=h"(x) : "h"(i), "h"(uint16_t(25)));
+            asm volatile ("rem.u16 %0, %1, %2;" : "=h"(y) : "h"(i), "h"(uint16_t(25)));
+            (*m_contents)[x][y] = other[{x, y}];
+        }
+
+        __syncthreads();
+    }
+
+    /**
      * Transfers the selected scoring table into device memory.
      * @return The new scoring table instance.
      */

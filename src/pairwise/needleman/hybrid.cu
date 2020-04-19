@@ -13,6 +13,7 @@
 #include <utils.hpp>
 #include <buffer.hpp>
 #include <encoder.hpp>
+#include <pointer.hpp>
 #include <database.hpp>
 #include <sequence.hpp>
 #include <exception.hpp>
@@ -71,7 +72,7 @@ namespace
      */
     __device__ void align_slice(
             int offset
-        ,   score *column
+        ,   score *__restrict__ column
         ,   const sequence_view& one
         ,   const encoder::unit *two
         ,   const scoring_table& table
@@ -164,7 +165,7 @@ namespace
             const sequence_view& one
         ,   const sequence_view& two
         ,   const scoring_table& table
-        ,   score *column
+        ,   score *__restrict__ column
         )
     {
         __shared__ encoder::unit decoded[batch_size];
@@ -220,6 +221,13 @@ namespace
     __launch_bounds__(block_size)
     __global__ void align_kernel(input in, buffer<score> out, const scoring_table table)
     {
+        __shared__ scoring_table::raw_type mem_table;
+        __shared__ scoring_table shared_table;
+
+        // Let's use our special scoring table constructor, available only in device
+        // code, to copy the scoring table into shared memory.
+        new (&shared_table) scoring_table {pointer<decltype(mem_table)>::weak(&mem_table), table};
+
         if(blockIdx.x < in.jobs.size()) {
             const sequence_view& one = in.db[in.jobs[blockIdx.x].payload.id[0]];
             const sequence_view& two = in.db[in.jobs[blockIdx.x].payload.id[1]];
@@ -230,7 +238,7 @@ namespace
             auto result = align_pair(
                     one.size() > two.size() ? one : two
                 ,   one.size() > two.size() ? two : one
-                ,   table
+                ,   shared_table
                 ,   &in.cache[in.jobs[blockIdx.x].cache_offset]
                 );
 

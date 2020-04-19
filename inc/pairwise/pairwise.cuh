@@ -121,13 +121,13 @@ namespace msa
         class scoring_table
         {
             public:
-                using element_type = score;             /// The table content's type.
-                using raw_type = element_type[25][25];  /// The raw table type.
-                using pointer_type = pointer<raw_type>; /// The table's pointer type.
+                using element_type = score;                 /// The table content's type.
+                using raw_type = element_type[25][25];      /// The raw table type.
+                using pointer_type = pointer<raw_type>;     /// The table's pointer type.
 
             protected:
-                pointer_type m_contents;                 /// The table's contents.
-                element_type m_penalty;                  /// The table's penalty value.
+                pointer_type m_contents;                    /// The table's contents.
+                element_type m_penalty;                     /// The table's penalty value.
 
             public:
                 inline scoring_table() noexcept = default;
@@ -139,10 +139,15 @@ namespace msa
                  * @param ptr The scoring table's pointer.
                  * @param penalty The penalty applied by the scoring table.
                  */
-                inline scoring_table(const pointer_type& ptr, const element_type& penalty) noexcept
+                __host__ __device__ inline scoring_table(
+                        const pointer_type& ptr
+                    ,   const element_type& penalty
+                    ) noexcept
                 :   m_contents {ptr}
                 ,   m_penalty {penalty}
                 {}
+
+                __device__ scoring_table(const pointer_type&, const scoring_table&) noexcept;
 
                 inline scoring_table& operator=(const scoring_table&) = default;
                 inline scoring_table& operator=(scoring_table&&) = default;
