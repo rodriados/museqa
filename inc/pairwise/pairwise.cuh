@@ -207,7 +207,7 @@ namespace msa
             virtual auto generate(size_t) -> buffer<pair>&;
             virtual auto run(const context&) -> buffer<score> = 0;
 
-            static auto retrieve(const std::string&) -> functor<algorithm *()>;
+            static auto retrieve(const std::string&) -> const functor<algorithm *()>&;
             static auto list() noexcept -> const std::vector<std::string>&;
         };
 

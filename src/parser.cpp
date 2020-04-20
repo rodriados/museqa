@@ -3,13 +3,13 @@
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018-2019 Rodrigo Siqueira
  */
-#include <map>
 #include <string>
 #include <vector>
 
 #include <parser.hpp>
 #include <database.hpp>
 #include <exception.hpp>
+#include <dispatcher.hpp>
 
 #include <parser/fasta.hpp>
 
@@ -19,7 +19,7 @@ namespace msa
      * Keeps the list of available parsers and their respective
      * file extensions correspondence.
      */
-    static const std::map<std::string, parser::functor> dispatcher = {
+    static const dispatcher<parser::functor> parser_dispatcher = {
         {"fa", parser::fasta}
     ,   {"fasta", parser::fasta}
     };
@@ -31,13 +31,11 @@ namespace msa
      * @return All parsed database entries from file.
      */
     database parser::parse(const std::string& filename, const std::string& ext)
-    {
+    try {
         const std::string extension = ext.size() ? ext : filename.substr(filename.find_last_of('.') + 1);
-        const auto& pair = dispatcher.find(extension);
-
-        enforce(pair != dispatcher.end(), "unknown parser for extension '%s'", extension);
-
-        return pair->second(filename);
+        return (parser_dispatcher[extension])(filename);
+    } catch(const exception& e) {
+        throw exception("no parser for unknown file extension");
     }
 
     /**

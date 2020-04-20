@@ -6,7 +6,6 @@
 #pragma once
 
 #include <string>
-#include <vector>
 
 #include <parser.hpp>
 #include <database.hpp>

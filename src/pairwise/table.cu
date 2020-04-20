@@ -3,7 +3,6 @@
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018-2019 Rodrigo Siqueira
  */
-#include <map>
 #include <string>
 #include <cstdint>
 
@@ -11,6 +10,7 @@
 #include <cuda.cuh>
 #include <pointer.hpp>
 #include <exception.hpp>
+#include <dispatcher.hpp>
 
 #include <pairwise/pairwise.cuh>
 
@@ -237,20 +237,6 @@ namespace msa
     };
 
     /**
-     * The list of all available scoring tables' names.
-     * @since 0.1.1
-     */
-    static const std::vector<std::string> table_name = {
-        "default"
-    ,   "blosum62"
-    ,   "blosum45"
-    ,   "blosum50"
-    ,   "blosum80"
-    ,   "blosum90"
-    ,   "pam250"
-    };
-
-    /**
      * Represents a local and simple scoring table instance. This struct is used
      * to link the static tables to their respective penalty values.
      * @since 0.1.1
@@ -264,14 +250,14 @@ namespace msa
      * Maps the table's string names to their respective info. This will be needed
      * when translating a table's names from a string to its actual contents.
      */
-    static const std::map<std::string, const local_table> dispatcher = {
-        {table_name[0], {&table_data[0], 1}}
-    ,   {table_name[1], {&table_data[1], 4}}
-    ,   {table_name[2], {&table_data[2], 5}}
-    ,   {table_name[3], {&table_data[3], 5}}
-    ,   {table_name[4], {&table_data[4], 6}}
-    ,   {table_name[5], {&table_data[5], 6}}
-    ,   {table_name[6], {&table_data[6], 8}}
+    static const dispatcher<const local_table> table_dispatcher = {
+        {"default",  {&table_data[0], 1}}
+    ,   {"blosum62", {&table_data[1], 4}}
+    ,   {"blosum45", {&table_data[2], 5}}
+    ,   {"blosum50", {&table_data[3], 5}}
+    ,   {"blosum80", {&table_data[4], 6}}
+    ,   {"blosum90", {&table_data[5], 6}}
+    ,   {"pam250",   {&table_data[6], 8}}
     };
 
     /**
@@ -287,7 +273,7 @@ namespace msa
     :   scoring_table {ptr, other.penalty()}
     {
         uint16_t x, y;
-        constexpr size_t total = (25 * 25);
+        constexpr uint16_t total = 25 * 25;
 
         for(uint16_t i = threadIdx.x; i < total; i += blockDim.x) {
             asm volatile ("div.u16 %0, %1, %2;" : "=h"(x) : "h"(i), "h"(uint16_t(25)));
@@ -311,26 +297,16 @@ namespace msa
     }
 
     /**
-     * Gets the description of a scoring table selected by name.
-     * @param name The name of selected scoring table.
-     * @return The local description of requested table.
-     */
-    static const local_table& retrieve(const std::string& name)
-    {
-        const auto& pair = dispatcher.find(name);
-        enforce(pair != dispatcher.end(), "unknown pairwise scoring table '%s'", name);
-        return pair->second;
-    }
-
-    /**
      * Selects a scoring table from its name.
      * @param name The name of selected scoring table.
      * @return The pointer to selected table.
      */
     auto pairwise::scoring_table::make(const std::string& name) -> pairwise::scoring_table
-    {
-        const local_table& selected = retrieve(name);
+    try {
+        const local_table& selected = table_dispatcher[name];
         return {pointer<table_type>::weak(selected.data), selected.penalty};
+    } catch(const exception& e) {
+        throw exception("unknown pairwise scoring table '%s'", name);
     }
 
     /**
@@ -339,6 +315,6 @@ namespace msa
      */
     auto pairwise::scoring_table::list() noexcept -> const std::vector<std::string>&
     {
-        return table_name;
+        return table_dispatcher.list();
     }
 }
