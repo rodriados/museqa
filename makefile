@@ -62,8 +62,7 @@ OBJHIERARCHY = $(SRCHIERARCHY:$(SRCDIR)/%=$(OBJDIR)/%)
 
 all: debug
 
-install:
-	@mkdir -p $(OBJHIERARCHY)
+install: $(OBJHIERARCHY)
 	@chmod +x src/hostfinder.sh
 	@chmod +x src/watchdog.sh
 	@chmod +x msarun
@@ -80,12 +79,11 @@ testing: override GCPP = $(PYPP)
 testing: override DEBUG = -g -DTESTING
 testing: override NVCCFLAGS = -std=$(STDCU) -I$(INCDIR) -g -arch $(NVARCH) -lcuda -lcudart -w       \
         -D_MWAITXINTRIN_H_INCLUDED $(DEBUG) --compiler-options -fPIC
-testing: $(TESTFILES) $(TESTDIR)/$(NAME)
+testing: $(TESTFILES)
 
 clean:
 	@rm -rf $(OBJDIR)
 	@rm -rf $(SRCDIR)/*~ *~
-	@rm -rf $(TESTDIR)/$(NAME)
 	@rm -rf $(TGTDIR)/*.so $(TGTDIR)/$(NAME)
 
 # Creates dependency on header files. This is valuable so that whenever a header
@@ -93,6 +91,11 @@ clean:
 ifneq ($(wildcard $(OBJDIR)/.),)
 -include testing.d $(shell find $(OBJDIR) -name '*.d')
 endif
+
+# Creates the hierarchy of folders needed to compile the project. This rule should
+# be depended upon by every single build.
+$(OBJHIERARCHY):
+	@mkdir -p $@
 
 # The step rules to generate the main production executable. These rules can be
 # parallelized to improve compiling time.
@@ -134,9 +137,6 @@ $(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/needleman/hybrid.pya.a
 $(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/needleman/sequential.pya.a
 $(OBJDIR)/libmodules.a: $(STATICFILES)
 	ar rcs $@ $^
-
-$(TESTDIR)/$(NAME):
-	@ln -r -s $(TGTDIR) $@
 
 .PHONY: all install production debug testing clean
 
