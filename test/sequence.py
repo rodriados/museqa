@@ -88,7 +88,7 @@ class TestSequence(unittest.TestCase):
     testCanInstantiate = instantiate
     testCanAccessItem = access
     testKnowsLength = length
-    testIndexError = indexError
+    testThrowIndexError = indexError
 
 if __name__ == '__main__':
     unittest.main()
