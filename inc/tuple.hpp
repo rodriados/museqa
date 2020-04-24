@@ -586,7 +586,7 @@ namespace msa
              */
             template <typename ...T>
             __host__ __device__ inline constexpr auto concat(const msa::tuple<T...>& zero) noexcept
-            -> decltype(zero)
+            -> msa::tuple<T...>
             {
                 return zero;
             }

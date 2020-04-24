@@ -1,5 +1,5 @@
 /**
- * Multiple Sequence Alignment parallel needleman distribution file.
+ * Multiple Sequence Alignment parallel needleman communication file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018-2020 Rodrigo Siqueira
  */
@@ -35,6 +35,8 @@ namespace msa
                 const ptrdiff_t displ = quotient * rank + utils::min(rank, remainder);
 
                 return slice_buffer<pair> {pairs, displ, count};
+            #else
+                return pairs;
             #endif
         }
 

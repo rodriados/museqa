@@ -6,6 +6,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include <cstdint>
 
 #include <cuda.cuh>
@@ -14,7 +15,6 @@
 #include <pointer.hpp>
 #include <database.hpp>
 #include <cartesian.hpp>
-#include <exception.hpp>
 
 namespace msa
 {
@@ -60,10 +60,10 @@ namespace msa
         class manager final : public buffer<score>
         {
             public:
-                using element_type = score;                 /// The object's element type.
+                using element_type = score;                 /// The manager's element type.
 
             protected:
-                using underlying_buffer = buffer<score>;    /// The object's underlying buffer.
+                using underlying_buffer = buffer<score>;    /// The manager's underlying buffer.
 
             protected:
                 size_t m_count;                              /// The total number of aligned sequences.
@@ -229,7 +229,7 @@ namespace msa
                 const msa::database& db
             ,   const std::string& algorithm = "default"
             ,   const std::string& table = "default"
-            )
+            ) noexcept
         {
             return {db, algorithm, table};
         }

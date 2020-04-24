@@ -1,52 +1,55 @@
 /**
  * Multiple Sequence Alignment neighbor-joining header file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2019 Rodrigo Siqueira
+ * @copyright 2019-2020 Rodrigo Siqueira
  */
 #pragma once
-
-#ifndef PG_NJOINING_CUH_INCLUDED
-#define PG_NJOINING_CUH_INCLUDED
 
 #include <limits>
 #include <vector>
 
-#include <phylogeny/tree.cuh>
+#include <pairwise.cuh>
+#include <reflection.hpp>
+
+#include <phylogeny/tree.cuh> 
 #include <phylogeny/phylogeny.cuh>
 
-namespace phylogeny
+namespace msa
 {
-    namespace njoining
+    namespace phylogeny
     {
-        /**
-         * Represents a candidate pair of OTUs to join.
-         * @since 0.1.1
-         */
-        struct candidate
+        namespace njoining
         {
-            oturef otu[2] = {undefined, undefined};             /// The candidate's OTUs to join.
-            score distance = std::numeric_limits<score>::max(); /// The candidate's score.
+            /**
+             * Represents a joinable OTU pair candidate.
+             * @since 0.1.1
+             */
+            struct joinpair : public reflector
+            {
+                oturef ref[2] = {undefined, undefined};             /// The OTU pair references.
+                score distance = std::numeric_limits<score>::max(); /// The distance between the OTU pair.
+                using reflex = decltype(reflect(ref, distance));
+            };
+
+            /**
+             * Represents a general neighbor-joining algorithm for solving the step
+             * of building a phylogenetic tree.
+             * @since 0.1.1
+             */
+            struct algorithm : public phylogeny::algorithm
+            {
+                std::vector<otu> rootless;      /// The list of rootless nodes in tree.
+
+                virtual auto join(const joinpair&) -> void = 0;
+                virtual auto run(const context&) -> tree = 0;
+
+                virtual auto reduce(joinpair&) -> joinpair;
+            };
+
+            /*
+             * The list of all available needleman algorithm implementations.
+             */
+            extern phylogeny::algorithm *sequential();
         }
-
-        /**
-         * Represents a general neighbor-joining algorithm.
-         * @since 0.1.1
-         */
-        struct algorithm : public phylogeny::algorithm
-        {
-            std::vector<clade> clades;                      /// The list of tree's clades.
-
-            virtual auto leaves(size_t) -> std::vector<clade>&;
-            virtual auto reduce(const candidate&) const -> candidate;
-            virtual auto run(const configuration&) -> tree = 0;
-        };
-
-        /*
-         * The list of available neighbor-joining algorithm implementations.
-         */
-        //extern phylogeny::algorithm *hybrid();
-        extern phylogeny::algorithm *sequential();
     }
 }
-
-#endif
