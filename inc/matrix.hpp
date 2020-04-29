@@ -74,7 +74,7 @@ namespace msa
             inline matrix& operator=(matrix&&) = default;
 
             /**
-             * Gives access to a element in the matrix.
+             * Gives access to an element in the matrix.
              * @param offset The offset's values.
              * @return The requested element.
              */
