@@ -72,7 +72,7 @@ if [[ ! -f "$hostfile" || ! -s "$hostfile" ]]; then
     # output to a watchdog process. After the operation is over, the pipe will be
     # automatically deleted.
     src/hostfinder.sh $hostfile > $pipe &
-    src/watchdog.sh $! < $pipe
+    src/watchdog.sh $reportonly $! < $pipe
 fi
 
 # Run the main project software. If running in debug mode, an instance of gdb will

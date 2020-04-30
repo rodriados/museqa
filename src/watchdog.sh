@@ -106,12 +106,14 @@ watchdog()
     # @param $2 The description of process to watch.
     init()
     {
-        process_name="$1"
-        process_message="$(markdown "$2")"
-        process_active=1
-        process_total=()
-        process_done=()
-        recalculate
+        if [[ -z "$reportonly" ]]; then
+            process_name="$1"
+            process_message="$(markdown "$2")"
+            process_active=1
+            process_total=()
+            process_done=()
+            recalculate
+        fi
     }
 
     # Updates the progress of the process being currently watched.
