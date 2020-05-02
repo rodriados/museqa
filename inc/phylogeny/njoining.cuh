@@ -11,7 +11,6 @@
 #include <pairwise.cuh>
 #include <reflection.hpp>
 
-#include <phylogeny/tree.cuh> 
 #include <phylogeny/phylogeny.cuh>
 
 namespace msa
@@ -38,12 +37,10 @@ namespace msa
              */
             struct algorithm : public phylogeny::algorithm
             {
-                std::vector<otu> rootless;      /// The list of rootless nodes in tree.
-
-                virtual auto join(const joinpair&) -> void = 0;
-                virtual auto run(const context&) -> tree = 0;
+                tree phylotree;
 
                 virtual auto reduce(joinpair&) -> joinpair;
+                virtual auto run(const context&) -> tree = 0;
             };
 
             /*

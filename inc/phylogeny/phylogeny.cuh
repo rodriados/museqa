@@ -8,38 +8,63 @@
 #include <string>
 #include <vector>
 #include <cstdint>
+#include <utility>
 
-#include <cuda.cuh>
 #include <utils.hpp>
 #include <buffer.hpp>
-#include <matrix.hpp>
-#include <pairwise.cuh>
+#include <dendogram.hpp>
+#include <symmatrix.hpp>
 
-#include <phylogeny/tree.cuh>
+#include <cuda.cuh>
+#include <pairwise.cuh>
 
 namespace msa
 {
     namespace phylogeny
     {
         /**
-         * Definition of an operational taxonomic unit (OTU). This representation
-         * effectively transforms an OTU into a phylogenetic tree node.
+         * Definition of the reference for a operational taxonomic unit (OTU). As
+         * sequences themselves are also considered OTUs, and thus independent nodes
+         * in our phylogenetic tree, we must guarantee that our OTU references are
+         * able to address at least all sequence references.
          * @since 0.1.1
          */
-        using otu = detail::phylogeny::node;
+        using oturef = typename std::conditional<
+                (sizeof(uint_least32_t) < sizeof(seqref))
+            ,   typename std::make_unsigned<seqref>::type
+            ,   uint_least32_t
+            >::type;
 
         /**
-         * Represents the reference for an OTU.
+         * As the only relevant aspect of a phylogenetic tree during its construction
+         * is its topology, we can assume an OTU's relationship to its neighbors
+         * is its only relevant piece of information. Thus, at this stage, we consider
+         * OTUs are simply references in our OTU addressing space.
          * @since 0.1.1
          */
-        using oturef = detail::phylogeny::noderef;
+        using otu = oturef;
 
         /**
-         * Definition of an undefined OTU reference. This reference represents an
-         * unknown or undefined OTU.
+         * Represents a phylogenetic tree. Our phylogenetic tree will be treated
+         * as a dendogram, and each node in this dendogram is effectively an OTU.
+         * The nodes in this tree are stored contiguously in memory, as the number
+         * of total nodes is known at instantiation-time. Rather unconventionally,
+         * though, we do not hold any physical memory pointers in our tree's nodes,
+         * so that we don't need to worry about them if we ever need to transfer
+         * the tree around the cluster to different machines. Furthermore, all of
+         * the tree's leaves occupy the lowest references on its addressing space.
          * @since 0.1.1
          */
-        enum : oturef { undefined = detail::phylogeny::undefined };
+        using tree = dendogram<otu, score, oturef>;
+
+        /**
+         * Definition of an undefined OTU reference. It is very unlikely that you'll
+         * ever need to fill up our whole pseudo-addressing-space with distinct
+         * OTUs references. For that reason, we use the highest available reference
+         * to represent an unset or undefined node.
+         * @since 0.1.1
+         */
+        enum : oturef { undefined = tree::undefined };
 
         /**
          * Manages and encapsulates all configurable aspects of the phylogeny module.
@@ -79,9 +104,6 @@ namespace msa
                 using underlying_type::operator=;
 
                 static auto run(const configuration&) -> manager;
-
-            private:
-                using underlying_type::connect;
         };
 
         /**
@@ -90,7 +112,7 @@ namespace msa
          */
         struct context
         {
-            const pairwise::manager& dmatrix;
+            const pairwise::manager& matrix;
             const size_t nsequences;
         };
 
@@ -100,7 +122,7 @@ namespace msa
          */
         struct algorithm
         {
-            matrix<score> dmatrix;          /// The nodes' distance matrix.
+            symmatrix<score> distances;          /// The nodes' distance matrix.
 
             inline algorithm() noexcept = default;
             inline algorithm(const algorithm&) noexcept = default;
@@ -111,7 +133,7 @@ namespace msa
             inline algorithm& operator=(const algorithm&) = default;
             inline algorithm& operator=(algorithm&&) = default;
 
-            virtual auto inflate(const pairwise::manager&) -> matrix<score>&;
+            virtual auto inflate(const pairwise::manager&) -> symmatrix<score>&;
             virtual auto run(const context&) -> tree = 0;
 
             static auto retrieve(const std::string&) -> const functor<algorithm *()>&;

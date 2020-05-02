@@ -7,8 +7,8 @@
 #include <vector>
 
 #include <msa.hpp>
-#include <matrix.hpp>
 #include <exception.hpp>
+#include <symmatrix.hpp>
 #include <dispatcher.hpp>
 
 #include <phylogeny/phylogeny.cuh>
@@ -55,16 +55,16 @@ namespace msa
          * @param origin The pairwise module's final result.
          * @return The inflated distance matrix.
          */
-        auto algorithm::inflate(const pairwise::manager& origin) -> matrix<score>&
+        auto algorithm::inflate(const pairwise::manager& origin) -> symmatrix<score>&
         {
             const auto nsequences = origin.count();
-            auto result = matrix<score>::make({nsequences, nsequences});
+            auto result = symmatrix<score>::make(nsequences);
 
             for(size_t i = 0; i < nsequences; ++i)
                 for(size_t j = i; j < nsequences; ++j)
-                    result[{i, j}] = result[{j, i}] = origin[{i, j}];
+                    result[{i, j}] = origin[{i, j}];
 
-            return dmatrix = result;
+            return distances = result;
         }
 
         /**
