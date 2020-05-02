@@ -42,9 +42,13 @@ namespace msa
          * In practice, this value will default to zero.
          * @since 0.1.1
          */
-        static constexpr reference_type undefined = {};
+        static constexpr reference_type undefined = (reference_type) typename std::conditional<
+                !std::is_pointer<reference_type>::value
+            ,   std::integral_constant<int8_t, ~0x00>
+            ,   nullptr_t
+            >::type {};
 
-        element_type self;                                  /// The node's self representation or contents.
+        element_type contents;                              /// The node's self representation or contents.
         reference_type parent = undefined;                  /// The node's hierarchical parent reference.
         reference_type child[2] = {undefined, undefined};   /// The node's hierarchical children references.
     };
