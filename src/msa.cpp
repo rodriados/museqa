@@ -17,7 +17,7 @@
 #include <exception.hpp>
 
 #include <pairwise.cuh>
-//#include <phylogeny.cuh>
+#include <phylogeny.cuh>
 
 using namespace msa;
 
@@ -101,13 +101,13 @@ namespace msa
          * @param pw The pairwise step instance.
          * @return The phylogeny module instance.
          */
-        /*static auto phylogeny(const msa::pairwise::manager& pw) -> msa::phylogeny::manager
+        static auto phylogeny(const msa::pairwise::manager& pw) -> msa::phylogeny::manager
         {
             return msa::phylogeny::manager::run({
                     pw
                 ,   cmdline::get("phylogeny", std::string ("default"))
                 });
-        }*/
+        }
     }
 
     /**
@@ -120,14 +120,15 @@ namespace msa
         watchdog::report("total", benchmark::run([]() {
             database db;
             pairwise::manager pw;
+            phylogeny::manager pg;
 
             pairwise::scoring_table::make(cmdline::get("matrix", std::string ("default")));
             pairwise::algorithm::retrieve(cmdline::get("pairwise", std::string ("default")));
-            //phylogeny::algorithm::retrieve(cmdline::get("phylogeny", std::string ("default")));
+            phylogeny::algorithm::retrieve(cmdline::get("phylogeny", std::string ("default")));
 
             watchdog::report("loading", benchmark::run(db, step::load));
             watchdog::report("pairwise", benchmark::run(pw, step::pairwise, db));
-            //watchdog::report("phylogeny", benchmark::run(pg, step::phylogeny, pw));
+            watchdog::report("phylogeny", benchmark::run(pg, step::phylogeny, pw));
         }));
 
         return 0;

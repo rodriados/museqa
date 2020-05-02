@@ -1,5 +1,5 @@
 /**
- * Multiple Sequence Alignment pairwise module file.
+ * Multiple Sequence Alignment pairwise module entry file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018-2020 Rodrigo Siqueira
  */
@@ -94,7 +94,6 @@ namespace msa
             onlymaster watchdog::finish("pairwise", "aligned all sequence pairs");
 
             delete worker;
-
             return result;
         }
     }

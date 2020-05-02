@@ -173,5 +173,31 @@ namespace msa
             return this->dim[0];
         }
     };
+
+    template <typename T>
+    struct cartesian<2, T> : public detail::cartesian::base<2, T>
+    {
+        using element_type = T;
+        using underlying_type = detail::cartesian::base<2, T>;
+
+        using underlying_type::base;
+        using underlying_type::operator=;
+
+        /**
+         * As 2-dimensional structures are overused throughout our project, the
+         * dependency on 2-dimensional cartesians are quite high. For this reason,
+         * we're providing this optimization, in order to crap quite a bit of time
+         * from every matrix access.
+         * @param other The cartesian value to collapse into the space.
+         * @return The 1-dimensional collapsed cartesian value.
+         */
+        template <typename U = T>
+        __host__ __device__ inline constexpr element_type collapse(
+                const detail::cartesian::base<2, U>& other
+            ) const noexcept
+        {
+            return other.dim[0] * this->dim[1] + other.dim[1];
+        }
+    };
     /**#@-*/
 }

@@ -1,47 +1,94 @@
 /**
- * Multiple Sequence Alignment phylogeny module file.
+ * Multiple Sequence Alignment phylogeny module entry file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2019 Rodrigo Siqueira
+ * @copyright 2019-2020 Rodrigo Siqueira
  */
-#include <map>
 #include <string>
+#include <vector>
 
 #include <msa.hpp>
 #include <exception.hpp>
+#include <symmatrix.hpp>
+#include <dispatcher.hpp>
 
-/*#include <phylogeny/phylogeny.cuh>
-#include <phylogeny/njoining.cuh>*/
+#include <phylogeny/phylogeny.cuh>
+#include <phylogeny/njoining.cuh>
 
-/*
- * Keeps the list of available algorithms and their respective factories.
- * @since 0.1.1
- */
-//static const std::map<std::string, phylogeny::factory> dispatcher = {
-    /*{"njoining",                phylogeny::njoining::hybrid}
-,   {"njoining-hybrid",         phylogeny::njoining::hybrid}
-,*/// {"njoining-sequential",     phylogeny::njoining::sequential}
-/*,   {"njoining-distributed",    phylogeny::njoining::distributed}*/
-//};
-
-/**
- * Executes a phylogeny algorithm, transforming the distance matrix between the
- * sequences into a pseudo-phylogenetic tree.
- * @param config The module's configuration.
- * @return The new module manager instance.
- */
-/*auto phylogeny::manager::run(const phylogeny::configuration& config) -> phylogeny::manager
+namespace msa
 {
-    const auto& selected = dispatcher.find(config.algorithm);
+    namespace phylogeny
+    {
+        /**
+         * Keeps the list of available algorithms and their respective factories.
+         * @since 0.1.1
+         */
+        static const dispatcher<factory> factory_dispatcher = {
+            {"default",              njoining::sequential}
+        ,   {"njoining",             njoining::sequential}
+        ,   {"njoining-sequential",  njoining::sequential}
+        ,   {"njoining-distributed", njoining::sequential}
+        };
 
-    enforce(selected != dispatcher.end(), "unknown phylogeny algorithm <bold>%s</>", config.algorithm);
-    onlymaster watchdog::info("chosen phylogeny algorithm <bold>%s</>", config.algorithm);
+        /**
+         * Gets an algorithm factory by its name.
+         * @param name The name of algorithm to retrieve.
+         * @return The factory of requested algorithm.
+         */
+        auto algorithm::retrieve(const std::string& name) -> const factory&
+        try {
+            return factory_dispatcher[name];
+        } catch(const exception& e) {
+            throw exception("unknown phylogeny algorithm '%s'", name);
+        }
 
-    onlymaster watchdog::init("phylogeny", "building the phylogenetic tree");
-    phylogeny::algorithm *worker = (selected->second)();
-    phylogeny::manager result {worker->run(config)};
-    onlymaster watchdog::finish("phylogeny", "phylogenetic tree fully constructed");
-    delete worker;
+        /**
+         * Informs the names of all available algorithms.
+         * @return The list of available algorithms.
+         */
+        auto algorithm::list() noexcept -> const std::vector<std::string>&
+        {
+            return factory_dispatcher.list();
+        }
 
-    return result;
+        /**
+         * Inflates the raw pairwise module's output into a real matrix.
+         * @param origin The pairwise module's final result.
+         * @return The inflated distance matrix.
+         */
+        auto algorithm::inflate(const pairwise::manager& origin) -> symmatrix<score>&
+        {
+            const auto nsequences = origin.count();
+            auto result = symmatrix<score>::make(nsequences);
+
+            for(size_t i = 0; i < nsequences; ++i)
+                for(size_t j = i; j < nsequences; ++j)
+                    result[{i, j}] = origin[{i, j}];
+
+            return distances = result;
+        }
+
+        /**
+         * Generates a pseudo-phylogenetic tree from the distance matrix of all
+         * possible input sequence pairs.
+         * @param config The module's configuration.
+         * @return The new module manager instance.
+         */
+        auto manager::run(const configuration& config) -> manager
+        {
+            const auto& algof = algorithm::retrieve(config.algorithm);
+
+            onlymaster watchdog::info("chosen phylogeny algorithm <bold>%s</>", config.algorithm);
+            onlymaster watchdog::init("phylogeny", "building phylogenetic tree");
+
+            algorithm *worker = (algof)();
+
+            context ctx {config.pw, config.pw.count()};
+            manager result {worker->run(ctx)};
+
+            onlymaster watchdog::finish("phylogeny", "phylogenetic tree built");
+
+            delete worker;
+            return result;
+        }
+    }
 }
-*/
