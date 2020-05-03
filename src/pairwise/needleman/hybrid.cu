@@ -417,9 +417,11 @@ namespace
 
             buffer<score> result;
             buffer<pair> pairs = this->scatter(this->pairs);
-            const scoring_table table = ctx.table.to_device();
 
-            onlyslaves result = align_db(pairs, ctx.db, table);
+            onlyslaves {
+                const scoring_table table = ctx.table.to_device();
+                result = align_db(pairs, ctx.db, table);
+            }
 
             return this->gather(result);
         }

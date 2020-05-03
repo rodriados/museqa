@@ -424,7 +424,7 @@ namespace msa
          */
         template <typename T>
         __host__ __device__ inline void swap(T& a, T& b)
-            noexcept(std::is_nothrow_move_constructible<T>::value &&  std::is_nothrow_move_assignable<T>::value)
+            noexcept(std::is_nothrow_move_constructible<T>::value && std::is_nothrow_move_assignable<T>::value)
         {
             T aux = std::move(a);
             a = std::move(b);

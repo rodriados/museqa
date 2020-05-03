@@ -87,11 +87,9 @@ namespace msa
          */
         static auto pairwise(const database& db) -> msa::pairwise::manager
         {
-            return msa::pairwise::manager::run({
-                    db
-                ,   cmdline::get("pairwise", std::string ("default"))
-                ,   cmdline::get("matrix", std::string ("default"))
-                });
+            auto algorithm = cmdline::get("pairwise", std::string ("default"));
+            auto matrix = cmdline::get("matrix", std::string ("default"));
+            return msa::pairwise::manager::run({db, algorithm, matrix});
         }
 
         /**
@@ -103,10 +101,8 @@ namespace msa
          */
         static auto phylogeny(const msa::pairwise::manager& pw) -> msa::phylogeny::manager
         {
-            return msa::phylogeny::manager::run({
-                    pw
-                ,   cmdline::get("phylogeny", std::string ("default"))
-                });
+            auto algorithm = cmdline::get("phylogeny", std::string ("default"));
+            return msa::phylogeny::manager::run({pw, algorithm});
         }
     }
 

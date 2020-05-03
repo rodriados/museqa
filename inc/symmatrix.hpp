@@ -28,9 +28,6 @@ namespace msa
             using element_type = typename underlying_matrix::element_type;
             using cartesian_type = typename underlying_matrix::cartesian_type;
 
-        protected:
-            cartesian_type m_dim;                       /// The matrix's current dimensions.
-
         public:
             inline symmatrix() noexcept = default;
             inline symmatrix(const symmatrix&) noexcept = default;
@@ -46,7 +43,7 @@ namespace msa
              */
             __host__ __device__ inline element_type& operator[](const cartesian_type& offset)
             {
-                return direct(transform(offset));
+                return direct(transform(offset, reprdim()));
             }
 
             /**
@@ -56,7 +53,7 @@ namespace msa
              */
             __host__ __device__ inline const element_type& operator[](const cartesian_type& offset) const
             {
-                return direct(transform(offset));
+                return direct(transform(offset, reprdim()));
             }
 
             /**
@@ -87,7 +84,8 @@ namespace msa
              */
             __host__ __device__ inline const cartesian_type dimension() const noexcept
             {
-                return {m_dim[1], m_dim[1]};
+                const auto width = reprdim()[1];
+                return {width, width};
             }
 
             /**
@@ -98,68 +96,56 @@ namespace msa
              */
             __host__ __device__ inline const cartesian_type& reprdim() const noexcept
             {
-                return m_dim;
+                return underlying_matrix::dimension();
             }
 
             /**
-             * Creates a new distance matrix for the given number of elements.
+             * Creates a new symmetric matrix for the given number of elements.
              * @param count The number of distinct target elements.
-             * @return The newly created distance matrix instance.
+             * @return The newly created symmetric matrix instance.
              */
             static inline symmatrix make(size_t count) noexcept
             {
-                const cartesian_type dim = shape(count);
-                return symmatrix {underlying_matrix::make(dim), dim};
+                return symmatrix {underlying_matrix::make(shape(count))};
             }
 
             /**
-             * Creates a new distance matrix for elements with an allocator.
+             * Creates a new symmetric matrix for elements with an allocator.
              * @param allocator The allocator to be used to new matrix.
              * @param count The number of distinct target elements.
-             * @return The newly created distance matrix instance.
+             * @return The newly created symmetric matrix instance.
              */
             static inline symmatrix make(const msa::allocator& allocator, size_t count) noexcept
             {
-                const cartesian_type dim = shape(count);
-                return symmatrix {underlying_matrix::make(allocator, dim), dim};
+                return symmatrix {underlying_matrix::make(allocator, shape(count))};
             }
 
         protected:
             /**
-             * Initializes a new distance matrix from an ordinary matrix.
+             * Initializes a new symmetric matrix from an ordinary matrix.
              * @param other The underlying matrix with correct memory layout.
-             * @param dim The new distance matrix's memory layout dimensions.
              */
-            inline explicit symmatrix(underlying_matrix&& other, const cartesian_type& dim) noexcept
+            inline explicit symmatrix(underlying_matrix&& other) noexcept
             :   underlying_matrix {other}
-            ,   m_dim {dim}
-            {}
-
-            /**
-             * Initializes a square matrix in-place to an already existing matrix
-             * and reinterprets it to work with given amount of elements. Please
-             * note the reinterpretation must always be to smaller dimensions.
-             * @param other The original matrix to be reinterpreted to new dimension.
-             * @param count The base number of elements to reinterpret the matrix with.
-             */
-            __host__ __device__ inline explicit symmatrix(const symmatrix& other, size_t count) noexcept
-            :   underlying_matrix {other}
-            ,   m_dim {shape(count)}
             {}
 
             /**
              * Transforms an external cartesian offset into the internal memory
-             * representation used by the distance matrix.
+             * representation used by the symmetric matrix.
              * @param offset The cartesian offset to transform.
+             * @param dim The matrix's compressed dimensions.
              * @return The transformed offset.
              */
-            __host__ __device__ inline cartesian_type transform(const cartesian_type& offset) const noexcept
+            __host__ __device__ static inline cartesian_type transform(
+                    const cartesian_type& offset
+                ,   const cartesian_type& dim
+                ) noexcept
             {
                 const auto i = utils::max(offset[0], offset[1]);
                 const auto j = utils::min(offset[0], offset[1]);
 
-                const auto x = (i < m_dim[0]) ? i : m_dim[1] - i - 1;
-                const auto y = (i < m_dim[0]) ? j : m_dim[1] - j - 1;
+                const auto x = (i < dim[0]) ? i : dim[1] - i - 1;
+                const auto y = (i < dim[0]) ? j : dim[1] - j - 1;
                 return {x, y};
             }
 

@@ -15,6 +15,7 @@
 #include <pointer.hpp>
 #include <database.hpp>
 #include <cartesian.hpp>
+#include <symmatrix.hpp>
 
 namespace msa
 {
@@ -57,16 +58,13 @@ namespace msa
          * Manages all data and execution of the pairwise module.
          * @since 0.1.1
          */
-        class manager final : public buffer<score>
+        class manager final : public symmatrix<score>
         {
             public:
                 using element_type = score;                 /// The manager's element type.
 
             protected:
-                using underlying_buffer = buffer<score>;    /// The manager's underlying buffer.
-
-            protected:
-                size_t m_count;                              /// The total number of aligned sequences.
+                using underlying_matrix = symmatrix<score>; /// The manager's underlying symmatrix.
 
             public:
                 inline manager() noexcept = default;
@@ -76,19 +74,7 @@ namespace msa
                 inline manager& operator=(const manager&) = default;
                 inline manager& operator=(manager&&) = default;
 
-                using underlying_buffer::operator=;
-
-                /**
-                 * Gives access to a pair score using a matrix format.
-                 * @param offset The requested element's offset.
-                 * @return The score of requested pair.
-                 */
-                inline element_type operator[](const cartesian<2>& offset) const
-                {
-                    const auto min = utils::min(offset[0], offset[1]);
-                    const auto max = utils::max(offset[0], offset[1]);
-                    return (min != max) ? underlying_buffer::operator[](utils::nchoose(max) + min) : 0;
-                }
+                using underlying_matrix::operator=;
 
                 /**
                  * Informs the total number of sequences available in the module.
@@ -96,21 +82,25 @@ namespace msa
                  */
                 inline auto count() const noexcept -> size_t
                 {
-                    return m_count;
+                    return underlying_matrix::dimension()[0];
                 }
 
                 static auto run(const configuration&) -> manager;
 
             protected:
                 /**
-                 * Initializes a new manager with results obtained by the module.
+                 * Initializes a new manager by inflating a buffer with results
+                 * obtained by the module's algorithm.
                  * @param buf The buffer with the module's results.
                  * @param count The number of sequences aligned.
                  */
                 inline manager(const buffer<score>& buf, size_t count) noexcept
-                :   underlying_buffer {buf}
-                ,   m_count {count}
-                {}
+                :   underlying_matrix {underlying_matrix::make(count)}
+                {
+                    for(size_t i = 0, n = 0; i < count; ++i)
+                        for(size_t j = i; j < count; ++j)
+                            operator[]({i, j}) = (i == j) ? 0 : buf[n++];
+                }
         };
 
         /**
