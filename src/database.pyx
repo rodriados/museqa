@@ -1,15 +1,17 @@
 #!/usr/bin/env python
-# cython: language_level = 3
 # Multiple Sequence Alignment sequence database wrapper file.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
 # @copyright 2018-2019 Rodrigo Siqueira
 from libcpp.set cimport set
 from libcpp.string cimport string
-from database cimport cDatabase
-from sequence cimport cSequence, Sequence
+from database cimport c_database
+from sequence cimport c_sequence, Sequence
+from sequence import Sequence
 
 from collections import namedtuple
 from functools import singledispatch
+
+__all__ = ["Database"]
 
 # Database wrapper. This class is responsible for interfacing all interactions between
 # Python code to the underlying C++ database object.
@@ -21,94 +23,92 @@ cdef class Database:
     entry = namedtuple('entry', ['description', 'contents'])
 
     # Gives access to a specific sequence of the database.
-    # @param keyOrIndex The requested sequence key or offset.
+    # @param key The requested sequence key or offset.
     # @return The requested sequence.
-    def __getitem__(self, keyOrIndex):
+    def __getitem__(self, key):
         @singledispatch
-        def default(value):
-            raise TypeError("could not get sequence")
+        def overload(value):
+            raise TypeError("could not find sequence")
 
-        @default.register(int)
-        def fromOffset(int value):
-            cdef cDatabase.entry_type entry = self.thisptr.at(value)
-            return Database.entry(entry.description.decode(), Sequence.wrap(entry.contents))
+        cdef c_database.entry_type entry
 
-        @default.register(bytes)
-        def fromKey(bytes value):
-            cdef cDatabase.entry_type entry = self.thisptr.at(value)
-            return Database.entry(entry.description.decode(), Sequence.wrap(entry.contents))
+        @overload.register(int)
+        def from_offset(int value):
+            entry = self.thisptr.at(value)
 
-        default.register(str, lambda value: fromKey(value.encode()))
-        return default(keyOrIndex)
+        @overload.register(bytes)
+        def from_key(bytes value):
+            entry = self.thisptr.at(value)
+
+        overload.register(str, lambda value: from_key(value.encode()))
+        overload(key)
+
+        return Database.entry(entry.description.decode(), Sequence.wrap(entry.contents))
 
     # Adds new sequences to database.
-    # @param newSequence The new sequence(s) to be added.
-    def add(self, newSequence):
+    # @param target The new sequence to add to database.
+    def add(self, target):
         @singledispatch
-        def default(value):
-            raise TypeError("could not add sequence")
+        def overload(value):
+            raise TypeError("could not add sequence to database")
 
-        @default.register(bytes)
-        def fromBytes(bytes value):
-            self.thisptr.add(cSequence(value))
+        @overload.register(bytes)
+        def from_bytes(bytes value):
+            self.thisptr.add(c_sequence(value))
 
-        @default.register(tuple)
-        def fromTuple(tuple value):
+        @overload.register(tuple)
+        def from_tuple(tuple value):
             description, contents = value
-            self.thisptr.add(description.encode(), Sequence(contents).thisptr)
+            self.thisptr.add(description.encode(), Sequence(contents).c_get())
 
-        @default.register(dict)
-        def fromDict(dict value):
-            [fromTuple(entry) for entry in value.items()]
+        @overload.register(dict)
+        def from_dict(dict value):
+            for entry in value.items():
+                from_tuple(entry)
 
-        @default.register(Sequence)
-        def fromSequence(Sequence value):
-            self.thisptr.add(value.thisptr)
+        @overload.register(Sequence)
+        def from_sequence(Sequence value):
+            self.thisptr.add(value.c_get())
 
-        default.register(list, lambda value: [default(i) for i in value])
-        default.register(str,  lambda value: fromBytes(value.encode('ascii')))
-        default(newSequence)
+        overload.register(list, lambda value: [overload(i) for i in value])
+        overload.register(str,  lambda value: from_bytes(value.encode('ascii')))
+        overload(target)
 
     # Adds all elements from another database into this instance.
     # @param other The database to merge into this instance.
     def merge(self, Database other):
-        self.thisptr.merge(other.thisptr)
+        self.thisptr.merge(other.c_get())
 
     # Creates a new database with only a set of selected elements.
-    # @param entries The entries to be included in new database.
+    # @param keys The entry's keys' to be included in new database.
     # @return The new database containing only the selected elements.
-    def only(self, list entries):
-        if not all([type(entry) is type(entries[0]) for entry in entries]):
-            raise TypeError("could select sequences via different key types")
+    def only(self, list keys):
+        if not all([type(key) is type(keys[0]) for key in keys]):
+            raise TypeError("cannot select sequences via different key types")
 
         @singledispatch
-        def default(*values):
+        def overload(*values):
             raise TypeError("could not select sequences")
 
-        @default.register(bytes)
-        def fromKeys(*values):
-            cdef set[string] keys = values
-            return Database.wrap(self.thisptr.only(keys))
+        cdef c_database result
 
-        @default.register(int)
-        def fromOffsets(*values):
-            cdef set[ptrdiff_t] offsets = values
-            return Database.wrap(self.thisptr.only(offsets))
+        @overload.register(bytes)
+        def from_keys(*values):
+            cdef set[string] selected = values
+            result = self.thisptr.only(selected)
 
-        default.register(str, lambda *values: fromKeys(*[entry.encode() for entry in values]))
-        return default(*entries)
+        @overload.register(int)
+        def from_offsets(*values):
+            cdef set[ptrdiff_t] selected = values
+            result = self.thisptr.only(selected)
 
-    # Wraps an existing database instance.
-    # @param target The database to be wrapped.
-    # @return The new wrapper instance.
-    @staticmethod
-    cdef Database wrap(cDatabase& target):
-        instance = <Database>Database.__new__(Database)
-        instance.thisptr = target
-        return instance
+        overload.register(str, lambda *values: from_keys(*[val.encode() for val in values]))
+        overload(*keys)
+
+        return Database.wrap(result)
 
     # Informs the number of sequences in database.
-    # @return int The number of sequences.
+    # @return int The total number of sequences in database.
     @property
     def count(self):
         return self.thisptr.count()

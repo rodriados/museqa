@@ -4,23 +4,23 @@
 # @copyright 2020 Rodrigo Siqueira
 from libc.stdint cimport *
 from libcpp.string cimport string
-from buffer cimport cBuffer as cBaseBuffer
+from buffer cimport c_buffer as c_base_buffer
 
 cdef extern from "encoder.hpp" namespace "msa::encoder" nogil:
     # The encoder character or unit type.
     # @since 0.1.1
-    ctypedef uint8_t cUnit "msa::encoder::unit"
+    ctypedef uint8_t c_unit "msa::encoder::unit"
 
     # The encoder sequence block type.
     # @since 0.1.1
-    ctypedef uint16_t cBlock "msa::encoder::block"
+    ctypedef uint16_t c_block "msa::encoder::block"
 
     # Aliases a block buffer into a more readable name.
     # @since 0.1.1
-    ctypedef cBaseBuffer[cBlock] cBuffer "msa::encoder::buffer"
+    ctypedef c_base_buffer[c_block] c_buffer "msa::encoder::buffer"
 
-    cdef cUnit cencode "msa::encoder::encode" (char)
-    cdef cBuffer cencode "msa::encoder::encode" (char *, size_t) except +RuntimeError
+    cdef c_unit c_encode "msa::encoder::encode" (char)
+    cdef c_buffer c_encode "msa::encoder::encode" (char *, size_t) except +RuntimeError
 
-    cdef char cdecode "msa::encoder::decode" (cUnit) except +RuntimeError
-    cdef string cdecode "msa::encoder::decode" (cBuffer&) except +RuntimeError
+    cdef char c_decode "msa::encoder::decode" (c_unit) except +RuntimeError
+    cdef string c_decode "msa::encoder::decode" (c_buffer&) except +RuntimeError

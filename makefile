@@ -132,7 +132,7 @@ $(OBJDIR)/libmodules.a: $(OBJDIR)/parser/fasta.pya.a
 $(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/pairwise.pya.a
 $(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/table.pya.a
 $(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/database.pya.a
-$(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/needleman/distribute.pya.a
+$(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/needleman/communication.pya.a
 $(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/needleman/hybrid.pya.a
 $(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/needleman/sequential.pya.a
 $(OBJDIR)/libmodules.a: $(STATICFILES)

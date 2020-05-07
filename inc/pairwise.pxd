@@ -4,75 +4,71 @@
 # @copyright 2018-2020 Rodrigo Siqueira
 from libcpp.string cimport string
 from libcpp.vector cimport vector
-from cartesian cimport cCartesian
-from database cimport cDatabase
-from buffer cimport cBuffer
+from cartesian cimport c_cartesian2
+from database cimport c_database
 
 cdef extern from "pairwise/pairwise.cuh" namespace "msa::pairwise":
-
     # The score of the alignment of a sequence pair.
     # @since 0.1.1
-    ctypedef float cScore "msa::pairwise::score"
+    ctypedef float c_score "msa::pairwise::score"
 
-    # Manages and encapsulates all configurable aspects of the pairwise module.
-    # @since 0.1.1
-    cdef struct cConfiguration "msa::pairwise::configuration":
-        const cDatabase *db
-        string algorithm
-        string table
+    cdef struct c_configuration "msa::pairwise::configuration":
+        pass
 
     # Manages all data and execution of the pairwise module.
     # @since 0.1.1
-    cdef cppclass cPairwise "msa::pairwise::manager" (cBuffer[cScore]):
-        ctypedef cScore element_type
+    cdef cppclass c_pairwise "msa::pairwise::manager":
+        ctypedef c_score element_type
 
-        cPairwise()
-        cPairwise(cPairwise&)
+        c_pairwise()
+        c_pairwise(c_pairwise&)
 
-        cPairwise& operator=(cPairwise&) except +RuntimeError
-        element_type at "operator[]" (cCartesian&) except +RuntimeError
+        c_pairwise& operator=(c_pairwise&) except +RuntimeError
+
+        element_type& at "operator[]" (const c_cartesian2&) except +RuntimeError
 
         size_t count()
 
         @staticmethod
-        cPairwise run(cConfiguration&) except +RuntimeError
+        c_pairwise run(c_configuration&) except +RuntimeError
 
     # The aminoacid substitution tables. These tables are stored contiguously
     # in memory, in order to facilitate accessing its elements.
     # @since 0.1.1
-    cdef cppclass cScoringTable "msa::pairwise::scoring_table":
-        ctypedef cScore element_type
+    cdef cppclass c_scoring_table "msa::pairwise::scoring_table":
+        ctypedef c_score element_type
 
-        element_type at "operator[]" (cCartesian&)
+        element_type at "operator[]" (const c_cartesian2&)
+
         element_type penalty()
 
         @staticmethod
-        cScoringTable make(string&) except +RuntimeError
+        c_scoring_table make(string&) except +RuntimeError
 
         @staticmethod
         vector[string]& list()
 
     # Represents a pairwise module algorithm.
     # @since 0.1.1
-    cdef cppclass cAlgorithm "msa::pairwise::algorithm":
+    cdef cppclass c_algorithm "msa::pairwise::algorithm":
         @staticmethod
         vector[string]& list()
 
     # Creates a module's configuration instance.
-    cdef cConfiguration configure(cDatabase&, string&, string&)
+    cdef c_configuration configure(c_database&, string&, string&)
 
 # Manages all data and execution of the pairwise module.
 # @since 0.1.1
 cdef class Pairwise:
-    cdef cPairwise thisptr
+    cdef c_pairwise thisptr
 
     @staticmethod
-    cdef Pairwise wrap(cPairwise&)
+    cdef Pairwise wrap(c_pairwise&)
 
 # Exposes a scoring table to Python's world.
 # @since 0.1.1
 cdef class ScoringTable:
-    cdef cScoringTable thisptr
+    cdef c_scoring_table thisptr
 
     @staticmethod
-    cdef ScoringTable wrap(cScoringTable&)
+    cdef ScoringTable wrap(c_scoring_table&)

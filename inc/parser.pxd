@@ -7,11 +7,11 @@ from libcpp.string cimport string
 from database cimport *
 
 cdef extern from "parser.hpp" namespace "msa::parser":
-    cdef cDatabase cparse "msa::parser::parse"(string&) except +RuntimeError
-    cdef cDatabase cparse "msa::parser::parse"(string&, string&) except +RuntimeError
+    cdef c_database c_parse "msa::parser::parse"(string&) except +RuntimeError
+    cdef c_database c_parse "msa::parser::parse"(string&, string&) except +RuntimeError
 
-    cdef cDatabase cparse "msa::parser::parse"(vector[string]&) except +RuntimeError
-    cdef cDatabase cparse "msa::parser::parse"(vector[string]&, string&) except +RuntimeError
+    cdef c_database c_parse "msa::parser::parse"(vector[string]&) except +RuntimeError
+    cdef c_database c_parse "msa::parser::parse"(vector[string]&, string&) except +RuntimeError
 
 cdef extern from "parser/fasta.hpp" namespace "msa::parser":
-    cdef cDatabase cfasta "msa::parser::fasta"(string&) except +RuntimeError
+    cdef c_database c_fasta "msa::parser::fasta"(string&) except +RuntimeError
