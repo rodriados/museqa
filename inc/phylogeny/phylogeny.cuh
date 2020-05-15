@@ -11,7 +11,6 @@
 #include <utility>
 
 #include <utils.hpp>
-#include <buffer.hpp>
 #include <dendogram.hpp>
 #include <symmatrix.hpp>
 
@@ -113,7 +112,7 @@ namespace msa
         struct context
         {
             const pairwise::manager& matrix;
-            const size_t nsequences;
+            const size_t count;
         };
 
         /**
@@ -122,8 +121,6 @@ namespace msa
          */
         struct algorithm
         {
-            symmatrix<score> distances;          /// The nodes' distance matrix.
-
             inline algorithm() noexcept = default;
             inline algorithm(const algorithm&) noexcept = default;
             inline algorithm(algorithm&&) noexcept = default;
@@ -133,7 +130,6 @@ namespace msa
             inline algorithm& operator=(const algorithm&) = default;
             inline algorithm& operator=(algorithm&&) = default;
 
-            virtual auto inflate(const pairwise::manager&) -> symmatrix<score>&;
             virtual auto run(const context&) -> tree = 0;
 
             static auto retrieve(const std::string&) -> const functor<algorithm *()>&;

@@ -72,11 +72,11 @@ namespace
          */
         auto run(const context& ctx) -> tree override
         {
-            symmatrix<score>& matrix = this->inflate(ctx.matrix);
+            /*symmatrix<score>& matrix = this->inflate(ctx.matrix);
 
             auto phylotree = build_tree(matrix, ctx.nsequences);
 
-            return phylotree;
+            return phylotree;*/
         }
     };
 }

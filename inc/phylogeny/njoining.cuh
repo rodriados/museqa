@@ -37,8 +37,6 @@ namespace msa
              */
             struct algorithm : public phylogeny::algorithm
             {
-                tree phylotree;
-
                 virtual auto reduce(joinpair&) -> joinpair;
                 virtual auto run(const context&) -> tree = 0;
             };

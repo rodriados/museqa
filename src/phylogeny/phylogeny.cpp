@@ -51,23 +51,6 @@ namespace msa
         }
 
         /**
-         * Inflates the raw pairwise module's output into a real matrix.
-         * @param origin The pairwise module's final result.
-         * @return The inflated distance matrix.
-         */
-        auto algorithm::inflate(const pairwise::manager& origin) -> symmatrix<score>&
-        {
-            const auto nsequences = origin.count();
-            auto result = symmatrix<score>::make(nsequences);
-
-            for(size_t i = 0; i < nsequences; ++i)
-                for(size_t j = i; j < nsequences; ++j)
-                    result[{i, j}] = origin[{i, j}];
-
-            return distances = result;
-        }
-
-        /**
          * Generates a pseudo-phylogenetic tree from the distance matrix of all
          * possible input sequence pairs.
          * @param config The module's configuration.
