@@ -423,8 +423,10 @@ namespace msa
          * @param b The second variable to have its contents swapped.
          */
         template <typename T>
-        __host__ __device__ inline void swap(T& a, T& b)
-            noexcept(std::is_nothrow_move_constructible<T>::value && std::is_nothrow_move_assignable<T>::value)
+        __host__ __device__ inline void swap(T& a, T& b) noexcept(
+                std::is_nothrow_move_constructible<T>::value &&
+                std::is_nothrow_move_assignable<T>::value
+            )
         {
             T aux = std::move(a);
             a = std::move(b);
