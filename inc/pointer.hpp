@@ -313,7 +313,7 @@ namespace msa
              */
             __host__ __device__ inline pointer offset(ptrdiff_t offset) noexcept
             {
-                static_assert(!std::is_same<element_type, T>::value, "only array pointers hava valid offsets");
+                static_assert(!std::is_same<element_type, T>::value, "only array pointers have valid offsets");
                 return pointer {m_ptr + offset, detail::pointer::acquire(m_meta)};
             }
 
