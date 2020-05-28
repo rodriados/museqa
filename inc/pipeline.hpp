@@ -25,8 +25,6 @@ namespace msa
          */
         struct conduit
         {
-            static constexpr const char *module = "anonymous";  /// The corresponding module name.
-
             inline explicit conduit() noexcept = default;
             inline explicit conduit(const conduit&) = default;
             inline explicit conduit(conduit&&) = default;
@@ -48,11 +46,12 @@ namespace msa
          */
         struct module
         {
-            using previous = void;                  /// Indicates which module should execute before.
+            using previous = void;                  /// Indicates the expected previous module.
             using conduit = pipeline::conduit;      /// The module's conduit type.
 
             virtual auto check(const commander&) const -> bool = 0;
             virtual auto run(const commander&, const pointer<conduit>&) const -> pointer<conduit> = 0;
+            virtual auto name() const -> const char * = 0;
         };
     }
 
@@ -96,7 +95,7 @@ namespace msa
          * @since 0.1.1
          */
         template <typename ...T>
-        class runner final
+        class runner
         {
             static_assert(utils::all(std::is_base_of<module, T>()...), "pipeline can only handle modules");
             static_assert(utils::all(std::is_default_constructible<T>()...), "modules must default construct");
@@ -105,7 +104,7 @@ namespace msa
             public:
                 static constexpr size_t count = sizeof...(T);   /// The number of chained modules.
 
-            private:
+            protected:
                 using module_tuple = tuple<T...>;               /// The tuple of chained modules types.
                 using conduit = pointer<pipeline::conduit>;     /// The return type expected from modules.
 
@@ -115,17 +114,51 @@ namespace msa
                  * @param cmd The command line manager to pass to each module.
                  * @return The last module's resulting value.
                  */
-                inline static auto run(const commander& cmd) -> conduit
+                inline auto run(const commander& cmd) const -> conduit
                 {
-                    auto modules = module_tuple {};
+                    const module_tuple modules = {};
+                    const module *modptr[count];
 
-                    auto lb1 = [&cmd](const bool prev, const module& mod) { return prev && mod.check(cmd); };
-                    auto lb2 = [&cmd](const conduit& prev, const module& mod) { return mod.run(cmd, prev); };
+                    auto extract = [](const module& mod) { return &mod; };
+                    utils::tie(modptr) = utils::apply(extract, modules);
 
-                    if(!utils::foldl(lb1, true, modules))
-                        throw exception {"command line arguments check failed"};
-                    
-                    return utils::foldl(lb2, conduit {}, modules);
+                    if(!verify(modptr, cmd))
+                        throw exception {"pipeline verification failed"};
+
+                    return execute(modptr, cmd);
+                }
+
+            protected:
+                /**
+                 * Verifies whether all modules will be in a valid state given the
+                 * pipeline's command line arguments.
+                 * @param modules The list of pipeline's modules instances.
+                 * @param cmd The command line arguments manager instance.
+                 * @return Are all modules in a valid state?
+                 */
+                inline virtual bool verify(const module *modules[], const commander& cmd) const
+                {
+                    for(size_t i = 0; i < count; ++i)
+                        if(!modules[i]->check(cmd))
+                            return false;
+
+                    return true;
+                }
+
+                /**
+                 * Executes the pipeline's module in sequence.
+                 * @param modules The list of pipeline's modules instances.
+                 * @param cmd The command line arguments manager instance.
+                 * @return The pipeline's final module's result.
+                 */
+                inline virtual conduit execute(const module *modules[], const commander& cmd) const
+                {
+                    auto previous = conduit {};
+
+                    for(size_t i = 0; i < count; ++i)
+                        previous = std::move(modules[i]->run(cmd, previous));
+
+                    return previous;
                 }
         };
     }
