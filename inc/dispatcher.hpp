@@ -69,6 +69,16 @@ namespace msa
             }
 
             /**
+             * Checks whether a given key is known by the dispatcher.
+             * @param key The key to check existence of in dispatcher.
+             * @return Is the given key known?
+             */
+            inline bool has(const std::string& key) const noexcept
+            {
+                return this->find(key) != this->end();
+            }
+
+            /**
              * Informs the list of registered key entries in dispatcher.
              * @return The list of registered keys.
              */
