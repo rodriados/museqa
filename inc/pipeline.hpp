@@ -7,10 +7,10 @@
 
 #include <utility>
 
+#include <io.hpp>
 #include <tuple.hpp>
 #include <utils.hpp>
 #include <pointer.hpp>
-#include <commander.hpp>
 #include <exception.hpp>
 
 namespace msa
@@ -49,8 +49,8 @@ namespace msa
             using previous = void;                  /// Indicates the expected previous module.
             using conduit = pipeline::conduit;      /// The module's conduit type.
 
-            virtual auto check(const commander&) const -> bool = 0;
-            virtual auto run(const commander&, const pointer<conduit>&) const -> pointer<conduit> = 0;
+            virtual auto check(const io::service&) const -> bool = 0;
+            virtual auto run(const io::service&, const pointer<conduit>&) const -> pointer<conduit> = 0;
             virtual auto name() const -> const char * = 0;
         };
     }
@@ -111,10 +111,10 @@ namespace msa
             public:
                 /**
                  * Runs the pipeline and returns the last module's result.
-                 * @param cmd The command line manager to pass to each module.
+                 * @param io The pipeline's IO service instance.
                  * @return The last module's resulting value.
                  */
-                inline auto run(const commander& cmd) const -> conduit
+                inline auto run(const io::service& io) const -> conduit
                 {
                     const module_tuple modules = {};
                     const module *modptr[count];
@@ -122,10 +122,10 @@ namespace msa
                     auto extract = [](const module& mod) { return &mod; };
                     utils::tie(modptr) = utils::apply(extract, modules);
 
-                    if(!verify(modptr, cmd))
+                    if(!verify(modptr, io))
                         throw exception {"pipeline verification failed"};
 
-                    return execute(modptr, cmd);
+                    return execute(modptr, io);
                 }
 
             protected:
@@ -133,13 +133,13 @@ namespace msa
                  * Verifies whether all modules will be in a valid state given the
                  * pipeline's command line arguments.
                  * @param modules The list of pipeline's modules instances.
-                 * @param cmd The command line arguments manager instance.
+                 * @param io The pipeline's IO service instance.
                  * @return Are all modules in a valid state?
                  */
-                inline virtual bool verify(const module *modules[], const commander& cmd) const
+                inline virtual bool verify(const module *modules[], const io::service& io) const
                 {
                     for(size_t i = 0; i < count; ++i)
-                        if(!modules[i]->check(cmd))
+                        if(!modules[i]->check(io))
                             return false;
 
                     return true;
@@ -148,15 +148,15 @@ namespace msa
                 /**
                  * Executes the pipeline's module in sequence.
                  * @param modules The list of pipeline's modules instances.
-                 * @param cmd The command line arguments manager instance.
+                 * @param io The pipeline's IO service instance.
                  * @return The pipeline's final module's result.
                  */
-                inline virtual conduit execute(const module *modules[], const commander& cmd) const
+                inline virtual conduit execute(const module *modules[], const io::service& io) const
                 {
                     auto previous = conduit {};
 
                     for(size_t i = 0; i < count; ++i)
-                        previous = std::move(modules[i]->run(cmd, previous));
+                        previous = std::move(modules[i]->run(io, previous));
 
                     return previous;
                 }
