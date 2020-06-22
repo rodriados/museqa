@@ -20,7 +20,7 @@ namespace msa
          * Scatters generated workpairs from master to all other processes.
          * @return The pairs the current node is responsible for processing.
          */
-        auto needleman::algorithm::scatter(buffer<pair>& pairs) -> buffer<pair>
+        auto needleman::algorithm::scatter(buffer<pair>& pairs) const -> buffer<pair>
         {
             onlymaster return pairs;
 

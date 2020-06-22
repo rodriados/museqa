@@ -53,6 +53,25 @@ namespace msa
             virtual auto run(const io::service&, const pointer<conduit>&) const -> pointer<conduit> = 0;
             virtual auto name() const -> const char * = 0;
         };
+
+        /**
+         * Converts an unknown conduit reference to that of the expected conduit
+         * type of a module. This function checks whether the conversion is possible.
+         * @tparam T The type of module receiving the conduit to be converted.
+         * @param target The instance to be converted into the expected type.
+         * @return The converted instance reference.
+         */
+        template <typename T>
+        inline auto convert(const conduit& target) noexcept
+        -> typename std::enable_if<
+                std::is_base_of<module, T>::value &&
+                std::is_base_of<module, typename T::previous>::value &&
+                std::is_base_of<conduit, typename T::previous::conduit>::value
+            ,   const typename T::previous::conduit&
+            >::type
+        {
+            return dynamic_cast<const typename T::previous::conduit&>(target);
+        }
     }
 
     namespace detail

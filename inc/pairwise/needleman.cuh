@@ -23,9 +23,9 @@ namespace msa
              */
             struct algorithm : public pairwise::algorithm
             {
-                virtual auto scatter(buffer<pair>&) -> buffer<pair>;
+                virtual auto scatter(buffer<pair>&) const -> buffer<pair>;
                 virtual auto gather(buffer<score>&) const -> buffer<score>;            
-                virtual auto run(const context&) -> buffer<score> = 0;
+                virtual auto run(const context&) const -> distance_matrix = 0;
             };
 
             /*

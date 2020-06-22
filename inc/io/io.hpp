@@ -35,8 +35,8 @@ namespace msa
 
             public:
                 inline service() noexcept = delete;
-                inline service(const service&) noexcept = default;
-                inline service(service&&) noexcept = default;
+                inline service(const service&) = default;
+                inline service(service&&) = default;
 
                 /**
                  * Initializes a new IO service with a command line manager instance.

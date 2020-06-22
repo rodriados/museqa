@@ -24,8 +24,8 @@ namespace msa
             const size_t total;             /// The total number of sequences.
 
             inline conduit() noexcept = delete;
-            inline conduit(const conduit&) noexcept = default;
-            inline conduit(conduit&&) noexcept = default;
+            inline conduit(const conduit&) = default;
+            inline conduit(conduit&&) = default;
 
             /**
              * Instantiates a new conduit.
@@ -36,8 +36,8 @@ namespace msa
             ,   total {db.count()}
             {}
 
-            inline conduit& operator=(const conduit&) noexcept = default;
-            inline conduit& operator=(conduit&&) noexcept = default;
+            inline conduit& operator=(const conduit&) = default;
+            inline conduit& operator=(conduit&&) = default;
         };
 
         /**

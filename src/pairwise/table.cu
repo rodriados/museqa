@@ -297,6 +297,16 @@ namespace msa
     }
 
     /**
+     * Checks whether a scoring table if the given name exists.
+     * @param name The name of selected scoring table.
+     * @return Does the requested scoring table exist?
+     */
+    auto pairwise::scoring_table::has(const std::string& name) -> bool
+    {
+        return table_dispatcher.has(name);
+    }
+
+    /**
      * Selects a scoring table from its name.
      * @param name The name of selected scoring table.
      * @return The pointer to selected table.

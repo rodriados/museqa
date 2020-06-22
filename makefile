@@ -57,7 +57,7 @@ TESTFILES    = $(PYXCFILES:$(SRCDIR)/%.pyx=$(TGTDIR)/%.so)                      
                $(PYFILES:$(SRCDIR)/%.py=$(TGTDIR)/%.py)
 STATICFILES  = $(filter $(PYXCFILES:$(SRCDIR)/%.pyx=$(OBJDIR)/%.pya.a),$(OBJFILES:%.o=%.pya.a))
 
-SRCHIERARCHY = $(sort $(dir $(wildcard $(SRCDIR)/*/. $(SRCDIR)/*/*/.)))
+SRCHIERARCHY = $(sort $(dir $(wildcard $(SRCDIR)/*/. $(SRCDIR)/*/*/. $(SRCDIR)/*/*/*/.)))
 OBJHIERARCHY = $(SRCHIERARCHY:$(SRCDIR)/%=$(OBJDIR)/%)
 
 all: debug

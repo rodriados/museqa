@@ -9,11 +9,14 @@
 #include <vector>
 #include <cstdint>
 
+#include <io.hpp>
 #include <cuda.cuh>
 #include <utils.hpp>
 #include <buffer.hpp>
 #include <pointer.hpp>
 #include <database.hpp>
+#include <pipeline.hpp>
+#include <bootstrap.hpp>
 #include <cartesian.hpp>
 #include <symmatrix.hpp>
 
@@ -44,68 +47,59 @@ namespace msa
         };
 
         /**
-         * Manages and encapsulates all configurable aspects of the pairwise module.
+         * Represents a pairwise distance matrix. At last, this object represents
+         * the pairwise module's execution's final result.
          * @since 0.1.1
          */
-        struct configuration
-        {
-            const msa::database& db;        /// The database of sequences to align.
-            std::string algorithm;          /// The chosen pairwise algorithm.
-            std::string table;              /// The chosen scoring table.
-        };
-
-        /**
-         * Manages all data and execution of the pairwise module.
-         * @since 0.1.1
-         */
-        class manager final : public symmatrix<score>
+        class distance_matrix : public symmatrix<score>
         {
             public:
-                using element_type = score;                 /// The manager's element type.
+                using element_type = score;                 /// The distance matrix's element type.
 
             protected:
-                using underlying_matrix = symmatrix<score>; /// The manager's underlying symmatrix.
+                using underlying_matrix = symmatrix<score>; /// The distance matrix's underlying type.
 
             public:
-                inline manager() noexcept = default;
-                inline manager(const manager&) noexcept = default;
-                inline manager(manager&&) noexcept = default;
+                inline distance_matrix() noexcept = default;
+                inline distance_matrix(const distance_matrix&) noexcept = default;
+                inline distance_matrix(distance_matrix&&) noexcept = default;
 
-                inline manager& operator=(const manager&) = default;
-                inline manager& operator=(manager&&) = default;
+                inline distance_matrix& operator=(const distance_matrix&) = default;
+                inline distance_matrix& operator=(distance_matrix&&) = default;
 
                 using underlying_matrix::operator=;
 
                 /**
-                 * Informs the total number of sequences available in the module.
-                 * @return The number of processed sequences.
+                 * Creates a new distance matrix by inflating a linear buffer with
+                 * the corresponding matrix's distances.
+                 * @param buf The buffer containing the matrix's distances.
+                 * @param count The total number of sequences aligned.
+                 * @return A new inflated distance matrix instance.
                  */
-                inline auto count() const noexcept -> size_t
+                static inline auto inflate(const buffer<score>& buf, size_t count) noexcept
+                -> distance_matrix
                 {
-                    return underlying_matrix::dimension()[0];
+                    return distance_matrix {buf, count};
                 }
 
-                static auto run(const configuration&) -> manager;
-
-            protected:
+            private:
                 /**
-                 * Initializes a new manager by inflating a buffer with results
-                 * obtained by the module's algorithm.
-                 * @param buf The buffer with the module's results.
-                 * @param count The number of sequences aligned.
+                 * Constructs a new distance matrix by inflating a distances buffer.
+                 * @param buf The buffer containing the matrix's distances.
+                 * @param count The total number of sequences aligned.
                  */
-                inline manager(const buffer<score>& buf, size_t count) noexcept
+                inline explicit distance_matrix(const buffer<score>& buf, size_t count) noexcept
                 :   underlying_matrix {underlying_matrix::make(count)}
                 {
                     for(size_t i = 0, n = 0; i < count; ++i)
                         for(size_t j = i; j < count; ++j)
-                            operator[]({i, j}) = (i == j) ? 0 : buf[n++];
+                            operator[]({i, j}) = (i != j) ? buf[n++] : 0;
                 }
         };
 
         /**
-         * The aminoacid substitution tables. These tables are stored contiguously
-         * in memory, in order to facilitate accessing its elements.
+         * An aminoacid or nucleotide substitution table. This table is used to
+         * calculate the match value between two aminoacid or nucleotide characters.
          * @since 0.1.1
          */
         class scoring_table
@@ -163,6 +157,7 @@ namespace msa
 
                 scoring_table to_device() const;
 
+                static auto has(const std::string&) -> bool;
                 static auto make(const std::string&) -> scoring_table;
                 static auto list() noexcept -> const std::vector<std::string>&;
         };
@@ -178,13 +173,18 @@ namespace msa
         };
 
         /**
+         * Functor responsible for instantiating an algorithm.
+         * @see pairwise::manager::run
+         * @since 0.1.1
+         */
+        using factory = functor<struct algorithm *()>;
+
+        /**
          * Represents a pairwise module algorithm.
          * @since 0.1.1
          */
         struct algorithm
         {
-            buffer<pair> pairs;             /// The sequence pairs to be aligned.
-
             inline algorithm() noexcept = default;
             inline algorithm(const algorithm&) noexcept = default;
             inline algorithm(algorithm&&) noexcept = default;
@@ -194,34 +194,89 @@ namespace msa
             inline algorithm& operator=(const algorithm&) = default;
             inline algorithm& operator=(algorithm&&) = default;
 
-            virtual auto generate(size_t) -> buffer<pair>&;
-            virtual auto run(const context&) -> buffer<score> = 0;
+            virtual auto generate(size_t) const -> buffer<pair>;
+            virtual auto run(const context&) const -> distance_matrix = 0;
 
-            static auto retrieve(const std::string&) -> const functor<algorithm *()>&;
+            static auto has(const std::string&) -> bool;
+            static auto make(const std::string&) -> const factory&;
             static auto list() noexcept -> const std::vector<std::string>&;
         };
 
         /**
-         * Functor responsible for instantiating an algorithm.
-         * @see pairwise::manager::run
+         * Defines the module's conduit. This conduit is composed of the sequences
+         * to be aligned and their pairwise distance matrix.
          * @since 0.1.1
          */
-        using factory = functor<algorithm *()>;
+        struct conduit : public pipeline::conduit
+        {
+            const msa::database db;                 /// The loaded sequences' database.
+            const distance_matrix distances;        /// The sequences' pairwise distances.
+            const size_t total;                     /// The total number of sequences.
+
+            inline conduit() noexcept = delete;
+            inline conduit(const conduit&) = default;
+            inline conduit(conduit&&) = default;
+
+            /**
+             * Instantiates a new conduit.
+             * @param db The sequence database to transfer to the next module.
+             * @param dmat The database's resulting pairwise distance matrix.
+             */
+            inline conduit(const msa::database& db, const distance_matrix& dmat) noexcept
+            :   db {db}
+            ,   distances {dmat}
+            ,   total {db.count()}
+            {}
+
+            inline conduit& operator=(const conduit&) = delete;
+            inline conduit& operator=(conduit&&) = delete;
+        };
 
         /**
-         * Creates a module's configuration instance.
-         * @param db The database of sequences to align.
-         * @param algorithm The chosen pairwise algorithm.
-         * @param table The chosen scoring table.
-         * @return The module's configuration instance.
+         * Defines the module's pipeline manager. This object will be the one responsible
+         * for checking and managing the module's execution when on a pipeline.
+         * @since 0.1.1
          */
-        inline configuration configure(
-                const msa::database& db
-            ,   const std::string& algorithm = "default"
-            ,   const std::string& table = "default"
-            ) noexcept
+        struct module : public pipeline::module
         {
-            return {db, algorithm, table};
+            using previous = bootstrap::module;     /// Indicates the expected previous module.
+            using conduit = pairwise::conduit;      /// The module's conduit type.
+
+            using pipe = pointer<pipeline::conduit>;
+            
+            /**
+             * Returns an string identifying the module's name.
+             * @return The module's name.
+             */
+            inline auto name() const -> const char * override
+            {
+                return "pairwise";
+            }
+
+            auto run(const io::service&, const pipe&) const -> pipe override;
+            auto check(const io::service&) const -> bool override;
+        };
+
+        /**
+         * Runs the module when not on a pipeline.
+         * @param db The database of sequences to align.
+         * @param table The chosen scoring table.
+         * @param algorithm The chosen pairwise algorithm.
+         * @return The chosen algorithm's resulting distance matrix.
+         */
+        inline distance_matrix run(
+                const msa::database& db
+            ,   const scoring_table& table
+            ,   const std::string& algorithm = "default"
+            )
+        {
+            auto lambda = pairwise::algorithm::make(algorithm);
+            
+            const pairwise::algorithm *worker = lambda ();
+            auto result = worker->run({db, table});
+            
+            delete worker;
+            return result;
         }
     }
 }

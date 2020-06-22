@@ -391,8 +391,6 @@ namespace
             align_kernel<<<in.jobs.size(), block_size, sizeof(score) * batch_size>>>(in, out, table);
             cuda::memory::copy(result.raw() + done, out.raw(), in.jobs.size());
             done += in.jobs.size();
-
-            watchdog::update("pairwise", done, count);
         }
 
         return result;
@@ -411,19 +409,20 @@ namespace
          * @param context The algorithm's context.
          * @return The module's result value.
          */
-        auto run(const context& ctx) -> buffer<score> override
+        auto run(const context& ctx) const -> distance_matrix override
         {
-            this->generate(ctx.db.count());
-
             buffer<score> result;
-            buffer<pair> pairs = this->scatter(this->pairs);
+            size_t nsequences = ctx.db.count();
 
+            auto pairs = this->generate(nsequences);
+                 pairs = this->scatter(pairs);
+            
             onlyslaves {
                 const scoring_table table = ctx.table.to_device();
                 result = align_db(pairs, ctx.db, table);
             }
 
-            return this->gather(result);
+            return distance_matrix::inflate(this->gather(result), nsequences);
         }
     };
 }

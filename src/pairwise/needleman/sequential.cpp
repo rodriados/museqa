@@ -89,8 +89,6 @@ namespace
                 ,   one.size() > two.size() ? two : one
                 ,   table
                 );
-
-            watchdog::update("pairwise", i, count);
         }
 
         return result;
@@ -110,16 +108,17 @@ namespace
          * @param context The algorithm's context.
          * @return The module's result value.
          */
-        auto run(const context& ctx) -> buffer<score> override
+        auto run(const context& ctx) const -> distance_matrix override
         {
-            this->generate(ctx.db.count());
-
             buffer<score> result;
-            buffer<pair> pairs = this->scatter(this->pairs);
+            size_t nsequences = ctx.db.count();
 
+            auto pairs = this->generate(nsequences);
+                 pairs = this->scatter(pairs);
+            
             onlyslaves result = align_db(pairs, ctx.db, ctx.table);
 
-            return this->gather(result);
+            return distance_matrix::inflate(this->gather(result), nsequences);
         }
     };
 }
