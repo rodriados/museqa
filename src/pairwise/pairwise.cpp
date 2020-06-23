@@ -6,9 +6,11 @@
 #include <string>
 #include <vector>
 
+#include <io.hpp>
 #include <msa.hpp>
 #include <utils.hpp>
 #include <buffer.hpp>
+#include <database.hpp>
 #include <exception.hpp>
 #include <dispatcher.hpp>
 
@@ -32,11 +34,21 @@ namespace msa
         };
 
         /**
+         * Informs whether a given factory name exists in dispatcher.
+         * @param name The name of algorithm to check existance of.
+         * @return Does the chosen algorithm exist?
+         */
+        auto algorithm::has(const std::string& name) -> bool
+        {
+            return factory_dispatcher.has(name);
+        }
+
+        /**
          * Gets an algorithm factory by its name.
          * @param name The name of algorithm to retrieve.
          * @return The factory of requested algorithm.
          */
-        auto algorithm::retrieve(const std::string& name) -> const factory&
+        auto algorithm::make(const std::string& name) -> const factory&
         try {
             return factory_dispatcher[name];
         } catch(const exception& e) {
@@ -57,44 +69,50 @@ namespace msa
          * @param num The total number of elements.
          * @return The generated sequence pairs.
          */
-        auto algorithm::generate(size_t num) -> buffer<pair>&
+        auto algorithm::generate(size_t num) const -> buffer<pair>
         {
             const auto total = utils::nchoose(num);
-            auto pairbuf = buffer<pair>::make(total);
+            auto pairs = buffer<pair>::make(total);
 
             for(size_t i = 0, c = 0; i < num - 1; ++i)
                 for(size_t j = i + 1; j < num; ++j, ++c)
-                    pairbuf[c] = {seqref(i), seqref(j)};
+                    pairs[c] = pair {seqref(i), seqref(j)};
 
-            return pairs = pairbuf;
+            return pairs;
         }
 
         /**
-         * Aligns every sequence in given database pairwise, thus calculating a
-         * similarity score for every different permutation of sequence pairs.
-         * @param config The module's configuration.
-         * @return The new module manager instance.
+         * Execute the module's task when on a pipeline.
+         * @param io The pipeline's IO service instance.
+         * @return A conduit with the module's processed results.
          */
-        auto manager::run(const configuration& config) -> manager
+        auto module::run(const io::service& io, const module::pipe& pipe) const -> module::pipe
         {
-            using utils::nchoose;
+            auto algoname = io.get<std::string>(cli::pairwise, "default");
+            auto tablename = io.get<std::string>(cli::scoring, "default");
+            const auto conduit = pipeline::convert<module>(*pipe);
 
-            const auto& algof = algorithm::retrieve(config.algorithm);
-            const auto table  = scoring_table::make(config.table);
+            auto table = scoring_table::make(tablename);
+            auto result = pairwise::run(conduit.db, table, algoname);
 
-            onlymaster watchdog::info("chosen pairwise algorithm <bold>%s</>", config.algorithm);
-            onlymaster watchdog::info("chosen pairwise scoring table <bold>%s</>", config.table);
-            onlymaster watchdog::init("pairwise", "aligning <bold>%llu</> pairs", nchoose(config.db.count()));
+            auto ptr = new module::conduit {conduit.db, result};
+            return module::pipe {ptr};
+        }
 
-            algorithm *worker = (algof)();
+        /**
+         * Checks whether command line arguments produce a valid module state.
+         * @param io The pipeline's IO service instance.
+         * @return Are the given command line arguments valid?
+         */
+        auto module::check(const io::service& io) const -> bool
+        {
+            auto algoname = io.get<std::string>(cli::pairwise, "default");
+            auto tablename = io.get<std::string>(cli::scoring, "default");
 
-            context ctx {config.db, table};
-            manager result {worker->run(ctx), config.db.count()};
-
-            onlymaster watchdog::finish("pairwise", "aligned all sequence pairs");
-
-            delete worker;
-            return result;
+            enforce(algorithm::has(algoname), "unknown pairwise algorithm chosen: '%s'", algoname);
+            enforce(scoring_table::has(tablename), "unknown scoring table chosen: '%s'", tablename);
+            
+            return true;
         }
     }
 }

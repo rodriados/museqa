@@ -49,7 +49,7 @@ namespace msa
                 template <
                         class ...U
                     ,   class X = element_type
-                    ,   class = typename std::enable_if<utils::all(std::is_convertible<U, X>::value...)>::type
+                    ,   class = typename std::enable_if<utils::all(std::is_convertible<U, X>()...)>::type
                     >
                 __host__ __device__ inline constexpr base(const U&... value) noexcept
                 :   dim {static_cast<element_type>(value)...}
@@ -92,7 +92,7 @@ namespace msa
                 __host__ __device__ inline constexpr base operator*(const U& scalar) const noexcept
                 {
                     using namespace utils;
-                    return from_tuple(apply(mul<element_type>, static_cast<element_type>(scalar), tie(dim)));
+                    return from_tuple(apply(mul<element_type>, tie(dim), static_cast<element_type>(scalar)));
                 }
 
                 /**

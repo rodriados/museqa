@@ -162,7 +162,7 @@ namespace msa
                 __host__ __device__ inline constexpr base(U&&... value) noexcept
                 :   leaf<I, T> (std::forward<decltype(value)>(value))...
                 {
-                    static_assert(utils::all(std::is_convertible<U, T>::value...), "tuple are not compatible");
+                    static_assert(utils::all(std::is_convertible<U, T>()...), "tuple types not compatible");
                 }
 
                 __host__ __device__ inline base& operator=(const base&) = default;
@@ -608,7 +608,7 @@ namespace msa
             /**
              * Applies an operator to all tuple's elements.
              * @tparam F The functor type to apply.
-             * @tparam B The base and return value types.
+             * @tparam A The types of extra arguments.
              * @tparam I The tuple's indeces.
              * @tparam T The tuple's types.
              * @param lambda The functor to apply to tuple.
@@ -616,15 +616,15 @@ namespace msa
              * @param tp The tuple to apply functor to.
              * @return The new tuple.
              */
-            template <typename F, typename B, size_t ...I, typename ...T>
+            template <typename F, typename ...A, size_t ...I, typename ...T>
             __host__ __device__ inline constexpr auto apply(
                     F&& lambda
-                ,   const B& zero
                 ,   const base<indexer<I...>, T...>& tp
+                ,   const A&... args
                 )
-            -> msa::tuple<decltype(lambda(std::declval<B>(), std::declval<T>()))...>
+            -> msa::tuple<decltype(lambda(std::declval<T>(), std::declval<A>()...))...>
             {
-                return {lambda(zero, get<I>(tp))...};
+                return {lambda(get<I>(tp), args...)...};
             }
 
             /**#@+
