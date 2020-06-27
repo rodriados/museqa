@@ -90,10 +90,10 @@ namespace msa
         {
             auto algoname = io.get<std::string>(cli::pairwise, "default");
             auto tablename = io.get<std::string>(cli::scoring, "default");
-            const auto conduit = pipeline::convert<module>(*pipe);
+            const auto conduit = pipeline::convert<module::previous>(*pipe);
 
             auto table = scoring_table::make(tablename);
-            auto result = pairwise::run(conduit.db, table, algoname);
+            auto result = pairwise::run(*conduit.db, table, algoname);
 
             auto ptr = new module::conduit {conduit.db, result};
             return module::pipe {ptr};
@@ -107,9 +107,9 @@ namespace msa
         auto module::check(const io::service& io) const -> bool
         {
             auto algoname = io.get<std::string>(cli::pairwise, "default");
-            auto tablename = io.get<std::string>(cli::scoring, "default");
-
             enforce(algorithm::has(algoname), "unknown pairwise algorithm chosen: '%s'", algoname);
+
+            auto tablename = io.get<std::string>(cli::scoring, "default");
             enforce(scoring_table::has(tablename), "unknown scoring table chosen: '%s'", tablename);
             
             return true;

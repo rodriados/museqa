@@ -174,7 +174,7 @@ namespace msa
 
         /**
          * Functor responsible for instantiating an algorithm.
-         * @see pairwise::manager::run
+         * @see pairwise::run
          * @since 0.1.1
          */
         using factory = functor<struct algorithm *()>;
@@ -209,7 +209,7 @@ namespace msa
          */
         struct conduit : public pipeline::conduit
         {
-            const msa::database db;                 /// The loaded sequences' database.
+            const pointer<msa::database> db;        /// The loaded sequences' database.
             const distance_matrix distances;        /// The sequences' pairwise distances.
             const size_t total;                     /// The total number of sequences.
 
@@ -222,10 +222,10 @@ namespace msa
              * @param db The sequence database to transfer to the next module.
              * @param dmat The database's resulting pairwise distance matrix.
              */
-            inline conduit(const msa::database& db, const distance_matrix& dmat) noexcept
+            inline conduit(const pointer<msa::database>& db, const distance_matrix& dmat) noexcept
             :   db {db}
             ,   distances {dmat}
-            ,   total {db.count()}
+            ,   total {db->count()}
             {}
 
             inline conduit& operator=(const conduit&) = delete;

@@ -65,12 +65,11 @@ namespace msa
         inline auto convert(const conduit& target) noexcept
         -> typename std::enable_if<
                 std::is_base_of<module, T>::value &&
-                std::is_base_of<module, typename T::previous>::value &&
-                std::is_base_of<conduit, typename T::previous::conduit>::value
+                std::is_base_of<conduit, typename T::conduit>::value
             ,   const typename T::previous::conduit&
             >::type
         {
-            return dynamic_cast<const typename T::previous::conduit&>(target);
+            return dynamic_cast<const typename T::conduit&>(target);
         }
     }
 

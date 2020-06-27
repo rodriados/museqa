@@ -20,7 +20,7 @@ namespace msa
          */
         struct conduit : public pipeline::conduit
         {
-            const database db;              /// The database with loaded sequences.
+            const pointer<database> db;     /// The database with loaded sequences.
             const size_t total;             /// The total number of sequences.
 
             inline conduit() noexcept = delete;
@@ -31,7 +31,7 @@ namespace msa
              * Instantiates a new conduit.
              * @param db The sequence database to transfer to the next module.
              */
-            inline explicit conduit(const database& db) noexcept
+            inline explicit conduit(const pointer<database>& db) noexcept
             :   db {db}
             ,   total {db.count()}
             {}

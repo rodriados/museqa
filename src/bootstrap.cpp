@@ -9,6 +9,7 @@
 #include <utils.hpp>
 #include <tuple.hpp>
 #include <encoder.hpp>
+#include <pointer.hpp>
 #include <database.hpp>
 #include <sequence.hpp>
 #include <bootstrap.hpp>
@@ -22,13 +23,13 @@ namespace msa
          * @param io The IO service instance to get file names from.
          * @return The sequences database with all loaded sequences.
          */
-        static auto load(const io::service& io) -> database
+        static auto load(const io::service& io) -> pointer<database>
         {
-            database db;
+            auto db = pointer<database>::make();
             auto dblist = io.load<database>();
 
             for(const auto& current : dblist)
-                db.merge(current);
+                db->merge(current);
 
             return db;
         }
@@ -40,12 +41,12 @@ namespace msa
          * @param db The database to be serializable.
          * @return The serialized database's contents.
          */
-        static auto serialize(const database& db) -> decltype(auto)
+        static auto serialize(const pointer<database>& db) -> decltype(auto)
         {
             std::vector<size_t> size;
             std::vector<encoder::block> block;
 
-            for(const auto& entry : db) {
+            for(const auto& entry : *db) {
                 size.push_back(entry.contents.size());
                 block.insert(block.end(), entry.contents.begin(), entry.contents.end());
             }
@@ -67,12 +68,12 @@ namespace msa
                 const std::vector<size_t>& sizes
             ,   const std::vector<encoder::block>& blocks
             )
-        -> database
+        -> pointer<database>
         {
-            database db;
+            auto db = pointer<database>::make();
 
             for(size_t i = 0, j = 0, n = sizes.size(); i < n; ++i) {
-                db.add(sequence::copy(&blocks[j], sizes[i]));
+                db->add(sequence::copy(&blocks[j], sizes[i]));
                 j += sizes[i];
             }
 
@@ -90,7 +91,7 @@ namespace msa
          */
         auto module::run(const io::service& io, const module::pipe&) const -> module::pipe
         {
-            database db;
+            pointer<database> db;
             std::vector<size_t> sizes;
             std::vector<encoder::block> blocks;
 
