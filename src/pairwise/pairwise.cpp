@@ -15,7 +15,7 @@
 #include <dispatcher.hpp>
 
 #include <pairwise/pairwise.cuh>
-#include <pairwise/needleman.cuh>
+#include <pairwise/algorithm/needleman.cuh>
 
 namespace msa
 {
