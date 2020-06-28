@@ -66,7 +66,7 @@ namespace msa
         -> typename std::enable_if<
                 std::is_base_of<module, T>::value &&
                 std::is_base_of<conduit, typename T::conduit>::value
-            ,   const typename T::previous::conduit&
+            ,   const typename T::conduit&
             >::type
         {
             return dynamic_cast<const typename T::conduit&>(target);

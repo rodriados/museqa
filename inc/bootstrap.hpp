@@ -33,7 +33,7 @@ namespace msa
              */
             inline explicit conduit(const pointer<database>& db) noexcept
             :   db {db}
-            ,   total {db.count()}
+            ,   total {db->count()}
             {}
 
             inline conduit& operator=(const conduit&) = default;

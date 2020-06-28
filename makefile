@@ -57,8 +57,7 @@ TESTFILES    = $(PYXCFILES:$(SRCDIR)/%.pyx=$(TGTDIR)/%.so)                      
                $(PYFILES:$(SRCDIR)/%.py=$(TGTDIR)/%.py)
 STATICFILES  = $(filter $(PYXCFILES:$(SRCDIR)/%.pyx=$(OBJDIR)/%.pya.a),$(OBJFILES:%.o=%.pya.a))
 
-SRCHIERARCHY = $(sort $(dir $(wildcard $(SRCDIR)/*/. $(SRCDIR)/*/*/. $(SRCDIR)/*/*/*/.)))
-OBJHIERARCHY = $(SRCHIERARCHY:$(SRCDIR)/%=$(OBJDIR)/%)
+OBJHIERARCHY = $(sort $(dir $(OBJFILES)))
 
 all: debug
 
@@ -128,10 +127,11 @@ $(OBJDIR)/%.pyo.so: $(OBJDIR)/%.cxx
 
 $(OBJDIR)/libmodules.a: $(OBJDIR)/cuda.pya.a
 $(OBJDIR)/libmodules.a: $(OBJDIR)/encoder.pya.a
-$(OBJDIR)/libmodules.a: $(OBJDIR)/parser/fasta.pya.a
 $(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/pairwise.pya.a
 $(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/table.pya.a
 $(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/database.pya.a
+$(OBJDIR)/libmodules.a: $(OBJDIR)/io/loader/database.pya.a
+$(OBJDIR)/libmodules.a: $(OBJDIR)/io/loader/parser/fasta.pya.a
 $(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/needleman/communication.pya.a
 $(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/needleman/hybrid.pya.a
 $(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/needleman/sequential.pya.a

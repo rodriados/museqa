@@ -11,6 +11,7 @@
 #include <utils.hpp>
 #include <buffer.hpp>
 #include <database.hpp>
+#include <pipeline.hpp>
 #include <exception.hpp>
 #include <dispatcher.hpp>
 
