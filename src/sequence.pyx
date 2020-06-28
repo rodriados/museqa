@@ -16,7 +16,7 @@ __all__ = ["Sequence"]
 cdef class Sequence:
     # Instantiates a new sequence.
     # @param contents The sequence contents.
-    def __cinit__(self, contents):
+    def __cinit__(self, contents = bytes()):
         @singledispatch
         def overload(value):
             raise TypeError("unexpected argument type")

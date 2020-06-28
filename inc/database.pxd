@@ -40,6 +40,11 @@ cdef extern from "database.hpp" namespace "msa" nogil:
 
         size_t count()
 
+cdef extern from "io/loader/database.hpp" namespace "msa::io" nogil:
+    # Imports the IO loader's specialization for databases. This will allow us to
+    # use the exactly same loader we do in C++.
+    pass
+
 # Database wrapper. This class is responsible for interfacing all interactions between
 # Python code to the underlying C++ database object.
 # @since 0.1.1

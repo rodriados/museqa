@@ -9,6 +9,7 @@
 
 #include <utils.hpp>
 #include <tuple.hpp>
+#include <environment.h>
 #include <exception.hpp>
 #include <reflection.hpp>
 
@@ -103,7 +104,9 @@ namespace msa
                  * @return The 1-dimensional collapsed cartesian value.
                  */
                 template <typename U = T>
-                __host__ __device__ inline constexpr element_type collapse(const base<D, U>& other) const noexcept
+                __host__ __device__ inline constexpr element_type collapse(
+                        const base<D, U>& other
+                    ) const noexcept
                 {
                     using namespace utils;
                     return foldl(add<element_type>, 0, zipwith(mul<element_type>, tie(other.dim), 
@@ -200,4 +203,15 @@ namespace msa
         }
     };
     /**#@-*/
+
+    #if __msa(runtime, cython)
+        /**
+         * Type alias available for Cython contexts. As Cython does not support
+         * type templates with value parameters, we must alias them.
+         * @tparam T The cartesian value type.
+         * @since 0.1.1
+         */
+        template <typename T = ptrdiff_t>
+        using cartesian2 = cartesian<2, T>;
+    #endif
 }

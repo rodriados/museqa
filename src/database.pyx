@@ -7,6 +7,7 @@ from libcpp.string cimport string
 from database cimport c_database
 from sequence cimport c_sequence, Sequence
 from sequence import Sequence
+from io cimport c_loader
 
 from collections import namedtuple
 from functools import singledispatch
@@ -30,20 +31,18 @@ cdef class Database:
         def overload(value):
             raise TypeError("could not find sequence")
 
-        cdef c_database.entry_type entry
-
         @overload.register(int)
         def from_offset(int value):
-            entry = self.thisptr.at(value)
+            cdef c_database.entry_type entry = self.thisptr.at(value)
+            return Database.entry(entry.description.decode(), Sequence.wrap(entry.contents))
 
         @overload.register(bytes)
         def from_key(bytes value):
-            entry = self.thisptr.at(value)
+            cdef c_database.entry_type entry = self.thisptr.at(value)
+            return Database.entry(entry.description.decode(), Sequence.wrap(entry.contents))
 
         overload.register(str, lambda value: from_key(value.encode()))
-        overload(key)
-
-        return Database.entry(entry.description.decode(), Sequence.wrap(entry.contents))
+        return overload(key)
 
     # Adds new sequences to database.
     # @param target The new sequence to add to database.
@@ -104,6 +103,19 @@ cdef class Database:
 
         overload.register(str, lambda *values: from_keys(*[val.encode() for val in values]))
         overload(*keys)
+
+        return Database.wrap(result)
+
+    # Loads a new database from the given files.
+    # @param filenames The files to load a new database from.
+    # @return The new database instance.
+    @staticmethod
+    def loadfrom(*filenames):
+        cdef c_database result
+        cdef c_loader[c_database] loader
+
+        for filename in filenames:
+            result.merge(loader.load(filename.encode()))
 
         return Database.wrap(result)
 

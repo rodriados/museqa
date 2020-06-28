@@ -2,35 +2,30 @@
 # Multiple Sequence Alignment pairwise export file.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
 # @copyright 2018-2020 Rodrigo Siqueira
+from libc.stdint cimport *
 from libcpp.string cimport string
 from libcpp.vector cimport vector
 from cartesian cimport c_cartesian2
 from database cimport c_database
 
 cdef extern from "pairwise/pairwise.cuh" namespace "msa::pairwise":
-    # The score of the alignment of a sequence pair.
+    # The score of a sequence pair alignment.
     # @since 0.1.1
     ctypedef float c_score "msa::pairwise::score"
 
-    cdef struct c_configuration "msa::pairwise::configuration":
-        pass
-
-    # Manages all data and execution of the pairwise module.
+    # Represents a pairwise distance matrix. At last, this object represents
+    # the pairwise module's execution's final result.
     # @since 0.1.1
-    cdef cppclass c_pairwise "msa::pairwise::manager":
+    cdef cppclass c_dist_matrix "msa::pairwise::distance_matrix":
         ctypedef c_score element_type
 
-        c_pairwise()
-        c_pairwise(c_pairwise&)
+        c_dist_matrix()
+        c_dist_matrix(c_dist_matrix&)
 
-        c_pairwise& operator=(c_pairwise&) except +RuntimeError
+        c_dist_matrix& operator=(c_dist_matrix&)
+        element_type& at "operator[]" (c_cartesian2[size_t]&) except +RuntimeError
 
-        element_type& at "operator[]" (const c_cartesian2&) except +RuntimeError
-
-        size_t count()
-
-        @staticmethod
-        c_pairwise run(c_configuration&) except +RuntimeError
+        c_cartesian2[size_t] dimension()
 
     # The aminoacid substitution tables. These tables are stored contiguously
     # in memory, in order to facilitate accessing its elements.
@@ -38,7 +33,11 @@ cdef extern from "pairwise/pairwise.cuh" namespace "msa::pairwise":
     cdef cppclass c_scoring_table "msa::pairwise::scoring_table":
         ctypedef c_score element_type
 
-        element_type at "operator[]" (const c_cartesian2&)
+        c_scoring_table()
+        c_scoring_table(c_scoring_table&)
+
+        c_scoring_table& operator=(c_scoring_table&) except +RuntimeError
+        element_type at "operator[]" (c_cartesian2[intptr_t]&)
 
         element_type penalty()
 
@@ -54,21 +53,53 @@ cdef extern from "pairwise/pairwise.cuh" namespace "msa::pairwise":
         @staticmethod
         vector[string]& list()
 
-    # Creates a module's configuration instance.
-    cdef c_configuration configure(c_database&, string&, string&)
+    # Runs the pairwise module with given parameters.
+    cdef c_dist_matrix c_run "msa::pairwise::run" (c_database&, c_scoring_table&, string&) except +RuntimeError
 
-# Manages all data and execution of the pairwise module.
+# Exposes the module's resulting distance matrix.
 # @since 0.1.1
-cdef class Pairwise:
-    cdef c_pairwise thisptr
+cdef class DistanceMatrix:
+    cdef c_dist_matrix thisptr
 
+    # Sets the underlying C++ object to the given target instance.
+    # @param target The target object to use as underlying instance.
+    cdef inline void c_set(self, const c_dist_matrix& target):
+        self.thisptr = target
+
+    # Retrieves the instance's underlying C++ object.
+    # @return The underlying C++ object instance.
+    cdef inline c_dist_matrix c_get(self):
+        return self.thisptr
+
+    # Wraps an existing distance matrix instance.
+    # @param target The distance matrix to be wrapped.
+    # @return The new wrapper instance.
     @staticmethod
-    cdef Pairwise wrap(c_pairwise&)
+    cdef inline DistanceMatrix wrap(const c_dist_matrix& target):
+        cdef DistanceMatrix wrapper = DistanceMatrix.__new__(DistanceMatrix)
+        wrapper.c_set(target)
+        return wrapper
 
-# Exposes a scoring table to Python's world.
+# Exposes the module's scoring table object.
 # @since 0.1.1
 cdef class ScoringTable:
     cdef c_scoring_table thisptr
 
+    # Sets the underlying C++ object to the given target instance.
+    # @param target The target object to use as underlying instance.
+    cdef inline void c_set(self, const c_scoring_table& target):
+        self.thisptr = target
+
+    # Retrieves the instance's underlying C++ object.
+    # @return The underlying C++ object instance.
+    cdef inline c_scoring_table c_get(self):
+        return self.thisptr
+
+    # Wraps an existing scoring table instance.
+    # @param target The scoring table to be wrapped.
+    # @return The new wrapper instance.
     @staticmethod
-    cdef ScoringTable wrap(c_scoring_table&)
+    cdef inline ScoringTable wrap(const c_scoring_table& target):
+        cdef ScoringTable wrapper = ScoringTable.__new__(ScoringTable)
+        wrapper.c_set(target)
+        return wrapper

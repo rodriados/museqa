@@ -1,55 +1,36 @@
 #!/usr/bin/env python
-# cython: language_level = 3
 # Multiple Sequence Alignment pairwise wrapper file.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
-# @copyright 2018-2019 Rodrigo Siqueira
+# @copyright 2018-2020 Rodrigo Siqueira
 from libc.stdint cimport *
 from libcpp.string cimport string
 from libcpp.vector cimport vector
+from cartesian cimport c_cartesian2
 from database cimport Database
 from encoder cimport c_encode
 from pairwise cimport *
 
-# Manages all data and execution of the pairwise module.
+# Exposes the module's resulting distance matrix.
 # @since 0.1.1
-cdef class Pairwise:
-    # Gets an item from the module's result.
-    # @param offset The requested element offset.
-    # @return The element in requested offset.
+cdef class DistanceMatrix:
+    # Accesses a value on the distance matrix.
+    # @param offset The requested matrix position to access.
+    # @return The score of given position.
     def __getitem__(self, tuple offset):
-        cdef c_cartesian2 point = c_cartesian2(int(offset[0]), int(offset[1]))
-        cdef c_score score = self.thisptr.at(point)
-        return score
+        cdef uint32_t x = int(offset[0])
+        cdef uint32_t y = int(offset[1])
+        cdef c_cartesian2[size_t] position = c_cartesian2[size_t](x, y)
 
-    # Aligns every sequence in given database pairwise, thus calculating a similarity
-    # score for every different permutation of sequence pairs.
-    # @param db The database to be processed.
-    # @param table The chosen scoring table.
-    # @param algorithm The pairwise algorithm to use.
-    # @return The processed pairwise instance.
-    @staticmethod
-    def run(Database db, **kwargs):
-        cdef string algorithm = kwargs.pop('algorithm', 'default').encode('ascii')
-        cdef string table = kwargs.pop('table', 'default').encode('ascii')
+        return self.thisptr.at(position)
 
-        return Pairwise.wrap(c_pairwise.run(configure(db.thisptr, algorithm, table)))
-
-    # Wraps an existing pairwise instance.
-    # @param target The pairwise to be wrapped.
-    # @return The new wrapper instance.
-    @staticmethod
-    cdef Pairwise wrap(c_pairwise& target):
-        instance = <Pairwise>Pairwise.__new__(Pairwise)
-        instance.thisptr = target
-        return instance
-
-    # Informs the number of processed pairs or to process.
-    # @return The number of pairs this instance shall process.
+    # Informs the matrix's dimension.
+    # @return The distance matrix's dimension.
     @property
-    def count(self):
-        return self.thisptr.count()
+    def dimension(self):
+        cdef c_cartesian2[size_t] dim = self.thisptr.dimension()
+        return (dim.at(0), dim.at(1))
 
-# Exposes a scoring table to Python world.
+# Exposes the module's scoring table object.
 # @since 0.1.1
 cdef class ScoringTable:
     # Instantiates a new scoring table instance.
@@ -58,13 +39,13 @@ cdef class ScoringTable:
         cdef string tablename = name.encode('ascii')
         self.thisptr = c_scoring_table.make(tablename)
 
-    # Accesses a value in the scoring table.
+    # Accesses a value on the scoring table.
     # @param offset The requested table position offset.
     # @return The score of given tuple index.
     def __getitem__(self, tuple offset):
         cdef uint8_t x = c_encode(ord(offset[0])) if isinstance(offset[0], str) else int(offset[0])
         cdef uint8_t y = c_encode(ord(offset[1])) if isinstance(offset[1], str) else int(offset[1])
-        cdef c_cartesian2 point = c_cartesian2(x, y)
+        cdef c_cartesian2[intptr_t] point = c_cartesian2[intptr_t](x, y)
 
         if x >= 25 or y >= 25:
             raise RuntimeError("scoring table offset out of range")
@@ -78,15 +59,6 @@ cdef class ScoringTable:
         cdef vector[string] result = c_scoring_table.list()
         return [elem.decode() for elem in result]
 
-    # Wraps an existing scoring table instance.
-    # @param target The scoring table to be wrapped.
-    # @return The new wrapper instance.
-    @staticmethod
-    cdef ScoringTable wrap(c_scoring_table& target):
-        instance = <ScoringTable>ScoringTable.__new__(ScoringTable)
-        instance.thisptr = target
-        return instance
-
     # Gives access to the table's penalty value.
     # @return The table's penalty value.
     @property
@@ -95,7 +67,7 @@ cdef class ScoringTable:
 
 # Lists all available algorithms to this module.
 # @return The list of all algorithms available.
-def algorithms():
+def list():
     cdef vector[string] result = c_algorithm.list()
     return [elem.decode() for elem in result]
 
@@ -104,6 +76,10 @@ def algorithms():
 # @param db The database to be processed.
 # @param table The chosen scoring table.
 # @param algorithm The pairwise algorithm to use.
-# @return The pairwise module instance.
+# @return The resulting distance matrix.
 def run(Database db, **kwargs):
-    return Pairwise(db, **kwargs)
+    table = kwargs.pop('table', ScoringTable())
+    algoname = kwargs.pop('algorithm', 'default').encode('ascii')
+
+    cdef ScoringTable s_table = table if type(table) is not str else ScoringTable(table)
+    return DistanceMatrix.wrap(c_run(db.thisptr, s_table.thisptr, algoname))
