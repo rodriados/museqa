@@ -4,7 +4,6 @@
 # @copyright 2019-2020 Rodrigo Siqueira
 from msa.database import Database
 from msa.sequence import Sequence
-from msa import parse
 import unittest
 
 # Groups up a list of tests for database objects.
@@ -38,7 +37,6 @@ class TestDatabase(unittest.TestCase):
     def add(self):
         self.compare(TestDatabase.fixtures)
         self.compare([(key, val) for key, val in TestDatabase.fixtures.items()])
-        self.compare([(key, Sequence(val)) for key, val in TestDatabase.fixtures.items()])
 
     # Tests whether sequences can be accessed via index and description.
     # @since 0.1.1

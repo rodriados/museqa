@@ -1,14 +1,14 @@
 #!/usr/bin/env python
-# Multiple Sequence Alignment sequence test file.
+# Multiple Sequence Alignment object loaders test file.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
 # @copyright 2019-2020 Rodrigo Siqueira
-from msa import parse
+from msa.database import Database
 from hashlib import md5
 import unittest
 
-# Groups up a list of tests for parsers.
+# Groups up a list of tests for loaders.
 # @since 0.1.1
-class TestParser(unittest.TestCase):
+class TestLoader(unittest.TestCase):
     # Defines some fixture files to parse and test against.
     # @since 0.1.1
     fixtures = {
@@ -38,8 +38,8 @@ class TestParser(unittest.TestCase):
     # Tests whether can parse FASTA files correctly.
     # @since 0.1.1
     def fasta(self):
-        for fixture, contents in TestParser.fixtures['fasta'].items():
-            database = parse(fixture)
+        for fixture, contents in TestLoader.fixtures['fasta'].items():
+            database = Database.loadfrom(fixture)
 
             for key, digest in contents.items():
                 self.assertEqual(key, database[key].description)
@@ -49,7 +49,7 @@ class TestParser(unittest.TestCase):
     # @since 0.1.1
     def unknown(self):
         with self.assertRaises(RuntimeError) as context:
-            parse("fixtures/unknown")
+            Database.loadfrom("fixtures/unknown")
 
     testCanParseFasta = fasta
     testThrowOnUnknwon = unknown
