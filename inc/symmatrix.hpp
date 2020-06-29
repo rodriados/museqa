@@ -5,6 +5,8 @@
  */
 #pragma once
 
+#include <utility>
+
 #include <utils.hpp>
 #include <matrix.hpp>
 #include <allocator.hpp>
@@ -100,6 +102,16 @@ namespace msa
             }
 
             /**
+             * Copies data from an existing matrix instance.
+             * @param mat The target matrix to copy data from.
+             * @return A newly created matrix instance.
+             */
+            static inline symmatrix copy(const symmatrix& mat) noexcept
+            {
+                return symmatrix {underlying_matrix::copy(mat)};
+            }
+
+            /**
              * Creates a new symmetric matrix for the given number of elements.
              * @param count The number of distinct target elements.
              * @return The newly created symmetric matrix instance.
@@ -126,7 +138,7 @@ namespace msa
              * @param other The underlying matrix with correct memory layout.
              */
             inline explicit symmatrix(underlying_matrix&& other) noexcept
-            :   underlying_matrix {other}
+            :   underlying_matrix {std::forward<decltype(other)>(other)}
             {}
 
             /**

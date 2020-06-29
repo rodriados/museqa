@@ -66,7 +66,7 @@ namespace msa
              * @param dim The matrix's dimensions.
              */
             inline explicit matrix(const underlying_buffer& buf, const cartesian_type& dim)
-            :   underlying_buffer {std::forward<decltype(buf)>(buf)}
+            :   underlying_buffer {buf}
             ,   m_dim {dim}
             {}
 
@@ -100,6 +100,16 @@ namespace msa
             __host__ __device__ inline const cartesian_type& dimension() const noexcept
             {
                 return m_dim;
+            }
+
+            /**
+             * Copies data from an existing matrix instance.
+             * @param mat The target matrix to copy data from.
+             * @return A newly created matrix instance.
+             */
+            static inline matrix copy(const matrix& mat) noexcept
+            {
+                return matrix {underlying_buffer::copy(mat), mat.m_dim};
             }
 
             /**

@@ -82,7 +82,25 @@ namespace msa
                     return distance_matrix {buf, count};
                 }
 
+                /**
+                 * Copies data from an existing matrix instance.
+                 * @param mat The target matrix to copy data from.
+                 * @return A newly created matrix instance.
+                 */
+                static inline distance_matrix copy(const distance_matrix& mat) noexcept
+                {
+                    return distance_matrix {underlying_matrix::copy(mat)};
+                }
+
             private:
+                /**
+                 * Initializes a new distance matrix from a symmetric matrix.
+                 * @param other The underlying matrix with correct memory layout.
+                 */
+                inline explicit distance_matrix(underlying_matrix&& other) noexcept
+                :   underlying_matrix {std::forward<decltype(other)>(other)}
+                {}
+
                 /**
                  * Constructs a new distance matrix by inflating a distances buffer.
                  * @param buf The buffer containing the matrix's distances.

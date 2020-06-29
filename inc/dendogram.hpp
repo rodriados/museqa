@@ -79,24 +79,6 @@ namespace msa
             using underlying_buffer::operator[];
 
             /**
-             * Retrieves the dendogram's root node.
-             * @return The dendogram's root.
-             */
-            inline node_type& root()
-            {
-                return operator[](this->size() - 1);
-            }
-
-            /**
-             * Retrieves the dendogram's const-qualified root node.
-             * @return The const-qualified dendogram's root.
-             */
-            inline const node_type& root() const
-            {
-                return operator[](this->size() - 1);
-            }
-
-            /**
              * Informs the number of leaves in dendogram.
              * @return The total amount of leaf nodes in dendogram.
              */
