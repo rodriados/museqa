@@ -8,7 +8,7 @@
 #include <environment.h>
 
 #include <phylogeny/phylogeny.cuh>
-#include <phylogeny/njoining.cuh>
+#include <phylogeny/algorithm/njoining.cuh>
 
 namespace msa
 {
@@ -23,7 +23,7 @@ namespace msa
              * @param b The second join pair candidate to compare.
              * @return The candidate with the minimum distance.
              */
-            auto closest(const joinpair& a, const joinpair& b) -> joinpair
+            auto closest(const joinable& a, const joinable& b) -> joinable
             {
                 const auto d1 = a.distance;
                 const auto d2 = b.distance;
@@ -36,10 +36,10 @@ namespace msa
              * @param candidate The current working node's join pair candidate.
              * @return The globally best join pair candidate.
              */
-            auto algorithm::reduce(joinpair& candidate) -> joinpair
+            auto algorithm::reduce(joinable& candidate) -> joinable
             {
                 #if !__msa(runtime, cython)
-                    static auto mpiop = mpi::op::create<joinpair>(closest);
+                    static auto mpiop = mpi::op::create<joinable>(closest);
                     return mpi::allreduce(candidate, mpiop);
                 #else
                     return candidate;

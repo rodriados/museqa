@@ -23,7 +23,7 @@ namespace msa
              * Represents a joinable OTU pair candidate.
              * @since 0.1.1
              */
-            struct joinpair : public reflector
+            struct joinable : public reflector
             {
                 oturef ref[2] = {undefined, undefined};             /// The OTU pair references.
                 score distance = std::numeric_limits<score>::max(); /// The distance between the OTU pair.
@@ -37,14 +37,14 @@ namespace msa
              */
             struct algorithm : public phylogeny::algorithm
             {
-                virtual auto reduce(joinpair&) -> joinpair;
-                virtual auto run(const context&) -> tree = 0;
+                virtual auto reduce(joinable&) -> joinable;
+                virtual auto run(const context&) const -> tree = 0;
             };
 
             /*
              * The list of all available needleman algorithm implementations.
              */
-            extern phylogeny::algorithm *sequential();
+            extern auto sequential() -> phylogeny::algorithm *;
         }
     }
 }

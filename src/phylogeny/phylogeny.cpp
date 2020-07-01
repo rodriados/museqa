@@ -6,13 +6,14 @@
 #include <string>
 #include <vector>
 
+#include <io.hpp>
 #include <msa.hpp>
 #include <exception.hpp>
 #include <symmatrix.hpp>
 #include <dispatcher.hpp>
 
 #include <phylogeny/phylogeny.cuh>
-#include <phylogeny/njoining.cuh>
+#include <phylogeny/algorithm/njoining.cuh>
 
 namespace msa
 {
@@ -30,11 +31,21 @@ namespace msa
         };
 
         /**
+         * Informs whether a given factory name exists in dispatcher.
+         * @param name The name of algorithm to check existance of.
+         * @return Does the chosen algorithm exist?
+         */
+        auto algorithm::has(const std::string& name) -> bool
+        {
+            return factory_dispatcher.has(name);
+        }
+
+        /**
          * Gets an algorithm factory by its name.
          * @param name The name of algorithm to retrieve.
          * @return The factory of requested algorithm.
          */
-        auto algorithm::retrieve(const std::string& name) -> const factory&
+        auto algorithm::make(const std::string& name) -> const factory&
         try {
             return factory_dispatcher[name];
         } catch(const exception& e) {
@@ -51,27 +62,32 @@ namespace msa
         }
 
         /**
-         * Generates a pseudo-phylogenetic tree from the distance matrix of all
-         * possible input sequence pairs.
-         * @param config The module's configuration.
-         * @return The new module manager instance.
+         * Execute the module's task when on a pipeline.
+         * @param io The pipeline's IO service instance.
+         * @return A conduit with the module's processed results.
          */
-        auto manager::run(const configuration& config) -> manager
+        auto module::run(const io::service& io, const module::pipe& pipe) const -> module::pipe
         {
-            const auto& algof = algorithm::retrieve(config.algorithm);
+            auto algoname = io.get<std::string>(cli::phylogeny, "default");
+            const auto conduit = pipeline::convert<module::previous>(*pipe);
 
-            onlymaster watchdog::info("chosen phylogeny algorithm <bold>%s</>", config.algorithm);
-            onlymaster watchdog::init("phylogeny", "building phylogenetic tree");
+            auto result = phylogeny::run(conduit.distances, conduit.total, algoname);
 
-            algorithm *worker = (algof)();
+            auto ptr = new module::conduit {conduit.db, result};
+            return module::pipe {ptr};
+        }
 
-            context ctx {config.pw, config.pw.count()};
-            manager result {worker->run(ctx)};
+        /**
+         * Checks whether command line arguments produce a valid module state.
+         * @param io The pipeline's IO service instance.
+         * @return Are the given command line arguments valid?
+         */
+        auto module::check(const io::service& io) const -> bool
+        {
+            auto algoname = io.get<std::string>(cli::phylogeny, "default");
+            enforce(algorithm::has(algoname), "unknown phylogeny algorithm chosen: '%s'", algoname);
 
-            onlymaster watchdog::finish("phylogeny", "phylogenetic tree built");
-
-            delete worker;
-            return result;
+            return true;
         }
     }
 }

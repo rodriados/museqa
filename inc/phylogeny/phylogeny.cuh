@@ -10,27 +10,30 @@
 #include <cstdint>
 #include <utility>
 
+#include <io.hpp>
+#include <cuda.cuh>
 #include <utils.hpp>
+#include <database.hpp>
+#include <pairwise.cuh>
+#include <pipeline.hpp>
+#include <allocator.hpp>
 #include <dendogram.hpp>
 #include <symmatrix.hpp>
-
-#include <cuda.cuh>
-#include <pairwise.cuh>
 
 namespace msa
 {
     namespace phylogeny
     {
         /**
-         * Definition of the reference for a operational taxonomic unit (OTU). As
-         * sequences themselves are also considered OTUs, and thus independent nodes
-         * in our phylogenetic tree, we must guarantee that our OTU references are
-         * able to address at least all sequence references.
+         * Definition of the reference for an operational taxonomic unit (OTU).
+         * As sequences by themselves are also considered OTUs, and thus leaf nodes
+         * on our phylogenetic tree, we must guarantee that our OTU references are
+         * able to individually identify all sequence references.
          * @since 0.1.1
          */
         using oturef = typename std::conditional<
-                (sizeof(uint_least32_t) < sizeof(seqref))
-            ,   typename std::make_unsigned<seqref>::type
+                utils::lt(sizeof(uint_least32_t), sizeof(pairwise::seqref))
+            ,   typename std::make_unsigned<pairwise::seqref>::type
             ,   uint_least32_t
             >::type;
 
@@ -38,7 +41,7 @@ namespace msa
          * As the only relevant aspect of a phylogenetic tree during its construction
          * is its topology, we can assume an OTU's relationship to its neighbors
          * is its only relevant piece of information. Thus, at this stage, we consider
-         * OTUs are simply references in our OTU addressing space.
+         * OTUs to simply be references on our OTU addressing space.
          * @since 0.1.1
          */
         using otu = oturef;
@@ -46,7 +49,7 @@ namespace msa
         /**
          * Represents a phylogenetic tree. Our phylogenetic tree will be treated
          * as a dendogram, and each node in this dendogram is effectively an OTU.
-         * The nodes in this tree are stored contiguously in memory, as the number
+         * The nodes on this tree are stored contiguously in memory, as the number
          * of total nodes is known at instantiation-time. Rather unconventionally,
          * though, we do not hold any physical memory pointers in our tree's nodes,
          * so that we don't need to worry about them if we ever need to transfer
@@ -54,56 +57,112 @@ namespace msa
          * the tree's leaves occupy the lowest references on its addressing space.
          * @since 0.1.1
          */
-        using tree = dendogram<otu, score, oturef>;
+        class tree : protected dendogram<otu, score, oturef>
+        {
+            protected:
+                using distance_type = score;
+                using reference_type = oturef;
+                using underlying_type = dendogram<otu, score, oturef>;
+
+            protected:
+                /**
+                 * Gathers all information needed to join a node to a new parent.
+                 * @since 0.1.1
+                 */
+                struct joininfo
+                {
+                    reference_type node;        /// The child node's reference.
+                    distance_type distance;     /// The node's distance to its new parent.
+                };
+
+            public:
+                inline tree() noexcept = default;
+                inline tree(const tree&) noexcept = default;
+                inline tree(tree&&) noexcept = default;
+
+                inline tree& operator=(const tree&) = default;
+                inline tree& operator=(tree&&) = default;
+
+                using underlying_type::operator[];
+
+                /**
+                 * Joins a pair of OTUs into a common parent.
+                 * @param parent The parent node reference to join children OTUs to.
+                 * @param fst The joining information for the parent's first child.
+                 * @param snd The joining information for the parent's second child.
+                 */
+                inline void join(reference_type parent, const joininfo& fst, const joininfo& snd)
+                {
+                    auto& father = underlying_type::operator[](parent);
+
+                    const auto rheight = branch(father, fst, 0);
+                    const auto lheight = branch(father, snd, 1);
+                    father.level = utils::max(rheight, lheight) + 1;
+                }
+
+                /**
+                 * Creates a new tree with given number of nodes as leaves.
+                 * @param leaves The number of leaf nodes in tree.
+                 * @return The newly created tree instance.
+                 */
+                static inline tree make(uint32_t leaves) noexcept
+                {
+                    return tree {underlying_type::make(leaves)};
+                }
+
+                /**
+                 * Creates a new tree with given number of nodes as leaves.
+                 * @param allocator The allocator to be used to create new dendogram.
+                 * @param leaves The number of leaf nodes in tree.
+                 * @return The newly created tree instance.
+                 */
+                static inline tree make(const msa::allocator& allocator, uint32_t leaves) noexcept
+                {
+                    return tree {underlying_type::make(allocator, leaves)};
+                }
+
+            protected:
+                /**
+                 * Builds a new tree from an underlying dendogram. It is assumed
+                 * that the given dendogram is empty, without relevant hierarchy.
+                 * @param raw The tree's underlying dendogram instance.
+                 */
+                inline tree(underlying_type&& raw)
+                : underlying_type {std::forward<decltype(raw)>(raw)}
+                {
+                    for(size_t i = 0; i < this->m_size; ++i)
+                        this->m_ptr[i].contents = (otu) i;
+                }
+
+                /**
+                 * Updates a node's branch according to the given joining action
+                 * being performed. The given node instance will be used as parent.
+                 * @param parent The node to act as the new branch's parent.
+                 * @param info The current joining action information.
+                 * @param relation The new branch's relation id.
+                 * @return The branch's current height.
+                 */
+                inline auto branch(node_type& parent, const joininfo& info, int relation) -> uint32_t
+                {
+                    auto& child = underlying_type::operator[](info.node);
+
+                    child.parent = parent.contents;
+                    child.distance = info.distance;
+                    parent.child[relation] = info.node;
+
+                    return child.level;
+                }
+        };
 
         /**
-         * Definition of an undefined OTU reference. It is very unlikely that you'll
-         * ever need to fill up our whole pseudo-addressing-space with distinct
-         * OTUs references. For that reason, we use the highest available reference
-         * to represent an unset or undefined node.
+         * We use the highest available reference in our pseudo-addressing-space
+         * to represent an unknown or undefined node of the phylogenetic tree. It
+         * is very unlikely that you'll ever need to fill up our whole addressing
+         * space with distinct OTUs references. And if you do, well, you'll have
+         * issues with this approach.
          * @since 0.1.1
          */
         enum : oturef { undefined = tree::undefined };
-
-        /**
-         * Manages and encapsulates all configurable aspects of the phylogeny module.
-         * @since 0.1.1
-         */
-        struct configuration
-        {
-            const pairwise::manager& pw;            /// The pairwise module manager instance.
-            std::string algorithm;                  /// The selected phylogeny algorithm.
-        };
-
-        /**
-         * Manages all data and execution of the phylogeny module.
-         * @since 0.1.1
-         */
-        class manager final : public tree
-        {
-            protected:
-                using underlying_type = tree;       /// The manager's underlying type.
-
-            public:
-                inline manager() noexcept = default;
-                inline manager(const manager&) noexcept = default;
-                inline manager(manager&&) noexcept = default;
-
-                /**
-                 * Initializes a new phylogeny manager from a tree instance.
-                 * @param tree The tree to create manager from.
-                 */
-                inline manager(const underlying_type& tree) noexcept
-                :   underlying_type {tree}
-                {}
-
-                inline manager& operator=(const manager&) = default;
-                inline manager& operator=(manager&&) = default;
-
-                using underlying_type::operator=;
-
-                static auto run(const configuration&) -> manager;
-        };
 
         /**
          * Represents a common phylogeny algorithm context.
@@ -111,9 +170,16 @@ namespace msa
          */
         struct context
         {
-            const pairwise::manager& matrix;
-            const size_t count;
+            const pairwise::distance_matrix matrix;
+            const size_t total;
         };
+
+        /**
+         * Functor responsible for instantiating an algorithm.
+         * @see phylogeny::run
+         * @since 0.1.1
+         */
+        using factory = functor<struct algorithm *()>;
 
         /**
          * Represents a phylogeny module algorithm.
@@ -130,31 +196,88 @@ namespace msa
             inline algorithm& operator=(const algorithm&) = default;
             inline algorithm& operator=(algorithm&&) = default;
 
-            virtual auto run(const context&) -> tree = 0;
+            virtual auto run(const context&) const -> tree = 0;
 
-            static auto retrieve(const std::string&) -> const functor<algorithm *()>&;
+            static auto has(const std::string&) -> bool;
+            static auto make(const std::string&) -> const factory&;
             static auto list() noexcept -> const std::vector<std::string>&;
         };
 
         /**
-         * Functor responsible for instantiating an algorithm.
-         * @see phylogeny::manager::run
+         * Defines the module's conduit. This conduit is composed of the sequences
+         * being aligned and the phylogenetic tree to guide their alignment.
          * @since 0.1.1
          */
-        using factory = functor<algorithm *()>;
+        struct conduit : public pipeline::conduit
+        {
+            const pointer<msa::database> db;        /// The loaded sequences' database.
+            const tree phylotree;                   /// The sequences' alignment guiding tree.
+            const size_t total;                     /// The total number of sequences.
+
+            inline conduit() noexcept = delete;
+            inline conduit(const conduit&) = default;
+            inline conduit(conduit&&) = default;
+
+            /**
+             * Instantiates a new conduit.
+             * @param db The sequence database to transfer to the next module.
+             * @param ptree The alignment guiding tree to transfer to the next module.
+             */
+            inline conduit(const pointer<msa::database>& db, const tree& ptree) noexcept
+            :   db {db}
+            ,   phylotree {ptree}
+            ,   total {db->count()}
+            {}
+
+            inline conduit& operator=(const conduit&) = delete;
+            inline conduit& operator=(conduit&&) = delete;
+        };
 
         /**
-         * Creates a module's configuration instance.
-         * @param pw The pairwise module manager instance reference.
-         * @param algorithm The chosen phylogeny algorithm.
-         * @return The module's configuration instance.
+         * Defines the module's pipeline manager. This object will be the one responsible
+         * for checking and managing the module's execution when on a pipeline.
+         * @since 0.1.1
          */
-        inline configuration configure(
-                const pairwise::manager& pw
-            ,   const std::string& algorithm = "default"
-            ) noexcept
+        struct module : public pipeline::module
         {
-            return {pw, algorithm};
+            using previous = pairwise::module;      /// Indicates the expected previous module.
+            using conduit = phylogeny::conduit;     /// The module's conduit type.
+
+            using pipe = pointer<pipeline::conduit>;
+            
+            /**
+             * Returns an string identifying the module's name.
+             * @return The module's name.
+             */
+            inline auto name() const -> const char * override
+            {
+                return "phylogeny";
+            }
+
+            auto run(const io::service&, const pipe&) const -> pipe override;
+            auto check(const io::service&) const -> bool override;
+        };
+
+        /**
+         * Runs the module when not on a pipeline.
+         * @param dmat The distance matrix between sequences.
+         * @param total The total number of sequences being aligned.
+         * @param algorithm The chosen phylogeny algorithm.
+         * @return The chosen algorithm's resulting phylogenetic tree.
+         */
+        inline tree run(
+                const pairwise::distance_matrix& dmat
+            ,   const size_t total
+            ,   const std::string& algorithm = "default"
+            )
+        {
+            auto lambda = phylogeny::algorithm::make(algorithm);
+            
+            const phylogeny::algorithm *worker = lambda ();
+            auto result = worker->run({dmat, total});
+            
+            delete worker;
+            return result;
         }
     }
 }
