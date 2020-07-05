@@ -21,7 +21,7 @@ namespace msa
      * @since 0.1.1
      */
     template <typename T>
-    class symmatrix : protected matrix<T>
+    class symmatrix : public matrix<T>
     {
         protected:
             using underlying_matrix = matrix<T>;        /// The matrix's base underlying type.
@@ -137,7 +137,7 @@ namespace msa
              * Initializes a new symmetric matrix from an ordinary matrix.
              * @param other The underlying matrix with correct memory layout.
              */
-            inline explicit symmatrix(underlying_matrix&& other) noexcept
+            __host__ __device__ inline explicit symmatrix(underlying_matrix&& other) noexcept
             :   underlying_matrix {std::forward<decltype(other)>(other)}
             {}
 
@@ -161,7 +161,6 @@ namespace msa
                 return {x, y};
             }
 
-        private:
             /**
              * Transforms the base number of elements to corresponding dimension.
              * @param count The base number of matrix elements.

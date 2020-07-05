@@ -13,15 +13,36 @@
 #include <cuda.cuh>
 #include <utils.hpp>
 #include <buffer.hpp>
+#include <matrix.hpp>
 #include <pointer.hpp>
 #include <database.hpp>
 #include <pipeline.hpp>
 #include <bootstrap.hpp>
 #include <cartesian.hpp>
 #include <symmatrix.hpp>
+#include <environment.h>
 
 namespace msa
 {
+    namespace detail
+    {
+        namespace pairwise
+        {
+            /**
+             * Conditionally defines the type of matrix to use as base for the module's
+             * distance matrix object.
+             * @tparam T The matrix's element type.
+             * @since 0.1.1
+             */
+            template <typename T>
+            using base_matrix = typename std::conditional<
+                    __msa(pairwise, use_symmatrix)
+                ,   symmatrix<T>
+                ,   matrix<T>
+                >::type;
+        }
+    }
+
     namespace pairwise
     {
         /**
@@ -51,13 +72,13 @@ namespace msa
          * the pairwise module's execution's final result.
          * @since 0.1.1
          */
-        class distance_matrix : public symmatrix<score>
+        class distance_matrix : public detail::pairwise::base_matrix<score>
         {
             public:
-                using element_type = score;                 /// The distance matrix's element type.
+                using element_type = score;         /// The distance matrix's element type.
 
             protected:
-                using underlying_matrix = symmatrix<score>; /// The distance matrix's underlying type.
+                using underlying_matrix = detail::pairwise::base_matrix<score>;
 
             public:
                 inline distance_matrix() noexcept = default;
@@ -101,18 +122,29 @@ namespace msa
                 :   underlying_matrix {std::forward<decltype(other)>(other)}
                 {}
 
-                /**
+                /**#@+
                  * Constructs a new distance matrix by inflating a distances buffer.
                  * @param buf The buffer containing the matrix's distances.
                  * @param count The total number of sequences aligned.
                  */
-                inline explicit distance_matrix(const buffer<score>& buf, size_t count) noexcept
-                :   underlying_matrix {underlying_matrix::make(count)}
-                {
-                    for(size_t i = 0, n = 0; i < count; ++i)
-                        for(size_t j = i; j < count; ++j)
-                            operator[]({i, j}) = (i != j) ? buf[n++] : 0;
-                }
+                #if __msa(pairwise, use_symmatrix)
+                    inline explicit distance_matrix(const buffer<score>& buf, size_t count) noexcept
+                    :   underlying_matrix {underlying_matrix::make(count)}
+                    {
+                        for(size_t i = 0, n = 0; i < count; ++i)
+                            for(size_t j = i; j < count; ++j)
+                                operator[]({i, j}) = (i != j) ? buf[n++] : 0;
+                    }
+                #else
+                    inline explicit distance_matrix(const buffer<score>& buf, size_t count) noexcept
+                    :   underlying_matrix {underlying_matrix::make({count, count})}
+                    {
+                        for(size_t i = 0, n = 0; i < count; ++i)
+                            for(size_t j = i; j < count; ++j)
+                                operator[]({i, j}) = operator[]({j, i}) = (i != j) ? buf[n++] : 0;
+                    }
+                #endif
+                /**#@-*/
         };
 
         /**

@@ -146,6 +146,16 @@
   #define msa_runtime_cython() 0
 #endif
 
+/*
+ * Sets whether the pairwise module's distance matrix should be implemented as a
+ * simple matrix or a symmetric matrix instance.
+ */
+#if !defined(PAIRWISE_NO_SYMMATRIX)
+  #define msa_pairwise_use_symmatrix() 1
+#else
+  #define msa_pairwise_use_symmatrix() 0
+#endif
+
 /**
  * Gets the value of one of the detected environment macros.
  * @param value The name of requested environment macro.

@@ -55,7 +55,7 @@ namespace msa
              * @param ptr The buffer pointer to acquire.
              * @param dim The size dimensions of buffer to acquire.
              */
-            inline explicit matrix(pointer_type&& ptr, const cartesian_type& dim)
+            __host__ __device__ inline explicit matrix(pointer_type&& ptr, const cartesian_type& dim)
             :   underlying_buffer {std::forward<decltype(ptr)>(ptr), dim.volume()}
             ,   m_dim {dim}
             {}
@@ -65,7 +65,7 @@ namespace msa
              * @param buf The pre-allocated matrix buffer.
              * @param dim The matrix's dimensions.
              */
-            inline explicit matrix(const underlying_buffer& buf, const cartesian_type& dim)
+            __host__ __device__ inline explicit matrix(const underlying_buffer& buf, const cartesian_type& dim)
             :   underlying_buffer {buf}
             ,   m_dim {dim}
             {}

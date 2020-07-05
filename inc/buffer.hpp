@@ -38,9 +38,9 @@ namespace msa
             size_t m_size = 0;      /// The number of elements in buffer.
 
         public:
-            inline buffer() noexcept = default;
-            inline buffer(const buffer&) noexcept = default;
-            inline buffer(buffer&&) noexcept = default;
+            __host__ __device__ inline buffer() noexcept = default;
+            __host__ __device__ inline buffer(const buffer&) noexcept = default;
+            __host__ __device__ inline buffer(buffer&&) noexcept = default;
 
             /**
              * Acquires the ownership of a raw buffer pointer.
@@ -57,13 +57,13 @@ namespace msa
              * @param ptr The buffer pointer to acquire.
              * @param size The size of buffer to acquire.
              */
-            inline explicit buffer(pointer_type&& ptr, size_t size) noexcept
+            __host__ __device__ inline explicit buffer(pointer_type&& ptr, size_t size) noexcept
             :   m_ptr {std::forward<decltype(ptr)>(ptr)}
             ,   m_size {size}
             {}
 
-            inline buffer& operator=(const buffer&) = default;
-            inline buffer& operator=(buffer&&) = default;
+            __host__ __device__ inline buffer& operator=(const buffer&) = default;
+            __host__ __device__ inline buffer& operator=(buffer&&) = default;
 
             /**
              * Gives access to a specific location in buffer's data.
