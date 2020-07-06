@@ -6,16 +6,16 @@
 #include <string>
 #include <vector>
 
+#include <io.hpp>
 #include <msa.hpp>
 #include <mpi.hpp>
 #include <cuda.cuh>
-#include <parser.hpp>
-#include <cmdline.hpp>
 #include <encoder.hpp>
 #include <database.hpp>
 #include <benchmark.hpp>
 #include <exception.hpp>
 
+#include <bootstrap.hpp>
 #include <pairwise.cuh>
 #include <phylogeny.cuh>
 
@@ -26,111 +26,191 @@ using namespace msa;
  * depending on the options available for the different steps of the software.
  * @since 0.1.1
  */
-static const std::vector<cmdline::option> options = {
-    {"multigpu",    {"-m", "--multigpu"},    "Try to use multiple devices in a single host."}
-,   {"matrix",      {"-x", "--matrix"},      "Choose the scoring matrix to use in pairwise.", true}
-,   {"pairwise",    {"-1", "--pairwise"},    "Choose the algorithm to use in pairwise module.", true}
-,   {"phylogeny",   {"-2", "--phylogeny"},   "Choose the algorithm to use in phylogeny module.", true}
-,   {"report",      {"-r", "--report-only"}, "Indicates whether should only print timing reports"}
+static const std::vector<io::option> options = {
+    {cli::multigpu,  {"-m", "--multigpu"},    "Use multiple devices in a single host."}
+,   {cli::report,    {"-r", "--report-only"}, "Print only timing reports and nothing more."}
+,   {cli::scoring,   {"-s", "--scoring"},     "Choose pairwise module's scoring matrix.", true}
+,   {cli::pairwise,  {"-1", "--pairwise"},    "Choose pairwise module's algorithm.", true}
+,   {cli::phylogeny, {"-2", "--phylogeny"},   "Choose phylogeny module's algorithm.", true}
 };
 
 namespace msa
 {
     /**
-     * Keeps the state of whether we should only print time report statuses.
+     * The global state instance. Here we define the target environment in which
+     * the software is running and has been compiled to.
      * @since 0.1.1
      */
-    bool watchdog::report_only = false;
+    state global_state {
+        #if __msa(production)
+            environment::production,
+        #elif __msa(testing)
+            environment::testing,
+        #elif __msa(debug)
+            environment::debug,
+        #else
+            environment::dev,
+        #endif
+    };
 
     namespace step
     {
         /**
-         * Parses all files given via command line and shares with all nodes.
-         * @return The database with all loaded sequences.
+         * Aliases the common conduit type for all pipeline's modules.
+         * @since 0.1.1
          */
-        static auto load() -> database
-        {
-            database db;
-            std::vector<size_t> size;
-            std::vector<encoder::block> block;
-
-            onlymaster for(size_t i = 0, n = cmdline::count(); i < n; ++i) {
-                const auto& filename = cmdline::get(i);
-                watchdog::info("parsing sequence file '<bold>%s</>'", filename);
-                db.merge(parser::parse(filename));
-            }
-
-            onlymaster for(const auto& entry : db) {
-                size.push_back(entry.contents.size());
-                block.insert(block.end(), entry.contents.begin(), entry.contents.end());
-            }
-
-            size = mpi::broadcast(size);
-            block = mpi::broadcast(block);
-
-            onlymaster watchdog::info("loaded a total of <bold>%d</> sequences", db.count());
-
-            onlyslaves for(size_t i = 0, j = 0, n = size.size(); i < n; ++i) {
-                db.add(sequence::copy(&block[j], size[i]));
-                j += size[i];
-            }
-
-            return db;
-        }
+        using pipe = pointer<pipeline::conduit>;
 
         /**
-         * Runs the first step in the multiple sequence alignment heuristic: the
-         * pairwise alignment. This step will align all possible pairs of sequences
-         * and give a score to each of these pairs.
-         * @param db The database of sequences to be aligned.
-         * @return The pairwise manager instance.
+         * Initializes and bootstraps the pipeline. Loads all sequence database
+         * files given via command line and feeds to following module.
+         * @since 0.1.1
          */
-        static auto pairwise(const database& db) -> msa::pairwise::manager
+        struct bootstrap : public msa::bootstrap::module
         {
-            auto algorithm = cmdline::get("pairwise", std::string ("default"));
-            auto matrix = cmdline::get("matrix", std::string ("default"));
-            return msa::pairwise::manager::run({db, algorithm, matrix});
-        }
+            /**
+             * Executes the pipeline module's logic.
+             * @param io The pipeline's IO service instance.
+             * @param pipe The previous module's conduit instance.
+             * @return The resulting conduit to send to the next module.
+             */
+            auto run(const io::service& io, const step::pipe& pipe) const -> step::pipe override
+            {
+                auto mresult = msa::bootstrap::module::run(io, pipe);
+                auto conduit = pipeline::convert<bootstrap>(*mresult);
+
+                onlymaster if(conduit.total > 0)
+                    watchdog::info("loaded a total of <bold>%d</> sequences", conduit.total);
+
+                return mresult;
+            }
+
+            /**
+             * Returns an string identifying the module's name.
+             * @return The module's name.
+             */
+            inline auto name() const -> const char * override
+            {
+                return "loading";
+            }
+        };
 
         /**
-         * Runs the second step in the multiple sequence alignment heuristic: the
-         * pseudo-phylogenetic tree construction. This step will group sequences in
-         * ways that they can later be definitively aligned.
-         * @param pw The pairwise step instance.
-         * @return The phylogeny module instance.
+         * Executes the heuristic's pairwise alignment module. This pairwise alignment
+         * module produces a distance matrix of sequences in relation to all others.
+         * @since 0.1.1
          */
-        static auto phylogeny(const msa::pairwise::manager& pw) -> msa::phylogeny::manager
+        struct pairwise : public msa::pairwise::module
         {
-            auto algorithm = cmdline::get("phylogeny", std::string ("default"));
-            return msa::phylogeny::manager::run({pw, algorithm});
-        }
+            /**
+             * Executes the pipeline module's logic.
+             * @param io The pipeline's IO service instance.
+             * @param pipe The previous module's conduit instance.
+             * @return The resulting conduit to send to the next module.
+             */
+            auto run(const io::service& io, const step::pipe& pipe) const -> step::pipe override
+            {
+                onlymaster {
+                    auto algoname = io.get<std::string>(cli::pairwise, "default");
+                    auto tablename = io.get<std::string>(cli::scoring, "default");
+                    const auto& conduit = pipeline::convert<pairwise::previous>(*pipe);
+
+                    watchdog::info("chosen pairwise algorithm <bold>%s</>", algoname);
+                    watchdog::info("chosen pairwise scoring table <bold>%s</>", tablename);
+                    watchdog::init("pairwise", "aligning <bold>%llu</> pairs", utils::nchoose(conduit.total));
+                }
+
+                auto mresult = msa::pairwise::module::run(io, pipe);
+                onlymaster watchdog::finish("pairwise", "aligned all sequence pairs");
+
+                return mresult;
+            }
+        };
+
+        /**
+         * Executes the heuristic's phylogeny module. This module produces a pseudo-
+         * phylogenetic tree, which will then be used to guide the final alignment.
+         * @since 0.1.1
+         */
+        struct phylogeny : public msa::phylogeny::module
+        {
+            /**
+             * Executes the pipeline module's logic.
+             * @param io The pipeline's IO service instance.
+             * @param pipe The previous module's conduit instance.
+             * @return The resulting conduit to send to the next module.
+             */
+            auto run(const io::service& io, const step::pipe& pipe) const -> step::pipe override
+            {
+                onlymaster {
+                    auto algoname = io.get<std::string>(cli::phylogeny, "default");
+
+                    watchdog::info("chosen phylogeny algorithm <bold>%s</>", algoname);
+                    watchdog::init("phylogeny", "producing phylogenetic tree");
+                }
+
+                auto mresult = msa::phylogeny::module::run(io, pipe);
+                onlymaster watchdog::finish("phylogeny", "phylogenetic tree produced");
+
+                return mresult;
+            }
+        };
     }
 
     /**
-     * Runs the application. This function measures the application's total
-     * execution time as well as all its steps.
+     * Definition of the heuristic's pipeline stages. These are the modules to run
+     * for executing this project's proposed heuristics.
+     * @since 0.1.1
+     */
+    using heuristic = pipeline::runner<
+            step::bootstrap
+        ,   step::pairwise
+        ,   step::phylogeny
+        >;
+
+    /**
+     * Definition of the heuristic's pipeline's runner. As we're interested on how
+     * long our heuristics stages take to run, we will implement an special runner.
+     * @since 0.1.1
+     */
+    class runner : public heuristic
+    {
+        protected:
+            /**
+             * Runs the pipeline's modules and reports how long they individually
+             * take to execute and send each duration to the watchdog process.
+             * @param modules The list pipeline's modules' instances to execute.
+             * @param io The IO module service instance.
+             * @return The pipeline's final module's result.
+             */
+            inline auto execute(const pipeline::module *modules[], const io::service& io) const
+            -> heuristic::conduit
+            {
+                auto previous = heuristic::conduit {};
+                auto lambda = [&](size_t i) { return std::move(modules[i]->run(io, previous)); };
+
+                for(size_t i = 0; i < heuristic::count; ++i)
+                    watchdog::report(modules[i]->name(), benchmark::run(previous, lambda, i));
+
+                return previous;
+            }
+    };
+
+    /**
+     * Runs the application's heuristic's pipeline. This function measures the application's
+     * total execution time and reports it to the watchdog process.
+     * @param io The IO module service instance.
      * @return Informs whether a failure has occurred during execution.
      */
-    static int run() noexcept
-    try {
-        watchdog::report("total", benchmark::run([]() {
-            database db;
-            pairwise::manager pw;
-            phylogeny::manager pg;
+    static void run(const io::service& io)
+    {
+        auto runner = msa::runner {};
+        auto lambda = [&io, &runner]() { runner.run(io); };
 
-            pairwise::scoring_table::make(cmdline::get("matrix", std::string ("default")));
-            pairwise::algorithm::retrieve(cmdline::get("pairwise", std::string ("default")));
-            phylogeny::algorithm::retrieve(cmdline::get("phylogeny", std::string ("default")));
+        onlyslaves if(global_state.use_multigpu && global_state.devices_available > 1)
+            cuda::device::select(node::rank - 1);
 
-            watchdog::report("loading", benchmark::run(db, step::load));
-            watchdog::report("pairwise", benchmark::run(pw, step::pairwise, db));
-            watchdog::report("phylogeny", benchmark::run(pg, step::phylogeny, pw));
-        }));
-
-        return 0;
-    } catch(const exception& e) {
-        watchdog::error(e.what());
-        return 1;
+        watchdog::report("total", benchmark::run(lambda));
     }
 };
 
@@ -140,34 +220,26 @@ namespace msa
  * @param argv The arguments sent by command line.
  * @return The error code for the operating system.
  */
-int main(int argc, char **argv)
-{
-    int code = 0;
-
+auto main(int argc, char **argv) -> int
+try {
     mpi::init(argc, argv);
 
-    try {
-        cmdline::init(options);
-        cmdline::parse(argc, argv);
+    auto io = io::service::make(options, argc, argv);
 
-        watchdog::report_only = cmdline::has("report");
+    enforce(io.filecount(), "no input files given");
+    enforce(node::count >= 2, "at least one slave node is needed");
 
-        enforce(cmdline::count(), "no input files to align");
-        enforce(node::count >= 2, "at least one slave node is needed");
+    global_state.report_only = io.has(cli::report);
+    onlyslaves global_state.use_multigpu = io.has(cli::multigpu);
+    onlyslaves global_state.devices_available = cuda::device::count();
 
-        onlyslaves if(!cuda::device::count())
-            throw exception("no compatible device has been found");
-
-        onlyslaves if(cmdline::has("multigpu"))
-            cuda::device::select(node::rank - 1);
-
-        code = msa::run();
-    } catch(const exception& e) {
-        watchdog::error(e.what());
-        code = 1;
-    }
+    msa::run(io);
 
     mpi::finalize();
+    return 0;
+} catch(const std::exception& e) {
+    watchdog::error(e.what());
 
-    return code;
+    mpi::finalize();
+    return 1;
 }

@@ -17,18 +17,79 @@
 
 namespace msa
 {
-    namespace watchdog
+    /**
+     * Lists all different environments in which the code may find itself. Different
+     * code behaviours may arise depending on the environment in which compiled.
+     * @since 0.1.1
+     */
+    enum class environment
+    {
+        production = 1,
+        testing = 2,
+        debug = 3,
+        dev = 4,
+    };
+
+    /**
+     * Stores globally relevant state. These values may be gathered during runtime
+     * and may affect the software's execution.
+     * @since 0.1.1
+     */
+    struct state
+    {
+        const environment env;
+        bool report_only = false;
+        bool mpi_running = false;
+        bool use_multigpu = false;
+        int devices_available = 0;
+
+        /**
+         * Initializes the global state with the environment configuration.
+         * @param env The environment in which the code is compiled.
+         */
+        constexpr inline state(environment env) noexcept
+        :   env {env}
+        {}
+    };
+
+    namespace cli
     {
         /**
-         * Informs whether we're working on a report-only status.
+         * Lists every command line flags available to users. These command line
+         * options do not accept arguments.
          * @since 0.1.1
          */
-        #if !__msa(runtime, cython)
-            extern bool report_only;
-        #else
-            constexpr bool report_only = false;
-        #endif
+        enum flag : uint32_t
+        {
+            multigpu    = 101
+        ,   report      = 102
+        };
 
+        /**
+         * Lists all command line options available to users. These enumerations
+         * will always be used when a command line argument is required.
+         * @since 0.1.1
+         */
+        enum argument : uint32_t
+        {
+            scoring     = 201
+        ,   pairwise    = 202
+        ,   phylogeny   = 203
+        };
+    }
+
+    /**
+     * The global state instance.
+     * @since 0.1.1
+     */
+    #if __msa(runtime, cython)
+        constexpr state global_state = {environment::testing};
+    #else
+        extern state global_state;
+    #endif
+
+    namespace watchdog
+    {
         /**
          * Notifies the watchdog about a general event.
          * @tparam T The format template arguments' types.
@@ -53,7 +114,8 @@ namespace msa
         template <typename ...T>
         inline void info(const std::string& fmtstr, T&&... args) noexcept
         {
-            if(!report_only) notify("info", fmtstr, args...);
+            if(!global_state.report_only)
+                notify("info", fmtstr, args...);
         }
 
         /**
@@ -100,7 +162,8 @@ namespace msa
         inline void init(const char *task, const std::string& fmtstr, T&&... args) noexcept
         {
             #if !__msa(production)
-                if(!report_only) notify("init", "%s|" + fmtstr, task, args...);
+                if(!global_state.report_only)
+                    notify("init", "%s|" + fmtstr, task, args...);
             #endif
         }
 
@@ -114,7 +177,8 @@ namespace msa
         inline void update(const char *task, size_t done, size_t total) noexcept
         {
             #if !__msa(production)
-                if(!report_only) notify("update", "%s|%d|%llu|%llu", task, node::rank, done, total);
+                if(!global_state.report_only)
+                    notify("update", "%s|%d|%llu|%llu", task, node::rank, done, total);
             #endif
         }
 
@@ -128,7 +192,8 @@ namespace msa
         inline void finish(const char *task, const std::string& fmtstr, T&&... args) noexcept
         {
             #if !__msa(production)
-                if(!report_only) notify("finish", "%s|" + fmtstr, task, args...);
+                if(!global_state.report_only)
+                    notify("finish", "%s|" + fmtstr, task, args...);
             #endif
         }
     }

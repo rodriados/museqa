@@ -64,6 +64,9 @@ namespace msa
                 using reference_type = oturef;
                 using underlying_type = dendogram<otu, score, oturef>;
 
+            public:
+                static constexpr reference_type undefined = node_type::undefined;
+
             protected:
                 /**
                  * Gathers all information needed to join a node to a new parent.
