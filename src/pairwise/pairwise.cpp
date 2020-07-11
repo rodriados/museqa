@@ -75,8 +75,10 @@ namespace msa
             const auto total = utils::nchoose(num);
             auto pairs = buffer<pair>::make(total);
 
-            for(size_t i = 0, c = 0; i < num - 1; ++i)
-                for(size_t j = i + 1; j < num; ++j, ++c)
+            // We generate our sequence pairs in such a way that a pair will always
+            // be at the same offset in array, independently of the number of sequences.
+            for(size_t i = 1, c = 0; i < num; ++i)
+                for(size_t j = 0; j < i; ++j, ++c)
                     pairs[c] = pair {seqref(i), seqref(j)};
 
             return pairs;

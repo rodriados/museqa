@@ -422,7 +422,7 @@ namespace
                 result = align_db(pairs, ctx.db, table);
             }
 
-            return distance_matrix::inflate(this->gather(result), nsequences);
+            return distance_matrix {this->gather(result), nsequences};
         }
     };
 }

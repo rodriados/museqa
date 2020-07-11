@@ -19,30 +19,10 @@
 #include <pipeline.hpp>
 #include <bootstrap.hpp>
 #include <cartesian.hpp>
-#include <symmatrix.hpp>
 #include <environment.h>
 
 namespace msa
 {
-    namespace detail
-    {
-        namespace pairwise
-        {
-            /**
-             * Conditionally defines the type of matrix to use as base for the module's
-             * distance matrix object.
-             * @tparam T The matrix's element type.
-             * @since 0.1.1
-             */
-            template <typename T>
-            using base_matrix = typename std::conditional<
-                    __msa(pairwise, use_symmatrix)
-                ,   symmatrix<T>
-                ,   matrix<T>
-                >::type;
-        }
-    }
-
     namespace pairwise
     {
         /**
@@ -72,79 +52,60 @@ namespace msa
          * the pairwise module's execution's final result.
          * @since 0.1.1
          */
-        class distance_matrix : public detail::pairwise::base_matrix<score>
+        class distance_matrix : protected buffer<score>
         {
+            protected:
+                using underlying_type = buffer<score>;
+                using cartesian_type = typename matrix<score>::cartesian_type;
+
             public:
                 using element_type = score;         /// The distance matrix's element type.
 
             protected:
-                using underlying_matrix = detail::pairwise::base_matrix<score>;
+                size_t m_count;                     /// The number of sequences represented in the matrix.
 
             public:
                 inline distance_matrix() noexcept = default;
                 inline distance_matrix(const distance_matrix&) noexcept = default;
                 inline distance_matrix(distance_matrix&&) noexcept = default;
 
+                /**
+                 * Instantiates a new distance matrix from a buffer linearly containing
+                 * the pairwise distances between all sequences.
+                 * @param buf The linear buffer of pairwise distances.
+                 * @param count The total number of sequences represented.
+                 */
+                inline distance_matrix(const underlying_type& buf, size_t count) noexcept
+                :   underlying_type {buf}
+                ,   m_count {count}
+                {}
+
                 inline distance_matrix& operator=(const distance_matrix&) = default;
                 inline distance_matrix& operator=(distance_matrix&&) = default;
 
-                using underlying_matrix::operator=;
-
                 /**
-                 * Creates a new distance matrix by inflating a linear buffer with
-                 * the corresponding matrix's distances.
-                 * @param buf The buffer containing the matrix's distances.
-                 * @param count The total number of sequences aligned.
-                 * @return A new inflated distance matrix instance.
+                 * Retrieves the pairwise distance of a specific pair on the matrix.
+                 * @param offset The requested pair's offset.
+                 * @return The pairwise distance between sequences in given pair.
                  */
-                static inline auto inflate(const buffer<score>& buf, size_t count) noexcept
-                -> distance_matrix
+                inline auto operator[](const cartesian_type& offset) const -> element_type
                 {
-                    return distance_matrix {buf, count};
+                    const auto max = utils::max(offset[0], offset[1]);
+                    const auto min = utils::min(offset[0], offset[1]);
+
+                    return (max > min)
+                        ? underlying_type::operator[](utils::nchoose(max) + min)
+                        : element_type {0};
                 }
 
                 /**
-                 * Copies data from an existing matrix instance.
-                 * @param mat The target matrix to copy data from.
-                 * @return A newly created matrix instance.
+                 * Informs the total number of pairwise aligned sequences.
+                 * @return The number of sequences processed by the module.
                  */
-                static inline distance_matrix copy(const distance_matrix& mat) noexcept
+                inline auto count() const noexcept -> size_t
                 {
-                    return distance_matrix {underlying_matrix::copy(mat)};
+                    return m_count;
                 }
-
-            private:
-                /**
-                 * Initializes a new distance matrix from a symmetric matrix.
-                 * @param other The underlying matrix with correct memory layout.
-                 */
-                inline explicit distance_matrix(underlying_matrix&& other) noexcept
-                :   underlying_matrix {std::forward<decltype(other)>(other)}
-                {}
-
-                /**#@+
-                 * Constructs a new distance matrix by inflating a distances buffer.
-                 * @param buf The buffer containing the matrix's distances.
-                 * @param count The total number of sequences aligned.
-                 */
-                #if __msa(pairwise, use_symmatrix)
-                    inline explicit distance_matrix(const buffer<score>& buf, size_t count) noexcept
-                    :   underlying_matrix {underlying_matrix::make(count)}
-                    {
-                        for(size_t i = 0, n = 0; i < count; ++i)
-                            for(size_t j = i; j < count; ++j)
-                                operator[]({i, j}) = (i != j) ? buf[n++] : 0;
-                    }
-                #else
-                    inline explicit distance_matrix(const buffer<score>& buf, size_t count) noexcept
-                    :   underlying_matrix {underlying_matrix::make({count, count})}
-                    {
-                        for(size_t i = 0, n = 0; i < count; ++i)
-                            for(size_t j = i; j < count; ++j)
-                                operator[]({i, j}) = operator[]({j, i}) = (i != j) ? buf[n++] : 0;
-                    }
-                #endif
-                /**#@-*/
         };
 
         /**
