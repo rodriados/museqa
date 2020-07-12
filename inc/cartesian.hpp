@@ -201,6 +201,15 @@ namespace msa
         {
             return other.dim[0] * this->dim[1] + other.dim[1];
         }
+
+        /**
+         * Specializes the volume calculation for 2-dimensional cartesian space.
+         * @return The 2-dimensional cartesian space volume.
+         */
+        __host__ __device__ inline constexpr element_type volume() const noexcept
+        {
+            return this->dim[0] * this->dim[1];
+        }
     };
     /**#@-*/
 

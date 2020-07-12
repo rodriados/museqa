@@ -36,9 +36,9 @@ namespace msa
             cartesian_type m_dim;                                   /// The matrix's dimensional size.
 
         public:
-            inline matrix() noexcept = default;
-            inline matrix(const matrix&) noexcept = default;
-            inline matrix(matrix&&) noexcept = default;
+            __host__ __device__ inline matrix() noexcept = default;
+            __host__ __device__ inline matrix(const matrix&) noexcept = default;
+            __host__ __device__ inline matrix(matrix&&) noexcept = default;
 
             /**
              * Acquires the ownership of a raw matrix buffer pointer.

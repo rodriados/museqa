@@ -311,19 +311,15 @@ namespace msa
                 template <typename ...T>
                 inline void preference(const pointer<T...> kernel, cache pref)
                 {
-                    check(cudaFuncSetCacheConfig(
-                        reinterpret_cast<const void *>(kernel)
-                    ,   static_cast<cudaFuncCache>(pref)
-                    ));
+                    const auto ptr = reinterpret_cast<const void *>(kernel);
+                    check(cudaFuncSetCacheConfig(ptr, static_cast<cudaFuncCache>(pref)));
                 }
 
                 template <typename ...T>
                 inline void preference(const pointer<T...> kernel, shared_mem pref)
                 {
-                    check(cudaFuncSetSharedMemConfig(
-                        reinterpret_cast<const void *>(kernel)
-                    ,   static_cast<cudaSharedMemConfig>(pref)
-                    ));
+                    const auto ptr = reinterpret_cast<const void *>(kernel);
+                    check(cudaFuncSetSharedMemConfig(ptr, static_cast<cudaSharedMemConfig>(pref)));
                 }
                 /**#@-*/
             }
