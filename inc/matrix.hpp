@@ -70,8 +70,8 @@ namespace msa
             ,   m_dim {dim}
             {}
 
-            inline matrix& operator=(const matrix&) = default;
-            inline matrix& operator=(matrix&&) = default;
+            __host__ __device__ inline matrix& operator=(const matrix&) = default;
+            __host__ __device__ inline matrix& operator=(matrix&&) = default;
 
             /**
              * Gives access to an element in the matrix.

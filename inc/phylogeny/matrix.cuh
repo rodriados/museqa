@@ -48,10 +48,6 @@ namespace msa
                 :   matrix {mat, mat.count()}
                 {}
 
-                inline explicit matrix(size_t width) noexcept
-                :   matrix {underlying_matrix::make({width, width}), width, false}
-                {}
-
                 __host__ __device__ inline matrix& operator=(const matrix&) = default;
                 __host__ __device__ inline matrix& operator=(matrix&&) = default;
 

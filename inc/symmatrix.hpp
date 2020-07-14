@@ -31,12 +31,12 @@ namespace msa
             using cartesian_type = typename underlying_matrix::cartesian_type;
 
         public:
-            inline symmatrix() noexcept = default;
-            inline symmatrix(const symmatrix&) noexcept = default;
-            inline symmatrix(symmatrix&&) noexcept = default;
+            __host__ __device__ inline symmatrix() noexcept = default;
+            __host__ __device__ inline symmatrix(const symmatrix&) noexcept = default;
+            __host__ __device__ inline symmatrix(symmatrix&&) noexcept = default;
 
-            inline symmatrix& operator=(const symmatrix&) = default;
-            inline symmatrix& operator=(symmatrix&&) = default;
+            __host__ __device__ inline symmatrix& operator=(const symmatrix&) = default;
+            __host__ __device__ inline symmatrix& operator=(symmatrix&&) = default;
 
             /**
              * Gives access to an element in the matrix.
