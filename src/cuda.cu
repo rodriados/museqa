@@ -9,6 +9,23 @@
 #include <cuda.cuh>
 #include <allocator.hpp>
 
+namespace
+{
+    using namespace msa;
+
+    /**
+     * Stores the ID of the compute-capable device currently selected.
+     * @since 0.1.1
+     */
+    cuda::device::id current = ~0;
+
+    /**
+     * Stores the properties of the currently selected compute-capable device.
+     * @since 0.1.1
+     */
+    cuda::device::props device_properties;
+}
+
 namespace msa
 {
     /**
@@ -71,7 +88,18 @@ namespace msa
      */
     auto cuda::device::select(const cuda::device::id& device) -> void
     {
-        cuda::check(cudaSetDevice(device));
+        cuda::check(cudaSetDevice(::current = device));
+        ::device_properties = cuda::device::properties(device);
+    }
+
+    /**
+     * Retrieves information and properties about the currently selected device.
+     * @return The current device properties.
+     */
+    auto cuda::device::properties() -> const cuda::device::props&
+    {
+        if(::current == ~0) cuda::device::select(cuda::device::init);
+        return device_properties;
     }
 
     /**

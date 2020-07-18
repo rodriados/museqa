@@ -260,11 +260,68 @@ namespace msa
             extern auto select(const id& = init) -> void;
 
             #if __msa(compiler, nvcc)
-                extern auto properties(const id& = init) -> props;
+                extern auto properties() -> const props&;
+                extern auto properties(const id&) -> props;
             #endif
         }
 
         #if __msa(compiler, nvcc)
+            /**
+             * Creates an asynchronous stream, which allows multiple device operations
+             * to be parallelized.
+             * @since 0.1.1
+             */
+            class stream
+            {
+                protected:
+                    using underlying_type = cudaStream_t;   /// The underlying stream type.
+
+                public:
+                    using id = underlying_type;             /// The public stream id type.
+
+                protected:
+                    underlying_type m_stream;               /// The internal device stream reference.
+
+                public:
+                    /**
+                     * Creates a new asynchronous stream. This is the stream reference
+                     * which will be wrapped and abstracted by this object.
+                     */
+                    inline stream()
+                    {
+                        cuda::check(cudaStreamCreate(&m_stream));
+                    }
+
+                    /**
+                     * Destroys and cleans up the wrapped stream. In case the device
+                     * is still doing work in the stream, the resources will be
+                     * released once the device has completed has completed all work.
+                     */
+                    inline ~stream()
+                    {
+                        cuda::check(cudaStreamDestroy(m_stream));
+                    }
+
+                    /**
+                     * Casts the stream wrapper as its underlying type, so it can
+                     * be seamlessly used in all existing CUDA interface by default.
+                     * @return The internal stream representation.
+                     */
+                    inline operator underlying_type() const noexcept
+                    {
+                        return m_stream;
+                    }
+
+                    /**
+                     * Blocks host CPU execution until all tasks on the wrapped
+                     * stream have been completed.
+                     */
+                    inline void barrier() const noexcept
+                    {
+                        cuda::check(cudaStreamSynchronize(m_stream));
+                    }
+            };
+
             /**
              * In some GPU micro-architectures, it's possible to have the multiprocessors
              * change the balance in the allocation of L1-cache-like resources between

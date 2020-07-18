@@ -223,7 +223,7 @@ namespace
      * @param offset The column and line offset to be removed.
      * @param device Is the source matrix on device memory?
      */    
-    void shrink(phylogeny::matrix& dest, const phylogeny::matrix& src, uint32_t offset, bool device)
+    inline void shrink(phylogeny::matrix& dest, const phylogeny::matrix& src, uint32_t offset, bool device)
     {
         if(device) {
             ::device::shrink(dest, src, int32_t(offset));
@@ -240,7 +240,7 @@ namespace
      * @param offset2 The second column and line offset to swap.
      * @param device Is the source matrix on device memory?
      */
-    void swap(phylogeny::matrix& target, uint32_t offset1, uint32_t offset2, bool device)
+    inline void swap(phylogeny::matrix& target, uint32_t offset1, uint32_t offset2, bool device)
     {
         if(device) {
             ::device::swap(target, int32_t(offset1), int32_t(offset2));
