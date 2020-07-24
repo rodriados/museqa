@@ -43,9 +43,10 @@ namespace
                     const auto lin = i + blockIdx.x;
                     const auto col = j + threadIdx.x;
 
-                    __syncthreads(); if(lin < height && col < width - 1) element = src[{lin, col + 1}];
-                    __syncthreads(); if(lin < height && col < width - 1) dest[{lin, col}] = element;
-                    __syncthreads();
+                    __syncthreads(); if(lin < height && col < width - 1)
+                        element = src[{lin, col + 1}];
+                    __syncthreads(); if(lin < height && col < width - 1)
+                        dest[{lin, col}] = element;
                 }
             }
         }
@@ -70,9 +71,10 @@ namespace
                     const auto lin = i + threadIdx.x;
                     const auto col = j + blockIdx.x;
 
-                    __syncthreads(); if(lin < height - 1 && col < width) element = src[{lin + 1, col}];
-                    __syncthreads(); if(lin < height - 1 && col < width) dest[{lin, col}] = element;
-                    __syncthreads();
+                    __syncthreads(); if(lin < height - 1 && col < width)
+                        element = src[{lin + 1, col}];
+                    __syncthreads(); if(lin < height - 1 && col < width)
+                        dest[{lin, col}] = element;
                 }
             }
         }
@@ -85,11 +87,11 @@ namespace
          */
         __global__ void xchange(phylogeny::matrix target, int32_t offset1, int32_t offset2)
         {
-            __shared__ int32_t diagonal;
+            __shared__ int32_t total;
 
-            diagonal  = (int32_t) utils::min(target.reprdim()[0], target.reprdim()[1]);
+            total  = (int32_t) utils::min(target.reprdim()[0], target.reprdim()[1]);
 
-            for(int32_t i = threadIdx.x; i < diagonal; i += blockDim.x) {
+            for(int32_t i = threadIdx.x; i < total; i += blockDim.x) {
                 if(i != offset1 && i != offset2) {
                     utils::swap(target[{offset1, i}], target[{offset2, i}]);
                     utils::swap(target[{i, offset1}], target[{i, offset2}]);
@@ -107,6 +109,7 @@ namespace
          */
         void shrink(phylogeny::matrix& dest, const phylogeny::matrix& src, int32_t offset)
         {
+            using namespace utils;
             const auto height = (int32_t) src.reprdim()[0];
             const auto width  = (int32_t) src.reprdim()[1];
 
@@ -126,8 +129,8 @@ namespace
             // To remove a column from the matrix, we will first shift left all columns
             // located to the right of the column being removed. And then shift
             // up all lines below the one being removed.
-            hshift<<<utils::min(max_blocks, height), utils::min(max_threads, left)>>>(dest, src, offset);
-            vshift<<<utils::min(max_blocks, width), utils::min(max_threads, bottom)>>>(dest, src, offset);
+            hshift<<<min(max_blocks, height), min(max_threads, left)>>>(dest, src, offset);
+            vshift<<<min(max_blocks, width), min(max_threads, bottom)>>>(dest, src, offset);
             cuda::barrier();
         }
 
@@ -139,20 +142,21 @@ namespace
          */
         void swap(phylogeny::matrix& target, int32_t offset1, int32_t offset2)
         {
+            using namespace utils;
             const auto height   = (int32_t) target.reprdim()[0];
             const auto width    = (int32_t) target.reprdim()[1];
-            const auto diagonal = utils::min(width, height);
+            const auto diagonal = min(width, height);
 
             // Let's verify whether both offsets are valid for a swap in our matrix.
             // If at least one of them is not valid, then we bail out.
-            if(utils::max(offset1, offset2) >= diagonal) return;
+            if(max(offset1, offset2) >= diagonal) return;
 
             const auto device_props = cuda::device::properties();
             const auto max_threads  = device_props.maxThreadsDim[0];
 
             // To swap two offsets in our matrix, we iterate over its diagonal so
             // we can swap both axis at the same time, without any run conditions.
-            xchange<<<1, utils::min(max_threads, diagonal - 1)>>>(target, offset1, offset2);
+            xchange<<<1, min(max_threads, diagonal - 1)>>>(target, offset1, offset2);
             cuda::barrier();
         }
     }
