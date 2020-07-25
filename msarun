@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Multiple Sequence Alignment controller script.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
-# @copyright 2018-2019 Rodrigo Siqueira
+# @copyright 2018-2020 Rodrigo Siqueira
 
 # The current software version
 readonly version="0.1.1"
@@ -57,7 +57,7 @@ if [[ -z "$reportonly" && -z "$debug" ]]; then
 fi
 
 # Discovers the name of hostfile to be used. If no valid file name is given,
-# the name is defaulted to "hostfile".
+# the default name ".hostfile" is used instead.
 if [[ -z "$hostfile" || (-e "$hostfile" && ! -f "$hostfile") ]]; then
     hostfile=".hostfile"
 fi

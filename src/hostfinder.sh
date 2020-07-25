@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Multiple Sequence Alignment hosts finder script.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
-# @copyright 2018-2019 Rodrigo Siqueira
+# @copyright 2018-2020 Rodrigo Siqueira
 
 # This script traverses the current local network in search of all computer-capable
 # devices we can run our software on, and automatically generates a hostfile for
@@ -62,9 +62,6 @@ EOF
         # the software. As MPI uses ssh internally to implement communication between
         # nodes, we use ssh here as well to look for 'em hosts.
         for host in ${host_list[@]}; do
-            # Notifies the watchdog about the execution's progress.
-            wnotify update "hostfinder" 0 $loop_count $host_count
-
             # Checking for local hosts only. We do not want to use external nodes when
             # executing. The user shall create the hosts file manually otherwise.
             if [[ "$ip_local" != *"$host"* && ("$host" == 192.168.* || "$host" == 10.*) ]]; then

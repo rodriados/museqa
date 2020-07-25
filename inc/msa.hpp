@@ -168,21 +168,6 @@ namespace msa
         }
 
         /**
-         * Informs the watchdog about the progress of the task being watched.
-         * @param task The name of task being watched.
-         * @param id The task's working node identification.
-         * @param done The number of completed subtasks.
-         * @param total The node's total number of subtasks.
-         */
-        inline void update(const char *task, size_t done, size_t total) noexcept
-        {
-            #if !__msa(production)
-                if(!global_state.report_only)
-                    notify("update", "%s|%d|%llu|%llu", task, node::rank, done, total);
-            #endif
-        }
-
-        /**
          * Informs the watchdog about the completion of the watched task.
          * @param task The name of task to be watched.
          * @param fmtstr The message formatting string.

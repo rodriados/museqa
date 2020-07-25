@@ -73,33 +73,20 @@ watchdog()
     # First, a SIGINT will be sent to process, and then SIGKILL if still alive.
     abort()
     {
-        local msg="abort manually requested by user"
-        printf "\r%27s · $msg\n" "$(style clean bold red abort)"
-        prockill 2
+        if [[ -z "$reportonly" ]]; then
+            printf "\r%27s · abort manually requested by user\n" "$(style clean bold red abort)"
+            prockill 2
+        else
+            echo "abort manually requested by user"
+            prockill 2
+        fi
     }
 
     # Initializing the current process' informative variables.
     local process_name="idle"
     local process_message=""
-    local process_percent=0
     local process_active=0
     local blink_state=0
-
-    # Initializing the progress tracking variables.
-    local process_done=()
-    local process_total=()
-
-    # Recalculates the total number of the process' tasks already completed.
-    # The new value is automatically stored to the bar's percent variable.
-    recalculate()
-    {
-        # Sums up the total tasks already completed and the total to do.
-        local done=$(echo "${process_done[@]/%/+}0" | bc)
-        local todo=$(echo "${process_total[@]/%/+}0" | bc)
-
-        # Updates the process' total percentage.
-        process_percent=$((todo > 0 ? done * 100 / todo : 0))
-    }
 
     # Initializes the watchdog for keeping track of progress of a new process.
     # @param $1 The name of process to watch.
@@ -110,25 +97,6 @@ watchdog()
             process_name="$1"
             process_message="$(markdown "$2")"
             process_active=1
-            process_total=()
-            process_done=()
-            recalculate
-        fi
-    }
-
-    # Updates the progress of the process being currently watched.
-    # @param $1 The name of process being watched.
-    # @param $2 The worker identification to update.
-    # @param $3 The current number of tasks done by worker.
-    # @param $4 The total number of tasks to be done by worker.
-    update()
-    {
-        # We check whether the operation corresponds to the currently watched
-        # process, just to be sure no parallel creepyness is going on.
-        if [[ -z "$reportonly" && "$1" == "$process_name" ]]; then
-            process_done[$2]=$3
-            process_total[$2]=$4
-            recalculate
         fi
     }
 
@@ -141,7 +109,7 @@ watchdog()
         # process, just to be sure no parallel creepyness is going on.
         if [[ -z "$reportonly" && "$1" == "$process_name" ]]; then
             printf "\r%27s · %12s · %s\n" "$(style clean bold green "$process_name")"       \
-                "$(style bold "100%%")"                                                     \
+                "$(style bold "done")"                                                      \
                 "$(markdown "$2")"
             process_active=0
         fi
@@ -175,7 +143,7 @@ watchdog()
         local contents="${unparsed_input}${1}"
 
         # Check whether the current input is a watchdog line and captures its info.
-        if [[ $contents =~ ^(.*)\[watchdog\|(info|error|warning|init|update|finish|report)\|(.*)\]$ ]]; then
+        if [[ $contents =~ ^(.*)\[watchdog\|(info|error|warning|init|finish|report)\|(.*)\]$ ]]; then
             # Save the unparsed contents so it may be useful for the next line.
             unparsed_input="${BASH_REMATCH[1]}"
 
@@ -208,7 +176,7 @@ watchdog()
         if [ $process_active -eq 1 ]; then
             printf "\r%27s · %12s %s %s"                                                    \
                 "$(style clean bold green "$process_name")"                                 \
-                "$(style bold "$process_percent%%")"                                        \
+                "$(style bold "running")"                                                   \
                 "$([ $blink_state -eq 0 ] && echo "·" || echo " ")"                         \
                 "$process_message"
             blink_state=$((blink_state > 0 ? 0 : 1))
