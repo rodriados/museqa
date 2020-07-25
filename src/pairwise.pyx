@@ -26,9 +26,8 @@ cdef class DistanceMatrix:
     # Informs the matrix's dimension.
     # @return The distance matrix's dimension.
     @property
-    def dimension(self):
-        cdef c_cartesian2[size_t] dim = self.thisptr.dimension()
-        return (dim.at(0), dim.at(1))
+    def count(self):
+        return self.thisptr.count()
 
 # Exposes the module's scoring table object.
 # @since 0.1.1

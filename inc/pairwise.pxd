@@ -23,9 +23,9 @@ cdef extern from "pairwise/pairwise.cuh" namespace "msa::pairwise":
         c_dist_matrix(c_dist_matrix&)
 
         c_dist_matrix& operator=(c_dist_matrix&)
-        element_type& at "operator[]" (c_cartesian2[size_t]&) except +RuntimeError
+        element_type at "operator[]" (c_cartesian2[size_t]&) except +RuntimeError
 
-        c_cartesian2[size_t] dimension()
+        size_t count()
 
     # The aminoacid substitution tables. These tables are stored contiguously
     # in memory, in order to facilitate accessing its elements.
