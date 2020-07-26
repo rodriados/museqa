@@ -10,8 +10,6 @@
 #include <cstdint>
 #include <utility>
 
-#include <environment.h>
-
 /*
  * Definition of CUDA function flags for host code, so we don't need to care about
  * which compiler is working on the file when using these flags.
@@ -20,6 +18,10 @@
   #define __host__
   #define __device__
 #endif
+
+#include <functor.hpp>
+#include <operator.hpp>
+#include <environment.h>
 
 namespace msa
 {
@@ -132,232 +134,9 @@ namespace msa
     template <size_t L>
     using indexer_g = typename indexer<L>::type;
 
-    /**#@+
-     * Wraps a function pointer into a functor.
-     * @tparam F The full function signature type.
-     * @tparam R The function return type.
-     * @tparam P The function parameter types.
-     * @since 0.1.1
-     */
-    template <typename F>
-    class functor
-    {
-        static_assert(std::is_function<F>::value, "a functor must have a function signature type");
-    };
-
-    template <typename R, typename ...P>
-    class functor<R(P...)>
-    {
-        public:
-            using return_type = R;                  /// The functor's return type.
-            using function_type = R (*)(P...);      /// The functor's raw pointer type.
-
-        protected:
-            function_type m_function = nullptr;      /// The raw functor's pointer.
-
-        public:
-            __host__ __device__ inline constexpr functor() noexcept = default;
-            __host__ __device__ inline constexpr functor(const functor&) noexcept = default;
-            __host__ __device__ inline constexpr functor(functor&&) noexcept = default;
-
-            /**
-             * Instantiates a new functor.
-             * @param function The function pointer to be encapsulated by functor.
-             */
-            __host__ __device__ inline constexpr functor(function_type function) noexcept
-            :   m_function {function}
-            {}
-
-            __host__ __device__ inline functor& operator=(const functor&) noexcept = default;
-            __host__ __device__ inline functor& operator=(functor&&) noexcept = default;
-
-            /**
-             * The functor call operator.
-             * @tparam T The given parameter types.
-             * @param param The given functor parameters.
-             * @return The functor return value.
-             */
-            template <typename ...T>
-            __host__ __device__ inline constexpr return_type operator()(T&&... param) const
-            {
-                return (m_function)(param...);
-            }
-
-            /**
-             * Allows the raw functor type to be directly accessed or called.
-             * @return The raw function pointer.
-             */
-            __host__ __device__ inline constexpr function_type operator&() const
-            {
-                return m_function;
-            }
-
-            /**
-             * Checks whether the functor is empty or not.
-             * @return Is the functor empty?
-             */
-            __host__ __device__ inline constexpr bool empty() const noexcept
-            {
-                return (m_function == nullptr);
-            }
-    };
-    /**#@-*/
-
     namespace utils
     {
-        /**
-         * Wraps an operator functor. An operator always transforms two elements
-         * of the same type into a single new value.
-         * @tparam T The type upon which the operator works.
-         * @since 0.1.1
-         */
-        template <typename T>
-        struct op : public functor<T(const T&, const T&)>
-        {
-            using underlying_type = functor<T(const T&, const T&)>;
-            using function_type = typename underlying_type::function_type;
-
-            using underlying_type::functor;
-            using underlying_type::operator=;
-        };
-
-        /**
-         * The logical AND operator.
-         * @return The logical AND result between operands.
-         */
-        __host__ __device__ inline constexpr auto andl(bool a, bool b) noexcept -> bool
-        {
-            return a && b;
-        }
-
-        /**
-         * The logical OR operator.
-         * @return The logical OR result between operands.
-         */
-        __host__ __device__ inline constexpr auto orl(bool a, bool b) noexcept -> bool
-        {
-            return a || b;
-        }
-
-        /**
-         * The logical less-than operator.
-         * @return The logical result between operands.
-         */
-        template <typename T>
-        __host__ __device__ inline constexpr auto lt(const T& a, const T& b) noexcept -> bool
-        {
-            return a < b;
-        }
-
-        /**
-         * The logical less-than-or-equal operator.
-         * @return The logical result between operands.
-         */
-        template <typename T>
-        __host__ __device__ inline constexpr auto lte(const T& a, const T& b) noexcept -> bool
-        {
-            return a <= b;
-        }
-
-        /**
-         * The logical greater-than operator.
-         * @return The logical result between operands.
-         */
-        template <typename T>
-        __host__ __device__ inline constexpr auto gt(const T& a, const T& b) noexcept -> bool
-        {
-            return a > b;
-        }
-
-        /**
-         * The logical greater-than-or-equal operator.
-         * @return The logical result between operands.
-         */
-        template <typename T>
-        __host__ __device__ inline constexpr auto gte(const T& a, const T& b) noexcept -> bool
-        {
-            return a >= b;
-        }
-
-        /**
-         * The logical equal operator.
-         * @return The logical result between operands.
-         */
-        template <typename T>
-        __host__ __device__ inline constexpr auto eq(const T& a, const T& b) noexcept -> bool
-        {
-            return a == b;
-        }
-
-        /**
-         * The sum operator.
-         * @return The sum of the operands.
-         */
-        template <typename T, typename U = T>
-        __host__ __device__ inline constexpr auto add(const T& a, const U& b) noexcept -> decltype(a + b)
-        {
-            return a + b;
-        }
-
-        /**
-         * The subtraction operator.
-         * @return The difference of the operands.
-         */
-        template <typename T, typename U = T>
-        __host__ __device__ inline constexpr auto sub(const T& a, const U& b) noexcept-> decltype(a - b)
-        {
-            return a - b;
-        }
-
-        /**
-         * The multiplication operator.
-         * @return The product of the operands.
-         */
-        template <typename T, typename U = T>
-        __host__ __device__ inline constexpr auto mul(const T& a, const U& b) noexcept -> decltype(a * b)
-        {
-            return a * b;
-        }
-
-        /**
-         * The division operator.
-         * @return The division of the operands.
-         */
-        template <typename T, typename U = T>
-        __host__ __device__ inline constexpr auto div(const T& a, const U& b) noexcept -> decltype(a / b)
-        {
-            return a / b;
-        }
-
-        /**
-         * The module operator.
-         * @return The module of the operands.
-         */
-        template <typename T, typename U = T>
-        __host__ __device__ inline constexpr auto mod(const T& a, const U& b) noexcept -> decltype(a % b)
-        {
-            return a % b;
-        }
-
-        /**
-         * The minimum operator.
-         * @return The minimum between the operands.
-         */
-        template <typename T>
-        __host__ __device__ inline constexpr auto min(const T& a, const T& b) noexcept -> const T&
-        {
-            return utils::lt(a, b) ? a : b;
-        }
-
-        /**
-         * The maximum operator.
-         * @return The maximum between the operands.
-         */
-        template <typename T>
-        __host__ __device__ inline constexpr auto max(const T& a, const T& b) noexcept -> const T&
-        {
-            return utils::gt(a, b) ? a : b;
-        }
+        using namespace op;
 
         /**#@+
          * Checks whether all given values are true.
