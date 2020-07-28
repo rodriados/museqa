@@ -7,6 +7,7 @@
 #include <string>
 
 #include <cuda.cuh>
+#include <utils.hpp>
 #include <allocator.hpp>
 
 namespace
@@ -112,5 +113,25 @@ namespace msa
         cuda::device::props props;
         cuda::check(cudaGetDeviceProperties(&props, device));
         return props;
+    }
+
+    /**
+     * Informs the total number of blocks supported by a single grid on the device.
+     * @param needed The number of blocks needed for a specific computation.
+     * @return The maximum number of blocks available.
+     */
+    auto cuda::device::max_blocks(size_t needed) -> size_t
+    {
+        return utils::min<size_t>(needed, ::device_properties.maxGridSize[0]);
+    }
+
+    /**
+     * Informs the total number of threads supported by a single grid on the device.
+     * @param needed The number of threads needed for a specific computation.
+     * @return The maximum number of threads available.
+     */
+    auto cuda::device::max_threads(size_t needed) -> size_t
+    {
+        return utils::min<size_t>(needed, ::device_properties.maxThreadsDim[0]);
     }
 }

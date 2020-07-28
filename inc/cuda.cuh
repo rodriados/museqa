@@ -262,6 +262,8 @@ namespace msa
             #if __msa(compiler, nvcc)
                 extern auto properties() -> const props&;
                 extern auto properties(const id&) -> props;
+                extern auto max_blocks(size_t = ~0) -> size_t;
+                extern auto max_threads(size_t = ~0) -> size_t;
             #endif
         }
 

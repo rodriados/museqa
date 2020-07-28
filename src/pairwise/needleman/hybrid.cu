@@ -331,11 +331,10 @@ namespace
      */
     static input make_input(const buffer<pair>& pairs, const msa::database& db, const size_t done)
     {
-        const auto device_props = cuda::device::properties();
         const size_t count = pairs.size();
 
         size_t mem_limit = cuda::device::free_memory();
-        size_t max_batch = utils::min(int(count), device_props.maxGridSize[0]);
+        size_t max_batch = cuda::device::max_blocks(count);
         size_t pair_cache, cache_offset = 0;
 
         std::vector<job> jobs;
