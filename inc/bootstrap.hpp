@@ -47,8 +47,8 @@ namespace msa
          */
         struct module : public pipeline::module
         {
-            using conduit = bootstrap::conduit;         /// The module's conduit type.
-            using pipe = pointer<pipeline::conduit>;    /// The conduit type alias.
+            typedef bootstrap::conduit conduit;         /// The module's conduit type.
+            typedef pointer<pipeline::conduit> pipe;    /// The conduit type alias.
 
             /**
              * Returns an string identifying the module's name.

@@ -11,6 +11,7 @@
 
 #include <io.hpp>
 #include <cuda.cuh>
+#include <point.hpp>
 #include <utils.hpp>
 #include <buffer.hpp>
 #include <matrix.hpp>
@@ -18,7 +19,6 @@
 #include <database.hpp>
 #include <pipeline.hpp>
 #include <bootstrap.hpp>
-#include <cartesian.hpp>
 #include <environment.h>
 
 namespace msa
@@ -56,7 +56,7 @@ namespace msa
         {
             protected:
                 using underlying_type = buffer<score>;
-                using cartesian_type = typename matrix<score>::cartesian_type;
+                using point_type = typename matrix<score>::point_type;
 
             public:
                 using element_type = score;         /// The distance matrix's element type.
@@ -88,7 +88,7 @@ namespace msa
                  * @param offset The requested pair's offset.
                  * @return The pairwise distance between sequences in given pair.
                  */
-                inline auto operator[](const cartesian_type& offset) const -> element_type
+                inline auto operator[](const point_type& offset) const -> element_type
                 {
                     const auto max = utils::max(offset[0], offset[1]);
                     const auto min = utils::min(offset[0], offset[1]);
@@ -152,9 +152,9 @@ namespace msa
                  * @param offset The requested table offset.
                  * @return The required table row's reference.
                  */
-                __host__ __device__ inline element_type operator[](const cartesian<2>& offset) const noexcept
+                __host__ __device__ inline element_type operator[](const point<2>& offset) const noexcept
                 {
-                    return (*m_contents)[offset[0]][offset[1]];
+                    return (*m_contents)[offset.x][offset.y];
                 }
 
                 /**
@@ -250,8 +250,8 @@ namespace msa
          */
         struct module : public pipeline::module
         {
-            using previous = bootstrap::module;     /// Indicates the expected previous module.
-            using conduit = pairwise::conduit;      /// The module's conduit type.
+            typedef bootstrap::module previous;     /// Indicates the expected previous module.
+            typedef pairwise::conduit conduit;      /// The module's conduit type.
 
             using pipe = pointer<pipeline::conduit>;
             
