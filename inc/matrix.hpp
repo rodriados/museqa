@@ -5,35 +5,37 @@
  */
 #pragma once
 
+#include <utility>
+
+#include <point.hpp>
+#include <space.hpp>
+#include <utils.hpp>
 #include <buffer.hpp>
-#include <cartesian.hpp>
+#include <transform.hpp>
 
 namespace msa
 {
     /**
-     * Creates a general-purpose multi-dimensional buffer. The matrix stores all
-     * its data contiguously in memory.
-     * @tparam T The matrix's buffer element type.
-     * @tparam D The matrix's dimensionality.
+     * Creates a general-purpose bi-dimensional buffer. The matrix stores all
+     * of its data contiguously in memory.
+     * @tparam E The matrix's buffer element type.
+     * @tparam T The matrix's spacial transformation.
      * @since 0.1.1
      */
-    template <typename T, size_t D = 2>
-    class matrix : protected buffer<T>
+    template <typename E, typename T = transform::linear<2>>
+    class matrix : protected buffer<E>
     {
-        static_assert(D >= 2, "matrices must be at least 2-dimensional");
-
         protected:
-            using underlying_buffer = buffer<T>;    /// The matrix's underlying buffer.
+            using underlying_buffer = buffer<E>;
+            using space_type = msa::space<2, size_t, T>;
 
         public:
-            using element_type = typename buffer<T>::element_type;  /// The matrix's element type.
-            using pointer_type = typename buffer<T>::pointer_type;  /// The matrix's pointer type.
-            using cartesian_type = cartesian<D, size_t>;            /// The matrix's dimension value type.
-
-            static constexpr size_t dimensionality = D;             /// The matrix's dimensionality.
+            using element_type = typename underlying_buffer::element_type;
+            using pointer_type = typename underlying_buffer::pointer_type;
+            using point_type = typename space_type::point_type;
 
         protected:
-            cartesian_type m_dim;                                   /// The matrix's dimensional size.
+            space_type m_space;                         /// The matrix's space.
 
         public:
             __host__ __device__ inline matrix() noexcept = default;
@@ -43,31 +45,31 @@ namespace msa
             /**
              * Acquires the ownership of a raw matrix buffer pointer.
              * @param ptr The buffer pointer to acquire.
-             * @param dim The size dimensions of buffer to acquire.
+             * @param space The space dimensions of buffer to acquire.
              */
-            inline explicit matrix(element_type *ptr, const cartesian_type& dim)
-            :   underlying_buffer {ptr, dim.volume()}
-            ,   m_dim {dim}
+            inline explicit matrix(element_type *ptr, const space_type& space)
+            :   underlying_buffer {ptr, space.volume()}
+            ,   m_space {space}
             {}
 
             /**
              * Acquires the ownership of a matrix buffer pointer.
              * @param ptr The buffer pointer to acquire.
-             * @param dim The size dimensions of buffer to acquire.
+             * @param space The space dimensions of buffer to acquire.
              */
-            __host__ __device__ inline explicit matrix(pointer_type&& ptr, const cartesian_type& dim)
-            :   underlying_buffer {std::forward<decltype(ptr)>(ptr), dim.volume()}
-            ,   m_dim {dim}
+            __host__ __device__ inline explicit matrix(pointer_type&& ptr, const space_type& space)
+            :   underlying_buffer {std::forward<decltype(ptr)>(ptr), space.volume()}
+            ,   m_space {space}
             {}
 
             /**
              * Instantiates a new matrix from an already allocated buffer.
              * @param buf The pre-allocated matrix buffer.
-             * @param dim The matrix's dimensions.
+             * @param space The matrix's space dimensions.
              */
-            __host__ __device__ inline explicit matrix(const underlying_buffer& buf, const cartesian_type& dim)
+            __host__ __device__ inline explicit matrix(const underlying_buffer& buf, const space_type& space)
             :   underlying_buffer {buf}
-            ,   m_dim {dim}
+            ,   m_space {space}
             {}
 
             __host__ __device__ inline matrix& operator=(const matrix&) = default;
@@ -75,31 +77,60 @@ namespace msa
 
             /**
              * Gives access to an element in the matrix.
-             * @param offset The offset's values.
+             * @param offset The element's offset value.
              * @return The requested element.
              */
-            __host__ __device__ inline element_type& operator[](const cartesian_type& offset)
+            __host__ __device__ inline element_type& operator[](const point_type& offset)
             {
-                return underlying_buffer::operator[](m_dim.collapse(offset));
+                return underlying_buffer::operator[](m_space.collapse(offset));
             }
 
             /**
              * Gives access to a const-qualified element in the matrix.
-             * @param offset The offset's values.
-             * @return The requested constant element.
+             * @param offset The element's offset value.
+             * @return The requested const-qualified element.
              */
-            __host__ __device__ inline const element_type& operator[](const cartesian_type& offset) const
+            __host__ __device__ inline const element_type& operator[](const point_type& offset) const
             {
-                return underlying_buffer::operator[](m_dim.collapse(offset));
+                return underlying_buffer::operator[](m_space.collapse(offset));
             }
 
             /**
-             * Informs the matrix's dimensional sizes.
-             * @return The matrix's dimensions.
+             * Gives direct linear access to an element in matrix.
+             * @param offset The element's offset value.
+             * @return The requested element.
              */
-            __host__ __device__ inline const cartesian_type& dimension() const noexcept
+            __host__ __device__ inline element_type& linear(const point_type& offset)
             {
-                return m_dim;
+                return underlying_buffer::operator[](m_space.direct(offset));
+            }
+
+            /**
+             * Gives direct linear access to a const-qualified element in matrix.
+             * @param offset The element's offset value.
+             * @return The requested const-qualified element.
+             */
+            __host__ __device__ inline const element_type& linear(const point_type& offset) const
+            {
+                return underlying_buffer::operator[](m_space.direct(offset));
+            }
+
+            /**
+             * Informs the matrix's projection dimensions.
+             * @return The matrix's projected size.
+             */
+            __host__ __device__ inline point_type dimension() const noexcept
+            {
+                return m_space.dimension();
+            }
+
+            /**
+             * Informs the matrix's internal representation dimensions.
+             * @return The matrix's shape in memory.
+             */
+            __host__ __device__ inline point_type reprdim() const noexcept
+            {
+                return m_space.reprdim();
             }
 
             /**
@@ -109,28 +140,36 @@ namespace msa
              */
             static inline matrix copy(const matrix& mat) noexcept
             {
-                return matrix {underlying_buffer::copy(mat), mat.m_dim};
+                return matrix {underlying_buffer::copy(mat), mat.m_space};
             }
 
             /**
-             * Creates a new matrix of given size.
-             * @param dim The matrix's dimension sizes.
+             * Creates a new matrix of given space dimensions.
+             * @param space The matrix's space dimensions.
              * @return The newly created matrix instance.
              */
-            static inline matrix make(const cartesian_type& dim) noexcept
+            static inline matrix make(const space_type& space) noexcept
             {
-                return matrix {pointer_type::make(dim.volume()), dim};
+                return matrix {pointer_type::make(space.volume()), space};
             }
 
             /**
-             * Creates a new matrix of given size with an allocator.
+             * Creates a new matrix of given dimensions with an allocator.
              * @param allocator The allocator to be used to new matrix.
-             * @param dim The matrix's dimension sizes.
+             * @param space The matrix's space dimensions.
              * @return The newly created matrix instance.
              */
-            static inline matrix make(const msa::allocator& allocator, const cartesian_type& dim) noexcept
+            static inline matrix make(const msa::allocator& allocator, const space_type& space) noexcept
             {
-                return matrix {pointer_type::make(allocator, dim.volume()), dim};
+                return matrix {pointer_type::make(allocator, space.volume()), space};
             }
     };
+
+    /**
+     * Implements a 2-dimensional symmetric matrix.
+     * @tparam E The matrix's contents type.
+     * @since 0.1.1
+     */
+    template <typename E>
+    using symmatrix = matrix<E, transform::symmetric>;
 }

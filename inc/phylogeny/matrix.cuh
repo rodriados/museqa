@@ -5,11 +5,14 @@
  */
 #pragma once
 
+#include <cstdint>
 #include <utility>
 
+#include <space.hpp>
 #include <utils.hpp>
 #include <matrix.hpp>
 #include <pairwise.cuh>
+#include <transform.hpp>
 
 namespace msa
 {
@@ -20,20 +23,26 @@ namespace msa
          * the pairwise distance matrix, as OTUs are joined together. If we choose
          * to employ a simple matrix for that job, this class will be responsible
          * for managing and performing all needed shrinking tasks.
+         * @tparam D Is the matrix stored on device memory?
+         * @tparam T The matrix's spacial transformation.
          * @since 0.1.1
          */
-        class matrix : protected msa::matrix<score>
+        template <bool D = false, typename T = transform::linear<2>>
+        class matrix : public msa::matrix<pairwise::score>
         {
             protected:
-                using underlying_matrix = msa::matrix<score>;
+                using underlying_matrix = msa::matrix<pairwise::score>;
 
             public:
+                static constexpr bool on_device = D;    /// Is matrix data on device memory?
+
+            public:
+                using transform_type = T;
                 using element_type = typename underlying_matrix::element_type;
-                using cartesian_type = typename underlying_matrix::cartesian_type;
+                using point_type = typename underlying_matrix::point_type;
 
             protected:
-                bool m_device = false;          /// Is the matrix on device memory?
-                size_t m_width;                 /// The matrix's dynamic width.
+                point_type m_virtual;                   /// The matrix's dynamic space.
 
             public:
                 __host__ __device__ inline matrix() noexcept = delete;
@@ -53,92 +62,55 @@ namespace msa
 
                 /**
                  * Gives access to an element in the matrix.
-                 * @param offset The requested element's offset.
-                 * @return The requested element value.
+                 * @param offset The element's offset value.
+                 * @return The requested element.
                  */
-                __host__ __device__ inline element_type& operator[](const cartesian_type& offset)
+                __host__ __device__ inline element_type& operator[](const point_type& offset)
                 {
-                    return direct(offset);
+                    return underlying_matrix::operator[](transform_type::transform(m_virtual, offset));
                 }
 
                 /**
                  * Gives access to a const-qualified element in the matrix.
-                 * @param offset The requested element's offset.
-                 * @return The requested const-qualified element value.
+                 * @param offset The element's offset value.
+                 * @return The requested const-qualified element.
                  */
-                __host__ __device__ inline const element_type& operator[](const cartesian_type& offset) const
+                __host__ __device__ inline const element_type& operator[](const point_type& offset) const
                 {
-                    return direct(offset);
+                    return underlying_matrix::operator[](transform_type::transform(m_virtual, offset));
                 }
 
                 /**
-                 * Gives direct access to an element offset in the matrix.
-                 * @param offset The requested matrix offset.
-                 * @return The element at requested offset.
+                 * Informs the matrix's projection dimensions.
+                 * @return The matrix's projected size.
                  */
-                __host__ __device__ inline element_type& direct(const cartesian_type& offset)
+                __host__ __device__ inline point_type dimension() const noexcept
                 {
-                    return underlying_matrix::operator[](offset);
+                    return transform_type::projection(m_virtual);
                 }
 
                 /**
-                 * Gives direct const-qualified access to an element in the matrix.
-                 * @param offset The requested matrix offset.
-                 * @return The const-qualified element at requested offset.
+                 * Informs the matrix's internal representation dimensions.
+                 * @return The matrix's shape in memory.
                  */
-                __host__ __device__ inline const element_type& direct(const cartesian_type& offset) const
+                __host__ __device__ inline point_type reprdim() const noexcept
                 {
-                    return underlying_matrix::operator[](offset);
-                }
-
-                /**
-                 * Informs the matrix's dimensions. It is important to note that
-                 * the values returned by this function does correspond directly
-                 * to how the matrix is stored in memory.
-                 * @return The matrix's virtual dimensions.
-                 */
-                __host__ __device__ inline const cartesian_type dimension() const noexcept
-                {
-                    return cartesian_type {m_width, m_width};
-                }
-
-                /**
-                 * Informs the matrix's virtual in-memory dimensions. This allows
-                 * direct access to the matrix's elements without applying any
-                 * kind of offset transformations.
-                 * @return The matrix's virtual in-memory dimensions.
-                 */
-                __host__ __device__ inline cartesian_type reprdim() const noexcept
-                {
-                    return dimension();
+                    return m_virtual;
                 }
 
                 auto remove(uint32_t) -> void;
                 auto swap(uint32_t, uint32_t) -> void;
-
-                auto to_device() const -> matrix;
+                auto to_device() const -> matrix<true, T>;
 
             protected:
                 /**
-                 * Copies the contents of an already existing instance but interpret
-                 * it to have a different, hopefully smaller, width. 
-                 * @param other The instance to be copied.
-                 * @param width The new matrix's width.
-                 */
-                inline explicit matrix(const matrix& other, size_t width) noexcept
-                :   matrix {other, width, other.m_device}
-                {}
-
-                /**
                  * Creates a new instance from an underlying matrix instance.
                  * @param mat The base matrix instance to be copied.
-                 * @param width The matrix's virtual width.
-                 * @param device Is the matrix on device memory?
+                 * @param side The matrix's virtual side size.
                  */
-                inline explicit matrix(const underlying_matrix& mat, size_t width, bool device) noexcept
+                inline explicit matrix(const underlying_matrix& mat, size_t side) noexcept
                 :   underlying_matrix {mat}
-                ,   m_device {device}
-                ,   m_width {width}
+                ,   m_virtual {transform_type::shape(point_type {side, side})}
                 {}
 
                 /**
@@ -149,34 +121,43 @@ namespace msa
                  */
                 inline explicit matrix(const pairwise::distance_matrix& mat, size_t count) noexcept
                 :   underlying_matrix {underlying_matrix::make({count, count})}
-                ,   m_width {count}
+                ,   m_virtual {transform_type::shape(point_type {count, count})}
                 {
                     for(size_t i = 0; i < count; ++i)
                         for(size_t j = 0; j <= i; ++j)
-                            operator[]({i, j}) = operator[]({j, i}) = mat[{i, j}];
+                            (*this)[{i, j}] = (*this)[{i, j}] = mat[{i, j}];
                 }
 
                 /**
-                 * Creates a new matrix of given width and height.
-                 * @param width The new matrix's width and height.
+                 * Creates a new matrix of given side size.
+                 * @param side The new matrix's width and height.
                  * @return The newly created matrix instance.
                  */
-                inline static auto make(size_t width) noexcept -> matrix
+                inline static auto make(size_t side) noexcept -> matrix
                 {
-                    return matrix {underlying_matrix::make({width, width}), width, false};
+                    return matrix {underlying_matrix::make({side, side}), side};
                 }
 
                 /**
-                 * Creates a new matrix of given size with an allocator.
+                 * Creates a new matrix of given side size with an allocator.
                  * @param allocator The allocator to be used to new matrix.
-                 * @param width The new matrix's width and height.
-                 * @param device Is the matrix being allocated on device memory?
+                 * @param side The new matrix's width and height.
                  * @return The newly created matrix instance.
                  */
-                inline static auto make(const msa::allocator& allocator, size_t width, bool device) -> matrix
+                inline static auto make(const msa::allocator& allocator, size_t side) -> matrix
                 {
-                    return matrix {underlying_matrix::make(allocator, {width, width}), width, device};
+                    return matrix {underlying_matrix::make(allocator, {side, side}), side};
                 }
+
+            friend class matrix<false, transform_type>;
         };
+
+        /**
+         * Implements a shrinkable symmetric matrix.
+         * @tparam D Is the matrix stored on device memory?
+         * @since 0.1.1
+         */
+        template <bool D = false>
+        using symmatrix = matrix<D, transform::symmetric>;
     }
 }

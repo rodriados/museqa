@@ -42,9 +42,10 @@ namespace msa
             };
 
             /*
-             * The list of all available needleman algorithm implementations.
+             * The list of all available neighbor-joining algorithm implementations.
              */
-            extern auto sequential() -> phylogeny::algorithm *;
+            extern auto sequential_matrix() -> phylogeny::algorithm *;
+            extern auto sequential_symmatrix() -> phylogeny::algorithm *;
         }
     }
 }

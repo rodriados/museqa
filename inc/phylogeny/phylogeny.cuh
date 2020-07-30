@@ -18,7 +18,6 @@
 #include <pipeline.hpp>
 #include <allocator.hpp>
 #include <dendogram.hpp>
-#include <symmatrix.hpp>
 
 namespace msa
 {

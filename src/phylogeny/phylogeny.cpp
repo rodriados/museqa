@@ -9,7 +9,6 @@
 #include <io.hpp>
 #include <msa.hpp>
 #include <exception.hpp>
-#include <symmatrix.hpp>
 #include <dispatcher.hpp>
 
 #include <phylogeny/phylogeny.cuh>
@@ -24,10 +23,12 @@ namespace msa
          * @since 0.1.1
          */
         static const dispatcher<factory> factory_dispatcher = {
-            {"default",              njoining::sequential}
-        ,   {"njoining",             njoining::sequential}
-        ,   {"njoining-sequential",  njoining::sequential}
-        ,   {"njoining-distributed", njoining::sequential}
+            {"default",              njoining::sequential_matrix}
+        ,   {"njoining",             njoining::sequential_symmatrix}
+        ,   {"njoining-matrix",      njoining::sequential_matrix}
+        ,   {"njoining-symmatrix",   njoining::sequential_symmatrix}
+        ,   {"njoining-sequential",  njoining::sequential_matrix}
+        ,   {"njoining-distributed", njoining::sequential_matrix}
         };
 
         /**

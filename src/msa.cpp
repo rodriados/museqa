@@ -207,8 +207,11 @@ namespace msa
         auto runner = msa::runner {};
         auto lambda = [&io, &runner]() { runner.run(io); };
 
-        onlyslaves if(global_state.use_multigpu && global_state.devices_available > 1)
-            cuda::device::select(node::rank - 1);
+        onlyslaves {
+            const auto rank  = node::rank - 1;
+            const auto count = global_state.devices_available;
+            cuda::device::select(global_state.use_multigpu ? (rank % count) : cuda::device::init);
+        }
 
         watchdog::report("total", benchmark::run(lambda));
     }
