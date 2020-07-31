@@ -5,8 +5,8 @@
 from libc.stdint cimport *
 from libcpp.string cimport string
 from libcpp.vector cimport vector
-from cartesian cimport c_cartesian2
 from database cimport c_database
+from point cimport c_point2
 
 cdef extern from "pairwise/pairwise.cuh" namespace "msa::pairwise":
     # The score of a sequence pair alignment.
@@ -23,7 +23,7 @@ cdef extern from "pairwise/pairwise.cuh" namespace "msa::pairwise":
         c_dist_matrix(c_dist_matrix&)
 
         c_dist_matrix& operator=(c_dist_matrix&)
-        element_type at "operator[]" (c_cartesian2[size_t]&) except +RuntimeError
+        element_type at "operator[]" (c_point2[size_t]&) except +RuntimeError
 
         size_t count()
 
@@ -37,7 +37,7 @@ cdef extern from "pairwise/pairwise.cuh" namespace "msa::pairwise":
         c_scoring_table(c_scoring_table&)
 
         c_scoring_table& operator=(c_scoring_table&) except +RuntimeError
-        element_type at "operator[]" (c_cartesian2[intptr_t]&)
+        element_type at "operator[]" (c_point2[size_t]&)
 
         element_type penalty()
 

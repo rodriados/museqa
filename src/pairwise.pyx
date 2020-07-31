@@ -5,9 +5,9 @@
 from libc.stdint cimport *
 from libcpp.string cimport string
 from libcpp.vector cimport vector
-from cartesian cimport c_cartesian2
 from database cimport Database
 from encoder cimport c_encode
+from point cimport c_point2
 from pairwise cimport *
 
 # Exposes the module's resulting distance matrix.
@@ -19,7 +19,7 @@ cdef class DistanceMatrix:
     def __getitem__(self, tuple offset):
         cdef uint32_t x = int(offset[0])
         cdef uint32_t y = int(offset[1])
-        cdef c_cartesian2[size_t] position = c_cartesian2[size_t](x, y)
+        cdef c_point2[size_t] position = c_point2[size_t](x, y)
 
         return self.thisptr.at(position)
 
@@ -44,7 +44,7 @@ cdef class ScoringTable:
     def __getitem__(self, tuple offset):
         cdef uint8_t x = c_encode(ord(offset[0])) if isinstance(offset[0], str) else int(offset[0])
         cdef uint8_t y = c_encode(ord(offset[1])) if isinstance(offset[1], str) else int(offset[1])
-        cdef c_cartesian2[intptr_t] point = c_cartesian2[intptr_t](x, y)
+        cdef c_point2[size_t] point = c_point2[size_t](x, y)
 
         if x >= 25 or y >= 25:
             raise RuntimeError("scoring table offset out of range")

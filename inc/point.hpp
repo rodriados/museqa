@@ -30,6 +30,10 @@ namespace msa
 
         dimension_type dim[dimensionality];             /// The point's dimensions values.
 
+        __host__ __device__ inline point() noexcept = default;
+        __host__ __device__ inline point(const point&) noexcept = default;
+        __host__ __device__ inline point(point&&) noexcept = default;
+
         /**
          * Constructs a new point instance.
          * @tparam U The point's dimension values' types.
@@ -55,6 +59,9 @@ namespace msa
         __host__ __device__ inline constexpr point(const detail::tuple::base<indexer<I...>, U...>& tup) noexcept
         :   point {detail::tuple::get<I>(tup)...}
         {}
+
+        __host__ __device__ inline point& operator=(const point&) noexcept = default;
+        __host__ __device__ inline point& operator=(point&&) noexcept = default;
 
         /**
          * Allows direct access to the value of one of the point's dimensions.
@@ -83,6 +90,10 @@ namespace msa
         dimension_type value;                           /// The point's uni-dimensional value.
         dimension_type dim[dimensionality];             /// The point's dimension value.
 
+        __host__ __device__ inline point() noexcept = default;
+        __host__ __device__ inline point(const point&) noexcept = default;
+        __host__ __device__ inline point(point&&) noexcept = default;
+
         /**
          * Constructs a new point instance.
          * @tparam U The point's dimension values' types.
@@ -106,6 +117,9 @@ namespace msa
         __host__ __device__ inline constexpr point(const tuple<U>& tup) noexcept
         :   point {tup.template get<0>()}
         {}
+
+        __host__ __device__ inline point& operator=(const point&) noexcept = default;
+        __host__ __device__ inline point& operator=(point&&) noexcept = default;
 
         /**
          * Allows direct access to the value of one of the point's dimensions.
@@ -142,6 +156,10 @@ namespace msa
         struct { dimension_type x, y; };                /// The point's dimensions aliases.
         dimension_type dim[dimensionality];             /// The point's dimensions values.
 
+        __host__ __device__ inline point() noexcept = default;
+        __host__ __device__ inline point(const point&) noexcept = default;
+        __host__ __device__ inline point(point&&) noexcept = default;
+
         /**
          * Constructs a new point instance.
          * @tparam U The point's first dimension value type.
@@ -169,6 +187,9 @@ namespace msa
         __host__ __device__ inline constexpr point(const tuple<U, V>& tup) noexcept
         :   point {detail::tuple::get<0>(tup), detail::tuple::get<1>(tup)}
         {}
+
+        __host__ __device__ inline point& operator=(const point&) noexcept = default;
+        __host__ __device__ inline point& operator=(point&&) noexcept = default;
 
         /**
          * Allows direct access to the value of one of the point's dimensions.
