@@ -1,7 +1,7 @@
 /** 
  * Multiple Sequence Alignment CUDA tools header file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018-2019 Rodrigo Siqueira
+ * @copyright 2018-2020 Rodrigo Siqueira
  */
 #pragma once
 
@@ -14,12 +14,12 @@
 #include <exception.hpp>
 #include <environment.h>
 
-#if __msa(compiler, nvcc)
+#if defined(__msa_compiler_nvcc)
   /*
    * Checks whether the compilation is targeting a compatible device. If not,
    * compilation fails and we inform about the error.
    */
-  #if __msa(runtime, device) && (__CUDA_ARCH__ < 200)
+  #if defined(__msa_runtime_device) && (__CUDA_ARCH__ < 200)
     #error a device of compute capability 2.0 or higher is required
   #endif
 
@@ -47,7 +47,7 @@ namespace msa
 
         namespace status
         {
-            #if __msa(compiler, nvcc)
+            #if defined(__msa_compiler_nvcc)
                 /**
                  * Aliases for CUDA error types and status codes enumeration.
                  * @since 0.1.1
@@ -205,7 +205,7 @@ namespace msa
                 }
         };
 
-        #if __msa(compiler, nvcc)
+        #if defined(__msa_compiler_nvcc)
             /**
              * Checks whether a CUDA has been successful and throws error if not.
              * @param code The status code obtained from a function.
@@ -235,7 +235,7 @@ namespace msa
              */
             enum : id { init = 0 };
 
-            #if __msa(compiler, nvcc)
+            #if defined(__msa_compiler_nvcc)
                 /**
                  * Every CUDA device can provide information about its fisical properties.
                  * @see cudaDeviceProp
@@ -259,7 +259,7 @@ namespace msa
             extern auto current() -> id;
             extern auto select(const id& = init) -> void;
 
-            #if __msa(compiler, nvcc)
+            #if defined(__msa_compiler_nvcc)
                 extern auto properties() -> const props&;
                 extern auto properties(const id&) -> props;
                 extern auto max_blocks(size_t = ~0) -> size_t;
@@ -267,7 +267,7 @@ namespace msa
             #endif
         }
 
-        #if __msa(compiler, nvcc)
+        #if defined(__msa_compiler_nvcc)
             /**
              * Creates an asynchronous stream, which allows multiple device operations
              * to be parallelized.

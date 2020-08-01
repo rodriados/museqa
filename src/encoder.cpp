@@ -12,7 +12,7 @@
 #include <exception.hpp>
 #include <environment.h>
 
-#if __msa(compiler, gcc)
+#if defined(__msa_compiler_gcc)
   #pragma GCC push_options
   #pragma GCC optimize ("unroll-loops")
 #endif
@@ -115,6 +115,6 @@ namespace msa
     }
 }
 
-#if __msa(compiler, gcc)
+#if defined(__msa_compiler_gcc)
   #pragma GCC pop_options
 #endif

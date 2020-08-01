@@ -1,7 +1,7 @@
 /** 
  * Multiple Sequence Alignment node header file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018-2019 Rodrigo Siqueira
+ * @copyright 2018-2020 Rodrigo Siqueira
  */
 #pragma once
 
@@ -22,7 +22,7 @@ namespace msa
          * global identification.
          * @see mpi::init
          */
-        #if !__msa(runtime, cython)
+        #if !defined(__msa_runtime_cython)
             extern id rank;
             extern int32_t count;
         #else
@@ -43,7 +43,7 @@ namespace msa
  * Defines some process control macros. These macros are to be used when
  * it is needed to check whether the current process is master or not.
  */
-#if !__msa(runtime, cython)
+#if !defined(__msa_runtime_cython)
   #define onlymaster   if(node::rank == node::master)
   #define onlyslaves   if(node::rank != node::master)
   #define onlynode(i)  if((i) == node::rank)

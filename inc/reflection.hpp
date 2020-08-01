@@ -1,7 +1,7 @@
 /** 
  * Multiple Sequence Alignment reflection header file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018-2019 Alexandr Poltavsky, Antony Polukhin, Rodrigo Siqueira
+ * @copyright 2018-2020 Alexandr Poltavsky, Antony Polukhin, Rodrigo Siqueira
  */
 #pragma once
 
@@ -28,16 +28,14 @@
 #include <tuple.hpp>
 #include <environment.h>
 
-#if __msa(compiler, gcc)
+#if defined(__msa_compiler_gcc)
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wnon-template-friend"
 #endif
 
-#ifndef use_loophole
+#if !defined(use_loophole)
   #if __cplusplus >= 201402L && !defined(avoid_loophole)
-    #define use_loophole 1
-  #else
-    #define use_loophole 0
+    #define use_loophole
   #endif
 #endif
 
@@ -45,7 +43,7 @@ namespace msa
 {
     namespace detail
     {
-        #if use_loophole
+        #if defined(use_loophole)
             namespace reflection
             {
                 /**
@@ -160,7 +158,7 @@ namespace msa
 
         namespace reflection
         {
-            #if use_loophole
+            #if defined(use_loophole)
                 /**
                  * This type uses C++14 loophole to create a tuple corresponding
                  * to the object's fields.
@@ -188,7 +186,7 @@ namespace msa
             template <typename T, bool B>
             struct mirror;
 
-            #if use_loophole
+            #if defined(use_loophole)
                 template <typename T>
                 struct mirror<T, false>
                 {
@@ -365,6 +363,6 @@ namespace msa
     };
 }
 
-#if __msa(compiler, gcc)
+#if defined(__msa_compiler_gcc)
   #pragma GCC diagnostic pop
 #endif

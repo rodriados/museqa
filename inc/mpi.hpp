@@ -22,7 +22,7 @@
 #include <reflection.hpp>
 #include <environment.h>
 
-#if !__msa(runtime, cython)
+#if !defined(__msa_runtime_cython)
 
 #include <mpi.h>
 

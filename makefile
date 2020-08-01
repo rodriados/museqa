@@ -33,14 +33,14 @@ MPILKFLAG ?= -lmpi_cxx -lmpi
 # certain features on code or affect the projects compilation.
 FLAGS ?=
 
-GCCCFLAGS = -std=$(STDC) -I$(INCDIR) -Wall -lm -fPIC -O3 $(FLAGS) $(DEBUG)
-GCPPFLAGS = -std=$(STDCPP) -I$(INCDIR) -Wall -fPIC -O3 $(FLAGS) $(DEBUG)
+GCCCFLAGS = -std=$(STDC) -I$(INCDIR) -Wall -lm -fPIC -O3 $(FLAGS) $(ENV)
+GCPPFLAGS = -std=$(STDCPP) -I$(INCDIR) -Wall -fPIC -O3 $(FLAGS) $(ENV)
 NVCCFLAGS = -std=$(STDCU) -I$(INCDIR) -arch $(NVARCH) -lmpi -lcuda -lcudart -w -O3 -Xptxas -O3      \
-        -Xcompiler -O3 -D_MWAITXINTRIN_H_INCLUDED $(FLAGS) $(DEBUG)
+        -Xcompiler -O3 -D_MWAITXINTRIN_H_INCLUDED $(FLAGS) $(ENV)
 PYPPFLAGS = -std=$(STDCPP) -I$(INCDIR) -I$(SRCDIR) -I$(PY3INCDIR) -shared -pthread -fPIC -fwrapv    \
-        -O2 -Wall -fno-strict-aliasing $(FLAGS) $(DEBUG)
+        -O2 -Wall -fno-strict-aliasing $(FLAGS) $(ENV)
 PYXCFLAGS = --cplus -I$(INCDIR) -I$(SRCDIR) -3
-LINKFLAGS = -L$(MPILIBDIR) $(MPILKFLAG) $(FLAGS) $(DEBUG)
+LINKFLAGS = -L$(MPILIBDIR) $(MPILKFLAG) $(FLAGS) $(ENV)
 
 # Lists all files to be compiled and separates them according to their corresponding
 # compilers. Changes in any of these files in will trigger conditional recompilation.
@@ -67,17 +67,18 @@ install: $(OBJHIERARCHY)
 	@chmod +x msarun
 
 production: install
+production: override ENV = -DPRODUCTION
 production: $(TGTDIR)/$(NAME)
 
 debug: install
-debug: override DEBUG = -g -DDEBUG
+debug: override ENV = -g -DDEBUG
 debug: $(TGTDIR)/$(NAME)
 
 testing: install
 testing: override GCPP = $(PYPP)
-testing: override DEBUG = -g -DTESTING
+testing: override ENV = -g -DTESTING
 testing: override NVCCFLAGS = -std=$(STDCU) -I$(INCDIR) -g -arch $(NVARCH) -lcuda -lcudart -w       \
-        -D_MWAITXINTRIN_H_INCLUDED $(DEBUG) --compiler-options -fPIC
+        -D_MWAITXINTRIN_H_INCLUDED $(ENV) --compiler-options -fPIC
 testing: $(TESTFILES)
 
 clean:

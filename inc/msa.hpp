@@ -24,9 +24,9 @@ namespace msa
      */
     enum class environment
     {
-        production = 1,
+        debug = 1,
         testing = 2,
-        debug = 3,
+        production = 3,
         dev = 4,
     };
 
@@ -82,7 +82,7 @@ namespace msa
      * The global state instance.
      * @since 0.1.1
      */
-    #if __msa(runtime, cython)
+    #if defined(__msa_runtime_cython)
         constexpr state global_state = {environment::testing};
     #else
         extern state global_state;
@@ -100,7 +100,7 @@ namespace msa
         template <typename ...T>
         inline void notify(const char *event, const std::string& fmtstr, T&&... args) noexcept
         {
-            #if !__msa(runtime, cython)
+            #if !defined(__msa_runtime_cython)
                 fmt::print("[watchdog|%s|" + fmtstr + "]\n", event, args...);
             #endif
         }
@@ -161,7 +161,7 @@ namespace msa
         template <typename ...T>
         inline void init(const char *task, const std::string& fmtstr, T&&... args) noexcept
         {
-            #if !__msa(production)
+            #if !defined(__msa_production)
                 if(!global_state.report_only)
                     notify("init", "%s|" + fmtstr, task, args...);
             #endif
@@ -176,7 +176,7 @@ namespace msa
         template <typename ...T>
         inline void finish(const char *task, const std::string& fmtstr, T&&... args) noexcept
         {
-            #if !__msa(production)
+            #if !defined(__msa_production)
                 if(!global_state.report_only)
                     notify("finish", "%s|" + fmtstr, task, args...);
             #endif

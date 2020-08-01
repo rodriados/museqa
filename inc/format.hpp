@@ -1,7 +1,7 @@
 /** 
  * Multiple Sequence Alignment formatting header file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2019 Rodrigo Siqueira
+ * @copyright 2019-2020 Rodrigo Siqueira
  */
 #pragma once
 
@@ -12,7 +12,7 @@
 #include <utils.hpp>
 #include <pointer.hpp>
 
-#if __msa(compiler, gcc)
+#if defined(__msa_compiler_gcc)
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wformat-security"
 #endif
@@ -183,6 +183,6 @@ namespace msa
     }
 }
 
-#if __msa(compiler, gcc)
+#if defined(__msa_compiler_gcc)
   #pragma GCC diagnostic pop
 #endif

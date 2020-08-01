@@ -76,8 +76,8 @@ namespace msa
     {
         static_assert(std::is_base_of<exception, E>::value, "only exception types are throwable");
 
-        #if !__msa(runtime, device) && !__msa(production)
-            #if __msa(compiler, gnuc)
+        #if !defined(__msa_runtime_device) && !defined(__msa_production)
+            #if defined(__msa_compiler_gnuc)
                 if(__builtin_expect(!condition, 0)) {
                     throw E {std::forward<decltype(args)>(args)...};
                 }

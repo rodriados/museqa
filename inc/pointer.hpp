@@ -1,7 +1,7 @@
 /**
  * Multiple Sequence Alignment pointer header file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018-2019 Rodrigo Siqueira
+ * @copyright 2018-2020 Rodrigo Siqueira
  */
 #pragma once
 
@@ -90,7 +90,7 @@ namespace msa
             template <typename T>
             __host__ __device__ inline void release(counter<T> *meta)
             {
-                #if __msa(runtime, host)
+                #if defined(__msa_runtime_host)
                     if(meta && --meta->use_count <= 0)
                         delete meta;
                 #endif

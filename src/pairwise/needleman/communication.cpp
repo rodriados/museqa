@@ -24,7 +24,7 @@ namespace msa
         {
             onlymaster return pairs;
 
-            #if !__msa(runtime, cython)
+            #if !defined(__msa_runtime_cython)
                 const size_t total    = pairs.size();
 
                 const size_t quotient   = total / (node::count - 1);
@@ -47,7 +47,7 @@ namespace msa
          */
         auto needleman::algorithm::gather(buffer<score>& input) const -> buffer<score>
         {
-            #if !__msa(runtime, cython)
+            #if !defined(__msa_runtime_cython)
                 return mpi::allgather(input);
             #else
                 return input;

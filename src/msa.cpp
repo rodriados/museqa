@@ -42,15 +42,11 @@ namespace msa
      * @since 0.1.1
      */
     state global_state {
-        #if __msa(production)
-            environment::production,
-        #elif __msa(testing)
-            environment::testing,
-        #elif __msa(debug)
-            environment::debug,
-        #else
-            environment::dev,
-        #endif
+      #if defined(__msa_environment)
+        static_cast<environment>(__msa_environment)
+      #else
+        environment::production
+      #endif
     };
 
     namespace step
