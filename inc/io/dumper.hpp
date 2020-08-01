@@ -45,7 +45,7 @@ namespace msa
                  */
                 inline bool dump(const T& obj, const std::string& fname, const std::string& ext = {}) const
                 {
-                    auto type = ext.size() ? ext : utils::extension(fname);
+                    auto type = ext.size() ? ext : fname.substr(fname.find_last_of('.') + 1);
                     auto func = factory(type);
                     return func (obj, fname);
                 }

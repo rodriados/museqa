@@ -1,11 +1,10 @@
 /**
  * Multiple Sequence Alignment utilities header file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018-2019 Rodrigo Siqueira
+ * @copyright 2018-2020 Rodrigo Siqueira
  */
 #pragma once
 
-#include <string>
 #include <cstddef>
 #include <cstdint>
 #include <utility>
@@ -20,7 +19,7 @@
 #endif
 
 #include <functor.hpp>
-#include <operator.hpp>
+#include <operators.hpp>
 #include <environment.h>
 
 namespace msa
@@ -138,67 +137,21 @@ namespace msa
     {
         using namespace op;
 
-        /**#@+
-         * Checks whether all given values are true.
-         * @param head The first value to test.
-         * @param tail The following values to test.
-         * @return Are all values true?
-         */
-        __host__ __device__ inline constexpr auto all() noexcept -> bool
-        {
-            return true;
-        }
-
-        template <typename T, typename ...U>
-        __host__ __device__ inline constexpr auto all(T&& head, U&&... tail) noexcept -> bool
-        {
-            return static_cast<bool>(head) ? all(tail...) : false;
-        }
-        /**#@-*/
-
-        /**#@+
-         * Checks whether at least one given value is true.
-         * @param head The first value to test.
-         * @param tail The following values to test.
-         * @return Is at least one value true?
-         */
-        __host__ __device__ inline constexpr auto any() noexcept -> bool
-        {
-            return false;
-        }
-
-        template <typename T, typename ...U>
-        __host__ __device__ inline constexpr auto any(T&& head, U&&... tail) noexcept -> bool
-        {
-            return static_cast<bool>(head) ? true : any(tail...);
-        }
-        /**#@-*/
-
-        /**
-         * Checks whether none of given values is true.
-         * @param value All the values to be tested.
-         * @return Are all values false?
-         */
-        template <typename ...U>
-        __host__ __device__ inline constexpr auto none(U&&... tail) noexcept -> bool
-        {
-            return !any(tail...);
-        }
-
         /**
          * Calculates the number of possible pair combinations with given number.
-         * @param count The number of objects to be combinated.
+         * @param n The total number of objects to be combined.
          * @return The number of possible pair combinations.
          */
         template <typename T>
-        __host__ __device__ inline constexpr auto nchoose(const T& count) noexcept
+        __host__ __device__ inline constexpr auto nchoose(const T& n) noexcept
         -> typename std::enable_if<std::is_integral<T>::value, T>::type
         {
-            return (count * (count - 1)) >> 1;
+            return (n * (n - 1)) >> 1;
         }
 
-        /**#@+
+        /**
          * Swaps the contents of two variables of same type
+         * @tparam T The variables' type.
          * @param a The first variable to have its contents swapped.
          * @param b The second variable to have its contents swapped.
          */
@@ -208,30 +161,24 @@ namespace msa
                 std::is_nothrow_move_assignable<T>::value
             )
         {
-            T aux = std::move(a);
+            auto aux = std::move(a);
             a = std::move(b);
             b = std::move(aux);
         }
 
+        /**
+         * Swaps the elements of two arrays of same type and size.
+         * @tparam T The arrays' type.
+         * @tparam N The arrays' size.
+         * @param a The first array to have its elements swapped.
+         * @param b The second array to have its elements swapped.
+         */
         template <typename T, size_t N>
         __host__ __device__ inline void swap(T (&a)[N], T (&b)[N])
             noexcept(noexcept(swap(*a, *b)))
         {
             for(size_t i = 0; i < N; ++i)
                 swap(a[i], b[i]);
-        }
-        /**#@-*/
-
-        /**
-         * Retrieves the given file's name's extension.
-         * @param filename The file to have its extension retrieved.
-         * @return The given file's extension.
-         */
-        inline auto extension(const std::string& filename) noexcept -> std::string
-        {
-            return filename.size()
-                ? filename.substr(filename.find_last_of('.') + 1)
-                : std::string {};
         }
     }
 }
