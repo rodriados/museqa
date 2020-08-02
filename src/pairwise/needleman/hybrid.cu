@@ -413,10 +413,8 @@ namespace
             buffer<score> result;
             size_t nsequences = ctx.db.count();
 
-            auto pairs = this->generate(nsequences);
-                 pairs = this->scatter(pairs);
-            
             onlyslaves {
+                auto pairs = this->generate(nsequences);
                 const scoring_table table = ctx.table.to_device();
                 result = align_db(pairs, ctx.db, table);
             }

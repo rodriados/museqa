@@ -113,10 +113,10 @@ namespace
             buffer<score> result;
             size_t nsequences = ctx.db.count();
 
-            auto pairs = this->generate(nsequences);
-                 pairs = this->scatter(pairs);
-            
-            onlyslaves result = align_db(pairs, ctx.db, ctx.table);
+            onlyslaves {
+                auto pairs = this->generate(nsequences);
+                result = align_db(pairs, ctx.db, ctx.table);
+            }
 
             return distance_matrix {this->gather(result), nsequences};
         }

@@ -5,6 +5,7 @@
  */
 #pragma once
 
+#include <string>
 #include <cstddef>
 #include <cstdint>
 #include <utility>
@@ -18,6 +19,7 @@
   #define __device__
 #endif
 
+#include <oeis.hpp>
 #include <functor.hpp>
 #include <operators.hpp>
 #include <environment.h>
@@ -34,6 +36,17 @@ namespace msa
     struct alignas(A) storage
     {
         alignas(A) char storage[S];     /// The storage container.
+    };
+
+    /**
+     * A general range container.
+     * @tparam T The range's elements type.
+     * @since 0.1.1
+     */
+    template <typename T>
+    struct range
+    {
+        T offset, total;
     };
 
     /**
@@ -136,6 +149,7 @@ namespace msa
     namespace utils
     {
         using namespace op;
+        using namespace oeis;
 
         /**
          * Calculates the number of possible pair combinations with given number.
@@ -143,10 +157,27 @@ namespace msa
          * @return The number of possible pair combinations.
          */
         template <typename T>
-        __host__ __device__ inline constexpr auto nchoose(const T& n) noexcept
+        __host__ __device__ inline auto nchoose(const T& n) noexcept
         -> typename std::enable_if<std::is_integral<T>::value, T>::type
         {
-            return (n * (n - 1)) >> 1;
+            return oeis::a000217(n - 1);
+        }
+
+        /**
+         * Calculates the range of a partition in a collection of given total size.
+         * @tparam T The given collection size's type.
+         * @param total The collection's size.
+         * @param count The total number of partitions on the collection.
+         * @param offset The requested range's partition index.
+         * @return The range of the requested collection's partition.
+         */
+        template <typename T>
+        __host__ __device__ inline auto partition(T total, size_t count, size_t offset = 0) noexcept
+        -> typename std::enable_if<std::is_integral<T>::value, range<T>>::type
+        {
+            const auto quo = total / count;
+            const auto rem = total % count;
+            return {quo * offset + min(rem, offset), quo + (rem > offset)};
         }
 
         /**
@@ -179,6 +210,17 @@ namespace msa
         {
             for(size_t i = 0; i < N; ++i)
                 swap(a[i], b[i]);
+        }
+
+        /**
+         * Retrieves the given file's name's extension.
+         * @param filename The file to have its extension retrieved.
+         * @return The given file's extension.
+         */
+        inline auto extension(const std::string& filename) noexcept -> std::string
+        {
+            if(filename.size()) return filename.substr(filename.find_last_of('.') + 1);
+            return std::string {};
         }
     }
 }

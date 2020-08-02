@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include <utils.hpp>
 #include <database.hpp>
 #include <exception.hpp>
 #include <dispatcher.hpp>
@@ -54,7 +55,7 @@ namespace msa
          */
         auto loader<database>::validate(const std::string& filename) const noexcept -> bool
         {
-            const auto ext = filename.substr(filename.find_last_of('.') + 1);
+            const auto ext = utils::extension(filename);
             return parser_dispatcher.has(ext);
         }
 

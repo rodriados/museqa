@@ -44,7 +44,7 @@ namespace msa
                  */
                 inline T load(const std::string& fname, const std::string& ext = {}) const
                 {
-                    auto fext = ext.size() ? ext : fname.substr(fname.find_last_of('.') + 1);
+                    auto fext = ext.size() ? ext : utils::extension(fname);
                     auto func = factory(fext);
                     return func (fname);
                 }
