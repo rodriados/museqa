@@ -8,6 +8,7 @@
 #include <limits>
 #include <vector>
 
+#include <buffer.hpp>
 #include <pairwise.cuh>
 #include <reflection.hpp>
 
@@ -18,16 +19,17 @@ namespace msa
     namespace phylogeny
     {
         namespace njoining
-        {
+        {        
             /**
              * Represents a joinable OTU pair candidate.
              * @since 0.1.1
              */
             struct joinable : public reflector
             {
-                oturef ref[2] = {undefined, undefined};             /// The OTU pair references.
+                oturef ref[2];                                      /// The OTU pair references.
+                score delta[2];                                     /// The selected OTU pair's deltas.
                 score distance = std::numeric_limits<score>::max(); /// The distance between the OTU pair.
-                using reflex = decltype(reflect(ref, distance));
+                using reflex = decltype(reflect(ref, delta, distance));
             };
 
             /**
@@ -37,7 +39,7 @@ namespace msa
              */
             struct algorithm : public phylogeny::algorithm
             {
-                virtual auto reduce(joinable&) -> joinable;
+                virtual auto reduce(joinable&) const -> joinable;
                 virtual auto run(const context&) const -> tree = 0;
             };
 

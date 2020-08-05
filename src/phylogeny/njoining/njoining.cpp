@@ -1,5 +1,5 @@
 /**
- * Multiple Sequence Alignment parallel needleman communication file.
+ * Multiple Sequence Alignment parallel njoining file.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2020 Rodrigo Siqueira
  */
@@ -25,9 +25,7 @@ namespace msa
              */
             auto closest(const joinable& a, const joinable& b) -> joinable
             {
-                const auto d1 = a.distance;
-                const auto d2 = b.distance;
-                return d1 < d2 ? a : b;
+                return a.distance < b.distance ? a : b;
             }
 
             /**
@@ -36,9 +34,9 @@ namespace msa
              * @param candidate The current working node's join pair candidate.
              * @return The globally best join pair candidate.
              */
-            auto algorithm::reduce(joinable& candidate) -> joinable
+            auto algorithm::reduce(joinable& candidate) const -> joinable
             {
-                #if !__msa(runtime, cython)
+                #if !defined(__msa_runtime_cython)
                     static auto mpiop = mpi::op::create<joinable>(closest);
                     return mpi::allreduce(candidate, mpiop);
                 #else

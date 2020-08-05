@@ -125,7 +125,7 @@ namespace msa
                 {
                     for(size_t i = 0; i < count; ++i)
                         for(size_t j = 0; j <= i; ++j)
-                            (*this)[{i, j}] = (*this)[{i, j}] = mat[{i, j}];
+                            operator[]({i, j}) = operator[]({j, i}) = mat[{i, j}];
                 }
 
                 /**
