@@ -281,7 +281,7 @@ namespace
                 // After finding each compute node's local best joinable candidate,
                 // we must gather the votes and find the best one globally.
                 onlyslaves vote = pick_joinable(star, partition);
-                           vote = this->reduce(vote);
+                vote = this->reduce(vote);
 
                 // At last, we join the selected pair, rebuild our distance matrix
                 // with the newly created OTU, recalculate our sum cache with the
