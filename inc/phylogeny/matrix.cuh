@@ -45,7 +45,7 @@ namespace msa
                 point_type m_virtual;                   /// The matrix's dynamic space.
 
             public:
-                __host__ __device__ inline matrix() noexcept = delete;
+                __host__ __device__ inline matrix() noexcept = default;
                 __host__ __device__ inline matrix(const matrix&) noexcept = default;
                 __host__ __device__ inline matrix(matrix&&) noexcept = default;
 

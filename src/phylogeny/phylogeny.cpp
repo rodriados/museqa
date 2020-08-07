@@ -23,12 +23,12 @@ namespace msa
          * @since 0.1.1
          */
         static const dispatcher<factory> factory_dispatcher = {
-            {"default",              njoining::sequential_matrix}
-        ,   {"njoining",             njoining::sequential_symmatrix}
-        ,   {"njoining-matrix",      njoining::sequential_matrix}
-        ,   {"njoining-symmatrix",   njoining::sequential_symmatrix}
-        ,   {"njoining-sequential",  njoining::sequential_matrix}
-        ,   {"njoining-distributed", njoining::sequential_matrix}
+            {"default",              njoining::sequential_mat}
+        ,   {"njoining",             njoining::sequential_sym}
+        ,   {"njoining-matrix",      njoining::sequential_mat}
+        ,   {"njoining-symmatrix",   njoining::sequential_sym}
+        ,   {"njoining-sequential",  njoining::sequential_mat}
+        ,   {"njoining-distributed", njoining::sequential_mat}
         };
 
         /**

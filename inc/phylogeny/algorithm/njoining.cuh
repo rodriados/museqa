@@ -19,7 +19,7 @@ namespace msa
     namespace phylogeny
     {
         namespace njoining
-        {        
+        {
             /**
              * Represents a joinable OTU pair candidate.
              * @since 0.1.1
@@ -46,8 +46,8 @@ namespace msa
             /*
              * The list of all available neighbor-joining algorithm implementations.
              */
-            extern auto sequential_matrix() -> phylogeny::algorithm *;
-            extern auto sequential_symmatrix() -> phylogeny::algorithm *;
+            extern auto sequential_mat() -> phylogeny::algorithm *;
+            extern auto sequential_sym() -> phylogeny::algorithm *;
         }
     }
 }

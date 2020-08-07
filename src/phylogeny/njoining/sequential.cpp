@@ -31,10 +31,29 @@ namespace
     using distance_type = pairwise::score;
 
     /**
+     * The type for mapping an OTU to its coordinates on the matrix.
+     * @since 0.1.1
+     */
+    using map_type = buffer<oturef>;
+
+    /**
      * Defines a cache for the matrix's columns and row sums.
      * @since 0.1.1
      */
     using cache_type = buffer<distance_type>;
+
+    /**
+     * The neighbor-joining algorithm's star tree data structures.
+     * @since 0.1.1
+     */
+    template <typename M>
+    struct startree
+    {
+        M matrix;           /// The algorithm's distance matrix.
+        map_type map;       /// The OTU references map to matrix indeces.
+        cache_type cache;   /// The cache of lines and columns total sums.
+        size_t count;       /// The number of OTUs yet to be joined.
+    };
 
     /**
      * Defines the algorithm's required base matrix type.
@@ -46,171 +65,73 @@ namespace
      * The point type required by the algorithm's matrices.
      * @since 0.1.1
      */
-    using point_type = typename base_matrix::point_type;
+    using pair_type = typename base_matrix::point_type;
 
     /**
      * Builds a cache for the sum of all elements from a matrix's columns and rows.
      * @tparam M The target matrix type from which the sums must be calculated.
-     * @param matrix The target matrix to have its elements summed up.
-     * @param total The total number of elements on the matrix's rows and columns.
-     * @return The built cache instance.
+     * @param star The algorithm's star tree to initialize the sum cache of.
      */
     template <typename M>
-    static cache_type init_cache(const M& matrix, size_t total)
+    static void cache_init(startree<M>& star)
     {
-        auto cache = cache_type::make(total);
-
-        for(size_t i = 0; i < total - 1; ++i) {
-            for(size_t j = i + 1; j < total; ++j) {
-                const auto current = matrix[{i, j}];
-                cache[i] += current;
-                cache[j] += current;
+        for(size_t i = 0; i < star.count - 1; ++i) {
+            for(size_t j = i + 1; j < star.count; ++j) {
+                const auto current = star.matrix[{i, j}];
+                star.cache[i] += current;
+                star.cache[j] += current;
             }
         }
-
-        return cache;
     }
 
     /**
-     * Updates the algorithm's data structures to the newly joined OTU pair. This
-     * function assumes a linear distance matrix is being used.
-     * @param matrix The linear distance matrix's instance.
-     * @param cache The distance matrix's column and row sums.
-     * @param map The matrix's columns OTU reference map.
-     * @param pair The pair of OTUs being currently joined.
-     * @param count The current number of OTU's represented on matrix.
-     * @return The new OTU's chosen column index on matrix.
-     */
-    static size_t update_matrix(
-            phylogeny::matrix<false>& matrix
-        ,   cache_type& cache
-        ,   buffer<oturef>& map
-        ,   const point_type& pair
-        ,   size_t count
-        )
-    {
-        distance_type sum = 0;
-        const auto otudist = matrix[pair];
-
-        // As updating the distance matrix is an expensive task, we will optimize
-        // it by reusing one of the joined OTU's column and row on the matrix to
-        // store the new OTU's distances. As we're currently dealing with a linear
-        // matrix, we will reuse the space of the x-OTU, which is at a lower index,
-        // and remove the y-OTU completely from the matrix.
-
-        // Let's calculate the distances between the OTU being created and the others
-        // which have not been affected by the current joining operation.
-        for(size_t i = 0; i < count; ++i) {
-            const auto previous = matrix[{i, pair.x}] + matrix[{i, pair.y}];
-            const auto current = .5 * (previous - otudist);
-
-            matrix[{i, pair.x}] = matrix[{pair.x, i}] = current;
-            onlyslaves cache[i] += current - previous;
-            sum += current;
-        }
-
-        // Taking advantage of our linear matrix, we will move the y-OTU to the
-        // matrix's last column, which is the cheapest to be removed.
-        matrix.swap(pair.y, count - 1);
-        matrix.remove(count - 1);
-
-        // Finally, at last, we commit the changes to the matrix by adjusting the
-        // matrix's OTUs map and the columns' sum cache.
-        utils::swap(map[pair.y], map[count - 1]);
-        onlyslaves utils::swap(cache[pair.y], cache[count - 1]);
-        onlyslaves cache[pair.x] = sum;
-
-        return pair.x;
-    }
-
-    /**
-     * Updates the algorithm's data structures to the newly joined OTU pair. This
-     * function assumes a symmetric distance matrix is being used.
-     * @param matrix The symmetric distance matrix's instance.
-     * @param cache The distance matrix's column and row sums.
-     * @param map The matrix's columns OTU reference map.
-     * @param pair The pair of OTUs being currently joined.
-     * @param count The current number of OTU's represented on matrix.
-     * @return The new OTU's chosen column index on matrix.
-     */
-    static size_t update_matrix(
-            phylogeny::symmatrix<false>& matrix
-        ,   cache_type& cache
-        ,   buffer<oturef>& map
-        ,   const point_type& pair
-        ,   size_t count
-        )
-    {
-        distance_type sum = 0;
-        const auto otudist = matrix[pair];
-
-        // As updating the distance matrix is an expensive task, we will optimize
-        // it by reusing one of the joined OTU's column and row on the matrix to
-        // store the new OTU's distances. As we're currently dealing with a linear
-        // matrix, we will reuse the space of the x-OTU, which is at a lower index,
-        // and remove the y-OTU completely from the matrix.
-
-        // Let's calculate the distances between the OTU being created and the others
-        // which have not been affected by the current joining operation.
-        for(size_t i = 0; i < count; ++i) {
-            const auto previous = matrix[{i, pair.x}] + matrix[{i, pair.y}];
-            const auto current = .5 * (previous - otudist);
-
-            matrix[{i, pair.x}] = matrix[{pair.x, i}] = current;
-            onlyslaves cache[i] += current - previous;
-            sum += current;
-        }
-
-        // Taking advantage of our linear matrix, we will move the y-OTU to the
-        // matrix's last column, which is the cheapest to be removed.
-        matrix.swap(0, pair.y);
-        matrix.remove(0);
-
-        // Finally, at last, we commit the changes to the matrix by adjusting the
-        // matrix's OTUs map and the columns' sum cache.
-        utils::swap(map[0], map[pair.y]);
-        onlyslaves utils::swap(cache[0], cache[pair.y]);
-        onlyslaves cache[pair.x] = sum;
-
-        for(size_t i = 0; i < count - 1; ++i) {
-            map[i] = map[i + 1];
-            onlyslaves cache[i] = cache[i + 1];
-        }
-
-        return pair.x;
-    }
-
-    /**
-     * Calculates the Q-value of the given point.
-     * @tparam M The algorithm's matrix type.
-     * @param matrix The distance matrix's instance.
-     * @param sum The distance matrix's column and row sums.
-     * @param point The target point.
-     * @param count The total number of OTUs in matrix.
-     * @return The point's Q-value.
+     * Initialize a new star tree, and builds all data structures needed for a fast
+     * neighbor-joining execution.
+     * @tparam M The distance matrix type to be used.
+     * @param matrix The pairwise module's distance matrix.
+     * @param count The total number of OTUs to be aligned.
+     * @return The initialized star tree.
      */
     template <typename M>
-    inline distance_type find_q(const M& matrix, const cache_type& sum, const point_type& point, size_t count)
+    static auto initialize(const pairwise::distance_matrix& matrix, size_t count) -> startree<M>
     {
-        return (count - 2) * matrix[point] - sum[point.x] - sum[point.y];
+        startree<M> star;
+
+        star.count = count;
+        star.matrix = M {matrix};
+        star.map = map_type::make(count);
+
+        onlyslaves star.cache = cache_type::make(count);
+        onlyslaves cache_init(star);
+
+        for(size_t i = 0; i < count; ++i)
+            star.map[i] = (otu) i;
+
+        return star;
+    }
+
+    /**
+     * Calculates the Q-value for the given OTU pair.
+     * @tparam M The algorithm's matrix type.
+     * @param star The OTUs' star tree data structures.
+     * @param pair The target pair to get the Q-value of.
+     * @return The given pair's Q-value.
+     */
+    template <typename M>
+    inline distance_type calculate_q(const startree<M>& star, const pair_type& pair)
+    {
+        return (star.count - 2) * star.matrix[pair] - star.cache[pair.x] - star.cache[pair.y];
     }
 
     /**
      * Finds the best joinable pair on the given partition.
      * @tparam M The algorithm's matrix type.
-     * @param matrix The distance matrix's instance.
-     * @param sum The distance matrix's column and row sums.
+     * @param star The OTUs' star tree data structures.
      * @param partition The local range at which a candidate must be found.
-     * @param count The total number of OTUs in matrix.
      * @return The best joinable pair candidate found on the given partition.
      */
     template <typename M>
-    static njoining::joinable pick_joinable(
-            const M& matrix
-        ,   const cache_type& sum
-        ,   const range<size_t>& partition
-        ,   size_t count
-        )
+    static njoining::joinable pick_joinable(const startree<M>& star, const range<size_t>& partition)
     {
         njoining::joinable chosen;
         size_t i = oeis::a002024(partition.offset + 1);
@@ -220,8 +141,8 @@ namespace
         // Q-value and picking the one with the lowest value. The point with the
         // lowest Q-value is then selected to be returned.
         for(size_t c = 0; c < partition.total; ++i, j = 0)
-            for(; c < partition.total && j < i; ++c, ++j) {
-                const score distance = find_q(matrix, sum, {i, j}, count);
+            for( ; c < partition.total && j < i; ++c, ++j) {
+                const auto distance = calculate_q(star, {i, j});
 
                 if(distance < chosen.distance) {
                     chosen.distance = distance;
@@ -231,12 +152,92 @@ namespace
             }
 
         /// Now that we have our partition's best candidate, we must calculate its
-        /// deltas, as the other nodes cannot figure it out by themselves.
-        const point_type pt = {chosen.ref[0], chosen.ref[1]};
-        chosen.delta[0] = (.5 * matrix[pt]) + ((sum[pt.x] - sum[pt.y]) / (2 * (count - 2)));
-        chosen.delta[1] = matrix[pt] - chosen.delta[0];
+        /// deltas, as the other nodes will not figure it out by themselves.
+        const pair_type pair = {chosen.ref[0], chosen.ref[1]};
+        const auto pairsum = star.cache[pair.x] - star.cache[pair.y];
+
+        chosen.delta[0] = (.5 * star.matrix[pair]) + (pairsum / (2 * (star.count - 2)));
+        chosen.delta[1] = star.matrix[pair] - chosen.delta[0];
 
         return chosen;
+    }
+
+    /**
+     * Swaps the given pair of OTUs and removes one of them from the star tree.
+     * @tparam M The algorithm's matrix type.
+     * @param star The OTU's star tree data structures.
+     * @param keep The OTU to be swapped but kept in the star tree.
+     * @param remove The OTU to be swapped and removed from the star tree.
+     */
+    template <typename M>
+    static void swap_remove(startree<M>& star, oturef keep, oturef remove)
+    {
+        onlyslaves utils::swap(star.cache[keep], star.cache[remove]);
+        utils::swap(star.map[keep], star.map[remove]);
+        star.matrix.swap(keep, remove);
+        star.matrix.remove(remove);
+
+        for(size_t i = remove; i < star.count - 1; ++i) {
+            onlyslaves star.cache[i] = star.cache[i + 1];
+            star.map[i] = star.map[i + 1];
+        }
+    }
+
+    /**
+     * Updates the star tree's cache structures by removing an OTU.
+     * @tparam M The algorithm's matrix type.
+     * @param star The OTU's star tree data structures.
+     * @param x The OTU to be removed from the star tree's caches and matrix.
+     */
+    template <typename M>
+    static void update_cache(startree<M>& star, oturef x)
+    {
+        if(std::is_same<phylogeny::symmatrix<false>, M>::value) {
+            swap_remove(star, x, 0);
+        } else {
+            swap_remove(star, x, star.count - 1);
+        }
+    }
+
+    /**
+     * Joins an OTU pair into a new parent OTU.
+     * @tparam M The algorithm's matrix type.
+     * @param phylotree The phylogenetic tree being constructed.
+     * @param parent The parent OTU into which the pair will be joined.
+     * @param star The OTU's star tree data structures.
+     * @param join The OTU pair to join.
+     */
+    template <typename M>
+    static void join_pair(tree& phylotree, oturef parent, startree<M>& star, const njoining::joinable& join)
+    {
+        const auto x = join.ref[0];
+        const auto y = join.ref[1];
+
+        distance_type new_sum = 0;
+
+        // As updating the star tree is a computationally expensive task, we optimize
+        // it by reusing one of the joined OTU's column and row on the matrix to
+        // store the new OTU's distances.
+        phylotree.join(parent, {star.map[x], join.delta[0]}, {star.map[y], join.delta[1]});
+
+        // Let's calculate the distances between the OTU being created and the others
+        // which have not been affected by the current joining operation.
+        for(size_t i = 0; i < star.count; ++i) {
+            const auto previous = star.matrix[{i, x}] + star.matrix[{i, y}];
+            const auto current = .5 * (previous - star.matrix[{x, y}]);
+
+            star.matrix[{i, x}] = star.matrix[{x, i}] = current;
+            onlyslaves star.cache[i] += current - previous;
+            new_sum += current;
+        }
+
+        // Finally, let's take advantage from our data structures' layouts and always remove
+        // the cheapest column from our star tree's distance matrix.
+        onlyslaves star.cache[x] = new_sum;
+        star.map[x] = parent;
+
+        update_cache(star, y);
+        --star.count;
     }
 
     /**
@@ -248,7 +249,6 @@ namespace
     template <typename M>
     struct sequential : public njoining::algorithm
     {
-        using matrix_type = M;
         static_assert(std::is_base_of<base_matrix, M>::value, "the given type is not a valid matrix");
 
         /**
@@ -257,30 +257,18 @@ namespace
          * @param count The total number of leaves in tree.
          * @return The calculated phylogenetic tree.
          */
-        auto build_tree(matrix_type& matrix, size_t count) const -> tree
+        auto build_tree(startree<M>& star) const -> tree
         {
-            cache_type cache;
-            oturef parent = (otu) count;
+            oturef parent = (otu) star.count;
+            auto phylotree = tree::make(star.count);
 
-            auto phylotree = tree::make(count);
-            auto map = buffer<oturef>::make(count);
-
-            // As an initialization step, we must first create our sum cache with 
-            // the initial sums of the original distance matrix.
-            onlyslaves cache = init_cache(matrix, count);
-
-            // Also, we must initialize our OTU reference map, so have flexibility
-            // when dealing with changes to our distance matrix.
-            for(size_t i = 0; i < count; ++i)
-                map[i] = (otu) i;
-
-            // We must keep joining OTU pairs until there are only two OTUs left
-            // in our distance matrix, so all the others have been joined.
-            for(size_t i = count; i > 2; --i, ++parent) {
+            // We must keep joining OTU pairs until there are only three OTUs left
+            // in our star tree, so all the other OTUs have been joined.
+            while(star.count > 2) {
                 range<size_t> partition;
                 njoining::joinable vote;
 
-                const size_t total = utils::nchoose(i);
+                const size_t total = utils::nchoose(star.count);
 
                 // Let's split the total amount of work to be done between our compute
                 // nodes. Each node must pick its local best joinable candidate.
@@ -292,19 +280,13 @@ namespace
 
                 // After finding each compute node's local best joinable candidate,
                 // we must gather the votes and find the best one globally.
-                onlyslaves vote = pick_joinable(matrix, cache, partition, i);
+                onlyslaves vote = pick_joinable(star, partition);
                            vote = this->reduce(vote);
-
-                const auto& ref = vote.ref;
-                const auto& delta = vote.delta;
 
                 // At last, we join the selected pair, rebuild our distance matrix
                 // with the newly created OTU, recalculate our sum cache with the
                 // new OTU and update our OTU map to reflect the changes.
-                phylotree.join(parent, {map[ref[0]], delta[0]}, {map[ref[1]], delta[1]});
-                const auto col = update_matrix(matrix, cache, map, {ref[0], ref[1]}, i);
-
-                map[col] = parent;
+                join_pair(phylotree, parent++, star, vote);
             }
 
             return phylotree;
@@ -317,8 +299,8 @@ namespace
          */
         auto run(const context& ctx) const -> tree override
         {
-            auto matrix = matrix_type {ctx.matrix};
-            auto result = build_tree(matrix, ctx.total);
+            auto star = initialize<M>(ctx.matrix, ctx.total);
+            auto result = build_tree(star);
 
             return result;
         }
@@ -331,7 +313,7 @@ namespace msa
      * Instantiates a new sequential neighbor-joining instance using a simple matrix.
      * @return The new algorithm instance.
      */
-    extern auto phylogeny::njoining::sequential_matrix() -> phylogeny::algorithm *
+    extern auto phylogeny::njoining::sequential_mat() -> phylogeny::algorithm *
     {
         return new ::sequential<phylogeny::matrix<false>>;
     }
@@ -340,7 +322,7 @@ namespace msa
      * Instantiates a new sequential neighbor-joining instance using a symmatrix.
      * @return The new algorithm instance.
      */
-    extern auto phylogeny::njoining::sequential_symmatrix() -> phylogeny::algorithm *
+    extern auto phylogeny::njoining::sequential_sym() -> phylogeny::algorithm *
     {
         return new ::sequential<phylogeny::symmatrix<false>>;
     }
