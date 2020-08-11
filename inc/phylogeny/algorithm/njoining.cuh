@@ -29,7 +29,9 @@ namespace msa
                 oturef ref[2];                                      /// The OTU pair references.
                 score delta[2];                                     /// The selected OTU pair's deltas.
                 score distance = std::numeric_limits<score>::max(); /// The distance between the OTU pair.
-                using reflex = decltype(reflect(ref, delta, distance));
+                #if !defined(__msa_compiler_nvcc)
+                    using reflex = decltype(reflect(ref, delta, distance));
+                #endif
             };
 
             /**
@@ -46,8 +48,10 @@ namespace msa
             /*
              * The list of all available neighbor-joining algorithm implementations.
              */
-            extern auto sequential_mat() -> phylogeny::algorithm *;
-            extern auto sequential_sym() -> phylogeny::algorithm *;
+            extern auto hybrid_linear() -> phylogeny::algorithm *;
+            extern auto hybrid_symmetric() -> phylogeny::algorithm *;
+            extern auto sequential_linear() -> phylogeny::algorithm *;
+            extern auto sequential_symmetric() -> phylogeny::algorithm *;
         }
     }
 }

@@ -44,36 +44,31 @@ namespace
 
     /**
      * The neighbor-joining algorithm's star tree data structures.
+     * @tparam T The star tree's matrix spatial transformation type.
      * @since 0.1.1
      */
-    template <typename M>
+    template <typename T>
     struct startree
     {
-        M matrix;           /// The algorithm's distance matrix.
-        map_type map;       /// The OTU references map to matrix indeces.
-        cache_type cache;   /// The cache of lines and columns total sums.
-        size_t count;       /// The number of OTUs yet to be joined.
+        phylogeny::matrix<false, T> matrix; /// The algorithm's distance matrix.
+        map_type map;                       /// The OTU references map to matrix indeces.
+        cache_type cache;                   /// The cache of lines and columns total sums.
+        size_t count;                       /// The number of OTUs yet to be joined.
     };
-
-    /**
-     * Defines the algorithm's required base matrix type.
-     * @since 0.1.1
-     */
-    using base_matrix = msa::matrix<distance_type>;
 
     /**
      * The point type required by the algorithm's matrices.
      * @since 0.1.1
      */
-    using pair_type = typename base_matrix::point_type;
+    using pair_type = typename msa::matrix<distance_type>::point_type;
 
     /**
      * Builds a cache for the sum of all elements from a matrix's columns and rows.
-     * @tparam M The target matrix type from which the sums must be calculated.
+     * @tparam T The star tree's matrix spatial transformation type.
      * @param star The algorithm's star tree to initialize the sum cache of.
      */
-    template <typename M>
-    static void cache_init(startree<M>& star)
+    template <typename T>
+    static void cache_init(startree<T>& star)
     {
         for(size_t i = 0; i < star.count - 1; ++i) {
             for(size_t j = i + 1; j < star.count; ++j) {
@@ -87,18 +82,18 @@ namespace
     /**
      * Initialize a new star tree, and builds all data structures needed for a fast
      * neighbor-joining execution.
-     * @tparam M The distance matrix type to be used.
+     * @tparam T The star tree's matrix spatial transformation type.
      * @param matrix The pairwise module's distance matrix.
      * @param count The total number of OTUs to be aligned.
      * @return The initialized star tree.
      */
-    template <typename M>
-    static auto initialize(const pairwise::distance_matrix& matrix, size_t count) -> startree<M>
+    template <typename T>
+    static auto initialize(const pairwise::distance_matrix& matrix, size_t count) -> startree<T>
     {
-        startree<M> star;
+        startree<T> star;
 
         star.count = count;
-        star.matrix = M {matrix};
+        star.matrix = phylogeny::matrix<false, T> {matrix};
         star.map = map_type::make(count);
 
         onlyslaves star.cache = cache_type::make(count);
@@ -112,26 +107,26 @@ namespace
 
     /**
      * Calculates the Q-value for the given OTU pair.
-     * @tparam M The algorithm's matrix type.
+     * @tparam T The star tree's matrix spatial transformation type.
      * @param star The OTUs' star tree data structures.
      * @param pair The target pair to get the Q-value of.
      * @return The given pair's Q-value.
      */
-    template <typename M>
-    inline distance_type calculate_q(const startree<M>& star, const pair_type& pair)
+    template <typename T>
+    inline distance_type calculate_q(const startree<T>& star, const pair_type& pair)
     {
         return (star.count - 2) * star.matrix[pair] - star.cache[pair.x] - star.cache[pair.y];
     }
 
     /**
      * Finds the best joinable pair on the given partition.
-     * @tparam M The algorithm's matrix type.
+     * @tparam T The star tree's matrix spatial transformation type.
      * @param star The OTUs' star tree data structures.
      * @param partition The local range at which a candidate must be found.
      * @return The best joinable pair candidate found on the given partition.
      */
-    template <typename M>
-    static njoining::joinable pick_joinable(const startree<M>& star, const range<size_t>& partition)
+    template <typename T>
+    static njoining::joinable pick_joinable(const startree<T>& star, const range<size_t>& partition)
     {
         njoining::joinable chosen;
         size_t i = oeis::a002024(partition.offset + 1);
@@ -164,13 +159,13 @@ namespace
 
     /**
      * Swaps the given pair of OTUs and removes one of them from the star tree.
-     * @tparam M The algorithm's matrix type.
+     * @tparam T The star tree's matrix spatial transformation type.
      * @param star The OTU's star tree data structures.
      * @param keep The OTU to be swapped but kept in the star tree.
      * @param remove The OTU to be swapped and removed from the star tree.
      */
-    template <typename M>
-    static void swap_remove(startree<M>& star, oturef keep, oturef remove)
+    template <typename T>
+    static void swap_remove(startree<T>& star, oturef keep, oturef remove)
     {
         onlyslaves utils::swap(star.cache[keep], star.cache[remove]);
         utils::swap(star.map[keep], star.map[remove]);
@@ -185,14 +180,14 @@ namespace
 
     /**
      * Updates the star tree's cache structures by removing an OTU.
-     * @tparam M The algorithm's matrix type.
+     * @tparam T The star tree's matrix spatial transformation type.
      * @param star The OTU's star tree data structures.
      * @param x The OTU to be removed from the star tree's caches and matrix.
      */
-    template <typename M>
-    static void update_cache(startree<M>& star, oturef x)
+    template <typename T>
+    static void update_cache(startree<T>& star, oturef x)
     {
-        if(std::is_same<phylogeny::symmatrix<false>, M>::value) {
+        if(std::is_same<transform::symmetric, T>::value) {
             swap_remove(star, x, 0);
         } else {
             swap_remove(star, x, star.count - 1);
@@ -201,14 +196,14 @@ namespace
 
     /**
      * Joins an OTU pair into a new parent OTU.
-     * @tparam M The algorithm's matrix type.
+     * @tparam T The star tree's matrix spatial transformation type.
      * @param phylotree The phylogenetic tree being constructed.
      * @param parent The parent OTU into which the pair will be joined.
      * @param star The OTU's star tree data structures.
      * @param join The OTU pair to join.
      */
-    template <typename M>
-    static void join_pair(tree& phylotree, oturef parent, startree<M>& star, const njoining::joinable& join)
+    template <typename T>
+    static void join_pair(tree& phylotree, oturef parent, startree<T>& star, const njoining::joinable& join)
     {
         const auto x = join.ref[0];
         const auto y = join.ref[1];
@@ -243,21 +238,19 @@ namespace
     /**
      * The sequential neighbor-joining algorithm object. This algorithm uses no
      * GPU parallelism whatsoever.
-     * @tparam M The matrix type to use within the algorithm.
+     * @tparam T The star tree's matrix spatial transformation type.
      * @since 0.1.1
      */
-    template <typename M>
+    template <typename T>
     struct sequential : public njoining::algorithm
     {
-        static_assert(std::is_base_of<base_matrix, M>::value, "the given type is not a valid matrix");
-
         /**
          * Builds the pseudo-phylogenetic tree from the given distance matrix.
          * @param matrix The distance matrix to build tree from.
          * @param count The total number of leaves in tree.
          * @return The calculated phylogenetic tree.
          */
-        auto build_tree(startree<M>& star) const -> tree
+        auto build_tree(startree<T>& star) const -> tree
         {
             oturef parent = (otu) star.count;
             auto phylotree = tree::make(star.count);
@@ -299,7 +292,7 @@ namespace
          */
         auto run(const context& ctx) const -> tree override
         {
-            auto star = initialize<M>(ctx.matrix, ctx.total);
+            auto star = initialize<T>(ctx.matrix, ctx.total);
             auto result = build_tree(star);
 
             return result;
@@ -313,17 +306,17 @@ namespace msa
      * Instantiates a new sequential neighbor-joining instance using a simple matrix.
      * @return The new algorithm instance.
      */
-    extern auto phylogeny::njoining::sequential_mat() -> phylogeny::algorithm *
+    extern auto phylogeny::njoining::sequential_linear() -> phylogeny::algorithm *
     {
-        return new ::sequential<phylogeny::matrix<false>>;
+        return new ::sequential<transform::linear<2>>;
     }
 
     /**
      * Instantiates a new sequential neighbor-joining instance using a symmatrix.
      * @return The new algorithm instance.
      */
-    extern auto phylogeny::njoining::sequential_sym() -> phylogeny::algorithm *
+    extern auto phylogeny::njoining::sequential_symmetric() -> phylogeny::algorithm *
     {
-        return new ::sequential<phylogeny::symmatrix<false>>;
+        return new ::sequential<transform::symmetric>;
     }
 }

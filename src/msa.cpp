@@ -180,7 +180,7 @@ namespace msa
              * @return The pipeline's final module's result.
              */
             inline auto execute(const pipeline::module *modules[], const io::service& io) const
-            -> heuristic::conduit
+            -> heuristic::conduit override
             {
                 auto previous = heuristic::conduit {};
                 auto lambda = [&](size_t i) { return std::move(modules[i]->run(io, previous)); };
