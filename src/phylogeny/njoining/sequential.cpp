@@ -113,7 +113,7 @@ namespace
      * @return The given pair's Q-value.
      */
     template <typename T>
-    inline distance_type calculate_q(const startree<T>& star, const pair_type& pair)
+    inline distance_type q_transform(const startree<T>& star, const pair_type& pair)
     {
         return (star.count - 2) * star.matrix[pair] - star.cache[pair.x] - star.cache[pair.y];
     }
@@ -137,7 +137,7 @@ namespace
         // lowest Q-value is then selected to be returned.
         for(size_t c = 0; c < partition.total; ++i, j = 0)
             for( ; c < partition.total && j < i; ++c, ++j) {
-                const auto distance = calculate_q(star, {i, j});
+                const auto distance = q_transform(star, {i, j});
 
                 if(distance < chosen.distance) {
                     chosen.distance = distance;
@@ -292,6 +292,9 @@ namespace
          */
         auto run(const context& ctx) const -> tree override
         {
+            if(!ctx.total < 2)
+                return tree {};
+
             auto star = initialize<T>(ctx.matrix, ctx.total);
             auto result = build_tree(star);
 
