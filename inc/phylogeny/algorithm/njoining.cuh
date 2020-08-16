@@ -40,33 +40,11 @@ namespace msa
                 __host__ __device__ inline candidate() noexcept = default;
                 __host__ __device__ inline candidate(const candidate&) noexcept = default;
                 __host__ __device__ inline candidate(candidate&&) noexcept = default;
-
-                /**
-                 * Instantiates a new candidate pair from its internal values.
-                 * @param x The first OTU reference value.
-                 * @param y The second OTU reference value.
-                 * @param distance The distance between the OTUs.
-                 */
-                __host__ __device__ inline candidate(oturef x, oturef y, score distance) noexcept
-                :   ref {x, y}
-                ,   distance {distance}
-                {}
+                __host__ __device__ inline candidate(oturef, oturef, score) noexcept;
 
                 __host__ __device__ inline candidate& operator=(const candidate&) noexcept = default;
                 __host__ __device__ inline candidate& operator=(candidate&&) noexcept = default;
-
-                /**
-                 * Implements a volatile-qualified copy operator.
-                 * @param other The volatile-qualified candidate to be copied.
-                 * @return A volatile-qualified candidate instance.
-                 */
-                __host__ __device__ inline volatile candidate& operator=(volatile candidate& other) volatile
-                {
-                    ref[0] = other.ref[0];
-                    ref[1] = other.ref[1];
-                    distance = other.distance;
-                    return *this;
-                }
+                __host__ __device__ inline volatile candidate& operator=(volatile candidate&) volatile noexcept;
             };
 
             /**
@@ -82,18 +60,7 @@ namespace msa
                 __host__ __device__ inline joinable() noexcept = default;
                 __host__ __device__ inline joinable(const joinable&) noexcept = default;
                 __host__ __device__ inline joinable(joinable&&) noexcept = default;
-
-                /**
-                 * Creates a new joinable OTU pair from a candidate and its deltas.
-                 * @param c The pair candidate to create instance from.
-                 * @param dx The delta distance from the first OTU to its parent.
-                 * @param dy The delta distance from the second OTU to its parent.
-                 */
-                __host__ __device__ inline joinable(const candidate& c, score dx, score dy) noexcept
-                :   ref {c.ref[0], c.ref[1]}
-                ,   delta {dx, dy}
-                ,   distance {c.distance}
-                {}
+                __host__ __device__ inline joinable(const candidate&, score, score) noexcept;
 
                 __host__ __device__ inline joinable& operator=(const joinable&) noexcept = default;
                 __host__ __device__ inline joinable& operator=(joinable&&) noexcept = default;
@@ -121,6 +88,44 @@ namespace msa
             extern auto hybrid_symmetric() -> phylogeny::algorithm *;
             extern auto sequential_linear() -> phylogeny::algorithm *;
             extern auto sequential_symmetric() -> phylogeny::algorithm *;
+
+            /**
+             * Instantiates a new candidate pair from its internal values.
+             * @param x The first OTU reference value.
+             * @param y The second OTU reference value.
+             * @param distance The distance between the OTUs.
+             */
+            __host__ __device__ candidate::candidate(oturef x, oturef y, score distance) noexcept
+            :   ref {x, y}
+            ,   distance {distance}
+            {}
+
+            /**
+             * Creates a new joinable OTU pair from a candidate and its deltas.
+             * @param cand The pair candidate to create instance from.
+             * @param dx The delta distance from the first OTU to its parent.
+             * @param dy The delta distance from the second OTU to its parent.
+             */
+            __host__ __device__ joinable::joinable(const candidate& cand, score dx, score dy) noexcept
+            :   ref {cand.ref[0], cand.ref[1]}
+            ,   delta {dx, dy}
+            ,   distance {cand.distance}
+            {}
+
+            /**
+             * Implements a volatile-qualified copy operator.
+             * @param other The volatile-qualified candidate to be copied.
+             * @return A volatile-qualified candidate instance.
+             */
+            __host__ __device__ volatile candidate& candidate::operator=(
+                    volatile candidate& other
+                ) volatile noexcept
+            {
+                distance = other.distance;
+                ref[0] = other.ref[0];
+                ref[1] = other.ref[1];
+                return *this;
+            }
         }
     }
 }

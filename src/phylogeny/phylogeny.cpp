@@ -23,12 +23,14 @@ namespace msa
          * @since 0.1.1
          */
         static const dispatcher<factory> factory_dispatcher = {
-            {"default",              njoining::sequential_linear}
-        ,   {"njoining",             njoining::sequential_symmetric}
-        ,   {"njoining-linear",      njoining::sequential_linear}
-        ,   {"njoining-symmetric",   njoining::sequential_symmetric}
-        ,   {"njoining-sequential",  njoining::sequential_linear}
-        ,   {"njoining-distributed", njoining::sequential_linear}
+            {"default",                     njoining::hybrid_symmetric}
+        ,   {"njoining",                    njoining::hybrid_symmetric}
+        ,   {"njoining-linear",             njoining::hybrid_linear}
+        ,   {"njoining-symmetric",          njoining::hybrid_symmetric}
+        ,   {"njoining-sequential",         njoining::sequential_symmetric}
+        ,   {"njoining-sequential-linear",  njoining::sequential_linear}
+        ,   {"njoining-distributed",        njoining::sequential_symmetric}
+        ,   {"njoining-distributed-linear", njoining::sequential_linear}
         };
 
         /**

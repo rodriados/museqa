@@ -43,6 +43,12 @@ namespace
     using cache_type = buffer<distance_type>;
 
     /**
+     * The point type required by the algorithm's matrices.
+     * @since 0.1.1
+     */
+    using pair_type = typename msa::matrix<distance_type>::point_type;
+
+    /**
      * The neighbor-joining algorithm's star tree data structures.
      * @tparam T The star tree's matrix spatial transformation type.
      * @since 0.1.1
@@ -55,12 +61,6 @@ namespace
         cache_type cache;                   /// The cache of lines and columns total sums.
         size_t count;                       /// The number of OTUs yet to be joined.
     };
-
-    /**
-     * The point type required by the algorithm's matrices.
-     * @since 0.1.1
-     */
-    using pair_type = typename msa::matrix<distance_type>::point_type;
 
     /**
      * Builds a cache for the sum of all elements from a matrix's columns and rows.
@@ -119,6 +119,25 @@ namespace
     }
 
     /**
+     * Raises a candidate OTU pair into the local best joinable OTU pair.
+     * @tparam T The star tree's matrix spatial transformation type.
+     * @param star The OTUs' star tree data structures.
+     * @param chosen The chosen candidate as the local best OTU pair.
+     * @return The fully-joinable OTU pair.
+     */
+    template <typename T>
+    static njoining::joinable raise_candidate(const startree<T>& star, const njoining::candidate& chosen)
+    {
+        const pair_type pair = {chosen.ref[0], chosen.ref[1]};
+        const auto pairsum = star.cache[pair.x] - star.cache[pair.y];
+
+        const distance_type dx = (.5 * star.matrix[pair]) + (pairsum / (2 * (star.count - 2)));
+        const distance_type dy = star.matrix[pair] - dx;
+
+        return {chosen, dx, dy};
+    }
+
+    /**
      * Finds the best joinable pair on the given partition.
      * @tparam T The star tree's matrix spatial transformation type.
      * @param star The OTUs' star tree data structures.
@@ -145,13 +164,7 @@ namespace
 
         /// Now that we have our partition's best candidate, we must calculate its
         /// deltas, as the other nodes will not figure it out by themselves.
-        const pair_type pair = {chosen.ref[0], chosen.ref[1]};
-        const auto pairsum = star.cache[pair.x] - star.cache[pair.y];
-
-        const distance_type dx = (.5 * star.matrix[pair]) + (pairsum / (2 * (star.count - 2)));
-        const distance_type dy = star.matrix[pair] - dx;
-
-        return {chosen, dx, dy};
+        return raise_candidate(star, chosen);
     }
 
     /**
@@ -164,15 +177,16 @@ namespace
     template <typename T>
     static void swap_remove(startree<T>& star, oturef keep, oturef remove)
     {
-        onlyslaves utils::swap(star.cache[keep], star.cache[remove]);
-        utils::swap(star.map[keep], star.map[remove]);
-        star.matrix.swap(keep, remove);
-        star.matrix.remove(remove);
-
-        for(size_t i = remove; i < star.count - 1; ++i) {
-            onlyslaves star.cache[i] = star.cache[i + 1];
-            star.map[i] = star.map[i + 1];
+        onlyslaves {
+            utils::swap(star.cache[keep], star.cache[remove]);
+            star.matrix.swap(keep, remove);
+            star.matrix.remove(remove);
         }
+
+        ptrdiff_t shift = (remove == 0);
+        utils::swap(star.map[keep], star.map[remove]);
+        star.map = map_type {star.map.offset(shift), star.map.size() - 1};
+        onlyslaves star.cache = cache_type {star.cache.offset(shift), star.cache.size() - 1};
     }
 
     /**
@@ -214,12 +228,12 @@ namespace
 
         // Let's calculate the distances between the OTU being created and the others
         // which have not been affected by the current joining operation.
-        for(size_t i = 0; i < star.count; ++i) {
+        onlyslaves for(size_t i = 0; i < star.count; ++i) {
             const auto previous = star.matrix[{i, x}] + star.matrix[{i, y}];
             const auto current = .5 * (previous - star.matrix[{x, y}]);
 
             star.matrix[{i, x}] = star.matrix[{x, i}] = current;
-            onlyslaves star.cache[i] += current - previous;
+            star.cache[i] += current - previous;
             new_sum += current;
         }
 
