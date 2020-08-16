@@ -128,7 +128,7 @@ namespace
     template <typename T>
     static njoining::joinable pick_joinable(const startree<T>& star, const range<size_t>& partition)
     {
-        njoining::joinable chosen;
+        njoining::candidate chosen;
         size_t i = oeis::a002024(partition.offset + 1);
         size_t j = partition.offset - utils::nchoose(i);
 
@@ -139,11 +139,8 @@ namespace
             for( ; c < partition.total && j < i; ++c, ++j) {
                 const auto distance = q_transform(star, {i, j});
 
-                if(distance < chosen.distance) {
-                    chosen.distance = distance;
-                    chosen.ref[0] = i;
-                    chosen.ref[1] = j;
-                }
+                if(distance < chosen.distance)
+                    chosen = {oturef(i), oturef(j), distance};
             }
 
         /// Now that we have our partition's best candidate, we must calculate its
@@ -151,10 +148,10 @@ namespace
         const pair_type pair = {chosen.ref[0], chosen.ref[1]};
         const auto pairsum = star.cache[pair.x] - star.cache[pair.y];
 
-        chosen.delta[0] = (.5 * star.matrix[pair]) + (pairsum / (2 * (star.count - 2)));
-        chosen.delta[1] = star.matrix[pair] - chosen.delta[0];
+        const distance_type dx = (.5 * star.matrix[pair]) + (pairsum / (2 * (star.count - 2)));
+        const distance_type dy = star.matrix[pair] - dx;
 
-        return chosen;
+        return {chosen, dx, dy};
     }
 
     /**
@@ -292,7 +289,7 @@ namespace
          */
         auto run(const context& ctx) const -> tree override
         {
-            if(!ctx.total < 2)
+            if(ctx.total < 2)
                 return tree {};
 
             auto star = initialize<T>(ctx.matrix, ctx.total);
