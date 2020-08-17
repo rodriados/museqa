@@ -320,7 +320,7 @@ namespace
         // we only spawn new blocks if all of its threads will be used.
         const size_t total = partition.total / reduce_factor;
         const auto threads = floor_power2(max_threads(total));
-        const auto blocks  = max_blocks(total / threads);
+        const auto blocks  = utils::max(1UL, max_blocks(total / threads));
 
         auto result = buffer<njoining::joinable>::make(blocks);
         auto chosen = buffer<njoining::joinable>::make(cuda::allocator::device, blocks);
@@ -474,19 +474,25 @@ namespace
                 range<size_t> partition;
                 njoining::joinable vote;
 
-                const size_t total = utils::nchoose(star.count);
+                onlyslaves if(star.count > node::rank) {
+                    const size_t total = utils::nchoose(star.count);
 
-                // Let's split the total amount of work to be done between our compute
-                // nodes. Each node must pick its local best joinable candidate.
-                #if !defined(__msa_runtime_cython)
-                    onlyslaves partition = utils::partition(total, node::count - 1, node::rank - 1);
-                #else
-                    partition = range<size_t> {0, total};
-                #endif
+                    // Let's split the total amount of work to be done between our
+                    // compute nodes. Each node must pick its local best joinable
+                    // candidate. This will only happen, though, if the total number
+                    // of OTUs is higher than the number of nodes.
+                    #if !defined(__msa_runtime_cython)
+                        const auto workers = utils::min<size_t>(node::count - 1, star.count - 1);
+                        onlyslaves partition = utils::partition(total, workers, node::rank - 1);
+                    #else
+                        partition = range<size_t> {0, total};
+                    #endif
 
-                // After finding each compute node's local best joinable candidate,
-                // we must gather the votes and find the best one globally.
-                onlyslaves vote = pick_joinable(star, partition);
+                    // After finding each compute node's local best joinable candidate,
+                    // we must gather the votes and find the best one globally.
+                    vote = pick_joinable(star, partition);
+                }
+
                 vote = this->reduce(vote);
 
                 // At last, we join the selected pair, rebuild our distance matrix
