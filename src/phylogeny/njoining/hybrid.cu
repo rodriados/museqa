@@ -275,7 +275,7 @@ namespace
         // Implements a reduction operation for finding the local best OTU pair
         // to be joined next. As we apply the Q-transformation for every pair on
         // the distance matrix, we must find the one with the smallest Q-value.
-        using min = struct : reduceable<njoining::candidate> {
+        using max = struct : reduceable<njoining::candidate> {
             __device__ static inline void join(volatile njoining::candidate *data, size_t dest, size_t src) {
                 if(data[src].distance > data[dest].distance) data[dest] = data[src];
             }
@@ -297,7 +297,7 @@ namespace
         // Reduces the shared list of candidates to find the absolute local best
         // on the current device. The list has already been reduced to a smaller
         // amount due to the operation performed above.
-        reduce<min>(list, blockDim.x, threadIdx.x);
+        reduce<max>(list, blockDim.x, threadIdx.x);
 
         if(threadIdx.x == 0)
             result[blockIdx.x] = raise_candidate(star, list[0]);
@@ -324,7 +324,7 @@ namespace
 
         auto result = buffer<njoining::joinable>::make(blocks);
         auto chosen = buffer<njoining::joinable>::make(cuda::allocator::device, blocks);
-        size_t smallest = 0;
+        size_t biggest = 0;
 
         find_candidates<<<blocks, threads, sizeof(njoining::candidate) * threads>>>(chosen, star, partition);
         cuda::memory::copy(result.raw(), chosen.raw(), blocks);
@@ -332,10 +332,10 @@ namespace
         // Now that we reduced the total number of candidates, we can finally apply
         // a small reduction to find the absolute best on this node's partition.
         for(size_t i = 1; i < blocks; ++i)
-            if(result[i].distance > result[smallest].distance)
-                smallest = i;
+            if(result[i].distance > result[biggest].distance)
+                biggest = i;
 
-        return result[smallest];
+        return result[biggest];
     }
 
     /**

@@ -55,7 +55,7 @@ namespace msa
             {
                 oturef ref[2] = {undefined, undefined}; /// The OTU pair references.
                 score delta[2] = {infinity, infinity};  /// The selected OTU pair's deltas.
-                score distance = infinity;              /// The distance between the OTU pair.
+                score distance = -infinity;             /// The distance between the OTU pair.
 
                 __host__ __device__ inline joinable() noexcept = default;
                 __host__ __device__ inline joinable(const joinable&) noexcept = default;
