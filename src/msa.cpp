@@ -30,6 +30,7 @@ static const std::vector<io::option> options = {
     {cli::multigpu,  {"-m", "--multigpu"},    "Use multiple devices in a single host."}
 ,   {cli::report,    {"-r", "--report-only"}, "Print only timing reports and nothing more."}
 ,   {cli::scoring,   {"-s", "--scoring"},     "Choose pairwise module's scoring matrix.", true}
+,   {cli::gpuid,     {"-d", "--device"},      "Choose the GPU id to be used", true}
 ,   {cli::pairwise,  {"-1", "--pairwise"},    "Choose pairwise module's algorithm.", true}
 ,   {cli::phylogeny, {"-2", "--phylogeny"},   "Choose phylogeny module's algorithm.", true}
 };
@@ -206,7 +207,8 @@ namespace msa
         onlyslaves {
             const auto rank  = node::rank - 1;
             const auto count = global_state.devices_available;
-            cuda::device::select(global_state.use_multigpu ? (rank % count) : cuda::device::init);
+            const auto gpuid = io.get<int>(cli::gpuid, cuda::device::init);
+            cuda::device::select((global_state.use_multigpu ? gpuid + rank : gpuid) % count);
         }
 
         watchdog::report("total", benchmark::run(lambda));

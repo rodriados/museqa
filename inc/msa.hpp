@@ -75,6 +75,7 @@ namespace msa
             scoring     = 201
         ,   pairwise    = 202
         ,   phylogeny   = 203
+        ,   gpuid       = 204
         };
     }
 

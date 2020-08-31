@@ -102,6 +102,8 @@ namespace msa
                     father.level = utils::max(rheight, lheight) + 1;
                 }
 
+                using underlying_type::leaves;
+
                 /**
                  * Creates a new tree with given number of nodes as leaves.
                  * @param leaves The number of leaf nodes in tree.
