@@ -120,6 +120,22 @@ namespace msa
                 auto mresult = msa::pairwise::module::run(io, pipe);
                 onlymaster watchdog::finish("pairwise", "aligned all sequence pairs");
 
+                onlymaster {
+                    const auto& conduit = pipeline::convert<pairwise::module>(*mresult);
+
+                    auto fhandle = fopen("msaresult.dmat", "w");
+
+                    fprintf(fhandle, "%lu\n", conduit.total);
+                    fprintf(fhandle, "padding\npadding\n");
+
+                    for(size_t i = 1; i < conduit.total; ++i) {
+                        for(size_t j = 0; j < i; ++j) {
+                            fprintf(fhandle, "%lf ", utils::max(0.f, conduit.distances[{i, j}]));
+                        }
+                        fprintf(fhandle, "\n");
+                    }
+                }
+
                 return mresult;
             }
         };
