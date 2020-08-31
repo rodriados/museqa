@@ -158,7 +158,7 @@ namespace
             for( ; c < partition.total && j < i; ++c, ++j) {
                 const auto distance = q_transform(star, {i, j});
 
-                if(distance < chosen.distance)
+                if(distance > chosen.distance)
                     chosen = {oturef(i), oturef(j), distance};
             }
 

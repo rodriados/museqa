@@ -25,7 +25,7 @@ namespace msa
              */
             auto closest(const joinable& a, const joinable& b) -> joinable
             {
-                return a.distance < b.distance ? a : b;
+                return a.distance > b.distance ? a : b;
             }
 
             /**

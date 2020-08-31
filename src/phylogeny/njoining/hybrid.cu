@@ -277,7 +277,7 @@ namespace
         // the distance matrix, we must find the one with the smallest Q-value.
         using min = struct : reduceable<njoining::candidate> {
             __device__ static inline void join(volatile njoining::candidate *data, size_t dest, size_t src) {
-                if(data[src].distance < data[dest].distance) data[dest] = data[src];
+                if(data[src].distance > data[dest].distance) data[dest] = data[src];
             }
         };
 
@@ -288,7 +288,7 @@ namespace
             const size_t y = (partition.offset + i) - utils::nchoose(x);
             const auto distance = q_transform(star, {x, y});
 
-            if(distance < list[threadIdx.x].distance)
+            if(distance > list[threadIdx.x].distance)
                 list[threadIdx.x] = njoining::candidate {x, y, distance};
         }
 
@@ -332,7 +332,7 @@ namespace
         // Now that we reduced the total number of candidates, we can finally apply
         // a small reduction to find the absolute best on this node's partition.
         for(size_t i = 1; i < blocks; ++i)
-            if(result[i].distance < result[smallest].distance)
+            if(result[i].distance > result[smallest].distance)
                 smallest = i;
 
         return result[smallest];

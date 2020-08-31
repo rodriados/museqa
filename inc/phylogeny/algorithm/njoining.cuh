@@ -35,7 +35,7 @@ namespace msa
             struct candidate
             {
                 oturef ref[2] = {undefined, undefined}; /// The OTU pair references.
-                score distance = infinity;              /// The distance between the OTU pair.
+                score distance = -infinity;             /// The distance between the OTU pair.
 
                 __host__ __device__ inline candidate() noexcept = default;
                 __host__ __device__ inline candidate(const candidate&) noexcept = default;
