@@ -1,8 +1,8 @@
-# Multiple Sequence Alignment
-![license MIT](https://img.shields.io/badge/license-MIT-lightgrey.svg)
+# Museqa
+![license GPL](https://img.shields.io/badge/license-GPL-lightgrey.svg)
 ![version dev](https://img.shields.io/badge/version-dev-orange.svg)
 
-Multiple Sequence Alignment using hybrid parallel computing.
+Museqa, pronounced as _moo-zee-kah_, is a multiple sequence aligner for hybrid parallel computing environments.
 
 ## Motivation
 In bioinformatics, the global alignment of multiple biological sequences has crucial importance. This allows
@@ -23,7 +23,7 @@ project uses GPGPU parallelism to attack the heuristic's execution time.
 Up to this moment, only has this project been targeted to and tested in Unix/Linux environments and NVIDIA CUDA-enabled
 GPGPUs. To install it, make sure you have both `openmpi` and `cuda` installed in your system, download the source files and compile, following the steps below:
 ```bash
-git clone https://github.com/rodriados/msa.git
+git clone https://github.com/rodriados/museqa.git
 make
 ```
 
@@ -36,6 +36,6 @@ make testing
 ## Usage
 To use this project, you simply run:
 ```bash
-msarun <file>
+museqa <file>
 ```
 Where `file` is the file containing all sequences to be aligned.
