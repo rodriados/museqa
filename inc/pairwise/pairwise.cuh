@@ -35,7 +35,7 @@ namespace msa
          * Represents a reference for a sequence.
          * @since 0.1.1
          */
-        using seqref = int_least16_t;
+        using seqref = int_least32_t;
 
         /**
          * Stores the indeces of a pair of sequences to be aligned.
