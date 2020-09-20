@@ -64,7 +64,7 @@ all: debug
 install: $(OBJHIERARCHY)
 	@chmod +x src/hostfinder.sh
 	@chmod +x src/watchdog.sh
-	@chmod +x msarun
+	@chmod +x museqa
 
 production: install
 production: override ENV = -DPRODUCTION
