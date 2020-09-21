@@ -1,25 +1,26 @@
 /** 
- * Multiple Sequence Alignment main file.
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file The software's entry point.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018-2020 Rodrigo Siqueira
+ * @copyright 2018-present Rodrigo Siqueira
  */
 #include <string>
 #include <vector>
 
-#include <io.hpp>
-#include <msa.hpp>
-#include <mpi.hpp>
-#include <cuda.cuh>
-#include <encoder.hpp>
-#include <database.hpp>
-#include <benchmark.hpp>
-#include <exception.hpp>
+#include "io.hpp"
+#include "mpi.hpp"
+#include "cuda.cuh"
+#include "museqa.hpp"
+#include "encoder.hpp"
+#include "database.hpp"
+#include "benchmark.hpp"
+#include "exception.hpp"
 
-#include <bootstrap.hpp>
-#include <pairwise.cuh>
-#include <phylogeny.cuh>
+#include "bootstrap.hpp"
+#include "pairwise.cuh"
+#include "phylogeny.cuh"
 
-using namespace msa;
+using namespace museqa;
 
 /**
  * The list of command line options available. This list might be increased
@@ -35,7 +36,7 @@ static const std::vector<io::option> options = {
 ,   {cli::phylogeny, {"-2", "--phylogeny"},   "Choose phylogeny module's algorithm.", true}
 };
 
-namespace msa
+namespace museqa
 {
     /**
      * The global state instance. Here we define the target environment in which
@@ -43,10 +44,10 @@ namespace msa
      * @since 0.1.1
      */
     state global_state {
-      #if defined(__msa_environment)
-        static_cast<environment>(__msa_environment)
+      #if defined(__museqa_environment)
+        static_cast<env>(__museqa_environment)
       #else
-        environment::production
+        env::production
       #endif
     };
 
@@ -63,7 +64,7 @@ namespace msa
          * files given via command line and feeds to following module.
          * @since 0.1.1
          */
-        struct bootstrap : public msa::bootstrap::module
+        struct bootstrap : public museqa::bootstrap::module
         {
             /**
              * Executes the pipeline module's logic.
@@ -73,7 +74,7 @@ namespace msa
              */
             auto run(const io::service& io, const step::pipe& pipe) const -> step::pipe override
             {
-                auto mresult = msa::bootstrap::module::run(io, pipe);
+                auto mresult = museqa::bootstrap::module::run(io, pipe);
                 auto conduit = pipeline::convert<bootstrap>(*mresult);
 
                 onlymaster if(conduit.total > 0)
@@ -97,7 +98,7 @@ namespace msa
          * module produces a distance matrix of sequences in relation to all others.
          * @since 0.1.1
          */
-        struct pairwise : public msa::pairwise::module
+        struct pairwise : public museqa::pairwise::module
         {
             /**
              * Executes the pipeline module's logic.
@@ -117,7 +118,7 @@ namespace msa
                     watchdog::init("pairwise", "aligning <bold>%llu</> pairs", utils::nchoose(conduit.total));
                 }
 
-                auto mresult = msa::pairwise::module::run(io, pipe);
+                auto mresult = museqa::pairwise::module::run(io, pipe);
                 onlymaster watchdog::finish("pairwise", "aligned all sequence pairs");
 
                 return mresult;
@@ -129,7 +130,7 @@ namespace msa
          * phylogenetic tree, which will then be used to guide the final alignment.
          * @since 0.1.1
          */
-        struct phylogeny : public msa::phylogeny::module
+        struct phylogeny : public museqa::phylogeny::module
         {
             /**
              * Executes the pipeline module's logic.
@@ -146,7 +147,7 @@ namespace msa
                     watchdog::init("phylogeny", "producing phylogenetic tree");
                 }
 
-                auto mresult = msa::phylogeny::module::run(io, pipe);
+                auto mresult = museqa::phylogeny::module::run(io, pipe);
                 onlymaster watchdog::finish("phylogeny", "phylogenetic tree produced");
 
                 return mresult;
@@ -201,7 +202,7 @@ namespace msa
      */
     static void run(const io::service& io)
     {
-        auto runner = msa::runner {};
+        auto runner = museqa::runner {};
         auto lambda = [&io, &runner]() { runner.run(io); };
 
         onlyslaves {
@@ -234,7 +235,7 @@ try {
     onlyslaves global_state.use_multigpu = io.has(cli::multigpu);
     onlyslaves global_state.devices_available = cuda::device::count();
 
-    msa::run(io);
+    museqa::run(io);
 
     mpi::finalize();
     return 0;
