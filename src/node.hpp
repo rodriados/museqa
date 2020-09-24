@@ -1,13 +1,17 @@
 /** 
- * Multiple Sequence Alignment node header file.
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file The MPI cluster's node identifiers and values.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018-2020 Rodrigo Siqueira
+ * @copyright 2018-present Rodrigo Siqueira
  */
 #pragma once
 
-#include <utils.hpp>
+#include <cstdint>
 
-namespace msa
+#include "utils.hpp"
+#include "environment.h"
+
+namespace museqa
 {
     namespace node
     {
@@ -22,28 +26,28 @@ namespace msa
          * global identification.
          * @see mpi::init
          */
-        #if !defined(__msa_runtime_cython)
-            extern id rank;
+        #if !defined(__museqa_runtime_cython)
+            extern node::id rank;
             extern int32_t count;
         #else
-            constexpr id rank = 0;
+            constexpr node::id rank = 0;
             constexpr int32_t count = 1;
         #endif
         /**#@-*/
 
         /*
-         * Defining the master node rank value. It is recommended not to change the
-         * master node's rank, as no other node rank is garanteed to exist.
+         * Defining the master node rank value. It is recommended not to change
+         * the master node's rank, as no other node rank is garanteed to exist.
          */
-        enum : id { master = 0 };
+        enum : node::id { master = 0 };
     }
 }
 
 /*
- * Defines some process control macros. These macros are to be used when
- * it is needed to check whether the current process is master or not.
+ * Defines some node control macros. These macros are to be used when it is needed
+ * to check whether the current node is the master or not.
  */
-#if !defined(__msa_runtime_cython)
+#if !defined(__museqa_runtime_cython)
   #define onlymaster   if(node::rank == node::master)
   #define onlyslaves   if(node::rank != node::master)
   #define onlynode(i)  if((i) == node::rank)

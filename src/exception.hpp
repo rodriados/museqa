@@ -1,7 +1,8 @@
-/** 
- * Multiple Sequence Alignment exception header file.
+/**
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Base class for generic exception types.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018-2019 Rodrigo Siqueira
+ * @copyright 2018-present Rodrigo Siqueira
  */
 #pragma once
 
@@ -9,13 +10,13 @@
 #include <utility>
 #include <exception>
 
-#include <utils.hpp>
-#include <format.hpp>
+#include "utils.hpp"
+#include "format.hpp"
 
-namespace msa
+namespace museqa
 {
     /**
-     * Holds an error message so it can be propagated through the code.
+     * Holds an exception message so it can be propagated through the code.
      * @since 0.1.1
      */
     class exception : public std::exception
@@ -76,8 +77,8 @@ namespace msa
     {
         static_assert(std::is_base_of<exception, E>::value, "only exception types are throwable");
 
-        #if !defined(__msa_runtime_device) && !defined(__msa_production)
-            #if defined(__msa_compiler_gnuc)
+        #if !defined(__museqa_runtime_device) && !defined(__museqa_production)
+            #if defined(__museqa_compiler_gnuc)
                 if(__builtin_expect(!condition, 0)) {
                     throw E {std::forward<decltype(args)>(args)...};
                 }

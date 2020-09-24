@@ -1,7 +1,8 @@
-/**
- * Multiple Sequence Alignment utilities header file.
+/** 
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Miscellaneous utilities and helper functions.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018-2020 Rodrigo Siqueira
+ * @copyright 2018-present Rodrigo Siqueira
  */
 #pragma once
 
@@ -9,6 +10,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <utility>
+
+#include "environment.h"
 
 /*
  * Definition of CUDA function flags for host code, so we don't need to care about
@@ -19,12 +22,11 @@
   #define __device__
 #endif
 
-#include <oeis.hpp>
-#include <functor.hpp>
-#include <operators.hpp>
-#include <environment.h>
+#include "oeis.hpp"
+#include "functor.hpp"
+#include "operators.hpp"
 
-namespace msa
+namespace museqa
 {
     /**
      * A general memory storage container.
@@ -199,7 +201,7 @@ namespace msa
 
         /**
          * Swaps the elements of two arrays of same type and size.
-         * @tparam T The arrays' type.
+         * @tparam T The arrays' elements' type.
          * @tparam N The arrays' size.
          * @param a The first array to have its elements swapped.
          * @param b The second array to have its elements swapped.
