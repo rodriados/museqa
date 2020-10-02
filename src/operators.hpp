@@ -1,13 +1,14 @@
 /**
- * Multiple Sequence Alignment general operators header file.
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Common functional operators implementation.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018-2020 Rodrigo Siqueira
+ * @copyright 2018-present Rodrigo Siqueira
  */
 #pragma once
 
-#include <functor.hpp>
+#include "functor.hpp"
 
-namespace msa
+namespace museqa
 {
     namespace op
     {

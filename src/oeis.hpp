@@ -1,7 +1,8 @@
 /**
- * Multiple Sequence Alignment OEIS sequences file.
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file OEIS's sequences generator functions.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2020 Rodrigo Siqueira
+ * @copyright 2020-present Rodrigo Siqueira
  */
 #pragma once
 
@@ -17,7 +18,7 @@
 #include <cmath>
 #include <cstdint>
 
-namespace msa
+namespace museqa
 {
     namespace oeis
     {

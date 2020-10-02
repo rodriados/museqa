@@ -1,13 +1,14 @@
 /**
- * Multiple Sequence Alignment functor header file.
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file A general function abstraction implementation.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018-2020 Rodrigo Siqueira
+ * @copyright 2018-present Rodrigo Siqueira
  */
 #pragma once
 
-#include <utils.hpp>
+#include "utils.hpp"
 
-namespace msa
+namespace museqa
 {
     /**#@+
      * Wraps a function pointer into a functor.
@@ -30,7 +31,7 @@ namespace msa
             using function_type = R (*)(P...);      /// The functor's raw pointer type.
 
         protected:
-            function_type m_function = nullptr;      /// The raw functor's pointer.
+            function_type m_function = nullptr;     /// The raw functor's pointer.
 
         public:
             __host__ __device__ inline constexpr functor() noexcept = default;
