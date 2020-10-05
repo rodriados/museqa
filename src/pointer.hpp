@@ -1,7 +1,8 @@
 /**
- * Multiple Sequence Alignment pointer header file.
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Smart CUDA-compatible pointers for generic types.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018-2020 Rodrigo Siqueira
+ * @copyright 2018-present Rodrigo Siqueira
  */
 #pragma once
 
@@ -9,29 +10,30 @@
 #include <cstddef>
 #include <utility>
 
-#include <utils.hpp>
-#include <allocator.hpp>
+#include "utils.hpp"
+#include "allocator.hpp"
 
-namespace msa
+namespace museqa
 {
     namespace detail
     {
         namespace pointer
         {
             /**
-             * Keeps track of the number of references of a given pointer.
+             * Keeps track of the number of references to a given memory pointer.
              * @tparam T The pointer type.
              * @since 0.1.1
              */
             template <typename T>
             struct counter
             {
-                using element_type = T;                 /// The type of elements represented by the pointer.
-                using allocator_type = msa::allocator;  /// The type of allocator for given type.
+                using element_type = T;                     /// The type of elements represented by the pointer.
+                using allocator_type = museqa::allocator;   /// The type of allocator for given type.
 
-                element_type *ptr = nullptr;            /// The raw target pointer.
-                size_t use_count = 0;                   /// The  number of currently active pointer references.
-                const allocator_type allocator;         /// The pointer's allocator.
+                element_type *ptr = nullptr;                /// The raw target pointer.
+                size_t use_count = 0;                       /// The number of currently active pointer references.
+
+                const allocator_type allocator;             /// The pointer's allocator.
 
                 /**
                  * Initializes a new pointer counter.
@@ -63,7 +65,7 @@ namespace msa
              * @return The new pointer's counter instance.
              */
             template <typename T>
-            inline counter<T> *acquire(T *ptr, const msa::allocator& allocator) noexcept
+            inline counter<T> *acquire(T *ptr, const museqa::allocator& allocator) noexcept
             {
                 return new counter<T> {ptr, allocator};
             }
@@ -90,7 +92,7 @@ namespace msa
             template <typename T>
             __host__ __device__ inline void release(counter<T> *meta)
             {
-                #if defined(__msa_runtime_host)
+                #if defined(__museqa_runtime_host)
                     if(meta && --meta->use_count <= 0)
                         delete meta;
                 #endif
@@ -113,15 +115,15 @@ namespace msa
         static_assert(!std::is_same<T, void>::value, "cannot create void smart pointers");
 
         public:
-            using element_type = pure<T>;           /// The type of pointer's elements.
-            using allocator_type = msa::allocator;  /// The type of allocator for given type.
+            using element_type = pure<T>;               /// The type of pointer's elements.
+            using allocator_type = museqa::allocator;   /// The type of allocator for given type.
 
         protected:
             using counter_type = detail::pointer::counter<element_type>;    /// The pointer counter type.
 
         protected:
-            element_type *m_ptr = nullptr;          /// The encapsulated pointer.
-            counter_type *m_meta = nullptr;         /// The pointer's metadata.
+            element_type *m_ptr = nullptr;              /// The encapsulated pointer.
+            counter_type *m_meta = nullptr;             /// The pointer's metadata.
 
         public:
             __host__ __device__ constexpr inline pointer() noexcept = default;

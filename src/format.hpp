@@ -1,7 +1,8 @@
-/** 
- * Multiple Sequence Alignment formatting header file.
+/**
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file String formatting and printing functions.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2019-2020 Rodrigo Siqueira
+ * @copyright 2019-present Rodrigo Siqueira
  */
 #pragma once
 
@@ -9,22 +10,26 @@
 #include <string>
 #include <utility>
 
-#include <utils.hpp>
-#include <pointer.hpp>
+#include "utils.hpp"
+#include "pointer.hpp"
 
-#if defined(__msa_compiler_gcc)
+#if defined(__museqa_compiler_gcc)
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wformat-security"
 #endif
 
-namespace msa
+namespace museqa
 {
     namespace detail
     {
         namespace fmt
         {
-            using msa::pointer;
-            
+            /**
+             * Alias type for a primitive format buffer.
+             * @since 0.1.1
+             */
+            using fmtbuffer = museqa::pointer<char[]>;
+
             /**
              * Checks whether all argument types are actually printable.
              * @tparam T The list of argment types to be checked.
@@ -42,17 +47,17 @@ namespace msa
              * @return The final formatted string.
              */
             template <typename ...T>
-            inline const pointer<char[]> format(const char *fmtstr, T&&... args) noexcept
+            inline const fmtbuffer format(const char *fmtstr, T&&... args) noexcept
             {
                 static_assert(valid<decltype(args)...>::value, "formatter must return scalar");
                 size_t length = snprintf(nullptr, 0, fmtstr, args...) + 1;
-                auto result = pointer<char[]>::make(length);
+                auto result = fmtbuffer::make(length);
                 snprintf(&result, length, fmtstr, args...);
                 return result;
             }
 
             template <typename ...T>
-            inline const pointer<char[]> format(const std::string& fmtstr, T&&... args) noexcept
+            inline const fmtbuffer format(const std::string& fmtstr, T&&... args) noexcept
             {
                 return format(fmtstr.c_str(), args...);
             }
@@ -64,7 +69,7 @@ namespace msa
     {
         /**
          * Allows a type to have a pre-formatting action, that is, it has the possibility
-         * of modifying how it is shown before being printed.
+         * of formatting itself before being printed.
          * @tparam T The type being currently formatted.
          * @since 0.1.1
          */
@@ -78,7 +83,7 @@ namespace msa
              * @param arg The value to format.
              * @return The formatted value.
              */
-            inline auto parse(const T& arg) const noexcept -> return_type
+            static inline auto parse(const T& arg) noexcept -> return_type
             {
                 return arg;
             }
@@ -98,7 +103,7 @@ namespace msa
              * @param arg The string to format.
              * @return The string's internal pointer.
              */
-            inline auto parse(const std::string& arg) const noexcept -> return_type
+            static inline auto parse(const std::string& arg) noexcept -> return_type
             {
                 return arg.c_str();
             }
@@ -106,7 +111,7 @@ namespace msa
 
         /**
          * Adapts a formatter into a new formatter. This allows formatters to be
-         * used as helpers for new formatters built upon.
+         * used as helpers for new formatters to build upon.
          * @tparam T The type of which formatter must be adapted.
          * @since 0.1.1
          */
@@ -150,7 +155,7 @@ namespace msa
         template <typename F, typename ...T>
         inline std::string format(const F& fmtstr, T&&... args) noexcept
         {
-            return &detail::fmt::format(fmtstr, formatter_g<T>().parse(args)...);
+            return &detail::fmt::format(fmtstr, formatter_g<T>::parse(args)...);
         }
 
         /**
@@ -164,7 +169,7 @@ namespace msa
         template <typename F, typename ...T>
         inline void fprint(FILE *file, const F& fmtstr, T&&... args) noexcept
         {
-            fputs(&detail::fmt::format(fmtstr, formatter_g<T>().parse(args)...), file);
+            fputs(&detail::fmt::format(fmtstr, formatter_g<T>::parse(args)...), file);
         }
 
         /**
@@ -183,6 +188,6 @@ namespace msa
     }
 }
 
-#if defined(__msa_compiler_gcc)
+#if defined(__museqa_compiler_gcc)
   #pragma GCC diagnostic pop
 #endif

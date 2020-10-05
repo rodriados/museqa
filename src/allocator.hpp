@@ -1,14 +1,15 @@
-/** 
- * Multiple Sequence Alignment allocator header file.
+/**
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file The base for generic type allocators.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2019 Rodrigo Siqueira
+ * @copyright 2019-present Rodrigo Siqueira
  */
 #pragma once
 
 #include <utility>
 #include <utils.hpp>
 
-namespace msa
+namespace museqa
 {
     /**
      * Describes the allocation and deallocation routines for a given type.
@@ -19,12 +20,13 @@ namespace msa
     {
         public:
             using ptr_type = void *;                                    /// The type of pointer to allocate.
+
             using up_type = functor<void(ptr_type *, size_t, size_t)>;  /// The allocator's functor type.
             using down_type = functor<void(ptr_type)>;                  /// The deallocator's functor type.
 
         protected:
-            up_type m_up;                       /// The allocator's up functor.
-            down_type m_down;                   /// The allocator's down functor.
+            up_type m_up;                                               /// The allocator's up functor.
+            down_type m_down;                                           /// The allocator's down functor.
 
         public:
             inline constexpr allocator() noexcept = default;
