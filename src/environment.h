@@ -6,9 +6,6 @@
  */
 #pragma once
 
-/*
- * The software version is in the form (major * 10000 + minor * 100 + patch).
- */
 #define __museqa_version 101
 
 /*
@@ -54,29 +51,29 @@
  * depending on the current compiler configuration.
  */
 #if defined(__GNUC__)
+  #define __museqa_compiler_gnuc
   #if !defined(__clang__)
     #define __museqa_compiler_gcc
-    #define __museqa_compiler_version __GNUC__
+    #define __museqa_gcc_version (__GNUC__ * 100 + __GNUC_MINOR__)
   #else
     #define __museqa_compiler_clang
-    #define __museqa_compiler_version __clang__
+    #define __museqa_clang_version (__clang_major__ * 100 + __clang_minor__)
   #endif
-  #define __museqa_compiler_gnuc
 #endif
 
 #if defined(__NVCC__) || defined(__CUDACC__)
   #define __museqa_compiler_nvcc
-  #define __museqa_compiler_version __CUDACC__
+  #define __museqa_nvcc_version (__CUDACC_VER_MAJOR__ * 100 + __CUDACC_VER_MINOR__)
 #endif
 
 #if defined(__INTEL_COMPILER) || defined(__ICL)
-  #define __museqa_compiler_icl
-  #define __museqa_compiler_version __ICL
+  #define __museqa_compiler_icc
+  #define __museqa_icc_version __INTEL_COMPILER
 #endif
 
 #if defined(_MSC_VER)
   #define __museqa_compiler_msc
-  #define __museqa_compiler_version _MSC_VER
+  #define __museqa_msc_version _MSC_VER
 #endif
 
 /* 
@@ -84,14 +81,19 @@
  * conditional compiling may take place depending on the environment.
  */
 #if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
+  #define __museqa_os_unix
   #if defined(__linux__) || defined(__gnu_linux__)
     #define __museqa_os_linux
+    #define __museqa_os "linux"
   #else
     #define __museqa_os_apple
+    #define __museqa_os "apple"
   #endif
-  #define __museqa_os_unix
 #elif defined(WIN32) || defined(_WIN32) || defined(__WIN32)
   #define __museqa_os_windows
+  #define __museqa_os "windows"
+#else
+  #define __museqa_os "unknown"
 #endif
 
 /*
@@ -122,12 +124,21 @@
  * Discovers about the runtime environment. As this software uses GPUs to run calculations
  * on, we need to know, at times, whether the code is being executed in CPU or GPU.
  */
-#if defined(__museqa_compiler_nvcc) && defined(__CUDA_ARCH__)
-  #define __museqa_runtime_device
-#else
-  #define __museqa_runtime_host
-#endif
-
 #if defined(__museqa_testing) || defined(CYTHON_ABI)
   #define __museqa_runtime_cython
+  #if defined(__museqa_compiler_nvcc) && defined(__CUDA_ARCH__)
+    #define __museqa_runtime (0x11)
+    #define __museqa_runtime_device
+  #else
+    #define __museqa_runtime (0x10)
+    #define __museqa_runtime_host
+  #endif
+#else
+  #if defined(__museqa_compiler_nvcc) && defined(__CUDA_ARCH__)
+    #define __museqa_runtime (0x01)
+    #define __museqa_runtime_device
+  #else
+    #define __museqa_runtime (0x00)
+    #define __museqa_runtime_host
+  #endif
 #endif

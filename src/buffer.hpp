@@ -1,24 +1,25 @@
-/** 
- * Multiple Sequence Alignment buffer header file.
+/**
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Generic CUDA-compatible buffer implementation.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018-2019 Rodrigo Siqueira
+ * @copyright 2018-present Rodrigo Siqueira
  */
 #pragma once
 
+#include <vector>
 #include <cstdint>
 #include <cstring>
-#include <vector>
 
-#include <utils.hpp>
-#include <pointer.hpp>
-#include <allocator.hpp>
-#include <exception.hpp>
+#include "utils.hpp"
+#include "pointer.hpp"
+#include "allocator.hpp"
+#include "exception.hpp"
 
-namespace msa
+namespace museqa
 {
     /**
      * Creates a general-purpose buffer. The buffer's idea is to store all of its
-     * data contiguously in memory. Originally, the buffer is not growable.
+     * data contiguously in memory. Originally, the buffer is not dynamic.
      * @tparam T The buffer contents type.
      * @see std::string
      * @see std::vector
