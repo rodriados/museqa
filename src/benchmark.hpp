@@ -1,7 +1,8 @@
-/** 
- * Multiple Sequence Alignment benchmarking header file.
+/**
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Implements a function timing benchmark interface.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018-2019 Rodrigo Siqueira
+ * @copyright 2018-present Rodrigo Siqueira
  */
 #pragma once
 
@@ -9,7 +10,7 @@
 #include <chrono>
 #include <utility>
 
-namespace msa
+namespace museqa
 {
     namespace benchmark
     {
@@ -22,8 +23,8 @@ namespace msa
         template <typename T, typename R = std::ratio<1>>
         struct duration : public std::chrono::duration<T, R>
         {
-            using ratio = R;        /// The time ratio in relation to seconds.
-            using value_type = T;   /// The scalar type to represent duration.
+            using ratio = R;            /// The time ratio in relation to seconds.
+            using value_type = T;       /// The scalar type to represent duration.
             
             using std::chrono::duration<T, R>::duration;
 
