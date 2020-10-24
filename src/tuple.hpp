@@ -1,16 +1,17 @@
 /** 
- * Multiple Sequence Alignment tuple header file.
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file A multiple type tuple and functional helpers.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018-2019 Rodrigo Siqueira
+ * @copyright 2018-present Rodrigo Siqueira
  */
 #pragma once
 
 #include <cstdint>
 #include <utility>
 
-#include <utils.hpp>
+#include "utils.hpp"
 
-namespace msa
+namespace museqa
 {
     namespace detail
     {
@@ -26,7 +27,6 @@ namespace msa
             struct leaf
             {
                 using element_type = T;         /// The leaf's element type.
-
                 element_type value;             /// The value held by the current leaf.
 
                 __host__ __device__ inline constexpr leaf() noexcept = default;
@@ -93,7 +93,6 @@ namespace msa
             struct leaf<I, T&>
             {
                 using element_type = T&;        /// The leaf's element type.
-
                 element_type value;             /// The value held by the current leaf.
 
                 __host__ __device__ inline constexpr leaf() noexcept = default;
@@ -134,7 +133,7 @@ namespace msa
                 __host__ __device__ inline leaf& operator=(const leaf&) = default;
                 __host__ __device__ inline leaf& operator=(leaf&&) = default;
             };
-        
+
             /**#@+
              * The base for a type tuple.
              * @tparam I The indeces for the tuple members.
@@ -420,7 +419,7 @@ namespace msa
              */
             template <typename T, size_t ...I>
             constexpr auto repeater(indexer<I...>) noexcept
-            -> msa::tuple<identity<T, I>...>;
+            -> museqa::tuple<identity<T, I>...>;
         }
     }
 
@@ -508,13 +507,13 @@ namespace msa
              * @return The new tuple of references.
              */
             template <typename ...T>
-            __host__ __device__ inline constexpr auto tie(T&... arg) noexcept -> msa::tuple<T&...>
+            __host__ __device__ inline constexpr auto tie(T&... arg) noexcept -> museqa::tuple<T&...>
             {
                 return {arg...};
             }
 
             template <typename T, size_t N>
-            __host__ __device__ inline constexpr auto tie(T (&arg)[N]) noexcept -> msa::ntuple<T&, N>
+            __host__ __device__ inline constexpr auto tie(T (&arg)[N]) noexcept -> museqa::ntuple<T&, N>
             {
                 return {arg};
             }
@@ -557,7 +556,7 @@ namespace msa
              */
             template <size_t ...I, typename ...T>
             __host__ __device__ inline constexpr auto init(const base<indexer<0, I...>, T...>& tp) noexcept
-            -> msa::tuple<decltype(type<I - 1>(std::declval<decltype(tp)>()))...>
+            -> museqa::tuple<decltype(type<I - 1>(std::declval<decltype(tp)>()))...>
             {
                 return {get<I - 1>(tp)...};
             }
@@ -571,7 +570,7 @@ namespace msa
              */
             template <size_t ...I, typename ...T>
             __host__ __device__ inline constexpr auto tail(const base<indexer<0, I...>, T...>& tp) noexcept
-            -> msa::tuple<decltype(type<I>(std::declval<decltype(tp)>()))...>
+            -> museqa::tuple<decltype(type<I>(std::declval<decltype(tp)>()))...>
             {
                 return {get<I>(tp)...};
             }
@@ -585,8 +584,8 @@ namespace msa
              * @return A concatenated tuple of all others.
              */
             template <typename ...T>
-            __host__ __device__ inline constexpr auto concat(const msa::tuple<T...>& zero) noexcept
-            -> msa::tuple<T...>
+            __host__ __device__ inline constexpr auto concat(const museqa::tuple<T...>& zero) noexcept
+            -> museqa::tuple<T...>
             {
                 return zero;
             }
@@ -596,11 +595,10 @@ namespace msa
                     const base<indexer<I...>, T...>& a
                 ,   const base<indexer<J...>, U...>& b
                 ,   const R&... tail
-                )
-                noexcept
-            -> decltype(concat(std::declval<msa::tuple<T..., U...>>(), std::declval<R>()...))
+                ) noexcept
+            -> decltype(concat(std::declval<museqa::tuple<T..., U...>>(), std::declval<R>()...))
             {
-                using merged_tuple = msa::tuple<T..., U...>;
+                using merged_tuple = museqa::tuple<T..., U...>;
                 return concat(merged_tuple {get<I>(a)..., get<J>(b)...}, tail...);
             }
             /**#@-*/
@@ -622,7 +620,7 @@ namespace msa
                 ,   const base<indexer<I...>, T...>& tp
                 ,   const A&... args
                 )
-            -> msa::tuple<decltype(lambda(std::declval<T>(), std::declval<A>()...))...>
+            -> museqa::tuple<decltype(lambda(std::declval<T>(), std::declval<A>()...))...>
             {
                 return {lambda(get<I>(tp), args...)...};
             }
@@ -638,13 +636,13 @@ namespace msa
              * @return The final value.
              */
             template <typename F, typename B>
-            __host__ __device__ inline constexpr B foldl(F&&, const B& zero, const msa::tuple<>&)
+            __host__ __device__ inline constexpr B foldl(F&&, const B& zero, const museqa::tuple<>&)
             {
                 return zero;
             }
 
             template <typename F, typename B, typename ...T>
-            __host__ __device__ inline constexpr B foldl(F&& lambda, const B& zero, const msa::tuple<T...>& tp)
+            __host__ __device__ inline constexpr B foldl(F&& lambda, const B& zero, const museqa::tuple<T...>& tp)
             {
                 return foldl(lambda, lambda(zero, head(tp)), tail(tp));
             }
@@ -661,13 +659,13 @@ namespace msa
              * @return The final value.
              */
             template <typename F, typename B>
-            __host__ __device__ inline constexpr B foldr(F&&, const B& zero, const msa::tuple<>&)
+            __host__ __device__ inline constexpr B foldr(F&&, const B& zero, const museqa::tuple<>&)
             {
                 return zero;
             }
 
             template <typename F, typename B, typename ...T>
-            __host__ __device__ inline constexpr B foldr(F&& lambda, const B& zero, const msa::tuple<T...>& tp)
+            __host__ __device__ inline constexpr B foldr(F&& lambda, const B& zero, const museqa::tuple<T...>& tp)
             {
                 return lambda(head(tp), foldr(lambda, zero, tail(tp)));
             }
@@ -686,7 +684,7 @@ namespace msa
              */
             template <typename F, typename B>
             __host__ __device__ inline constexpr auto scanl(F&&, const B& zero, const base<indexer<>>&)
-            -> msa::tuple<B>
+            -> museqa::tuple<B>
             {
                 return {zero};
             }
@@ -697,7 +695,7 @@ namespace msa
                 ,   const B& zero
                 ,   const base<indexer<I...>, T...>& tp
                 )
-            -> msa::tuple<B, identity<B, I>...>
+            -> museqa::tuple<B, identity<B, I>...>
             {
                 return {zero, get<I>(scanl(lambda, lambda(zero, head(tp)), tail(tp)))...};
             }
@@ -716,7 +714,7 @@ namespace msa
              */
             template <typename F, typename B>
             __host__ __device__ inline constexpr auto scanr(F&&, const B& zero, const base<indexer<>>&)
-            -> msa::tuple<B>
+            -> museqa::tuple<B>
             {
                 return {zero};
             }
@@ -727,7 +725,7 @@ namespace msa
                 ,   const B& zero
                 ,   const base<indexer<I...>, T...>& tp
                 )
-            -> msa::tuple<identity<B, I>..., B>
+            -> museqa::tuple<identity<B, I>..., B>
             {
                 return {get<I>(scanr(lambda, lambda(head(tp), zero), tail(tp)))..., zero};
             }
@@ -748,9 +746,9 @@ namespace msa
                     const base<indexer<I...>, T...>& a
                 ,   const base<indexer<I...>, U...>& b
                 )
-            -> msa::tuple<msa::tuple<T, U>...>
+            -> museqa::tuple<museqa::tuple<T, U>...>
             {
-                return {msa::tuple<T, U> {get<I>(a), get<I>(b)}...};
+                return {museqa::tuple<T, U> {get<I>(a), get<I>(b)}...};
             }
 
             /**
@@ -771,7 +769,7 @@ namespace msa
                 ,   const base<indexer<I...>, T...>& a
                 ,   const base<indexer<I...>, U...>& b
                 )
-            -> msa::tuple<decltype(lambda(std::declval<T>(), std::declval<U>()))...>
+            -> museqa::tuple<decltype(lambda(std::declval<T>(), std::declval<U>()))...>
             {
                 return {lambda(get<I>(a), get<I>(b))...};
             }
@@ -782,7 +780,7 @@ namespace msa
     {
         /*
          * Including tuple functions in the utility namespace. This gives these
-         * functions a higher accessibility, usubility and a shorter name.
+         * functions a higher accessibility, usability and shorter names.
          */
         using detail::tuple::tie;
         using detail::tuple::zip;
