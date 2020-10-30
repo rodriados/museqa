@@ -1,18 +1,19 @@
-/** 
- * Multiple Sequence Alignment sequence encoder header file.
+/**
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Biological sequence encoder and compresser.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018-2019 Rodrigo Siqueira
+ * @copyright 2018-present Rodrigo Siqueira
  */
 #pragma once
 
 #include <string>
 #include <cstdint>
 
-#include <utils.hpp>
-#include <buffer.hpp>
-#include <format.hpp>
+#include "utils.hpp"
+#include "buffer.hpp"
+#include "format.hpp"
 
-namespace msa
+namespace museqa
 {
     namespace encoder
     {
@@ -32,7 +33,7 @@ namespace msa
          * Aliases a block buffer into a more readable name.
          * @since 0.1.1
          */
-        using buffer = msa::buffer<block>;
+        using buffer = museqa::buffer<block>;
 
         /**
          * Defining the unit symbol for final of sequence.
@@ -74,7 +75,7 @@ namespace msa
 
         extern char decode(unit);
         extern std::string decode(const buffer&);
-    };
+    }
 
     namespace fmt
     {
