@@ -1,7 +1,8 @@
-/** 
- * Multiple Sequence Alignment reflection header file.
+/**
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Reflection for introspecting plain-old data structures.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018-2020 Alexandr Poltavsky, Antony Polukhin, Rodrigo Siqueira
+ * @copyright 2018-present Alexandr Poltavsky, Antony Polukhin, Rodrigo Siqueira
  */
 #pragma once
 
@@ -24,11 +25,11 @@
 #include <cstdint>
 #include <utility>
 
-#include <utils.hpp>
-#include <tuple.hpp>
-#include <environment.h>
+#include "utils.hpp"
+#include "tuple.hpp"
+#include "environment.h"
 
-#if defined(__msa_compiler_gcc)
+#if defined(__museqa_compiler_gcc)
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wnon-template-friend"
 #endif
@@ -39,7 +40,7 @@
   #endif
 #endif
 
-namespace msa
+namespace museqa
 {
     namespace detail
     {
@@ -129,9 +130,9 @@ namespace msa
                 struct loophole_invoker;
 
                 template <size_t ...I, typename T>
-                struct loophole_invoker<indexer<I...>, T> : msa::tuple<decltype(T {loophole<T, I> {}...}, 0)>
+                struct loophole_invoker<indexer<I...>, T> : museqa::tuple<decltype(T {loophole<T, I> {}...}, 0)>
                 {
-                    using type = msa::tuple<decltype(loop(tag<T, I> {}))...>;
+                    using type = museqa::tuple<decltype(loop(tag<T, I> {}))...>;
                 };
                 /**#@-*/
 
@@ -211,8 +212,8 @@ namespace msa
              * @since 0.1.1
              */
             template <typename ...T>
-            static constexpr auto aligned(msa::tuple<T...>) noexcept
-            -> msa::tuple<storage<sizeof(T), alignof(T)>...>;
+            static constexpr auto aligned(museqa::tuple<T...>) noexcept
+            -> museqa::tuple<storage<sizeof(T), alignof(T)>...>;
 
             /**
              * Helper for creating a tuple with references to object values.
@@ -220,8 +221,8 @@ namespace msa
              * @since 0.1.1
              */
             template <typename ...T>
-            static constexpr auto reference(msa::tuple<T...>) noexcept
-            -> msa::tuple<T&...>;
+            static constexpr auto reference(museqa::tuple<T...>) noexcept
+            -> museqa::tuple<T&...>;
         }
     }
 
@@ -248,7 +249,7 @@ namespace msa
              */
             template <typename ...T>
             static constexpr auto reflect(T&...) noexcept
-            -> decltype(utils::concat(std::declval<msa::ntuple<
+            -> decltype(utils::concat(std::declval<museqa::ntuple<
                     typename std::remove_all_extents<T>::type
                 ,   utils::max(std::extent<T>::value, 1ul)
                 >>()...));
@@ -363,6 +364,6 @@ namespace msa
     };
 }
 
-#if defined(__msa_compiler_gcc)
+#if defined(__museqa_compiler_gcc)
   #pragma GCC diagnostic pop
 #endif
