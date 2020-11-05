@@ -1,7 +1,8 @@
 /**
- * Multiple Sequence Alignment sequences database header file.
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Implementation for a database of sequences to be aligned.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018-2019 Rodrigo Siqueira
+ * @copyright 2018-present Rodrigo Siqueira
  */
 #pragma once
 
@@ -10,11 +11,11 @@
 #include <string>
 #include <vector>
 
-#include <format.hpp>
-#include <sequence.hpp>
-#include <exception.hpp>
+#include "format.hpp"
+#include "sequence.hpp"
+#include "exception.hpp"
 
-namespace msa
+namespace museqa
 {
     /**
      * Stores a list of sequences read from possibly different sources. The added

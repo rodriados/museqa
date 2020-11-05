@@ -1,19 +1,20 @@
-/** 
- * Multiple Sequence Alignment sequence header file.
+/**
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Biologic sequence storage and representation.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018-2019 Rodrigo Siqueira
+ * @copyright 2018-present Rodrigo Siqueira
  */
 #pragma once
 
 #include <string>
 #include <cstdint>
 
-#include <utils.hpp>
-#include <buffer.hpp>
-#include <format.hpp>
-#include <encoder.hpp>
+#include "utils.hpp"
+#include "buffer.hpp"
+#include "format.hpp"
+#include "encoder.hpp"
 
-namespace msa
+namespace museqa
 {
     /**
      * Holds an enconded sequence. The encoding pattern will used throughout all
