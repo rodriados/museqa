@@ -1,13 +1,14 @@
 /**
- * Multiple Sequence Alignment hierarchy header file.
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Implements a base for a general hierarchical data structure.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2020 Rodrigo Siqueira
+ * @copyright 2020-present Rodrigo Siqueira
  */
 #pragma once
 
 #include <utility>
 
-namespace msa
+namespace museqa
 {
     /**
      * A node for a general hierarchical data structure.
