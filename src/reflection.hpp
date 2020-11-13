@@ -1,6 +1,6 @@
 /**
  * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
- * @file Reflection for introspecting plain-old data structures.
+ * @file Implements reflection for introspecting plain-old data structures.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018-present Alexandr Poltavsky, Antony Polukhin, Rodrigo Siqueira
  */

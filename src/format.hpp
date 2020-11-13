@@ -1,6 +1,6 @@
 /**
  * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
- * @file String formatting and printing functions.
+ * @file Implements string formatting and printing functions.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2019-present Rodrigo Siqueira
  */

@@ -1,6 +1,6 @@
 /**
  * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
- * @file OEIS's sequences generator functions.
+ * @file Implements OEIS's sequences generator functions.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2020-present Rodrigo Siqueira
  */

@@ -1,6 +1,6 @@
 /** 
  * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
- * @file The MPI cluster's node identifiers and values.
+ * @file Implements MPI cluster's node identifiers and values.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018-present Rodrigo Siqueira
  */

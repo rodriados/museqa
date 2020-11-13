@@ -1,6 +1,6 @@
 /** 
  * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
- * @file A multiple type tuple and functional helpers.
+ * @file Implements a multiple type tuple and functional helpers.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018-present Rodrigo Siqueira
  */

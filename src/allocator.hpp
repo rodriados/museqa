@@ -1,13 +1,15 @@
 /**
  * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
- * @file The base for generic type allocators.
+ * @file Implements the base for generic type allocators.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2019-present Rodrigo Siqueira
  */
 #pragma once
 
 #include <utility>
-#include <utils.hpp>
+
+#include "utils.hpp"
+#include "functor.hpp"
 
 namespace museqa
 {
