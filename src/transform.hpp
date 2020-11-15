@@ -1,16 +1,17 @@
-/**
- * Multiple Sequence Alignment space transformation header file.
+/** 
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Implements transformations for spatial data structures.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2020 Rodrigo Siqueira
+ * @copyright 2020-present Rodrigo Siqueira
  */
 #pragma once
 
 #include <cstdint>
 
-#include <point.hpp>
-#include <utils.hpp>
+#include "point.hpp"
+#include "utils.hpp"
 
-namespace msa
+namespace museqa
 {
     namespace transform
     {

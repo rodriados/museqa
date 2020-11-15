@@ -1,19 +1,20 @@
-/**
- * Multiple Sequence Alignment space header file.
+/** 
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Implements a coordinate system for a n-dimensional space.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2020 Rodrigo Siqueira
+ * @copyright 2020-present Rodrigo Siqueira
  */
 #pragma once
 
 #include <cstdint>
 
-#include <point.hpp>
-#include <tuple.hpp>
-#include <utils.hpp>
-#include <exception.hpp>
-#include <transform.hpp>
+#include "point.hpp"
+#include "tuple.hpp"
+#include "utils.hpp"
+#include "exception.hpp"
+#include "transform.hpp"
 
-namespace msa
+namespace museqa
 {
     namespace detail
     {

@@ -1,18 +1,19 @@
-/**
- * Multiple Sequence Alignment point header file.
+/** 
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Implements a n-dimensional point data structure.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2020 Rodrigo Siqueira
+ * @copyright 2020-present Rodrigo Siqueira
  */
 #pragma once
 
 #include <cstdint>
 #include <utility>
 
-#include <tuple.hpp>
-#include <utils.hpp>
-#include <exception.hpp>
+#include "tuple.hpp"
+#include "utils.hpp"
+#include "exception.hpp"
 
-namespace msa
+namespace museqa
 {
     /**
      * Represents a D-dimensional point.

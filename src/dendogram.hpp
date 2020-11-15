@@ -1,7 +1,8 @@
-/**
- * Multiple Sequence Alignment dendogram header file.
+/** 
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Implements a hierarchical-like dendogram data structure.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2020 Rodrigo Siqueira
+ * @copyright 2020-present Rodrigo Siqueira
  */
 #pragma once
 
@@ -9,11 +10,11 @@
 #include <cstdint>
 #include <utility>
 
-#include <buffer.hpp>
-#include <allocator.hpp>
-#include <hierarchy.hpp>
+#include "buffer.hpp"
+#include "allocator.hpp"
+#include "hierarchy.hpp"
 
-namespace msa
+namespace museqa
 {
     namespace detail
     {
@@ -36,8 +37,8 @@ namespace msa
 
                 static constexpr distance_type farthest = std::numeric_limits<distance_type>::max();
 
-                distance_type distance = farthest;  /// The distance from this node to its parent.
-                uint32_t level = 0;                 /// The node's level or height in dendogram.
+                distance_type distance = farthest;      /// The distance from this node to its parent.
+                uint32_t level = 0;                     /// The node's level or height in dendogram.
             };
         }
     }
@@ -103,7 +104,7 @@ namespace msa
              * @param leaves The number of points in dendogram.
              * @return The newly created dendogram instance.
              */
-            static inline dendogram make(const msa::allocator& allocator, uint32_t leaves) noexcept
+            static inline dendogram make(const museqa::allocator& allocator, uint32_t leaves) noexcept
             {
                 return dendogram {underlying_buffer::make(allocator, (leaves << 1) - 1), leaves};
             }
