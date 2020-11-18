@@ -1,19 +1,20 @@
-/**
- * Multiple Sequence Alignment matrix header file.
+/** 
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Implements a generic spatial storage matrix data structure.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2019-2020 Rodrigo Siqueira
+ * @copyright 2019-present Rodrigo Siqueira
  */
 #pragma once
 
 #include <utility>
 
-#include <point.hpp>
-#include <space.hpp>
-#include <utils.hpp>
-#include <buffer.hpp>
-#include <transform.hpp>
+#include "point.hpp"
+#include "space.hpp"
+#include "utils.hpp"
+#include "buffer.hpp"
+#include "transform.hpp"
 
-namespace msa
+namespace museqa
 {
     /**
      * Creates a general-purpose bi-dimensional buffer. The matrix stores all
@@ -27,7 +28,7 @@ namespace msa
     {
         protected:
             using underlying_buffer = buffer<E>;
-            using space_type = msa::space<2, size_t, T>;
+            using space_type = museqa::space<2, size_t, T>;
 
         public:
             using element_type = typename underlying_buffer::element_type;
@@ -159,7 +160,7 @@ namespace msa
              * @param space The matrix's space dimensions.
              * @return The newly created matrix instance.
              */
-            static inline matrix make(const msa::allocator& allocator, const space_type& space) noexcept
+            static inline matrix make(const museqa::allocator& allocator, const space_type& space) noexcept
             {
                 return matrix {pointer_type::make(allocator, space.volume()), space};
             }
