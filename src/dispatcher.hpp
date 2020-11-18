@@ -1,15 +1,16 @@
-/** 
- * Multiple Sequence Alignment dispatcher header file.
+/**
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Implements a string and index key-value dispatcher.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2020 Rodrigo Siqueira
+ * @copyright 2020-present Rodrigo Siqueira
  */
 #include <map>
 #include <string>
 #include <vector>
 
-#include <exception.hpp>
+#include "exception.hpp"
 
-namespace msa
+namespace museqa
 {
     /**
      * Maps elements of given type to a string identificator.
