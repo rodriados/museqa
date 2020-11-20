@@ -1,7 +1,8 @@
 /**
- * Multiple Sequence Alignment pairwise header file.
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Implements the pairwise module's functionality.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018-2020 Rodrigo Siqueira
+ * @copyright 2018-present Rodrigo Siqueira
  */
 #pragma once
 
@@ -9,19 +10,16 @@
 #include <vector>
 #include <cstdint>
 
-#include <io.hpp>
-#include <cuda.cuh>
-#include <point.hpp>
-#include <utils.hpp>
-#include <buffer.hpp>
-#include <matrix.hpp>
-#include <pointer.hpp>
-#include <database.hpp>
-#include <pipeline.hpp>
-#include <bootstrap.hpp>
-#include <environment.h>
+#include "cuda.cuh"
+#include "utils.hpp"
+#include "point.hpp"
+#include "buffer.hpp"
+#include "matrix.hpp"
+#include "functor.hpp"
+#include "pointer.hpp"
+#include "database.hpp"
 
-namespace msa
+namespace museqa
 {
     namespace pairwise
     {
@@ -179,7 +177,7 @@ namespace msa
          */
         struct context
         {
-            const msa::database& db;
+            const museqa::database& db;
             const scoring_table& table;
         };
 
@@ -214,61 +212,6 @@ namespace msa
         };
 
         /**
-         * Defines the module's conduit. This conduit is composed of the sequences
-         * to be aligned and their pairwise distance matrix.
-         * @since 0.1.1
-         */
-        struct conduit : public pipeline::conduit
-        {
-            const pointer<msa::database> db;        /// The loaded sequences' database.
-            const distance_matrix distances;        /// The sequences' pairwise distances.
-            const size_t total;                     /// The total number of sequences.
-
-            inline conduit() noexcept = delete;
-            inline conduit(const conduit&) = default;
-            inline conduit(conduit&&) = default;
-
-            /**
-             * Instantiates a new conduit.
-             * @param db The sequence database to transfer to the next module.
-             * @param dmat The database's resulting pairwise distance matrix.
-             */
-            inline conduit(const pointer<msa::database>& db, const distance_matrix& dmat) noexcept
-            :   db {db}
-            ,   distances {dmat}
-            ,   total {db->count()}
-            {}
-
-            inline conduit& operator=(const conduit&) = delete;
-            inline conduit& operator=(conduit&&) = delete;
-        };
-
-        /**
-         * Defines the module's pipeline manager. This object will be the one responsible
-         * for checking and managing the module's execution when on a pipeline.
-         * @since 0.1.1
-         */
-        struct module : public pipeline::module
-        {
-            typedef bootstrap::module previous;     /// Indicates the expected previous module.
-            typedef pairwise::conduit conduit;      /// The module's conduit type.
-
-            using pipe = pointer<pipeline::conduit>;
-            
-            /**
-             * Returns an string identifying the module's name.
-             * @return The module's name.
-             */
-            inline auto name() const -> const char * override
-            {
-                return "pairwise";
-            }
-
-            auto run(const io::service&, const pipe&) const -> pipe override;
-            auto check(const io::service&) const -> bool override;
-        };
-
-        /**
          * Runs the module when not on a pipeline.
          * @param db The database of sequences to align.
          * @param table The chosen scoring table.
@@ -276,7 +219,7 @@ namespace msa
          * @return The chosen algorithm's resulting distance matrix.
          */
         inline distance_matrix run(
-                const msa::database& db
+                const museqa::database& db
             ,   const scoring_table& table
             ,   const std::string& algorithm = "default"
             )

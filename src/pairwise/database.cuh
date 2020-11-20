@@ -1,25 +1,27 @@
 /**
- * Multiple Sequence Alignment pairwise database header file.
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Implements a pairwise-specialized sequence database.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018-2020 Rodrigo Siqueira
+ * @copyright 2018-present Rodrigo Siqueira
  */
 #pragma once
 
-#include <cuda.cuh>
-#include <buffer.hpp>
-#include <pointer.hpp>
-#include <database.hpp>
-#include <sequence.hpp>
+#include <cstdint>
 
-namespace msa
+#include "cuda.cuh"
+#include "buffer.hpp"
+#include "database.hpp"
+#include "sequence.hpp"
+
+namespace museqa
 {
     namespace pairwise
     {
         /**
          * Stores a list of sequences from a database as a single contiguous sequence.
          * No description nor any other metadata will be stored alongside the sequences,
-         * which will all solely be identified by their indeces. These indeces
-         * will be kept the same as in the original database.
+         * which will all solely be identified by their indeces. These indeces will
+         * be kept the same as in the original database.
          * @since 0.1.1
          */
         class database : public sequence
@@ -43,7 +45,7 @@ namespace msa
                  * Initializes a contiguous database from a common database instance.
                  * @param db The database to be transformed.
                  */
-                inline database(const msa::database& db) noexcept
+                inline database(const museqa::database& db) noexcept
                 :   underlying_type {merge(db)}
                 ,   m_views {init(*this, db)}
                 {}
@@ -84,8 +86,8 @@ namespace msa
                 ,   m_views {views}
                 {}
 
-                static auto init(underlying_type&, const msa::database&) -> entry_buffer;
-                static auto merge(const msa::database&) -> underlying_type;
+                static auto init(underlying_type&, const museqa::database&) -> entry_buffer;
+                static auto merge(const museqa::database&) -> underlying_type;
         };
     }
 }

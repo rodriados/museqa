@@ -1,20 +1,21 @@
 /**
- * Multiple Sequence Alignment pairwise scoring tables file.
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Implementation for the pairwise module's scoring table.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018-2019 Rodrigo Siqueira
+ * @copyright 2018-present Rodrigo Siqueira
  */
 #include <string>
+#include <vector>
 #include <cstdint>
 
-#include <msa.hpp>
-#include <cuda.cuh>
-#include <pointer.hpp>
-#include <exception.hpp>
-#include <dispatcher.hpp>
+#include "cuda.cuh"
+#include "pointer.hpp"
+#include "exception.hpp"
+#include "dispatcher.hpp"
 
-#include <pairwise/pairwise.cuh>
+#include "pairwise/pairwise.cuh"
 
-namespace msa
+namespace museqa
 {
     /**
      * Aliasing the scoring table's raw type in order to avoid excessive verbosity

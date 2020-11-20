@@ -1,16 +1,15 @@
 /**
- * Multiple Sequence Alignment needleman header file.
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Implements the pairwise module's needleman algorithm.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018-2020 Rodrigo Siqueira
+ * @copyright 2018-present Rodrigo Siqueira
  */
 #pragma once
 
-#include <buffer.hpp>
-#include <pointer.hpp>
+#include "buffer.hpp"
+#include "pairwise/pairwise.cuh"
 
-#include <pairwise/pairwise.cuh>
-
-namespace msa
+namespace museqa
 {
     namespace pairwise
     {

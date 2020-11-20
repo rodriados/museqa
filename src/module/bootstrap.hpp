@@ -31,6 +31,8 @@ namespace museqa
         struct bootstrap : public pipeline::module
         {
             struct conduit;                             /// The module's conduit type.
+
+            typedef void previous;                      /// The expected previous module.
             typedef pointer<pipeline::conduit> pipe;    /// The generic conduit type alias.
 
             /**

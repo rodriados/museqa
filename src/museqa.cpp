@@ -98,7 +98,7 @@ namespace museqa
          * module produces a distance matrix of sequences in relation to all others.
          * @since 0.1.1
          */
-        struct pairwise : public museqa::pairwise::module
+        struct pairwise : public museqa::module::pairwise
         {
             /**
              * Executes the pipeline module's logic.

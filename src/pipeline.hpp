@@ -98,7 +98,7 @@ namespace museqa
                 using previous = typename T::previous;
 
                 return (std::is_same<previous, P>::value || std::is_base_of<previous, P>::value)
-                    && std::is_base_of<msa::pipeline::module, T>::value
+                    && std::is_base_of<museqa::pipeline::module, T>::value
                     && chainable<T, U...>();
             }
             /**#@-*/
@@ -125,7 +125,7 @@ namespace museqa
 
             protected:
                 using module_tuple = tuple<T...>;               /// The tuple of chained modules types.
-                using conduit = pointer<pipeline::conduit>;     /// The return type expected from modules.
+                using pipe = pointer<pipeline::conduit>;        /// The return type expected from modules.
 
             public:
                 /**
@@ -133,15 +133,18 @@ namespace museqa
                  * @param io The pipeline's IO service instance.
                  * @return The last module's resulting value.
                  */
-                inline auto run(const io::service& io) const -> conduit
+                inline auto run(const io::service& io) const -> pipe
                 {
-                    const module *modules[count] = {new T()...};
-                    auto ptr = pointer<decltype(modules)> {modules};
+                    const module *ptr[count];
+                    const module_tuple modules = {};
 
-                    if(!verify(&ptr, io))
+                    auto extract = [](const module& m) { return &m; };
+                    utils::tie(ptr) = utils::apply(extract, modules);
+
+                    if(!verify(ptr, io))
                         throw exception {"pipeline verification failed"};
 
-                    return execute(&ptr, io);
+                    return execute(ptr, io);
                 }
 
             protected:
@@ -167,9 +170,9 @@ namespace museqa
                  * @param io The pipeline's IO service instance.
                  * @return The pipeline's final module's result.
                  */
-                inline virtual conduit execute(const module *modules[], const io::service& io) const
+                inline virtual pipe execute(const module *modules[], const io::service& io) const
                 {
-                    auto previous = conduit {};
+                    auto previous = pipe {};
 
                     for(size_t i = 0; i < count; ++i)
                         previous = std::move(modules[i]->run(io, previous));
