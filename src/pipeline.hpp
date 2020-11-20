@@ -1,19 +1,20 @@
 /**
- * Multiple Sequence Alignment pipeline header file.
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Implements an interface for pipelines of modules.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018-2019 Rodrigo Siqueira
+ * @copyright 2020-present Rodrigo Siqueira
  */
 #pragma once
 
 #include <utility>
 
-#include <io.hpp>
-#include <tuple.hpp>
-#include <utils.hpp>
-#include <pointer.hpp>
-#include <exception.hpp>
+#include "io.hpp"
+#include "tuple.hpp"
+#include "utils.hpp"
+#include "pointer.hpp"
+#include "exception.hpp"
 
-namespace msa
+namespace museqa
 {
     namespace pipeline
     {
@@ -134,16 +135,13 @@ namespace msa
                  */
                 inline auto run(const io::service& io) const -> conduit
                 {
-                    const module_tuple modules = {};
-                    const module *modptr[count];
+                    const module *modules[count] = {new T()...};
+                    auto ptr = pointer<decltype(modules)> {modules};
 
-                    auto extract = [](const module& mod) { return &mod; };
-                    utils::tie(modptr) = utils::apply(extract, modules);
-
-                    if(!verify(modptr, io))
+                    if(!verify(&ptr, io))
                         throw exception {"pipeline verification failed"};
 
-                    return execute(modptr, io);
+                    return execute(&ptr, io);
                 }
 
             protected:
