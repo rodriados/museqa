@@ -1,20 +1,22 @@
 /**
- * Multiple Sequence Alignment bootstrap module file.
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Implementation for the heuristic's bootstrap module.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2020 Rodrigo Siqueira
+ * @copyright 2020-present Rodrigo Siqueira
  */
 #include <vector>
 
-#include <mpi.hpp>
-#include <utils.hpp>
-#include <tuple.hpp>
-#include <encoder.hpp>
-#include <pointer.hpp>
-#include <database.hpp>
-#include <sequence.hpp>
-#include <bootstrap.hpp>
+#include "mpi.hpp"
+#include "utils.hpp"
+#include "tuple.hpp"
+#include "encoder.hpp"
+#include "pointer.hpp"
+#include "database.hpp"
+#include "sequence.hpp"
 
-namespace msa
+#include "module/bootstrap.hpp"
+
+namespace museqa
 {
     namespace
     {
@@ -35,36 +37,13 @@ namespace msa
         }
 
         /**
-         * Serializes a database instance to a tuple with the database's flattened
-         * contents and its repective sequences' lengths. The sequences' descriptions,
-         * though, are not serialized and thus their contents are lost.
-         * @param db The database to be serializable.
-         * @return The serialized database's contents.
-         */
-        static auto serialize(const pointer<database>& db) -> decltype(auto)
-        {
-            std::vector<size_t> size;
-            std::vector<encoder::block> block;
-
-            for(const auto& entry : *db) {
-                size.push_back(entry.contents.size());
-                block.insert(block.end(), entry.contents.begin(), entry.contents.end());
-            }
-
-            return tuple<
-                    std::vector<size_t>
-                ,   std::vector<encoder::block>
-                > {size, block};
-        }
-
-        /**
-         * Unserializes a database from its flattened components and rebuilds an
-         * instance with the exact sequence contents as before serialization.
+         * Unpacks a database from its flattened components and rebuilds an instance
+         * with the exact sequence contents as before serialization.
          * @param sizes The list of serialized sequences sizes.
          * @param blocks The flattened database blocks.
          * @return The reconstructed database.
          */
-        static auto unserialize(
+        static auto unpack(
                 const std::vector<size_t>& sizes
             ,   const std::vector<encoder::block>& blocks
             )
@@ -81,7 +60,7 @@ namespace msa
         }
     }
 
-    namespace bootstrap
+    namespace module
     {
         /**
          * Runs the bootstrap module. This method shall solely load the sequence
@@ -89,28 +68,28 @@ namespace msa
          * @param io The pipeline's IO service instance.
          * @return A conduit with the module's processed results.
          */
-        auto module::run(const io::service& io, const module::pipe&) const -> module::pipe
+        auto bootstrap::run(const io::service& io, const bootstrap::pipe&) const -> bootstrap::pipe
         {
             pointer<database> db;
             std::vector<size_t> sizes;
             std::vector<encoder::block> blocks;
 
-            onlymaster {
-                db = load(io);
-                utils::tie(sizes, blocks) = serialize(db);
+            onlymaster db = load(io);
+
+            onlymaster for(const auto& entry : *db) {
+                size.push_back(entry.contents.size());
+                block.insert(block.end(), entry.contents.begin(), entry.contents.end());
             }
 
             sizes = mpi::broadcast(sizes);
             blocks = mpi::broadcast(blocks);
 
-            onlyslaves {
-                db = unserialize(sizes, blocks);
-            }
+            onlyslaves db = unpack(sizes, blocks);
 
-            auto ptr = new module::conduit {db};
+            auto ptr = new bootstrap::conduit {db};
             mpi::barrier();
 
-            return module::pipe {ptr};
+            return bootstrap::pipe {ptr};
         }
     }
 }

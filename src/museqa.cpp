@@ -64,7 +64,7 @@ namespace museqa
          * files given via command line and feeds to following module.
          * @since 0.1.1
          */
-        struct bootstrap : public museqa::bootstrap::module
+        struct bootstrap : public museqa::module::bootstrap
         {
             /**
              * Executes the pipeline module's logic.
@@ -74,7 +74,7 @@ namespace museqa
              */
             auto run(const io::service& io, const step::pipe& pipe) const -> step::pipe override
             {
-                auto mresult = museqa::bootstrap::module::run(io, pipe);
+                auto mresult = museqa::module::bootstrap::run(io, pipe);
                 auto conduit = pipeline::convert<bootstrap>(*mresult);
 
                 onlymaster if(conduit.total > 0)

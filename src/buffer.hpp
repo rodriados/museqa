@@ -157,7 +157,7 @@ namespace museqa
              * Exposes the buffer's internal allocator instance.
              * @return The buffer's internal allocator.
              */
-            __host__ __device__ inline msa::allocator allocator() const noexcept
+            __host__ __device__ inline museqa::allocator allocator() const noexcept
             {
                 return m_ptr.allocator();
             }
@@ -218,7 +218,7 @@ namespace museqa
              * @param size The buffer's number of elements.
              * @return The newly created buffer instance.
              */
-            static inline buffer make(const msa::allocator& allocator, size_t size = 1) noexcept
+            static inline buffer make(const museqa::allocator& allocator, size_t size = 1) noexcept
             {
                 return buffer {pointer_type::make(allocator, size), size};
             }
