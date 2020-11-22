@@ -16,22 +16,6 @@
 
 namespace museqa
 {
-    namespace detail
-    {
-        namespace space
-        {
-            /*
-             * Forward-declaration of collapse and volume proxy functions. These
-             * functions are available for use inside the space class.
-             */
-            template <size_t D, typename T, typename U>
-            __host__ __device__ inline constexpr T collapse(const point<D, T>&, const point<D, U>&) noexcept;
-
-            template <size_t D, typename T>
-            __host__ __device__ inline constexpr T volume(const point<D, T>&) noexcept;
-        }
-    }
-
     /**
      * Represents a D-dimensional space.
      * @tparam D The space's dimensionality.
@@ -91,17 +75,6 @@ namespace museqa
         }
 
         /**
-         * Collapses a multidimensional space onto an 1-dimensional untransformed
-         * point value. This allows any space to be mapped linearly.
-         * @param target The target point to collapse the space onto.
-         * @return The 1-dimensional collapsed linear value.
-         */
-        __host__ __device__ inline constexpr dimension_type direct(const point_type& target) const noexcept
-        {
-            return detail::space::collapse(dim, target);
-        }
-
-        /**
          * Informs the space's projection dimensions. These dimensions, though,
          * may be different from those represented internally by this space.
          * @return The space's dimensions.
@@ -120,14 +93,8 @@ namespace museqa
             return dim;
         }
 
-        /**
-         * Calculates the space's total volume.
-         * @return The space volume.
-         */
-        __host__ __device__ inline constexpr dimension_type volume() const noexcept
-        {
-            return detail::space::volume(dim);
-        }
+        __host__ __device__ inline constexpr dimension_type direct(const point_type&) const noexcept;
+        __host__ __device__ inline constexpr dimension_type volume() const noexcept;
     };
 
     namespace detail
@@ -145,19 +112,28 @@ namespace museqa
              * @return The resulting 1-dimensional point value.
              */
             template <typename T, typename U>
-            __host__ __device__ inline constexpr T map(const point1<T>&, const point1<U>& target) noexcept
+            __host__ __device__ inline constexpr T collapse
+                (   const point<1, T>&
+                ,   const point<1, U>& target
+                ) noexcept
             {
                 return T {target.x};
             }
 
             template <typename T, typename U>
-            __host__ __device__ inline constexpr T map(const point2<T>& space, const point2<U>& target) noexcept
+            __host__ __device__ inline constexpr T collapse
+                (   const point<2, T>& space
+                ,   const point<2, U>& target
+                ) noexcept
             {
                 return T {target.x * space.y + target.y};
             }
 
             template <size_t D, typename T, typename U>
-            __host__ __device__ inline constexpr T map(const point<D, T>& space, const point<D, U>& target) noexcept
+            __host__ __device__ inline constexpr T collapse
+                (   const point<D, T>& space
+                ,   const point<D, U>& target
+                ) noexcept
             {
                 using namespace utils;
                 return foldl(add<T>, 0, zipwith(mul<T>, tie(target.dim), scanr(mul<T>, 1, tail(tie(space.dim)))));
@@ -171,55 +147,52 @@ namespace museqa
              * @return The space's total volume.
              */
             template <typename T>
-            __host__ __device__ inline constexpr T count(const point1<T>& target) noexcept
+            __host__ __device__ inline constexpr T volume(const point<1, T>& target) noexcept
             {
                 return target.x;
             }
 
             template <typename T>
-            __host__ __device__ inline constexpr T count(const point2<T>& target) noexcept
+            __host__ __device__ inline constexpr T volume(const point<2, T>& target) noexcept
             {
                 return target.x * target.y;
             }
 
             template <size_t D, typename T>
-            __host__ __device__ inline constexpr T count(const point<D, T>& target) noexcept
+            __host__ __device__ inline constexpr T volume(const point<D, T>& target) noexcept
             {
                 using namespace utils;
                 return foldl(mul<T>, 1, tie(target.dim));
             }
             /**#@-*/
-
-            /**
-             * Collapses a multidimensional space onto an 1-dimensional point value.
-             * @tparam D The point and space dimensionality.
-             * @tparam T The space's dimensions type.
-             * @tparam U The point's dimensions type.
-             * @param space The dimensions of the space being collapsed.
-             * @param target The point to collapse the space onto.
-             * @return The resulting 1-dimensional point value.
-             */
-            template <size_t D, typename T, typename U>
-            __host__ __device__ inline constexpr T collapse(
-                    const point<D, T>& space
-                ,   const point<D, U>& target
-                ) noexcept
-            {
-                return map(space, target);
-            }
-
-            /**
-             * Calculates the given space's total volume.
-             * @tparam D The space dimensionality.
-             * @tparam T The space's dimensions types.
-             * @param space The dimensions of the target space.
-             * @return The space's total volume.
-             */
-            template <size_t D, typename T>
-            __host__ __device__ inline constexpr T volume(const point<D, T>& space) noexcept
-            {
-                return count(space);
-            }          
         }
+    }
+
+    /**
+     * Collapses a multidimensional space onto an 1-dimensional point value.
+     * @tparam D The point and space dimensionality.
+     * @tparam T The space's dimensions type.
+     * @tparam M The space coordinates transformer.
+     * @param target The point to collapse the space onto.
+     * @return The resulting 1-dimensional point value.
+     */
+    template <size_t D, typename T, typename M>
+    __host__ __device__ inline constexpr auto space<D, T, M>::direct(const point_type& target) const noexcept
+    -> dimension_type
+    {
+        return detail::space::collapse(dim, target);
+    }
+
+    /**
+     * Calculates the space's total volume.
+     * @tparam D The space dimensionality.
+     * @tparam T The space's dimensions types.
+     * @tparam M The space coordinates transformer.
+     * @return The space's total volume.
+     */
+    template <size_t D, typename T, typename M>
+    __host__ __device__ inline constexpr auto space<D, T, M>::volume() const noexcept -> dimension_type
+    {
+        return detail::space::volume(dim);
     }
 }
