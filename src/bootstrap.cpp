@@ -14,7 +14,7 @@
 #include "database.hpp"
 #include "sequence.hpp"
 
-#include "module/bootstrap.hpp"
+#include "bootstrap.hpp"
 
 namespace museqa
 {

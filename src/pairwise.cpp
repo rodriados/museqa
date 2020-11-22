@@ -10,7 +10,7 @@
 #include "pipeline.hpp"
 #include "exception.hpp"
 
-#include "module/pairwise.cuh"
+#include "pairwise.cuh"
 
 namespace museqa
 {
