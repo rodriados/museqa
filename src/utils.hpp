@@ -215,6 +215,55 @@ namespace museqa
         }
 
         /**
+         * Converts the given string value to any other generic type.
+         * @tparam T The target type to convert to.
+         * @param value The value to be converted.
+         * @return The converted value to the requested type.
+         */
+        template <typename T>
+        inline auto convert(const std::string& value)
+        -> typename std::enable_if<std::is_convertible<std::string, T>::value, T>::value
+        {
+            return T (value);
+        }
+
+        /**
+         * Converts the given string value to an integral type.
+         * @tparam T The target type to convert to.
+         * @param value The value to be converted.
+         * @return The converted value to the requested type.
+         * @throw exception Error detected during operation.
+         */
+        template <typename T>
+        inline auto convert(const std::string& value)
+        -> typename std::enable_if<std::is_integral<T>::value, T>::type
+        try {
+            return static_cast<T>(std::stoull(value));
+        } catch(const std::invalid_argument&) {
+            throw exception {"unable to convert value to integer: '%s'", value};
+        } catch(const std::out_of_range&) {
+            throw exception {"numeric value out of range: '%s'", value};
+        }
+
+        /**
+         * Converts the given string value to a floating point type.
+         * @tparam T The target type to convert to.
+         * @param value The value to be converted.
+         * @return The converted value to the requested type.
+         * @throw exception Error detected during operation.
+         */
+        template <typename T>
+        inline auto convert(const std::string& value)
+        -> typename std::enable_if<std::is_floating_point<T>::value, T>::type
+        try {
+            return static_cast<T>(std::stold(value));
+        } catch(const std::invalid_argument&) {
+            throw exception {"unable to convert value to floating point: '%s'", value};
+        } catch(const std::out_of_range&) {
+            throw exception {"numeric value out of range: '%s'", value};
+        }
+
+        /**
          * Retrieves the given file's name's extension.
          * @param filename The file to have its extension retrieved.
          * @return The given file's extension.
