@@ -1,39 +1,41 @@
-/** 
- * Multiple Sequence Alignment parser file.
+/**
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Implementation for the loader of sequences database.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018-2019 Rodrigo Siqueira
+ * @copyright 2018-present Rodrigo Siqueira
  */
 #include <string>
 #include <vector>
 
-#include <utils.hpp>
+#include "utils.hpp"
 #include <database.hpp>
-#include <exception.hpp>
-#include <dispatcher.hpp>
+#include "exception.hpp"
+#include "dispatcher.hpp"
 
-#include <io/loader/database.hpp>
-#include <io/loader/parser/fasta.hpp>
+#include "io/loader/database.hpp"
 
-namespace msa
+using namespace museqa;
+
+namespace
 {
-    namespace
-    {
-        /**
-         * Aliases the target functor into the anonymous namespace.
-         * @since 0.1.1
-         */
-        using functor = typename io::loader<database>::functor;
+    /**
+     * Aliases the target functor into the anonymous namespace.
+     * @since 0.1.1
+     */
+    using fparser = typename io::loader<database>::functor;
 
-        /*
-         * Keeps the list of available parsers and their respective file extensions
-         * correspondence. Whenever a new parser is introduced, it must be listed.
-         */
-        static const dispatcher<functor> parser_dispatcher = {
-            {"fa", io::parser::fasta}
-        ,   {"fasta", io::parser::fasta}
-        };
-    }
+    /*
+     * Keeps the list of available parsers and their respective file extensions
+     * correspondence. Whenever a new parser is introduced, it must be listed.
+     */
+    static const dispatcher<fparser> parser_dispatcher = {
+        {"fa",    io::parser::fasta}
+    ,   {"fasta", io::parser::fasta}
+    };
+}
 
+namespace museqa
+{
     namespace io
     {
         /**
@@ -41,11 +43,11 @@ namespace msa
          * @param ext The file extension to get the corresponding parser of.
          * @return The retrieved parser functor.
          */
-        auto loader<database>::factory(const std::string& ext) const -> functor
+        auto loader<database>::factory(const std::string& ext) const -> fparser
         try {
             return parser_dispatcher[ext];
-        } catch(const exception& e) {
-            throw exception("unknown database parser '%s'", ext);
+        } catch(const exception&) {
+            throw exception {"unknown database parser '%s'", ext};
         }
 
         /**

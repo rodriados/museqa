@@ -1,21 +1,21 @@
 /**
- * Multiple Sequence Alignment IO object dumper header file.
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Implements the base for IO dumpers of data structures into files.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2020 Rodrigo Siqueira
+ * @copyright 2020-present Rodrigo Siqueira
  */
 #pragma once
 
 #include <string>
-#include <vector>
-#include <utility>
 
-#include <utils.hpp>
+#include "utils.hpp"
+#include "functor.hpp"
 
-namespace msa
+namespace museqa
 {
-    namespace detail
+    namespace io
     {
-        namespace io
+        namespace base
         {
             /**
              * The common base for a given type's file dumper.
@@ -25,7 +25,7 @@ namespace msa
             template <typename T>
             struct dumper
             {
-                using functor = msa::functor<auto(const T&, const std::string&) -> bool>;
+                using functor = museqa::functor<auto(const T&, const std::string&) -> bool>;
 
                 inline dumper() noexcept = default;
                 inline dumper(const dumper&) noexcept = default;
@@ -54,17 +54,6 @@ namespace msa
                 virtual auto list() const noexcept -> const std::vector<std::string>& = 0;
             };
         }
-    }
-
-    namespace io
-    {
-        /**
-         * The common base for all object dumpers.
-         * @tparam T The type of object to be dumped into file.
-         * @since 0.1.1
-         */
-        template <typename T>
-        using base_dumper = detail::io::dumper<T>;
 
         /**
          * Defines the generic object dumper type. This struct must be specialized
@@ -73,7 +62,7 @@ namespace msa
          * @since 0.1.1
          */
         template <typename T>
-        struct dumper : public base_dumper<T>
+        struct dumper : public base::dumper<T>
         {};
     }
 }

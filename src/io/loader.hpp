@@ -1,21 +1,22 @@
 /**
- * Multiple Sequence Alignment IO object loader header file.
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Implements the base for IO loaders of files and data structures.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2020 Rodrigo Siqueira
+ * @copyright 2020-present Rodrigo Siqueira
  */
 #pragma once
 
 #include <string>
 #include <vector>
-#include <utility>
 
-#include <utils.hpp>
+#include "utils.hpp"
+#include "functor.hpp"
 
-namespace msa
+namespace museqa
 {
-    namespace detail
+    namespace io
     {
-        namespace io
+        namespace base
         {
             /**
              * The common base for a given type's loader.
@@ -25,7 +26,7 @@ namespace msa
             template <typename T>
             struct loader
             {
-                using functor = msa::functor<auto(const std::string&) -> T>;
+                using functor = museqa::functor<auto(const std::string&) -> T>;
 
                 inline loader() noexcept = default;
                 inline loader(const loader&) noexcept = default;
@@ -54,26 +55,15 @@ namespace msa
                 virtual auto list() const noexcept -> const std::vector<std::string>& = 0;
             };
         }
-    }
-
-    namespace io
-    {
-        /**
-         * The common base for all object loaders.
-         * @tparam T The type of object to be loaded from file.
-         * @since 0.1.1
-         */
-        template <typename T>
-        using base_loader = detail::io::loader<T>;
 
         /**
-         * Defines the generic object loader type. Whenever a new type may loaded
+         * Defines the generic object loader type. Whenever a new type may be loaded
          * directly from a file, this struct must be specialized for given type.
          * @tparam T The target object type to load.
          * @since 0.1.1
          */
         template <typename T>
-        struct loader : public base_loader<T>
+        struct loader : public base::loader<T>
         {};
     }
 }

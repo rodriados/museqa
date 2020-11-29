@@ -121,6 +121,9 @@ namespace museqa
             friend auto parse(const std::vector<option>&, int, char **) -> parser;
         };
 
+        /*
+         * Declaration of external namespace functions.
+         */
         extern auto parse(const std::vector<option>&, int, char **) -> parser;
     }
 }
