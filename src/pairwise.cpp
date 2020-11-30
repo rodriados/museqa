@@ -23,7 +23,7 @@ namespace museqa
          * @param io The pipeline's IO service instance.
          * @return A conduit with the module's processed results.
          */
-        auto pairwise::run(const io::service& io, const pairwise::pipe& pipe) const -> pairwise::pipe
+        auto pairwise::run(const io::manager& io, const pairwise::pipe& pipe) const -> pairwise::pipe
         {
             auto algoname = io.get<std::string>(cli::pairwise, "default");
             auto tablename = io.get<std::string>(cli::scoring, "default");
@@ -42,7 +42,7 @@ namespace museqa
          * @param io The pipeline's IO service instance.
          * @return Are the given command line arguments valid?
          */
-        auto pairwise::check(const io::service& io) const -> bool
+        auto pairwise::check(const io::manager& io) const -> bool
         {
             auto algoname = io.get<std::string>(cli::pairwise, "default");
             enforce(pw::algorithm::has(algoname), "unknown pairwise algorithm chosen: '%s'", algoname);

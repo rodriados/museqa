@@ -1,20 +1,21 @@
 /**
- * Multiple Sequence Alignment neighbor-joining header file.
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Implements the phylogeny module's neighbor-joining algorithms.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2019-2020 Rodrigo Siqueira
+ * @copyright 2019-present Rodrigo Siqueira
  */
 #pragma once
 
 #include <limits>
-#include <vector>
 
-#include <buffer.hpp>
-#include <pairwise.cuh>
-#include <reflection.hpp>
+#include "utils.hpp"
+#include "pairwise.cuh"
+#include "environment.h"
+#include "reflection.hpp"
 
-#include <phylogeny/phylogeny.cuh>
+#include "phylogeny/phylogeny.cuh"
 
-namespace msa
+namespace museqa
 {
     namespace phylogeny
     {
@@ -53,9 +54,9 @@ namespace msa
              */
             struct joinable : public reflector
             {
-                oturef ref[2] = {undefined, undefined}; /// The OTU pair references.
-                score delta[2] = {infinity, infinity};  /// The selected OTU pair's deltas.
-                score distance = -infinity;             /// The distance between the OTU pair.
+                oturef ref[2] = {undefined, undefined};     /// The OTU pair references.
+                score delta[2] = {infinity, infinity};      /// The selected OTU pair's deltas.
+                score distance = -infinity;                 /// The distance between the OTU pair.
 
                 __host__ __device__ inline joinable() noexcept = default;
                 __host__ __device__ inline joinable(const joinable&) noexcept = default;
@@ -106,10 +107,10 @@ namespace msa
              * @param dx The delta distance from the first OTU to its parent.
              * @param dy The delta distance from the second OTU to its parent.
              */
-            __host__ __device__ joinable::joinable(const candidate& cand, score dx, score dy) noexcept
-            :   ref {cand.ref[0], cand.ref[1]}
+            __host__ __device__ joinable::joinable(const candidate& can, score dx, score dy) noexcept
+            :   ref {can.ref[0], can.ref[1]}
             ,   delta {dx, dy}
-            ,   distance {cand.distance}
+            ,   distance {can.distance}
             {}
 
             /**

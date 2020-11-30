@@ -1,30 +1,31 @@
 /**
- * Multiple Sequence Alignment hybrid neighbor-joining file.
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Hybrid implementation for the phylogeny module's neighbor-joining algorithm.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2019-2020 Rodrigo Siqueira
+ * @copyright 2019-present Rodrigo Siqueira
  */
 #include <limits>
 #include <cstdint>
 #include <utility>
 
-#include <cuda.cuh>
-#include <node.hpp>
-#include <oeis.hpp>
-#include <utils.hpp>
-#include <buffer.hpp>
-#include <matrix.hpp>
-#include <pairwise.cuh>
-#include <exception.hpp>
-#include <transform.hpp>
-#include <environment.h>
+#include "cuda.cuh"
+#include "node.hpp"
+#include "oeis.hpp"
+#include "utils.hpp"
+#include "buffer.hpp"
+#include "matrix.hpp"
+#include "pairwise.cuh"
+#include "exception.hpp"
+#include "transform.hpp"
+#include "environment.h"
 
-#include <phylogeny/matrix.cuh>
-#include <phylogeny/phylogeny.cuh>
-#include <phylogeny/algorithm/njoining.cuh>
+#include "phylogeny/matrix.cuh"
+#include "phylogeny/phylogeny.cuh"
+#include "phylogeny/njoining/njoining.cuh"
 
 namespace
 {
-    using namespace msa;
+    using namespace museqa;
     using namespace phylogeny;
 
     /*
@@ -55,7 +56,7 @@ namespace
      * The point type required by the algorithm's matrices.
      * @since 0.1.1
      */
-    using pair_type = typename msa::matrix<distance_type>::point_type;
+    using pair_type = typename museqa::matrix<distance_type>::point_type;
 
     /**
      * The neighbor-joining algorithm's star tree data structures.
@@ -91,7 +92,7 @@ namespace
      */
     static inline uint32_t floor_power2(uint32_t x) noexcept
     {
-      #if !defined(__msa_compiler_gnuc)
+      #if !defined(__museqa_compiler_gnuc)
         x |= x >> 1;
         x |= x >> 2;
         x |= x >> 4;
@@ -481,7 +482,7 @@ namespace
                     // compute nodes. Each node must pick its local best joinable
                     // candidate. This will only happen, though, if the total number
                     // of OTUs is higher than the number of nodes.
-                    #if !defined(__msa_runtime_cython)
+                    #if !defined(__museqa_runtime_cython)
                         const auto workers = utils::min<size_t>(node::count - 1, star.count - 1);
                         onlyslaves partition = utils::partition(total, workers, node::rank - 1);
                     #else
@@ -522,7 +523,7 @@ namespace
     };
 }
 
-namespace msa
+namespace museqa
 {
     /**
      * Instantiates a new hybrid neighbor-joining instance using a simple matrix.

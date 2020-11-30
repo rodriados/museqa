@@ -1,18 +1,19 @@
 /**
- * Multiple Sequence Alignment phylogeny matrix file.
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Implementation for the phylogeny-specialized matrix.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2020 Rodrigo Siqueira
+ * @copyright 2019-present Rodrigo Siqueira
  */
 #include <cstdint>
 
-#include <cuda.cuh>
-#include <point.hpp>
-#include <utils.hpp>
-#include <matrix.hpp>
+#include "cuda.cuh"
+#include "point.hpp"
+#include "utils.hpp"
+#include "matrix.hpp"
 
-#include <phylogeny/matrix.cuh>
+#include "phylogeny/matrix.cuh"
 
-namespace msa
+namespace museqa
 {
     namespace phylogeny
     {
@@ -27,7 +28,7 @@ namespace msa
     }
 }
 
-using namespace msa;
+using namespace museqa;
 
 /**
  * Aliases the phylogeny matrix element type, to reduce verbosity.
@@ -507,7 +508,7 @@ namespace
 
 #pragma pop
 
-namespace msa
+namespace museqa
 {
     /**
      * Removes a column from matrix and effectively shrinks the matrix. Although

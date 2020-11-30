@@ -1,7 +1,8 @@
 /**
- * Multiple Sequence Alignment phylogeny header file.
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Implements the phylogeny module's functionality.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2019-2020 Rodrigo Siqueira
+ * @copyright 2019-present Rodrigo Siqueira
  */
 #pragma once
 
@@ -10,16 +11,13 @@
 #include <cstdint>
 #include <utility>
 
-#include <io.hpp>
-#include <cuda.cuh>
-#include <utils.hpp>
-#include <database.hpp>
-#include <pairwise.cuh>
-#include <pipeline.hpp>
-#include <allocator.hpp>
-#include <dendogram.hpp>
+#include "utils.hpp"
+#include "functor.hpp"
+#include "pairwise.cuh"
+#include "allocator.hpp"
+#include "dendogram.hpp"
 
-namespace msa
+namespace museqa
 {
     namespace phylogeny
     {
@@ -120,7 +118,7 @@ namespace msa
                  * @param leaves The number of leaf nodes in tree.
                  * @return The newly created tree instance.
                  */
-                static inline tree make(const msa::allocator& allocator, uint32_t leaves) noexcept
+                static inline tree make(const museqa::allocator& allocator, uint32_t leaves) noexcept
                 {
                     return tree {underlying_type::make(allocator, leaves)};
                 }
@@ -205,61 +203,6 @@ namespace msa
             static auto has(const std::string&) -> bool;
             static auto make(const std::string&) -> const factory&;
             static auto list() noexcept -> const std::vector<std::string>&;
-        };
-
-        /**
-         * Defines the module's conduit. This conduit is composed of the sequences
-         * being aligned and the phylogenetic tree to guide their alignment.
-         * @since 0.1.1
-         */
-        struct conduit : public pipeline::conduit
-        {
-            const pointer<msa::database> db;        /// The loaded sequences' database.
-            const tree phylotree;                   /// The sequences' alignment guiding tree.
-            const size_t total;                     /// The total number of sequences.
-
-            inline conduit() noexcept = delete;
-            inline conduit(const conduit&) = default;
-            inline conduit(conduit&&) = default;
-
-            /**
-             * Instantiates a new conduit.
-             * @param db The sequence database to transfer to the next module.
-             * @param ptree The alignment guiding tree to transfer to the next module.
-             */
-            inline conduit(const pointer<msa::database>& db, const tree& ptree) noexcept
-            :   db {db}
-            ,   phylotree {ptree}
-            ,   total {db->count()}
-            {}
-
-            inline conduit& operator=(const conduit&) = delete;
-            inline conduit& operator=(conduit&&) = delete;
-        };
-
-        /**
-         * Defines the module's pipeline manager. This object will be the one responsible
-         * for checking and managing the module's execution when on a pipeline.
-         * @since 0.1.1
-         */
-        struct module : public pipeline::module
-        {
-            using previous = pairwise::module;      /// Indicates the expected previous module.
-            using conduit = phylogeny::conduit;     /// The module's conduit type.
-
-            using pipe = pointer<pipeline::conduit>;
-            
-            /**
-             * Returns an string identifying the module's name.
-             * @return The module's name.
-             */
-            inline auto name() const -> const char * override
-            {
-                return "phylogeny";
-            }
-
-            auto run(const io::service&, const pipe&) const -> pipe override;
-            auto check(const io::service&) const -> bool override;
         };
 
         /**

@@ -1,20 +1,21 @@
 /**
- * Multiple Sequence Alignment phylogeny matrix header file.
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Implements the phylogeny module's matrix data structure.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2020 Rodrigo Siqueira
+ * @copyright 2020-present Rodrigo Siqueira
  */
 #pragma once
 
 #include <cstdint>
 #include <utility>
 
-#include <space.hpp>
-#include <utils.hpp>
-#include <matrix.hpp>
-#include <pairwise.cuh>
-#include <transform.hpp>
+#include "utils.hpp"
+#include "matrix.hpp"
+#include "pairwise.cuh"
+#include "allocator.hpp"
+#include "transform.hpp"
 
-namespace msa
+namespace museqa
 {
     namespace phylogeny
     {
@@ -28,10 +29,10 @@ namespace msa
          * @since 0.1.1
          */
         template <bool D = false, typename T = transform::linear<2>>
-        class matrix : public msa::matrix<pairwise::score>
+        class matrix : public museqa::matrix<pairwise::score>
         {
             protected:
-                using underlying_matrix = msa::matrix<pairwise::score>;
+                using underlying_matrix = museqa::matrix<pairwise::score>;
 
             public:
                 static constexpr bool on_device = D;    /// Is matrix data on device memory?
@@ -144,7 +145,7 @@ namespace msa
                  * @param side The new matrix's width and height.
                  * @return The newly created matrix instance.
                  */
-                inline static auto make(const msa::allocator& allocator, size_t side) -> matrix
+                inline static auto make(const museqa::allocator& allocator, size_t side) -> matrix
                 {
                     return matrix {underlying_matrix::make(allocator, {side, side}), side};
                 }

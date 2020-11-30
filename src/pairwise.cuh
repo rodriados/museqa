@@ -47,8 +47,8 @@ namespace museqa
                 return "pairwise";
             }
 
-            auto run(const io::service&, const pipe&) const -> pipe override;
-            auto check(const io::service&) const -> bool override;
+            auto run(const io::manager&, const pipe&) const -> pipe override;
+            auto check(const io::manager&) const -> bool override;
         };
 
         /**

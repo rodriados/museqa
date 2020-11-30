@@ -1,27 +1,28 @@
 /**
- * Multiple Sequence Alignment sequential neighbor-joining file.
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Sequential implementation for the phylogeny module's neighbor-joining algorithm.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2019-2020 Rodrigo Siqueira
+ * @copyright 2019-present Rodrigo Siqueira
  */
 #include <cstdint>
 #include <utility>
 
-#include <node.hpp>
-#include <oeis.hpp>
-#include <utils.hpp>
-#include <buffer.hpp>
-#include <matrix.hpp>
-#include <pairwise.cuh>
-#include <exception.hpp>
-#include <environment.h>
+#include "node.hpp"
+#include "oeis.hpp"
+#include "utils.hpp"
+#include "buffer.hpp"
+#include "matrix.hpp"
+#include "pairwise.cuh"
+#include "exception.hpp"
+#include "environment.h"
 
-#include <phylogeny/matrix.cuh>
-#include <phylogeny/phylogeny.cuh>
-#include <phylogeny/algorithm/njoining.cuh>
+#include "phylogeny/matrix.cuh"
+#include "phylogeny/phylogeny.cuh"
+#include "phylogeny/njoining/njoining.cuh"
 
 namespace
 {
-    using namespace msa;
+    using namespace museqa;
     using namespace phylogeny;
 
     /**
@@ -46,7 +47,7 @@ namespace
      * The point type required by the algorithm's matrices.
      * @since 0.1.1
      */
-    using pair_type = typename msa::matrix<distance_type>::point_type;
+    using pair_type = typename museqa::matrix<distance_type>::point_type;
 
     /**
      * The neighbor-joining algorithm's star tree data structures.
@@ -276,7 +277,7 @@ namespace
 
                 // Let's split the total amount of work to be done between our compute
                 // nodes. Each node must pick its local best joinable candidate.
-                #if !defined(__msa_runtime_cython)
+                #if !defined(__museqa_runtime_cython)
                     onlyslaves partition = utils::partition(total, node::count - 1, node::rank - 1);
                 #else
                     partition = range<size_t> {0, total};
@@ -314,7 +315,7 @@ namespace
     };
 }
 
-namespace msa
+namespace museqa
 {
     /**
      * Instantiates a new sequential neighbor-joining instance using a simple matrix.
