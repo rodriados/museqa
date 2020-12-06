@@ -105,10 +105,10 @@ namespace museqa
             inline static auto builtin() -> allocator
             {
                 return {
-                    std::is_same<pure<T>, T>::value
+                    !std::is_array<T>::value
                         ? [](void **ptr, size_t, size_t n) { *ptr = new pure<T>; }
                         : [](void **ptr, size_t, size_t n) { *ptr = new pure<T> [n]; }
-                ,   std::is_same<pure<T>, T>::value
+                ,   !std::is_array<T>::value
                         ? [](void *ptr) { delete (static_cast<pure<T> *>(ptr)); }
                         : [](void *ptr) { delete[] (static_cast<pure<T> *>(ptr)); }
                 };

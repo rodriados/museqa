@@ -21,27 +21,23 @@ namespace museqa
         {
             /**
              * Keeps track of the number of references to a given memory pointer.
-             * @tparam T The pointer type.
              * @since 0.1.1
              */
-            template <typename T>
-            struct counter
+            struct metadata
             {
-                using element_type = T;                     /// The type of elements represented by the pointer.
-                using allocator_type = museqa::allocator;   /// The type of allocator for given type.
-
-                element_type *ptr = nullptr;                /// The raw target pointer.
+                void *ptr = nullptr;                        /// The raw target pointer.
                 size_t use_count = 0;                       /// The number of currently active pointer references.
 
+                using allocator_type = museqa::allocator;   /// The pointer's allocator type.
                 const allocator_type allocator;             /// The pointer's allocator.
 
                 /**
-                 * Initializes a new pointer counter.
+                 * Initializes a new pointer metadata.
                  * @param ptr The raw pointer to be held.
                  * @param allocator The pointer's allocator.
                  * @see detail::pointer::acquire
                  */
-                inline counter(element_type *ptr, const allocator_type& allocator) noexcept
+                inline metadata(void *ptr, const allocator_type& allocator) noexcept
                 :   ptr {ptr}
                 ,   use_count {1}
                 ,   allocator {allocator}
@@ -51,52 +47,46 @@ namespace museqa
                  * Deletes and frees the memory claimed by the raw pointer.
                  * @see detail::pointer::release
                  */
-                inline ~counter()
+                inline ~metadata()
                 {
                     allocator.deallocate(ptr);
                 }
+
+                /**
+                 * Creates a new pointer context from given arguments.
+                 * @param ptr The pointer to be put into context.
+                 * @param allocator The pointer's allocator.
+                 * @return The new pointer's metadata instance.
+                 */
+                static inline metadata *acquire(void *ptr, const allocator_type& allocator) noexcept
+                {
+                    return new metadata {ptr, allocator};
+                }
+
+                /**
+                 * Acquires access to an already existing pointer.
+                 * @param meta The metadata of pointer to be acquired.
+                 * @return The acquired metadata pointer.
+                 */
+                __host__ __device__ static inline metadata *acquire(metadata *meta) noexcept
+                {
+                    if(meta) ++meta->use_count;
+                    return meta;
+                }
+
+                /**
+                 * Releases access to pointer, and deletes it if so needed.
+                 * @param meta The metadata of pointer to be released.
+                 * @see metadata::acquire
+                 */
+                __host__ __device__ static inline void release(metadata *meta)
+                {
+                    #if defined(__museqa_runtime_host)
+                        if(meta && --meta->use_count <= 0)
+                            delete meta;
+                    #endif
+                }
             };
-
-            /**
-             * Creates a new pointer context from given arguments.
-             * @tparam T The pointer type.
-             * @param ptr The pointer to be put into context.
-             * @param allocator The pointer's allocator.
-             * @return The new pointer's counter instance.
-             */
-            template <typename T>
-            inline counter<T> *acquire(T *ptr, const museqa::allocator& allocator) noexcept
-            {
-                return new counter<T> {ptr, allocator};
-            }
-
-            /**
-             * Acquires access to an already existing pointer.
-             * @tparam T The pointer type.
-             * @param meta The metadata of pointer to be acquired.
-             * @return The metadata acquired pointer.
-             */
-            template <typename T>
-            __host__ __device__ inline counter<T> *acquire(counter<T> *meta) noexcept
-            {
-                meta && ++meta->use_count;
-                return meta;
-            }
-
-            /**
-             * Releases access to pointer, and deletes it if so needed.
-             * @tparam T The pointer type.
-             * @param meta The metadata of pointer to be released.
-             * @see detail::pointer::acquire
-             */
-            template <typename T>
-            __host__ __device__ inline void release(counter<T> *meta)
-            {
-                #if defined(__museqa_runtime_host)
-                    if(meta && --meta->use_count <= 0)
-                        delete meta;
-                #endif
-            }
         }
     }
 
@@ -112,18 +102,17 @@ namespace museqa
     {
         static_assert(!std::is_function<T>::value, "cannot create pointer to a function");
         static_assert(!std::is_reference<T>::value, "cannot create pointer to a reference");
-        static_assert(!std::is_same<T, void>::value, "cannot create void smart pointers");
 
         public:
             using element_type = pure<T>;               /// The type of pointer's elements.
             using allocator_type = museqa::allocator;   /// The type of allocator for given type.
 
         protected:
-            using counter_type = detail::pointer::counter<element_type>;    /// The pointer counter type.
+            using metadata = detail::pointer::metadata; /// The internal pointer reference metadata type.
 
         protected:
             element_type *m_ptr = nullptr;              /// The encapsulated pointer.
-            counter_type *m_meta = nullptr;             /// The pointer's metadata.
+            metadata *m_meta = nullptr;                 /// The pointer's metadata.
 
         public:
             __host__ __device__ constexpr inline pointer() noexcept = default;
@@ -133,7 +122,7 @@ namespace museqa
              * @param ptr The pointer to be encapsulated.
              */
             inline pointer(element_type *ptr) noexcept
-            :   pointer {ptr, detail::pointer::acquire(ptr, allocator_type::builtin<T>())}
+            :   pointer {ptr, allocator_type::builtin<T>()}
             {}
 
             /**
@@ -142,24 +131,29 @@ namespace museqa
              * @param allocator The allocator of given pointer.
              */
             inline pointer(element_type *ptr, const allocator_type& allocator) noexcept
-            :   pointer {ptr, detail::pointer::acquire(ptr, allocator)}
+            :   pointer {ptr, metadata::acquire(ptr, allocator)}
             {}
 
             /**
              * Gets reference to an already existing pointer.
+             * @tparam U The other pointer's type.
              * @param other The reference to be acquired.
              */
-            __host__ __device__ inline pointer(const pointer& other) noexcept
-            :   pointer {other.m_ptr, detail::pointer::acquire(other.m_meta)}
+            template <typename U>
+            __host__ __device__ inline pointer(const pointer<U>& other) noexcept
+            :   pointer {static_cast<element_type *>(other.m_ptr), metadata::acquire(other.m_meta)}
             {}
 
             /**
              * Acquires a moved reference to an already existing pointer.
+             * @tparam U The other pointer's type.
              * @param other The reference to be moved.
              */
-            __host__ __device__ inline pointer(pointer&& other) noexcept
+            template <typename U>
+            __host__ __device__ inline pointer(pointer<U>&& other) noexcept
+            :   pointer {static_cast<element_type *>(other.m_ptr), metadata::acquire(other.m_meta)}
             {
-                operator=(std::forward<decltype(other)>(other));
+                other.reset();
             }
 
             /**
@@ -168,48 +162,53 @@ namespace museqa
              */
             __host__ __device__ inline ~pointer()
             {
-                detail::pointer::release(m_meta);
+                metadata::release(m_meta);
             }
 
             /**
              * The copy-assignment operator.
+             * @tparam U The other pointer's type.
              * @param other The reference to be acquired.
              * @return This pointer object.
              */
-            __host__ __device__ inline pointer& operator=(const pointer& other)
+            template <typename U>
+            __host__ __device__ inline pointer& operator=(const pointer<U>& other)
             {
-                detail::pointer::release(m_meta);
-                m_meta = detail::pointer::acquire(other.m_meta);
-                m_ptr = other.m_ptr;
-                return *this;
+                metadata::release(m_meta);
+                return new (this) pointer {other};
             }
 
             /**
              * The move-assignment operator.
+             * @tparam U The other pointer's type.
              * @param other The reference to be acquired.
              * @return This pointer object.
              */
-            __host__ __device__ inline pointer& operator=(pointer&& other)
+            template <typename U>
+            __host__ __device__ inline pointer& operator=(pointer<U>&& other)
             {
-                other.swap(*this);
-                other.reset();
-                return *this;
+                metadata::release(m_meta);
+                return new (this) pointer {std::forward<decltype(other)>(other)};
             }
 
             /**
              * Dereferences the pointer.
              * @return The pointed object.
              */
-            __host__ __device__ inline element_type& operator*() noexcept
+            template <typename Z = T>
+            __host__ __device__ inline auto operator*() noexcept
+            -> typename std::enable_if<!std::is_void<Z>::value, pure<Z>&>::type
             {
                 return *m_ptr;
             }
 
             /**
-             * Dereferences the constant pointer.
-             * @return The constant pointed object.
+             * Dereferences the const-qualified pointer.
+             * @return The const-qualified pointed object.
              */
-            __host__ __device__ inline const element_type& operator*() const noexcept
+            template <typename Z = T>
+            __host__ __device__ inline auto operator*() const noexcept
+            -> typename std::enable_if<!std::is_void<Z>::value, const pure<Z>&>::type
             {
                 return *m_ptr;
             }
@@ -224,8 +223,8 @@ namespace museqa
             }
 
             /**
-             * Gives access to the raw constant pointer.
-             * @return The raw constant pointer.
+             * Gives access to the raw const-qualified pointer.
+             * @return The raw const-qualified pointer.
              */
             __host__ __device__ inline const element_type *operator&() const noexcept
             {
@@ -242,8 +241,8 @@ namespace museqa
             }
 
             /**
-             * Gives access to raw constant pointer using the dereference operator.
-             * @return The raw constant pointer.
+             * Gives access to raw const-qualified pointer using the dereference operator.
+             * @return The raw const-qualified pointer.
              */
             __host__ __device__ inline const element_type *operator->() const noexcept
             {
@@ -255,20 +254,24 @@ namespace museqa
              * @param offset The offset to be accessed.
              * @return The requested object instance.
              */
-            __host__ __device__ inline element_type& operator[](ptrdiff_t offset) noexcept
+            template <typename Z = T>
+            __host__ __device__ inline auto operator[](ptrdiff_t offset) noexcept
+            -> typename std::enable_if<!std::is_void<Z>::value, pure<Z>&>::type
             {
-                static_assert(!std::is_same<element_type, T>::value, "only array pointers have valid offsets");
+                static_assert(std::is_array<T>::value, "only array pointers have valid offsets");
                 return m_ptr[offset];
             }
 
             /**
-             * Gives access to an constant object in an array pointer offset.
+             * Gives access to an const-qualified object in an array pointer offset.
              * @param offset The offset to be accessed.
-             * @return The requested constant object instance.
+             * @return The requested const-qualified object instance.
              */
-            __host__ __device__ inline const element_type& operator[](ptrdiff_t offset) const noexcept
+            template <typename Z = T>
+            __host__ __device__ inline auto operator[](ptrdiff_t offset) const noexcept
+            -> typename std::enable_if<!std::is_void<Z>::value, const pure<Z>&>::type
             {
-                static_assert(!std::is_same<element_type, T>::value, "only array pointers hava valid offsets");
+                static_assert(std::is_array<T>::value, "only array pointers have valid offsets");
                 return m_ptr[offset];
             }
 
@@ -291,8 +294,8 @@ namespace museqa
             }
 
             /**
-             * Converts to raw constant pointer type.
-             * @return The constant pointer converted to raw type.
+             * Converts to raw const-qualified pointer type.
+             * @return The const-qualified pointer converted to raw type.
              */
             __host__ __device__ inline operator const element_type *() const noexcept
             {
@@ -300,8 +303,8 @@ namespace museqa
             }
 
             /**
-             * Gives access to raw pointer.
-             * @return The raw pointer.
+             * Gives access to the raw const-qualified pointer.
+             * @return The raw const-qualified pointer.
              */
             __host__ __device__ inline const element_type *get() const noexcept
             {
@@ -315,8 +318,8 @@ namespace museqa
              */
             __host__ __device__ inline pointer offset(ptrdiff_t offset) noexcept
             {
-                static_assert(!std::is_same<element_type, T>::value, "only array pointers have valid offsets");
-                return pointer {m_ptr + offset, detail::pointer::acquire(m_meta)};
+                static_assert(std::is_array<T>::value, "only array pointers have valid offsets");
+                return pointer {m_ptr + offset, metadata::acquire(m_meta)};
             }
 
             /**
@@ -325,9 +328,8 @@ namespace museqa
              */
             __host__ __device__ inline void reset() noexcept
             {
-                detail::pointer::release(m_meta);
-                m_ptr = nullptr;
-                m_meta = nullptr;
+                metadata::release(m_meta);
+                new (this) pointer {};
             }
 
             /**
@@ -355,7 +357,7 @@ namespace museqa
              */
             inline size_t use_count() const noexcept
             {
-                return m_meta ? m_meta->count : 0;
+                return m_meta ? m_meta->use_count : 0;
             }
 
             /**
@@ -382,6 +384,7 @@ namespace museqa
 
             /**
              * Creates a non-owning weak reference to given pointer.
+             * @tparam U The raw pointer's type.
              * @param ptr The non-owning pointer to create weak-reference from.
              * @return The weak referenced pointer instance.
              */
@@ -396,9 +399,11 @@ namespace museqa
              * @param ptr The raw pointer object.
              * @param meta The pointer's metadata.
              */
-            __host__ __device__ inline pointer(element_type *ptr, counter_type *meta) noexcept
+            __host__ __device__ inline pointer(element_type *ptr, metadata *meta) noexcept
             :   m_ptr {ptr}
             ,   m_meta {meta}
             {}
+
+        template <typename> friend class pointer;
     };
 }
