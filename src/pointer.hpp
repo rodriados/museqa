@@ -135,6 +135,14 @@ namespace museqa
             {}
 
             /**
+             * Builds a new instance by copying another instance.
+             * @param other The instance to be copied.
+             */
+            __host__ __device__ inline pointer(const pointer& other) noexcept
+            :   pointer {other.m_ptr, metadata::acquire(other.m_meta)}
+            {}
+
+            /**
              * Gets reference to an already existing pointer.
              * @tparam U The other pointer's type.
              * @param other The reference to be acquired.
@@ -143,6 +151,16 @@ namespace museqa
             __host__ __device__ inline pointer(const pointer<U>& other) noexcept
             :   pointer {static_cast<element_type *>(other.m_ptr), metadata::acquire(other.m_meta)}
             {}
+
+            /**
+             * Builds a new instance by moving another instance.
+             * @param other The instance to be moved.
+             */
+            __host__ __device__ inline pointer(pointer&& other) noexcept
+            :   pointer {other.m_ptr, metadata::acquire(other.m_meta)}
+            {
+                other.reset();
+            }
 
             /**
              * Acquires a moved reference to an already existing pointer.
@@ -175,7 +193,7 @@ namespace museqa
             __host__ __device__ inline pointer& operator=(const pointer<U>& other)
             {
                 metadata::release(m_meta);
-                return new (this) pointer {other};
+                return *new (this) pointer {other};
             }
 
             /**
@@ -188,7 +206,7 @@ namespace museqa
             __host__ __device__ inline pointer& operator=(pointer<U>&& other)
             {
                 metadata::release(m_meta);
-                return new (this) pointer {std::forward<decltype(other)>(other)};
+                return *new (this) pointer {std::forward<decltype(other)>(other)};
             }
 
             /**

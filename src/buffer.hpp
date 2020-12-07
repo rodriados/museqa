@@ -178,7 +178,8 @@ namespace museqa
              */
             static inline buffer copy(const buffer& buf) noexcept
             {
-                return make(buf.size()).copy_from(buf.raw());
+                auto instance = buffer::make(buf.size());
+                return instance.copy_from(buf.raw());
             }
 
             /**
@@ -188,7 +189,8 @@ namespace museqa
              */
             static inline buffer copy(const std::vector<element_type>& vector) noexcept
             {
-                return make(vector.size()).copy_from(vector.data());
+                auto instance = buffer::make(vector.size());
+                return instance.copy_from(vector.data());
             }
 
             /**
@@ -199,7 +201,8 @@ namespace museqa
              */
             static inline buffer copy(const element_type *ptr, size_t count) noexcept
             {
-                return make(count).copy_from(ptr);
+                auto instance = buffer::make(count);
+                return instance.copy_from(ptr);
             }
 
             /**

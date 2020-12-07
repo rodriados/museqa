@@ -69,7 +69,7 @@ namespace museqa
             template <typename T = void>
             inline auto allocate(T **ptr, size_t n) const -> T *
             {
-                using type = typename std::conditional<std::is_same<T, void>::value, char, T>::type;
+                using type = typename std::conditional<std::is_void<T>::value, char, T>::type;
                 m_up.operator()(reinterpret_cast<ptr_type *>(ptr), sizeof(type), n);
                 return *ptr;
             }
