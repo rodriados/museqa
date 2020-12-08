@@ -71,7 +71,7 @@ namespace
 
     namespace device
     {
-        using namespace cuda::device;
+        using namespace d = cuda::device;
 
         /**
          * Performs a horizontal shift on the given source matrix. This operation
@@ -153,8 +153,8 @@ namespace
             // To remove a column from the matrix, we will first shift left all columns
             // located to the right of the column being removed. And then shift
             // up all lines below the one being removed.
-            hmove<<<max_blocks(height), max_threads(left)>>>(dest, src, offset);
-            vmove<<<max_blocks(width), max_threads(bottom)>>>(dest, src, offset);
+            hmove<<<d::blocks(height), d::threads(left)>>>(dest, src, offset);
+            vmove<<<d::blocks(width), d::threads(bottom)>>>(dest, src, offset);
         }
 
         /**
@@ -295,14 +295,14 @@ namespace
             // line and column from the matrix. On these offsets, the amount of
             // elements to be moved on this step is exactly zero.
             if(dbottom > 0 && offset > 0)
-                hmove<<<max_blocks(dbottom), max_threads(offset), 0, s[0]>>>(dest, src, offset);
+                hmove<<<d::blocks(dbottom), d::threads(offset), 0, s[0]>>>(dest, src, offset);
 
             // Unfortunately, our horizontal shift kernel cannot move elements which
             // find themselves "above" the midpoint line. For these elements to
             // be moved, we explicitly perform an effective vertical shift on these
             // elements, so they occupy the space left by the removed line.
             if(offset > 0 && dmiddle + 1 > 0)
-                vmove<<<max_blocks(offset), max_threads(dmiddle + 1), 0, s[1]>>>(dest, src, offset);
+                vmove<<<d::blocks(offset), d::threads(dmiddle + 1), 0, s[1]>>>(dest, src, offset);
 
             // Lastly, we need to diagonally move any elements which may remain
             // on their original position, and thus misplaced on the new matrix.
@@ -310,9 +310,9 @@ namespace
             // in that they behave differently depending on whether these elements
             // find themselves "above" or "below" the midpoint line.
             if(midpoint > offset && dmiddle > 0)
-                bdmove<<<max_blocks(dmiddle), max_threads(dmiddle), 0, s[2]>>>(dest, src, offset);
+                bdmove<<<d::blocks(dmiddle), d::threads(dmiddle), 0, s[2]>>>(dest, src, offset);
             else if(offset >= midpoint)
-                admove<<<max_blocks(offset - 2), max_threads(offset), 0, s[2]>>>(dest, src, offset);
+                admove<<<d::blocks(offset - 2), d::threads(offset), 0, s[2]>>>(dest, src, offset);
         }
     }
 
@@ -386,7 +386,7 @@ namespace
 
     namespace device
     {
-        using namespace cuda::device;
+        using namespace d = cuda::device;
 
         /**
          * Swaps positions of two columns and lines at the given offsets.
@@ -426,7 +426,7 @@ namespace
 
             // To swap two offsets in our matrix, we iterate over its diagonal so
             // we can swap both axis at the same time, without any run conditions.
-            dswap<<<1, max_threads(diagonal - 1)>>>(target, a, b);
+            dswap<<<1, d::threads(diagonal - 1)>>>(target, a, b);
         }
     }
 

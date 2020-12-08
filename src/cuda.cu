@@ -1,33 +1,38 @@
-/** 
- * Multiple Sequence Alignment CUDA tools file.
+/**
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Implementation for CUDA functions and structures wrappers.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018-2019 Rodrigo Siqueira
+ * @copyright 2018-present Rodrigo Siqueira
  */
 #include <cuda.h>
+#include <limits>
 #include <string>
 
-#include <cuda.cuh>
-#include <utils.hpp>
-#include <allocator.hpp>
+#include "cuda.cuh"
+#include "utils.hpp"
+#include "allocator.hpp"
 
 namespace
 {
-    using namespace msa;
+    namespace current
+    {
+        using namespace museqa;
 
-    /**
-     * Stores the ID of the compute-capable device currently selected.
-     * @since 0.1.1
-     */
-    cuda::device::id current = ~0;
+        /**
+         * Stores the ID of the compute-capable device currently selected.
+         * @since 0.1.1
+         */
+        cuda::device::id id = std::numeric_limits<cuda::word>::max();
 
-    /**
-     * Stores the properties of the currently selected compute-capable device.
-     * @since 0.1.1
-     */
-    cuda::device::props device_properties;
+        /**
+         * Stores the properties of the currently selected compute-capable device.
+         * @since 0.1.1
+         */
+        cuda::device::property property;
+    }
 }
 
-namespace msa
+namespace museqa
 {
     /**
      * The allocator instance for reserving and managing pointers of memory regions
@@ -56,7 +61,7 @@ namespace msa
      * @param code The error code to be described.
      * @return The error description.
      */
-    std::string cuda::status::describe(cuda::status_code code) noexcept
+    std::string cuda::status::describe(cuda::status::code code) noexcept
     {
         return cudaGetErrorString(static_cast<cudaError_t>(code));
     }
@@ -87,20 +92,21 @@ namespace msa
      * Sets the current device to given id.
      * @param device The device to be used.
      */
-    auto cuda::device::select(const cuda::device::id& device) -> void
+    void cuda::device::select(cuda::device::id device)
     {
-        cuda::check(cudaSetDevice(::current = device));
-        ::device_properties = cuda::device::properties(device);
+        cuda::check(cudaSetDevice(::current::id = device));
+        ::current::property = cuda::device::properties(device);
     }
 
     /**
      * Retrieves information and properties about the currently selected device.
-     * @return The current device properties.
+     * @return The currently selected device properties.
      */
-    auto cuda::device::properties() -> const cuda::device::props&
+    auto cuda::device::properties() -> cuda::device::property
     {
-        if(::current == ~0) cuda::device::select(cuda::device::init);
-        return device_properties;
+        if(::current::id == std::numeric_limits<cuda::word>::max())
+            cuda::device::select(cuda::device::init);
+        return ::current::property;
     }
 
     /**
@@ -108,11 +114,11 @@ namespace msa
      * @param device The device of which properties will be retrieved.
      * @return The device properties.
      */
-    auto cuda::device::properties(const cuda::device::id& device) -> cuda::device::props
+    auto cuda::device::properties(cuda::device::id device) -> cuda::device::property
     {
-        cuda::device::props props;
-        cuda::check(cudaGetDeviceProperties(&props, device));
-        return props;
+        cuda::device::property property;
+        cuda::check(cudaGetDeviceProperties(&property, device));
+        return property;
     }
 
     /**
@@ -120,9 +126,9 @@ namespace msa
      * @param needed The number of blocks needed for a specific computation.
      * @return The maximum number of blocks available.
      */
-    auto cuda::device::max_blocks(size_t needed) -> size_t
+    auto cuda::device::blocks(size_t needed) -> size_t
     {
-        return utils::min<size_t>(needed, ::device_properties.maxGridSize[0]);
+        return utils::min<size_t>(needed, ::current::property.maxGridSize[0]);
     }
 
     /**
@@ -130,8 +136,8 @@ namespace msa
      * @param needed The number of threads needed for a specific computation.
      * @return The maximum number of threads available.
      */
-    auto cuda::device::max_threads(size_t needed) -> size_t
+    auto cuda::device::threads(size_t needed) -> size_t
     {
-        return utils::min<size_t>(needed, ::device_properties.maxThreadsDim[0]);
+        return utils::min<size_t>(needed, ::current::property.maxThreadsDim[0]);
     }
 }
