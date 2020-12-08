@@ -48,11 +48,11 @@ namespace museqa
  * to check whether the current node is the master or not.
  */
 #if !defined(__museqa_runtime_cython)
-  #define onlymaster   if(node::rank == node::master)
-  #define onlyslaves   if(node::rank != node::master)
-  #define onlynode(i)  if((i) == node::rank)
+  #define onlymaster   if(museqa::node::rank == museqa::node::master)
+  #define onlyslaves   if(museqa::node::rank != museqa::node::master)
+  #define onlynode(i)  if((i) == museqa::node::rank)
 #else
   #define onlymaster   if(1)
   #define onlyslaves   if(1)
-  #define onlynode(i)  if((i) == node::master)
+  #define onlynode(i)  if((i) == museqa::node::master)
 #endif
