@@ -6,22 +6,21 @@
  */
 #pragma once
 
-#include "environment.h"
-
-#if !defined(__museqa_runtime_cython)
-
 #include <map>
 #include <string>
 #include <vector>
 #include <cstdint>
 #include <algorithm>
 
-#include <mpi.h>
-
 #include "node.hpp"
 #include "buffer.hpp"
 #include "exception.hpp"
+#include "environment.h"
 #include "reflection.hpp"
+
+#if !defined(__museqa_runtime_cython)
+
+#include <mpi.h>
 
 namespace museqa
 {
@@ -186,7 +185,8 @@ namespace museqa
          */
         inline void check(error_code code)
         {
-            enforce<mpi::exception>(code == error::success, code);
+            using E = museqa::mpi::exception;
+            enforce<E>(code == error::success, code);
         }
 
         namespace datatype
