@@ -189,6 +189,18 @@ namespace museqa
              * @param other The reference to be acquired.
              * @return This pointer object.
              */
+            __host__ __device__ inline pointer& operator=(const pointer& other)
+            {
+                metadata::release(m_meta);
+                return *new (this) pointer {other};
+            }
+
+            /**
+             * The copy-assignment operator from a different pointer type.
+             * @tparam U The other pointer's type.
+             * @param other The reference to be acquired.
+             * @return This pointer object.
+             */
             template <typename U>
             __host__ __device__ inline pointer& operator=(const pointer<U>& other)
             {
@@ -198,6 +210,18 @@ namespace museqa
 
             /**
              * The move-assignment operator.
+             * @tparam U The other pointer's type.
+             * @param other The reference to be acquired.
+             * @return This pointer object.
+             */
+            __host__ __device__ inline pointer& operator=(pointer&& other)
+            {
+                metadata::release(m_meta);
+                return *new (this) pointer {std::forward<decltype(other)>(other)};
+            }
+
+            /**
+             * The move-assignment operator from a different pointer type.
              * @tparam U The other pointer's type.
              * @param other The reference to be acquired.
              * @return This pointer object.
