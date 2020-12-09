@@ -50,8 +50,8 @@ namespace museqa
             using previous = void;                  /// Indicates the expected previous module.
             using conduit = pipeline::conduit;      /// The module's conduit type.
 
-            virtual auto check(const io::service&) const -> bool = 0;
-            virtual auto run(const io::service&, const pointer<conduit>&) const -> pointer<conduit> = 0;
+            virtual auto check(const io::manager&) const -> bool = 0;
+            virtual auto run(const io::manager&, const pointer<conduit>&) const -> pointer<conduit> = 0;
             virtual auto name() const -> const char * = 0;
         };
 
@@ -133,7 +133,7 @@ namespace museqa
                  * @param io The pipeline's IO service instance.
                  * @return The last module's resulting value.
                  */
-                inline auto run(const io::service& io) const -> pipe
+                inline auto run(const io::manager& io) const -> pipe
                 {
                     const module *ptr[count];
                     const module_tuple modules = {};
@@ -155,7 +155,7 @@ namespace museqa
                  * @param io The pipeline's IO service instance.
                  * @return Are all modules in a valid state?
                  */
-                inline virtual bool verify(const module *modules[], const io::service& io) const
+                inline virtual bool verify(const module *modules[], const io::manager& io) const
                 {
                     for(size_t i = 0; i < count; ++i)
                         if(!modules[i]->check(io))
@@ -170,7 +170,7 @@ namespace museqa
                  * @param io The pipeline's IO service instance.
                  * @return The pipeline's final module's result.
                  */
-                inline virtual pipe execute(const module *modules[], const io::service& io) const
+                inline virtual pipe execute(const module *modules[], const io::manager& io) const
                 {
                     auto previous = pipe {};
 

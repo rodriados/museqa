@@ -49,12 +49,12 @@ namespace museqa
              * @param io The pipeline's IO service instance.
              * @return Are the given command line arguments valid?
              */
-            inline auto check(const io::service& io) const -> bool override
+            inline auto check(const io::manager& io) const -> bool override
             {
-                return io.filecount() > 0;
+                return io.cmd.all().size() > 0;
             }
 
-            auto run(const io::service&, const pipe&) const -> pipe override;
+            auto run(const io::manager&, const pipe&) const -> pipe override;
         };
 
         /**

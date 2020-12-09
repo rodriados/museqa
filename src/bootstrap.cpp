@@ -25,7 +25,7 @@ namespace museqa
          * @param io The IO service instance to get file names from.
          * @return The sequences database with all loaded sequences.
          */
-        static auto load(const io::service& io) -> pointer<database>
+        static auto load(const io::manager& io) -> pointer<database>
         {
             auto db = pointer<database>::make();
             auto dblist = io.load<database>();
@@ -68,7 +68,7 @@ namespace museqa
          * @param io The pipeline's IO service instance.
          * @return A conduit with the module's processed results.
          */
-        auto bootstrap::run(const io::service& io, const bootstrap::pipe&) const -> bootstrap::pipe
+        auto bootstrap::run(const io::manager& io, const bootstrap::pipe&) const -> bootstrap::pipe
         {
             pointer<database> db;
             std::vector<size_t> sizes;
@@ -77,8 +77,8 @@ namespace museqa
             onlymaster db = load(io);
 
             onlymaster for(const auto& entry : *db) {
-                size.push_back(entry.contents.size());
-                block.insert(block.end(), entry.contents.begin(), entry.contents.end());
+                sizes.push_back(entry.contents.size());
+                blocks.insert(blocks.end(), entry.contents.begin(), entry.contents.end());
             }
 
             sizes = mpi::broadcast(sizes);
