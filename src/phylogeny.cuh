@@ -32,10 +32,10 @@ namespace museqa
          */
         struct phylogeny : public pipeline::module
         {
-            struct conduit;                             /// The module's conduit type.
+            struct conduit;                                 /// The module's conduit type.
 
-            typedef module::pairwise previous;          /// The expected previous module.
-            typedef pointer<pipeline::conduit> pipe;    /// The generic conduit type alias.
+            typedef museqa::module::pairwise previous;      /// The expected previous module.
+            typedef pointer<pipeline::conduit> pipe;        /// The generic conduit type alias.
 
             /**
              * Returns an string identifying the module's name.

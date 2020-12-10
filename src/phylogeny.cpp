@@ -16,7 +16,7 @@ namespace museqa
 {
     namespace module
     {
-        using namespace pg = museqa::phylogeny;
+        namespace pg = museqa::phylogeny;
 
         /**
          * Execute the module's task when on a pipeline.
@@ -25,7 +25,7 @@ namespace museqa
          */
         auto phylogeny::run(const io::manager& io, const phylogeny::pipe& pipe) const -> phylogeny::pipe
         {
-            auto algoname = io.get<std::string>(cli::phylogeny, "default");
+            auto algoname = io.cmd.get("phylogeny", "default");
             const auto conduit = pipeline::convert<phylogeny::previous>(*pipe);
 
             auto result = pg::run(conduit.distances, conduit.total, algoname);
@@ -41,7 +41,7 @@ namespace museqa
          */
         auto phylogeny::check(const io::manager& io) const -> bool
         {
-            auto algoname = io.get<std::string>(cli::phylogeny, "default");
+            auto algoname = io.cmd.get("phylogeny", "default");
             enforce(pg::algorithm::has(algoname), "unknown phylogeny algorithm chosen: '%s'", algoname);
 
             return true;

@@ -222,7 +222,7 @@ namespace museqa
          */
         template <typename T>
         inline auto convert(const std::string& value)
-        -> typename std::enable_if<std::is_convertible<std::string, T>::value, T>::value
+        -> typename std::enable_if<std::is_convertible<std::string, T>::value, T>::type
         {
             return T (value);
         }

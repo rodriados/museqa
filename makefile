@@ -3,7 +3,7 @@
 # @copyright 2018-2020 Rodrigo Siqueira
 NAME = msa
 
-INCDIR  = inc
+INCDIR  = src
 SRCDIR  = src
 OBJDIR  = obj
 TGTDIR  = bin
