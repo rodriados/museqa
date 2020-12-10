@@ -27,6 +27,7 @@ namespace
 {
     using namespace museqa;
     using namespace phylogeny;
+    namespace d = museqa::cuda::device;
 
     /*
      * Algorithm configuration parameters. These values interfere directly into
@@ -188,8 +189,8 @@ namespace
         // The number of threads spawned by each block to initialize our cache will
         // be a power of 2 roughly equal to half the width of our matrix. We force
         // such specific number in order to take the most out of our reduce kernel.
-        const auto blocks  = max_blocks(height);
-        const auto threads = floor_power2(max_threads(width / reduce_factor));
+        const auto blocks  = d::blocks(height);
+        const auto threads = floor_power2(d::threads(width / reduce_factor));
 
         fill_cache<<<blocks, threads, sizeof(distance_type) * threads>>>(star);
     }
@@ -320,8 +321,8 @@ namespace
         // OTU will be a power of 2 roughly equal to half the partition size. Also,
         // we only spawn new blocks if all of its threads will be used.
         const size_t total = partition.total / reduce_factor;
-        const auto threads = floor_power2(max_threads(total));
-        const auto blocks  = utils::max(1UL, max_blocks(total / threads));
+        const auto threads = floor_power2(d::threads(total));
+        const auto blocks  = utils::max(1UL, d::blocks(total / threads));
 
         auto result = buffer<njoining::joinable>::make(blocks);
         auto chosen = buffer<njoining::joinable>::make(cuda::allocator::device, blocks);
@@ -439,7 +440,7 @@ namespace
 
         // Let's calculate the distances between the OTU being created and the others
         // which have not been affected by the current joining operation.
-        onlyslaves rebuild<<<1, max_threads(star.count)>>>(star, {x, y});
+        onlyslaves rebuild<<<1, d::threads(star.count)>>>(star, {x, y});
 
         // Finally, let's take advantage from our data structures' layouts and always remove
         // the cheapest column from our star tree's distance matrix.

@@ -66,7 +66,7 @@ namespace museqa
                 __host__ __device__ inline joinable& operator=(const joinable&) noexcept = default;
                 __host__ __device__ inline joinable& operator=(joinable&&) noexcept = default;
 
-                #if !defined(__msa_compiler_nvcc)
+                #if !defined(__museqa_compiler_nvcc)
                     using reflex = decltype(reflect(ref, delta, distance));
                 #endif
             };

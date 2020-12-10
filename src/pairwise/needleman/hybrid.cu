@@ -335,7 +335,7 @@ namespace
         const size_t count = pairs.size();
 
         size_t mem_limit = cuda::device::free_memory();
-        size_t max_batch = cuda::device::max_blocks(count);
+        size_t max_batch = cuda::device::blocks(count);
         size_t pair_cache, cache_offset = 0;
 
         std::vector<job> jobs;

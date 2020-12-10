@@ -71,7 +71,7 @@ namespace
 
     namespace device
     {
-        using namespace d = cuda::device;
+        namespace d = cuda::device;
 
         /**
          * Performs a horizontal shift on the given source matrix. This operation
@@ -386,7 +386,7 @@ namespace
 
     namespace device
     {
-        using namespace d = cuda::device;
+        namespace d = cuda::device;
 
         /**
          * Swaps positions of two columns and lines at the given offsets.

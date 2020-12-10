@@ -28,8 +28,8 @@ namespace museqa
             terminal::parser cmd;           /// The internal command line parser instance.
 
             inline manager() noexcept = default;
-            inline manager(const manager&) noexcept = default;
-            inline manager(manager&&) noexcept = default;
+            inline manager(const manager&) = default;
+            inline manager(manager&&) = default;
 
             /**
              * Initializes a new IO manager with a command line parser instance.
