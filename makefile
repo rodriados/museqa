@@ -1,7 +1,8 @@
-# Multiple Sequence Alignment makefile.
+# Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+# @file The software's compilation and instalation script.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
-# @copyright 2018-2020 Rodrigo Siqueira
-NAME = msa
+# @copyright 2018-present Rodrigo Siqueira
+NAME = museqa
 
 INCDIR  = src
 SRCDIR  = src
@@ -33,13 +34,13 @@ MPILKFLAG ?= -lmpi_cxx -lmpi
 # certain features on code or affect the projects compilation.
 FLAGS ?=
 
-GCCCFLAGS = -std=$(STDC) -I$(INCDIR) -Wall -lm -fPIC -O3 $(FLAGS) $(ENV)
-GCPPFLAGS = -std=$(STDCPP) -I$(INCDIR) -Wall -fPIC -O3 $(FLAGS) $(ENV)
-NVCCFLAGS = -std=$(STDCU) -I$(INCDIR) -arch $(NVARCH) -lmpi -lcuda -lcudart -w -O3 -Xptxas -O3      \
+GCCCFLAGS = -std=$(STDC) -I$(SRCDIR) -Wall -lm -fPIC -O3 $(FLAGS) $(ENV)
+GCPPFLAGS = -std=$(STDCPP) -I$(SRCDIR) -Wall -fPIC -O3 $(FLAGS) $(ENV)
+NVCCFLAGS = -std=$(STDCU) -I$(SRCDIR) -arch $(NVARCH) -lmpi -lcuda -lcudart -w -O3 -Xptxas -O3      \
         -Xcompiler -O3 -D_MWAITXINTRIN_H_INCLUDED $(FLAGS) $(ENV)
-PYPPFLAGS = -std=$(STDCPP) -I$(INCDIR) -I$(SRCDIR) -I$(PY3INCDIR) -shared -pthread -fPIC -fwrapv    \
+PYPPFLAGS = -std=$(STDCPP) -I$(SRCDIR) -I$(SRCDIR) -I$(PY3INCDIR) -shared -pthread -fPIC -fwrapv    \
         -O2 -Wall -fno-strict-aliasing $(FLAGS) $(ENV)
-PYXCFLAGS = --cplus -I$(INCDIR) -I$(SRCDIR) -3
+PYXCFLAGS = --cplus -I$(SRCDIR) -I$(SRCDIR) -3
 LINKFLAGS = -L$(MPILIBDIR) $(MPILKFLAG) $(FLAGS) $(ENV)
 
 # Lists all files to be compiled and separates them according to their corresponding
@@ -77,7 +78,7 @@ debug: $(TGTDIR)/$(NAME)
 testing: install
 testing: override GCPP = $(PYPP)
 testing: override ENV = -g -DTESTING
-testing: override NVCCFLAGS = -std=$(STDCU) -I$(INCDIR) -g -arch $(NVARCH) -lcuda -lcudart -w       \
+testing: override NVCCFLAGS = -std=$(STDCU) -I$(SRCDIR) -g -arch $(NVARCH) -lcuda -lcudart -w       \
         -D_MWAITXINTRIN_H_INCLUDED $(ENV) --compiler-options -fPIC
 testing: $(TESTFILES)
 

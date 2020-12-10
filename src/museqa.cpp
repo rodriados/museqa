@@ -27,13 +27,13 @@ using namespace museqa;
  * depending on the options available for the different steps of the software.
  * @since 0.1.1
  */
-static const std::vector<io::option> options = {
-    {cli::multigpu,  {"-m", "--multigpu"},    "Use multiple devices in a single host."}
-,   {cli::report,    {"-r", "--report-only"}, "Print only timing reports and nothing more."}
-,   {cli::scoring,   {"-s", "--scoring"},     "Choose pairwise module's scoring matrix.", true}
-,   {cli::gpuid,     {"-d", "--device"},      "Choose the GPU id to be used", true}
-,   {cli::pairwise,  {"-1", "--pairwise"},    "Choose pairwise module's algorithm.", true}
-,   {cli::phylogeny, {"-2", "--phylogeny"},   "Choose phylogeny module's algorithm.", true}
+static const std::vector<terminal::option> options = {
+    {"multigpu",      {"-m", "--multigpu"},      "Use multiple devices in a single host if possible."}
+,   {"report-only",   {"-r", "--report-only"},   "Print only timing reports and nothing else."}
+,   {"gpu-id",        {"-d", "--device"},        "Picks the GPU to be used on hosts with more than one.", true}
+,   {"scoring-table", {"-s", "--scoring-table"}, "The scoring table name or file to align sequences with.", true}
+,   {"pairwise",      {"-1", "--pairwise"},      "Picks the algorithm to use within the pairwise module.", true}
+,   {"phylogeny",     {"-2", "--phylogeny"},     "Picks the algorithm to use within the phylogeny module.", true}
 };
 
 namespace museqa
@@ -72,7 +72,7 @@ namespace museqa
              * @param pipe The previous module's conduit instance.
              * @return The resulting conduit to send to the next module.
              */
-            auto run(const io::service& io, const step::pipe& pipe) const -> step::pipe override
+            auto run(const io::manager& io, const step::pipe& pipe) const -> step::pipe override
             {
                 auto mresult = museqa::module::bootstrap::run(io, pipe);
                 auto conduit = pipeline::convert<bootstrap>(*mresult);
@@ -106,11 +106,11 @@ namespace museqa
              * @param pipe The previous module's conduit instance.
              * @return The resulting conduit to send to the next module.
              */
-            auto run(const io::service& io, const step::pipe& pipe) const -> step::pipe override
+            auto run(const io::manager& io, const step::pipe& pipe) const -> step::pipe override
             {
                 onlymaster {
-                    auto algoname = io.get<std::string>(cli::pairwise, "default");
-                    auto tablename = io.get<std::string>(cli::scoring, "default");
+                    auto algoname = io.cmd.get("pairwise", "default");
+                    auto tablename = io.cmd.get("scoring-table", "default");
                     const auto& conduit = pipeline::convert<pairwise::previous>(*pipe);
 
                     watchdog::info("chosen pairwise algorithm <bold>%s</>", algoname);
@@ -138,10 +138,10 @@ namespace museqa
              * @param pipe The previous module's conduit instance.
              * @return The resulting conduit to send to the next module.
              */
-            auto run(const io::service& io, const step::pipe& pipe) const -> step::pipe override
+            auto run(const io::manager& io, const step::pipe& pipe) const -> step::pipe override
             {
                 onlymaster {
-                    auto algoname = io.get<std::string>(cli::phylogeny, "default");
+                    auto algoname = io.cmd.get("phylogeny", "default");
 
                     watchdog::info("chosen phylogeny algorithm <bold>%s</>", algoname);
                     watchdog::init("phylogeny", "producing phylogenetic tree");
@@ -181,10 +181,10 @@ namespace museqa
              * @param io The IO module service instance.
              * @return The pipeline's final module's result.
              */
-            inline auto execute(const pipeline::module *modules[], const io::service& io) const
-            -> heuristic::conduit override
+            inline auto execute(const pipeline::module *modules[], const io::manager& io) const
+            -> heuristic::pipe override
             {
-                auto previous = heuristic::conduit {};
+                auto previous = heuristic::pipe {};
                 auto lambda = [&](size_t i) { return std::move(modules[i]->run(io, previous)); };
 
                 for(size_t i = 0; i < heuristic::count; ++i)
@@ -200,15 +200,15 @@ namespace museqa
      * @param io The IO module service instance.
      * @return Informs whether a failure has occurred during execution.
      */
-    static void run(const io::service& io)
+    static void run(const io::manager& io)
     {
         auto runner = museqa::runner {};
         auto lambda = [&io, &runner]() { runner.run(io); };
 
         onlyslaves {
             const auto rank  = node::rank - 1;
-            const auto count = global_state.devices_available;
-            const auto gpuid = io.get<int>(cli::gpuid, cuda::device::init);
+            const auto count = global_state.local_devices;
+            const auto gpuid = io.cmd.get<unsigned>("gpu-id", cuda::device::init);
             cuda::device::select((global_state.use_multigpu ? gpuid + rank : gpuid) % count);
         }
 
@@ -222,26 +222,26 @@ namespace museqa
  * @param argv The arguments sent by command line.
  * @return The error code for the operating system.
  */
-auto main(int argc, char **argv) -> int
+int main(int argc, char **argv)
 try {
     mpi::init(argc, argv);
 
-    auto io = io::service::make(options, argc, argv);
+    auto io = io::manager::make(options, argc, argv);
 
-    enforce(io.filecount(), "no input files given");
+    enforce(!io.cmd.all().empty(), "no input files given");
     enforce(node::count >= 2, "at least one slave node is needed");
 
-    global_state.report_only = io.has(cli::report);
-    onlyslaves global_state.use_multigpu = io.has(cli::multigpu);
-    onlyslaves global_state.devices_available = cuda::device::count();
+    global_state.report_only = io.cmd.has("report-only");
+    onlyslaves global_state.use_multigpu = io.cmd.has("multigpu");
+    onlyslaves global_state.local_devices = cuda::device::count();
 
     museqa::run(io);
-
     mpi::finalize();
+
     return 0;
 } catch(const std::exception& e) {
     watchdog::error(e.what());
-
     mpi::finalize();
+
     return 1;
 }

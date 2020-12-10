@@ -1,8 +1,8 @@
 obj/
 tex/
 .idea/
-bin/msa
-test/msa
+bin/museqa
+test/museqa
 
 *.o
 *.so
