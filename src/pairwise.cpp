@@ -16,7 +16,7 @@ namespace museqa
 {
     namespace module
     {
-        using namespace pw = museqa::pairwise;
+        namespace pw = museqa::pairwise;
 
         /**
          * Execute the module's task when on a pipeline.
@@ -25,8 +25,8 @@ namespace museqa
          */
         auto pairwise::run(const io::manager& io, const pairwise::pipe& pipe) const -> pairwise::pipe
         {
-            auto algoname = io.get<std::string>(cli::pairwise, "default");
-            auto tablename = io.get<std::string>(cli::scoring, "default");
+            auto algoname = io.cmd.get("pairwise", "default");
+            auto tablename = io.cmd.get("scoring-table", "default");
 
             const auto conduit = pipeline::convert<pairwise::previous>(*pipe);
 
@@ -44,10 +44,10 @@ namespace museqa
          */
         auto pairwise::check(const io::manager& io) const -> bool
         {
-            auto algoname = io.get<std::string>(cli::pairwise, "default");
+            auto algoname = io.cmd.get("pairwise", "default");
             enforce(pw::algorithm::has(algoname), "unknown pairwise algorithm chosen: '%s'", algoname);
 
-            auto tablename = io.get<std::string>(cli::scoring, "default");
+            auto tablename = io.cmd.get("scoring-table", "default");
             enforce(pw::scoring_table::has(tablename), "unknown scoring table chosen: '%s'", tablename);
             
             return true;
