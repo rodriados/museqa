@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 #include <cstdint>
-#include <algorithm>
+#include <numeric>
 
 #include "node.hpp"
 #include "buffer.hpp"

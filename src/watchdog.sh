@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Multiple Sequence Alignment watchdog execution script.
+# Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+# @file The script for the execution watchdog routine.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
-# @copyright 2018-2020 Rodrigo Siqueira
+# @copyright 2018-present Rodrigo Siqueira
 
 # This script watches over the output of a process and exhibits the process's progress.
 # To interact with the watchdog, a process must use the format given in this file,
