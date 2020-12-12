@@ -1274,16 +1274,16 @@ namespace museqa
             message msg = payload<T> {data};
 
             payload<int> size = mpi::allgather(&msg.size, 1, comm);
-            payload<int> disp = payload<int>::make(comm.size() + 1);
+            payload<int> disp = payload<int>::make(comm.size());
 
-            bool equal = true;
+            bool homogeneous = true;
 
             for(size_t i = 0, n = comm.size(); i < n; ++i) {
-                equal = equal && (size[0] == size[i]);
-                disp[i + 1] = disp[i] + size[i];
+                homogeneous = homogeneous && (size[i] == size[0]);
+                disp[i] = i > 0 ? (disp[i - 1] + size[i - 1]) : 0;
             }
 
-            if(equal) return mpi::allgather(msg, comm);
+            if(homogeneous) return mpi::allgather(msg, comm);
             else return mpi::allgatherv(msg, size, disp, comm);
         }
         /**#@-*/
@@ -1319,17 +1319,17 @@ namespace museqa
             message msg = payload<T> {data};
 
             payload<int> size = mpi::allgather(&msg.size, 1, comm);
-            payload<int> disp = payload<int>::make(comm.size() + 1);
+            payload<int> disp = payload<int>::make(comm.size());
 
-            bool equal = true;
+            bool homogeneous = true;
 
             for(size_t i = 0, n = comm.size(); i < n; ++i) {
-                equal = equal && (size[0] == size[i]);
-                disp[i + 1] = disp[i] + size[i];
+                homogeneous = homogeneous && (size[i] == size[0]);
+                disp[i] = i > 0 ? (disp[i - 1] + size[i - 1]) : 0;
             }
 
-            if(equal) return mpi::gather(msg, root, comm);
-            else return mpi::gatherv(msg, size, disp, root, comm);
+            if(homogeneous) return mpi::allgather(msg, comm);
+            else return mpi::allgatherv(msg, size, disp, comm);
         }
         /**#@-*/
 
