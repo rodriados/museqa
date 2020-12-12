@@ -34,14 +34,14 @@ MPILKFLAG ?= -lmpi_cxx -lmpi
 # certain features on code or affect the projects compilation.
 FLAGS ?=
 
-GCCCFLAGS = -std=$(STDC) -I$(SRCDIR) -Wall -lm -fPIC -O3 $(FLAGS) $(ENV)
-GCPPFLAGS = -std=$(STDCPP) -I$(SRCDIR) -Wall -fPIC -O3 $(FLAGS) $(ENV)
-NVCCFLAGS = -std=$(STDCU) -I$(SRCDIR) -arch $(NVARCH) -lmpi -lcuda -lcudart -w -O3 -Xptxas -O3      \
-        -Xcompiler -O3 -D_MWAITXINTRIN_H_INCLUDED $(FLAGS) $(ENV)
-PYPPFLAGS = -std=$(STDCPP) -I$(SRCDIR) -I$(SRCDIR) -I$(PY3INCDIR) -shared -pthread -fPIC -fwrapv    \
-        -O2 -Wall -fno-strict-aliasing $(FLAGS) $(ENV)
-PYXCFLAGS = --cplus -I$(SRCDIR) -I$(SRCDIR) -3
-LINKFLAGS = -L$(MPILIBDIR) $(MPILKFLAG) $(FLAGS) $(ENV)
+GCCCFLAGS = -std=$(STDC) -I$(INCDIR) -Wall -lm -fPIC -O3 $(ENV) $(FLAGS)
+GCPPFLAGS = -std=$(STDCPP) -I$(INCDIR) -Wall -fPIC -O3 $(ENV) $(FLAGS)
+NVCCFLAGS = -std=$(STDCU) -I$(INCDIR) -arch $(NVARCH) -lmpi -lcuda -lcudart -w -O3 -Xptxas -O3      \
+        -Xcompiler -O3 -D_MWAITXINTRIN_H_INCLUDED $(ENV) $(FLAGS)
+PYPPFLAGS = -std=$(STDCPP) -I$(INCDIR) -I$(PY3INCDIR) -shared -pthread -fPIC -fwrapv -O2 -Wall      \
+        -fno-strict-aliasing $(ENV) $(FLAGS)
+PYXCFLAGS = --cplus -I$(INCDIR) -3
+LINKFLAGS = -L$(MPILIBDIR) $(MPILKFLAG) $(ENV) $(FLAGS)
 
 # Lists all files to be compiled and separates them according to their corresponding
 # compilers. Changes in any of these files in will trigger conditional recompilation.
