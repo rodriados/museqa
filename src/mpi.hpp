@@ -1328,8 +1328,8 @@ namespace museqa
                 disp[i] = i > 0 ? (disp[i - 1] + size[i - 1]) : 0;
             }
 
-            if(homogeneous) return mpi::allgather(msg, comm);
-            else return mpi::allgatherv(msg, size, disp, comm);
+            if(homogeneous) return mpi::gather(msg, root, comm);
+            else return mpi::gatherv(msg, size, disp, root, comm);
         }
         /**#@-*/
 
