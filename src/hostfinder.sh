@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Multiple Sequence Alignment hosts finder script.
+# Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+# @file Script responsible for finding available hosts on network.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
-# @copyright 2018-2020 Rodrigo Siqueira
+# @copyright 2018-present Rodrigo Siqueira
 
 # This script traverses the current local network in search of all computer-capable
 # devices we can run our software on, and automatically generates a hostfile for
@@ -28,10 +29,7 @@ if [ "$0" = "$BASH_SOURCE" ]; then
     {
         # Access remote host in batch mode without tty allocation and runs the command
         # to find out the number of connected GPUs.
-        ssh -o ConnectTimeout=5 -o BatchMode=yes -o StrictHostKeyChecking=no -T $1 << EOF
-            ${gpu_counter}
-            exit
-EOF
+        ssh -o ConnectTimeout=5 -o BatchMode=yes -o StrictHostKeyChecking=no -T $1 "${gpu_counter}"
     }
 
     # Automatically generates a hostfile for MPI execution.
