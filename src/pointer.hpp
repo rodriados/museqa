@@ -418,7 +418,7 @@ namespace museqa
              * @param count The number of elements to be allocated.
              * @return The newly allocated pointer.
              */
-            static inline auto make(const allocator_type& allocator, size_t count = 1) noexcept -> pointer
+            static inline auto make(const allocator_type& allocator, size_t count = 1) -> pointer
             {
                 element_type *ptr = allocator.allocate<element_type>(count);
                 return pointer {ptr, allocator};

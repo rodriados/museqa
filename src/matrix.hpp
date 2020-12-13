@@ -160,7 +160,7 @@ namespace museqa
              * @param space The matrix's space dimensions.
              * @return The newly created matrix instance.
              */
-            static inline matrix make(const museqa::allocator& allocator, const space_type& space) noexcept
+            static inline matrix make(const museqa::allocator& allocator, const space_type& space)
             {
                 return matrix {pointer_type::make(allocator, space.volume()), space};
             }

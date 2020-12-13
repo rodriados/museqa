@@ -205,7 +205,7 @@ namespace museqa
         auto runner = museqa::runner {};
         auto lambda = [&io, &runner]() { runner.run(io); };
 
-        onlyslaves {
+        onlyslaves if(global_state.local_devices > 0) {
             const auto rank  = node::rank - 1;
             const auto count = global_state.local_devices;
             const auto gpuid = io.cmd.get<unsigned>("gpu-id", cuda::device::init);
@@ -233,7 +233,12 @@ try {
 
     global_state.report_only = io.cmd.has("report-only");
     onlyslaves global_state.use_multigpu = io.cmd.has("multigpu");
-    onlyslaves global_state.local_devices = cuda::device::count();
+
+    onlyslaves try {
+        global_state.local_devices = cuda::device::count();
+    } catch(const cuda::exception&) {
+        global_state.local_devices = 0;
+    }
 
     museqa::run(io);
     mpi::finalize();

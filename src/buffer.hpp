@@ -221,7 +221,7 @@ namespace museqa
              * @param size The buffer's number of elements.
              * @return The newly created buffer instance.
              */
-            static inline buffer make(const museqa::allocator& allocator, size_t size = 1) noexcept
+            static inline buffer make(const museqa::allocator& allocator, size_t size = 1)
             {
                 return buffer {pointer_type::make(allocator, size), size};
             }
