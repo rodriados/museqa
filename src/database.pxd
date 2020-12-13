@@ -1,17 +1,18 @@
 #!/usr/bin/env python
-# Multiple Sequence Alignment sequence database export file.
+# Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+# @file Wraps the software's database module and exposes it to Python world.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
-# @copyright 2018-2020 Rodrigo Siqueira
-from libcpp.set cimport set
+# @copyright 2018-present Rodrigo Siqueira
 from libcpp.vector cimport vector
 from libcpp.string cimport string
+from libcpp.set cimport set
 from sequence cimport c_sequence
 
-cdef extern from "database.hpp" namespace "msa" nogil:
+cdef extern from "database.hpp" namespace "museqa" nogil:
     # Stores a list of sequences read from possibly different sources. The added
     # sequences can only be accessed via their respective identity or iterator.
     # @since 0.1.1
-    cdef cppclass c_database "msa::database":
+    cdef cppclass c_database "museqa::database":
         ctypedef c_sequence element_type
 
         cppclass entry_type:
@@ -40,7 +41,7 @@ cdef extern from "database.hpp" namespace "msa" nogil:
 
         size_t count()
 
-cdef extern from "io/loader/database.hpp" namespace "msa::io" nogil:
+cdef extern from "io/loader/database.hpp" namespace "museqa::io" nogil:
     # Imports the IO loader's specialization for databases. This will allow us to
     # use the exactly same loader we do in C++.
     pass

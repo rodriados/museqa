@@ -1,22 +1,23 @@
 #!/usr/bin/env python
-# Multiple Sequence Alignment pairwise export file.
+# Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+# @file Wraps the software's pairwise module and exposes it to Python world.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
-# @copyright 2018-2020 Rodrigo Siqueira
+# @copyright 2018-present Rodrigo Siqueira
 from libc.stdint cimport *
 from libcpp.string cimport string
 from libcpp.vector cimport vector
 from database cimport c_database
 from point cimport c_point2
 
-cdef extern from "pairwise/pairwise.cuh" namespace "msa::pairwise":
+cdef extern from "pairwise/pairwise.cuh" namespace "museqa::pairwise":
     # The score of a sequence pair alignment.
     # @since 0.1.1
-    ctypedef float c_score "msa::pairwise::score"
+    ctypedef float c_score "museqa::pairwise::score"
 
     # Represents a pairwise distance matrix. At last, this object represents
     # the pairwise module's execution's final result.
     # @since 0.1.1
-    cdef cppclass c_dist_matrix "msa::pairwise::distance_matrix":
+    cdef cppclass c_dist_matrix "museqa::pairwise::distance_matrix":
         ctypedef c_score element_type
 
         c_dist_matrix()
@@ -30,7 +31,7 @@ cdef extern from "pairwise/pairwise.cuh" namespace "msa::pairwise":
     # The aminoacid substitution tables. These tables are stored contiguously
     # in memory, in order to facilitate accessing its elements.
     # @since 0.1.1
-    cdef cppclass c_scoring_table "msa::pairwise::scoring_table":
+    cdef cppclass c_scoring_table "museqa::pairwise::scoring_table":
         ctypedef c_score element_type
 
         c_scoring_table()
@@ -49,12 +50,12 @@ cdef extern from "pairwise/pairwise.cuh" namespace "msa::pairwise":
 
     # Represents a pairwise module algorithm.
     # @since 0.1.1
-    cdef cppclass c_algorithm "msa::pairwise::algorithm":
+    cdef cppclass c_algorithm "museqa::pairwise::algorithm":
         @staticmethod
         vector[string]& list()
 
     # Runs the pairwise module with given parameters.
-    cdef c_dist_matrix c_run "msa::pairwise::run" (c_database&, c_scoring_table&, string&) except +RuntimeError
+    cdef c_dist_matrix c_run "museqa::pairwise::run" (c_database&, c_scoring_table&, string&) except +RuntimeError
 
 # Exposes the module's resulting distance matrix.
 # @since 0.1.1

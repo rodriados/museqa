@@ -27,8 +27,8 @@ STDCPP ?= c++14
 STDCU  ?= c++11
 
 MPILIBDIR ?= /usr/lib/openmpi/lib
-PY3INCDIR ?= /usr/include/python3.5
 MPILKFLAG ?= -lmpi_cxx -lmpi
+PY3INCDIR ?= $(shell python -c "import sysconfig as s; print(s.get_paths()['include'])")
 
 # Defining macros inside code at compile time. This can be used to enable or disable
 # certain features on code or affect the projects compilation.
@@ -134,9 +134,9 @@ $(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/table.pya.a
 $(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/database.pya.a
 $(OBJDIR)/libmodules.a: $(OBJDIR)/io/loader/database.pya.a
 $(OBJDIR)/libmodules.a: $(OBJDIR)/io/loader/parser/fasta.pya.a
-$(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/needleman/communication.pya.a
 $(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/needleman/hybrid.pya.a
 $(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/needleman/sequential.pya.a
+$(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/needleman/needleman.pya.a
 $(OBJDIR)/libmodules.a: $(STATICFILES)
 	ar rcs $@ $^
 

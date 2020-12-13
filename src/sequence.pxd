@@ -1,16 +1,17 @@
 #!/usr/bin/env python
-# Multiple Sequence Alignment sequence export file.
+# Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+# @file Wraps the software's sequence module and exposes it to Python world.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
-# @copyright 2018-2020 Rodrigo Siqueira
-from libc.stdint cimport *
-from libcpp.string cimport string
+# @copyright 2018-present Rodrigo Siqueira
 from encoder cimport c_unit, c_block
+from libcpp.string cimport string
+from libc.stdint cimport *
 
-cdef extern from "sequence.hpp" namespace "msa" nogil:
+cdef extern from "sequence.hpp" namespace "museqa" nogil:
     # Holds an enconded sequence. The encoding pattern will used throughout all
     # steps: it saves up to a third of the required space and is easily revertable.
     # @since 0.1.1
-    cdef cppclass c_sequence "msa::sequence":
+    cdef cppclass c_sequence "museqa::sequence":
         c_sequence()
         c_sequence(c_sequence&)
         c_sequence(char *, size_t)
@@ -27,7 +28,7 @@ cdef extern from "sequence.hpp" namespace "msa" nogil:
     # Manages a slice of a sequence. The sequence must have already been initialized
     # and will have boundaries checked according to view pointers.
     # @since 0.1.1
-    cdef cppclass c_sequence_view "msa::sequence_view":
+    cdef cppclass c_sequence_view "museqa::sequence_view":
         c_sequence_view()
         c_sequence_view(c_sequence_view&)
 

@@ -1,8 +1,9 @@
 #!/usr/bin/env python
-# Multiple Sequence Alignment sequence test file.
+# Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+# @file Unit tests for the software's sequence module.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
-# @copyright 2019-2020 Rodrigo Siqueira
-from msa.sequence import Sequence
+# @copyright 2019-present Rodrigo Siqueira
+from museqa.sequence import Sequence
 import unittest
 
 # The list of available alphabets for sequences generation.
@@ -29,7 +30,7 @@ def encode(sequence):
     for letter in sequence:
         result.append(letter if letter in alphabet else invalid)
 
-    if length % 3 is not 0:
+    if length % 3 != 0:
         result += padding * (3 - (length % 3))
 
     return str.join("", result)
