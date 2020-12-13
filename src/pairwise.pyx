@@ -1,7 +1,8 @@
 #!/usr/bin/env python
-# Multiple Sequence Alignment pairwise wrapper file.
+# Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+# @file Implementation for the pairwise module wrapper.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
-# @copyright 2018-2020 Rodrigo Siqueira
+# @copyright 2018-present Rodrigo Siqueira
 from libc.stdint cimport *
 from libcpp.string cimport string
 from libcpp.vector cimport vector

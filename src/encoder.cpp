@@ -1,23 +1,24 @@
 /**
- * Multiple Sequence Alignment sequence encoder file.
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Implements a biological sequence encoder and compresser.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018-2019 Rodrigo Siqueira
+ * @copyright 2018-present Rodrigo Siqueira
  */
 #include <cctype>
 #include <string>
 #include <vector>
 
-#include <buffer.hpp>
-#include <encoder.hpp>
-#include <exception.hpp>
-#include <environment.h>
+#include "buffer.hpp"
+#include "encoder.hpp"
+#include "exception.hpp"
+#include "environment.h"
 
-#if defined(__msa_compiler_gcc)
+#if defined(__museqa_compiler_gcc)
   #pragma GCC push_options
   #pragma GCC optimize ("unroll-loops")
 #endif
 
-namespace msa
+namespace museqa
 {
     /**
      * The translate table used for creating new encoded units.
@@ -115,6 +116,6 @@ namespace msa
     }
 }
 
-#if defined(__msa_compiler_gcc)
+#if defined(__museqa_compiler_gcc)
   #pragma GCC pop_options
 #endif

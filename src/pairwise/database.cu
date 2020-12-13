@@ -1,26 +1,27 @@
 /**
- * Multiple Sequence Alignment pairwise database file.
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Implementation for the pairwise-specialized sequence database.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018-2020 Rodrigo Siqueira
+ * @copyright 2018-present Rodrigo Siqueira
  */
 #include <vector>
+#include <cstdint>
 
-#include <cuda.cuh>
-#include <encoder.hpp>
-#include <pointer.hpp>
-#include <database.hpp>
-#include <sequence.hpp>
+#include "cuda.cuh"
+#include "encoder.hpp"
+#include "database.hpp"
+#include "sequence.hpp"
 
-#include <pairwise/database.cuh>
+#include "pairwise/database.cuh"
 
-namespace msa
+namespace museqa
 {
     /**
      * Sets up the view pointers responsible for keeping track of internal sequences.
      * @param seq The merged sequence to have its internal parts splitted.
      * @param db The database to have its sequences mapped.
      */
-    auto pairwise::database::init(underlying_type& merged, const msa::database& db) -> entry_buffer
+    auto pairwise::database::init(underlying_type& merged, const museqa::database& db) -> entry_buffer
     {
         auto const count = db.count();
         auto result = entry_buffer::make(count);
@@ -38,7 +39,7 @@ namespace msa
      * @param db The database to have its sequences merged.
      * @return The merged sequences blocks.
      */
-    auto pairwise::database::merge(const msa::database& db) -> underlying_type
+    auto pairwise::database::merge(const museqa::database& db) -> underlying_type
     {
         std::vector<encoder::block> merged;
 

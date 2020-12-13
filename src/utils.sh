@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Multiple Sequence Alignment utility functions script file.
+# Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+# @file Micellaneous utility functions for bash scripts.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
-# @copyright 2019 Rodrigo Siqueira
+# @copyright 2019-present Rodrigo Siqueira
 
 # Applies a new style to given text.
 # @param $@ List of style names to apply

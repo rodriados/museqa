@@ -1,9 +1,10 @@
-# Multiple Sequence Alignment makefile.
+# Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+# @file The software's compilation and instalation script.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
-# @copyright 2018-2020 Rodrigo Siqueira
-NAME = msa
+# @copyright 2018-present Rodrigo Siqueira
+NAME = museqa
 
-INCDIR  = inc
+INCDIR  = src
 SRCDIR  = src
 OBJDIR  = obj
 TGTDIR  = bin
@@ -26,21 +27,21 @@ STDCPP ?= c++14
 STDCU  ?= c++11
 
 MPILIBDIR ?= /usr/lib/openmpi/lib
-PY3INCDIR ?= /usr/include/python3.5
 MPILKFLAG ?= -lmpi_cxx -lmpi
+PY3INCDIR ?= $(shell python -c "import sysconfig as s; print(s.get_paths()['include'])")
 
 # Defining macros inside code at compile time. This can be used to enable or disable
 # certain features on code or affect the projects compilation.
 FLAGS ?=
 
-GCCCFLAGS = -std=$(STDC) -I$(INCDIR) -Wall -lm -fPIC -O3 $(FLAGS) $(ENV)
-GCPPFLAGS = -std=$(STDCPP) -I$(INCDIR) -Wall -fPIC -O3 $(FLAGS) $(ENV)
+GCCCFLAGS = -std=$(STDC) -I$(INCDIR) -Wall -lm -fPIC -O3 $(ENV) $(FLAGS)
+GCPPFLAGS = -std=$(STDCPP) -I$(INCDIR) -Wall -fPIC -O3 $(ENV) $(FLAGS)
 NVCCFLAGS = -std=$(STDCU) -I$(INCDIR) -arch $(NVARCH) -lmpi -lcuda -lcudart -w -O3 -Xptxas -O3      \
-        -Xcompiler -O3 -D_MWAITXINTRIN_H_INCLUDED $(FLAGS) $(ENV)
-PYPPFLAGS = -std=$(STDCPP) -I$(INCDIR) -I$(SRCDIR) -I$(PY3INCDIR) -shared -pthread -fPIC -fwrapv    \
-        -O2 -Wall -fno-strict-aliasing $(FLAGS) $(ENV)
-PYXCFLAGS = --cplus -I$(INCDIR) -I$(SRCDIR) -3
-LINKFLAGS = -L$(MPILIBDIR) $(MPILKFLAG) $(FLAGS) $(ENV)
+        -Xcompiler -O3 -D_MWAITXINTRIN_H_INCLUDED $(ENV) $(FLAGS)
+PYPPFLAGS = -std=$(STDCPP) -I$(INCDIR) -I$(PY3INCDIR) -shared -pthread -fPIC -fwrapv -O2 -Wall      \
+        -fno-strict-aliasing $(ENV) $(FLAGS)
+PYXCFLAGS = --cplus -I$(INCDIR) -3
+LINKFLAGS = -L$(MPILIBDIR) $(MPILKFLAG) $(ENV) $(FLAGS)
 
 # Lists all files to be compiled and separates them according to their corresponding
 # compilers. Changes in any of these files in will trigger conditional recompilation.
@@ -77,7 +78,7 @@ debug: $(TGTDIR)/$(NAME)
 testing: install
 testing: override GCPP = $(PYPP)
 testing: override ENV = -g -DTESTING
-testing: override NVCCFLAGS = -std=$(STDCU) -I$(INCDIR) -g -arch $(NVARCH) -lcuda -lcudart -w       \
+testing: override NVCCFLAGS = -std=$(STDCU) -I$(SRCDIR) -g -arch $(NVARCH) -lcuda -lcudart -w       \
         -D_MWAITXINTRIN_H_INCLUDED $(ENV) --compiler-options -fPIC
 testing: $(TESTFILES)
 
@@ -133,9 +134,9 @@ $(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/table.pya.a
 $(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/database.pya.a
 $(OBJDIR)/libmodules.a: $(OBJDIR)/io/loader/database.pya.a
 $(OBJDIR)/libmodules.a: $(OBJDIR)/io/loader/parser/fasta.pya.a
-$(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/needleman/communication.pya.a
 $(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/needleman/hybrid.pya.a
 $(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/needleman/sequential.pya.a
+$(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/needleman/needleman.pya.a
 $(OBJDIR)/libmodules.a: $(STATICFILES)
 	ar rcs $@ $^
 

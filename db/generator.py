@@ -1,7 +1,8 @@
 #!/usr/bin/env python
-# Multiple Sequence Alignment random sequence database generator file.
+# Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+# @file A random sequence database generator for testing.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
-# @copyright 2019-2020 Rodrigo Siqueira
+# @copyright 2019-present Rodrigo Siqueira
 import random
 
 # The list of available alphabets for sequence generation.

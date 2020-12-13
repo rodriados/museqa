@@ -1,23 +1,23 @@
 /**
- * Multiple Sequence Alignment sequential needleman file.
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Sequential implementation for the pairwise module's needleman algorithm.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018-2020 Rodrigo Siqueira
+ * @copyright 2018-present Rodrigo Siqueira
  */
 #include <cstdint>
 
-#include <msa.hpp>
-#include <node.hpp>
-#include <buffer.hpp>
-#include <encoder.hpp>
-#include <database.hpp>
-#include <sequence.hpp>
+#include "node.hpp"
+#include "buffer.hpp"
+#include "encoder.hpp"
+#include "database.hpp"
+#include "sequence.hpp"
 
-#include <pairwise/pairwise.cuh>
-#include <pairwise/algorithm/needleman.cuh>
+#include "pairwise/pairwise.cuh"
+#include "pairwise/needleman/needleman.cuh"
 
 namespace
 {
-    using namespace msa;
+    using namespace museqa;
     using namespace pairwise;
 
     /**
@@ -123,7 +123,7 @@ namespace
     };
 }
 
-namespace msa
+namespace museqa
 {
     /**
      * Instantiates a new sequential needleman instance.

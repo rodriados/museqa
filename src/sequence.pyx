@@ -1,10 +1,11 @@
 #!/usr/bin/env python
-# Multiple Sequence Alignment sequence wrapper file.
+# Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+# @file Implementation for the sequence module wrapper.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
-# @copyright 2018-2020 Rodrigo Siqueira
+# @copyright 2018-present Rodrigo Siqueira
 from libcpp.string cimport string
-from sequence cimport c_sequence
 from encoder cimport c_unit, c_decode
+from sequence cimport c_sequence
 
 from functools import singledispatch
 

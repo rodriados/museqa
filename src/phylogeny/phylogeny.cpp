@@ -1,20 +1,19 @@
 /**
- * Multiple Sequence Alignment phylogeny module entry file.
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Implementation for the heuristics' phylogeny module.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2019-2020 Rodrigo Siqueira
+ * @copyright 2019-present Rodrigo Siqueira
  */
 #include <string>
 #include <vector>
 
-#include <io.hpp>
-#include <msa.hpp>
-#include <exception.hpp>
-#include <dispatcher.hpp>
+#include "exception.hpp"
+#include "dispatcher.hpp"
 
-#include <phylogeny/phylogeny.cuh>
-#include <phylogeny/algorithm/njoining.cuh>
+#include "phylogeny/phylogeny.cuh"
+#include "phylogeny/njoining/njoining.cuh"
 
-namespace msa
+namespace museqa
 {
     namespace phylogeny
     {
@@ -62,35 +61,6 @@ namespace msa
         auto algorithm::list() noexcept -> const std::vector<std::string>&
         {
             return factory_dispatcher.list();
-        }
-
-        /**
-         * Execute the module's task when on a pipeline.
-         * @param io The pipeline's IO service instance.
-         * @return A conduit with the module's processed results.
-         */
-        auto module::run(const io::service& io, const module::pipe& pipe) const -> module::pipe
-        {
-            auto algoname = io.get<std::string>(cli::phylogeny, "default");
-            const auto conduit = pipeline::convert<module::previous>(*pipe);
-
-            auto result = phylogeny::run(conduit.distances, conduit.total, algoname);
-
-            auto ptr = new module::conduit {conduit.db, result};
-            return module::pipe {ptr};
-        }
-
-        /**
-         * Checks whether command line arguments produce a valid module state.
-         * @param io The pipeline's IO service instance.
-         * @return Are the given command line arguments valid?
-         */
-        auto module::check(const io::service& io) const -> bool
-        {
-            auto algoname = io.get<std::string>(cli::phylogeny, "default");
-            enforce(algorithm::has(algoname), "unknown phylogeny algorithm chosen: '%s'", algoname);
-
-            return true;
         }
     }
 }

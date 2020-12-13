@@ -1,30 +1,31 @@
 /**
- * Multiple Sequence Alignment hybrid needleman file.
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Hybrid implementation for the pairwise module's needleman algorithm.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018-2019 Rodrigo Siqueira
+ * @copyright 2018-present Rodrigo Siqueira
  */
 #include <map>
 #include <set>
 #include <vector>
+#include <cstdint>
 
-#include <msa.hpp>
-#include <cuda.cuh>
-#include <node.hpp>
-#include <utils.hpp>
-#include <buffer.hpp>
-#include <encoder.hpp>
-#include <pointer.hpp>
-#include <database.hpp>
-#include <sequence.hpp>
-#include <exception.hpp>
+#include "cuda.cuh"
+#include "node.hpp"
+#include "utils.hpp"
+#include "buffer.hpp"
+#include "encoder.hpp"
+#include "pointer.hpp"
+#include "database.hpp"
+#include "sequence.hpp"
+#include "exception.hpp"
 
-#include <pairwise/database.cuh>
-#include <pairwise/pairwise.cuh>
-#include <pairwise/algorithm/needleman.cuh>
+#include "pairwise/database.cuh"
+#include "pairwise/pairwise.cuh"
+#include "pairwise/needleman/needleman.cuh"
 
 namespace
 {
-    using namespace msa;
+    using namespace museqa;
     using namespace pairwise;
 
     /**
@@ -259,7 +260,7 @@ namespace
      * @return The total memory requested for this work case execution.
      */
     static size_t required_memory(
-            const msa::database& db
+            const museqa::database& db
         ,   const std::set<ptrdiff_t>& used
         ,   const pair& target
         ,   size_t *pair_cache
@@ -291,7 +292,7 @@ namespace
      * @return The new loaded input instance.
      */
     static input load_input(
-            const msa::database& db
+            const museqa::database& db
         ,   const std::set<ptrdiff_t>& used
         ,   const std::vector<job>& jobs
         ,   const size_t cache_size
@@ -329,12 +330,12 @@ namespace
      * @param done The number of already processed pairs.
      * @return Input object instance with the selected pairs.
      */
-    static input make_input(const buffer<pair>& pairs, const msa::database& db, const size_t done)
+    static input make_input(const buffer<pair>& pairs, const museqa::database& db, const size_t done)
     {
         const size_t count = pairs.size();
 
         size_t mem_limit = cuda::device::free_memory();
-        size_t max_batch = cuda::device::max_blocks(count);
+        size_t max_batch = cuda::device::blocks(count);
         size_t pair_cache, cache_offset = 0;
 
         std::vector<job> jobs;
@@ -368,7 +369,7 @@ namespace
      * @param table The scoring table to use.
      * @return The score of aligned pairs.
      */
-    static auto align_db(const buffer<pair>& pairs, const msa::database& db, const scoring_table& table)
+    static auto align_db(const buffer<pair>& pairs, const museqa::database& db, const scoring_table& table)
     -> buffer<score>
     {
         const size_t count = pairs.size();
@@ -424,7 +425,7 @@ namespace
     };
 }
 
-namespace msa
+namespace museqa
 {
     /**
      * Instantiates a new hybrid needleman instance.

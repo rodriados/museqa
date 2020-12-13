@@ -1,7 +1,8 @@
 #!/usr/bin/env python
-# Multiple Sequence Alignment sequence database wrapper file.
+# Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+# @file Implementation for the database module wrapper.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
-# @copyright 2018-2019 Rodrigo Siqueira
+# @copyright 2018-present Rodrigo Siqueira
 from libcpp.set cimport set
 from libcpp.string cimport string
 from database cimport c_database
@@ -110,7 +111,7 @@ cdef class Database:
     # @param filenames The files to load a new database from.
     # @return The new database instance.
     @staticmethod
-    def loadfrom(*filenames):
+    def load(*filenames):
         cdef c_database result
         cdef c_loader[c_database] loader
 

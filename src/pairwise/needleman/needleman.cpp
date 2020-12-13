@@ -1,20 +1,20 @@
 /**
- * Multiple Sequence Alignment parallel needleman file.
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Implementation for the pairwise module's needleman algorithm.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2018-2020 Rodrigo Siqueira
+ * @copyright 2018-present Rodrigo Siqueira
  */
-#include <mpi.hpp>
-#include <oeis.hpp>
-#include <utils.hpp>
-#include <buffer.hpp>
+#include "mpi.hpp"
+#include "oeis.hpp"
+#include "utils.hpp"
+#include "buffer.hpp"
+#include "exception.hpp"
+#include "environment.h"
 
-#include <exception.hpp>
-#include <environment.h>
+#include "pairwise/pairwise.cuh"
+#include "pairwise/needleman/needleman.cuh"
 
-#include <pairwise/pairwise.cuh>
-#include <pairwise/algorithm/needleman.cuh>
-
-namespace msa
+namespace museqa
 {
     namespace pairwise
     {
@@ -28,7 +28,7 @@ namespace msa
              */
             auto algorithm::generate(size_t num) const -> buffer<pair>
             {
-                #if !defined(__msa_runtime_cython)
+                #if !defined(__museqa_runtime_cython)
                     enforce(node::rank >= 1, "master node must not generate pairs");
 
                     const auto total = utils::nchoose(num);
@@ -56,7 +56,7 @@ namespace msa
              */
             auto algorithm::gather(buffer<score>& input) const -> buffer<score>
             {
-                #if !defined(__msa_runtime_cython)
+                #if !defined(__museqa_runtime_cython)
                     return mpi::allgather(input);
                 #else
                     return input;

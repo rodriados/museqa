@@ -1,7 +1,8 @@
 #!/usr/bin/env python
-# Multiple Sequence Alignment test package file.
+# Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+# @file The project's test package entry point.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
-# @copyright 2018-2020 Rodrigo Siqueira
+# @copyright 2018-present Rodrigo Siqueira
 import sys
 import os
 

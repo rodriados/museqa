@@ -1,9 +1,10 @@
 #!/usr/bin/env python
-# Multiple Sequence Alignment database test file.
+# Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+# @file Unit tests for the software's database module.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
-# @copyright 2019-2020 Rodrigo Siqueira
-from msa.database import Database
-from msa.sequence import Sequence
+# @copyright 2019-present Rodrigo Siqueira
+from museqa.database import Database
+from museqa.sequence import Sequence
 import unittest
 
 # Groups up a list of tests for database objects.

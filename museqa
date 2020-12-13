@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Multiple Sequence Alignment controller script.
+# Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+# @file The software's controller script.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
-# @copyright 2018-2020 Rodrigo Siqueira
+# @copyright 2018-present Rodrigo Siqueira
 
 # The current software version
 readonly version="0.1.1"
@@ -13,17 +14,17 @@ source src/utils.sh
 # letting the user know what is the use of this script.
 showhelp()
 {
-    echo "Usage: msarun [options] files..."
+    echo "Usage: museqa [options] files..."
     echo "Options:"
-    echo "  -h, --help                  Prints this information."
-    echo "  -v, --version               Prints the software version."
-    echo "  -m, --multigpu              Try to use multiple devices in a single host."
-    echo "  -r, --report-only           Indicates whether only time reports should be printed"
-    echo "  -x, --matrix    <matrix>    The scoring matrix to use for alignment."
-    echo "  -f, --hostfile  <hostfile>  Use or generate the given cluster configuration file."
-    echo "  -d, --device    <device>    The id of first GPU to use for computation"
-    echo "  -1, --pairwise  <algorithm> The algorithm to use in pairwise module."
-    echo "  -2, --phylogeny <algorithm> The algorithm to use in phylogeny module."
+    echo "  -h, --help                       Prints this information."
+    echo "  -v, --version                    Prints the software version."
+    echo "  -m, --multigpu                   Try to use multiple devices in a single host."
+    echo "  -r, --report-only                Indicates whether only time reports should be printed."
+    echo "  -s, --scoring-matrix <matrix>    The scoring table name or file to align sequences with."
+    echo "  -f, --hostfile       <hostfile>  Use or generate the given cluster configuration file."
+    echo "  -d, --device         <device>    The id of first GPU to use for computation"
+    echo "  -1, --pairwise       <algorithm> The algorithm to use in pairwise module."
+    echo "  -2, --phylogeny      <algorithm> The algorithm to use in phylogeny module."
 }
 
 # Shows the current software version. This message is always shown during the application's
@@ -79,12 +80,12 @@ fi
 # Run the main project software. If running in debug mode, an instance of gdb will
 # run with each process. Thus, one can see what each process does separately.
 if [[ -z "$debug" ]]; then
-    mpirun -q --hostfile $hostfile bin/msa $reportonly ${positional[@]} > $pipe &
+    mpirun -q --hostfile $hostfile bin/museqa $reportonly ${positional[@]} > $pipe &
     src/watchdog.sh $reportonly $! < $pipe
 else
     mpirun -q --hostfile $hostfile                                                  \
         xterm -fa 'Monospace' -fs 10 -e                                             \
-        gdb --args bin/msa --report-only ${positional[@]}
+        gdb --args bin/museqa --report-only ${positional[@]}
 fi
 
 # Waits up for any undesired killed-process report message and throws it away.

@@ -1,7 +1,8 @@
 #!/usr/bin/perl -w
-# Multiple Sequence Alignment NCBI sequences downloader file.
+# Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+# @file The script for downloading NCBI sequences.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
-# @copyright 2020 Oleg Khovayko, Rodrigo Siqueira
+# @copyright 2020-present Oleg Khovayko, Rodrigo Siqueira
 use strict;
 use warnings;
 use LWP::Simple;

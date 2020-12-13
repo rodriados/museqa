@@ -1,16 +1,16 @@
 /**
- * Multiple Sequence Alignment parallel njoining file.
+ * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
+ * @file Implementation for the phylogeny module's neighbor-joining algorithm.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
- * @copyright 2020 Rodrigo Siqueira
+ * @copyright 2019-present Rodrigo Siqueira
  */
-#include <mpi.hpp>
+#include "mpi.hpp"
+#include "environment.h"
 
-#include <environment.h>
+#include "phylogeny/phylogeny.cuh"
+#include "phylogeny/njoining/njoining.cuh"
 
-#include <phylogeny/phylogeny.cuh>
-#include <phylogeny/algorithm/njoining.cuh>
-
-namespace msa
+namespace museqa
 {
     namespace phylogeny
     {
@@ -36,7 +36,7 @@ namespace msa
              */
             auto algorithm::reduce(joinable& candidate) const -> joinable
             {
-                #if !defined(__msa_runtime_cython)
+                #if !defined(__museqa_runtime_cython)
                     static auto mpiop = mpi::op::create<joinable>(closest);
                     return mpi::allreduce(candidate, mpiop);
                 #else
