@@ -229,9 +229,9 @@ namespace
         // code, to copy the scoring table into shared memory.
         new (&shared_table) scoring_table {pointer<decltype(mem_table)>::weak(&mem_table), table};
 
-        if(blockIdx.x < in.jobs.size()) {
-            const sequence_view& one = in.db[in.jobs[blockIdx.x].payload.id[0]];
-            const sequence_view& two = in.db[in.jobs[blockIdx.x].payload.id[1]];
+        for(size_t i = blockIdx.x; i < in.jobs.size(); i += gridDim.x) {
+            const sequence_view& one = in.db[in.jobs[i].payload.id[0]];
+            const sequence_view& two = in.db[in.jobs[i].payload.id[1]];
 
             // We must make sure that, if the sequences have different lengths,
             // the first sequence is bigger than the second. This will allow the
@@ -240,13 +240,13 @@ namespace
                     one.size() > two.size() ? one : two
                 ,   one.size() > two.size() ? two : one
                 ,   shared_table
-                ,   &in.cache[in.jobs[blockIdx.x].cache_offset]
+                ,   &in.cache[in.jobs[i].cache_offset]
                 );
 
             // We don't need every spawned thread to write the result to the output,
             // as only the first one contains the requested result.
             if(threadIdx.x == 0) {
-                out[blockIdx.x] = result;
+                out[i] = result;
             }
         }
     }
@@ -263,13 +263,12 @@ namespace
             const museqa::database& db
         ,   const std::set<ptrdiff_t>& used
         ,   const pair& target
-        ,   size_t *pair_cache
+        ,   size_t pair_cache
         )
     {
-        // Calculating the cache size required for processing the current work pair.
-        // The memory required by the cache is the size of a score type array.
-        *pair_cache = utils::max(db[target.id[0]].contents.length(), db[target.id[1]].contents.length());
-        size_t total_mem = sizeof(score) * (*pair_cache);
+        // Calculating the total amount of memory required for cache while processing
+        // the current work pair. The cache consists of a score type array.
+        size_t total_mem = sizeof(score) * pair_cache;
 
         // The amount of memory required by the sequences themselves are defined
         // by their sizes and whether they are already "loaded" or not.
@@ -284,6 +283,19 @@ namespace
     }
 
     /**
+     * Calculates the total amount of cache needed for processing the given pair.
+     * @param cache_size The amount of cache allocated previously for the block.
+     * @param db The sequences available for alignment.
+     * @param target The work case's target pair.
+     * @return The additional amount of cache needed for processing the pair.
+     */
+    static size_t needed_cache(const size_t cache_size, const museqa::database& db, const pair& target)
+    {
+        auto total = utils::max(db[target.id[0]].contents.length(), db[target.id[1]].contents.length());
+        return utils::max(total - cache_size, 0UL);
+    }
+
+    /**
      * Loads all necessary data to device, so that the selected jobs can start.
      * @param db The sequences available for alignment.
      * @param used The map of already "loaded" sequences.
@@ -294,7 +306,7 @@ namespace
     static input load_input(
             const museqa::database& db
         ,   const std::set<ptrdiff_t>& used
-        ,   const std::vector<job>& jobs
+        ,   const buffer<job>& jobs
         ,   const size_t cache_size
         )
     {
@@ -310,9 +322,9 @@ namespace
 
         for(size_t i = 0; i < count; ++i)
             jobs_buffer[i].payload = {
-                    transform[jobs[i].payload.id[0]]
-                ,   transform[jobs[i].payload.id[1]]
-                };
+                transform[jobs[i].payload.id[0]]
+            ,   transform[jobs[i].payload.id[1]]
+            };
 
         target.db = pairwise::database(db.only(used)).to_device();
         target.jobs = buffer<job>::make(cuda::allocator::device, count);
@@ -334,15 +346,18 @@ namespace
     {
         const size_t count = pairs.size();
 
-        size_t mem_limit = cuda::device::free_memory();
-        size_t max_batch = cuda::device::blocks(count);
-        size_t pair_cache, cache_offset = 0;
+        size_t job_count  = 0;
+        size_t mem_limit  = cuda::device::free_memory();
+        size_t max_blocks = cuda::device::blocks(count);
 
-        std::vector<job> jobs;
-        std::set<ptrdiff_t> selected;
+        auto sequences    = std::set<ptrdiff_t>();
+        auto block_cache  = std::vector<size_t>(max_blocks);
 
-        for(size_t i = done, n = 0; i < count && n < max_batch; ++i, ++n) {
-            size_t pair_mem = required_memory(db, selected, pairs[i], &pair_cache);
+        for(size_t i = done, n = 0; i < count; ++i, n = (n + 1) % max_blocks) {
+            // As this block might have already been used to calculate a previous
+            // pair, we should try reusing its old cache.
+            size_t pair_cache = needed_cache(block_cache[n], db, pairs[i]);
+            size_t pair_mem = required_memory(db, sequences, pairs[i], pair_cache);
 
             // If the amount of memory requested by the current pair is not available,
             // then our input is already in its full capacity. We assume sequences
@@ -351,15 +366,31 @@ namespace
             if(pair_mem > mem_limit)
                 break;
 
-            jobs.push_back({pairs[i], cache_offset});
-            selected.insert(pairs[i].id[0]);
-            selected.insert(pairs[i].id[1]);
+            sequences.insert(pairs[i].id[0]);
+            sequences.insert(pairs[i].id[1]);
 
-            cache_offset += pair_cache;
+            block_cache[n] += pair_cache;
             mem_limit -= pair_mem;
+            ++job_count;
         }
 
-        return load_input(db, selected, jobs, cache_offset);
+        size_t cache_offset = 0;
+        auto jobs = buffer<job>::make(job_count);
+
+        // Calculates the cache offset for each kernel block's use. This is essential
+        // to avoid cache collisions while processing pairs simultaneously.
+        for(size_t i = 0; i < max_blocks; ++i) {
+            auto length = block_cache[i];
+            block_cache[i] = cache_offset;
+            cache_offset += length;
+        }
+
+        // Builds the jobs instances, by assigning each job a pair to process and
+        // a cache offset to work with, which relates to the block it'll run in.
+        for(size_t i = 0; i < job_count; ++i)
+            jobs[i] = {pairs[done + i], block_cache[i]};
+
+        return load_input(db, sequences, jobs, cache_offset);
     }
 
     /**
@@ -382,13 +413,14 @@ namespace
             auto out = buffer<score>::make(cuda::allocator::device, in.jobs.size());
 
             enforce(in.jobs.size(), "not enough memory in device");
+            size_t blocks = cuda::device::blocks(in.jobs.size());
 
             // Here, we call our kernel and allocate our Needleman-Wunsch line buffer
             // in shared memory. We recommend that the batch size be a multiple
             // of both the number of characters in an encoded sequence block and
             // the number of threads in a warp. You can change the block size by
             // tweaking the *block_size* configuration value.
-            align_kernel<<<in.jobs.size(), block_size, sizeof(score) * batch_size>>>(in, out, table);
+            align_kernel<<<blocks, block_size, sizeof(score) * batch_size>>>(in, out, table);
             cuda::memory::copy(result.raw() + done, out.raw(), in.jobs.size());
             done += in.jobs.size();
         }

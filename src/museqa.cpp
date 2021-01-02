@@ -1,4 +1,4 @@
-/** 
+/**
  * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
  * @file The software's entry point.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
@@ -130,7 +130,7 @@ namespace museqa
          * phylogenetic tree, which will then be used to guide the final alignment.
          * @since 0.1.1
          */
-        struct phylogeny : public museqa::phylogeny::module
+        struct phylogeny : public museqa::module::phylogeny
         {
             /**
              * Executes the pipeline module's logic.
