@@ -40,13 +40,10 @@ namespace museqa
             const auto& target = selected->second;
             const auto& name = target.name;
 
-            if(target.is_variadic) {
+            if(target.is_variadic)
                 enforce(++i < argc, "missing argument value for option '%s'", selected->first);
-                parser.m_parsed[name].push_back(argv[i]);
-            } else {
-                auto e = parser.m_parsed[name];
-                (void) e; // forcing variable usage
-            }
+
+            parser.m_parsed[name].push_back(argv[i]);
         }
 
         return parser;
