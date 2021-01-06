@@ -54,9 +54,9 @@ PYFILES   := $(shell find $(SRCDIR) -name '*.py')
 OBJFILES     = $(GCCCFILES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)                                             \
                $(GCPPFILES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)                                           \
                $(NVCCFILES:$(SRCDIR)/%.cu=$(OBJDIR)/%.o)
-TESTFILES    = $(PYXCFILES:$(SRCDIR)/%.pyx=$(TGTDIR)/%.so)                                          \
-               $(PYFILES:$(SRCDIR)/%.py=$(TGTDIR)/%.py)
-STATICFILES  = $(filter $(PYXCFILES:$(SRCDIR)/%.pyx=$(OBJDIR)/%.pya.a),$(OBJFILES:%.o=%.pya.a))
+TESTFILES    = $(PYXCFILES:$(SRCDIR)/python/%.pyx=$(TGTDIR)/%.so)                                   \
+               $(PYFILES:$(SRCDIR)/python/%.py=$(TGTDIR)/%.py)
+STATICFILES  = $(filter $(PYXCFILES:$(SRCDIR)/python/%.pyx=$(OBJDIR)/%.pya.a),$(OBJFILES:%.o=%.pya.a))
 
 OBJHIERARCHY = $(sort $(dir $(OBJFILES)))
 
@@ -121,7 +121,7 @@ $(TGTDIR)/%.so: $(OBJDIR)/%.pyo.so $(OBJDIR)/libmodules.a
 $(TGTDIR)/%.py: $(SRCDIR)/%.py
 	cp $< $@
 
-$(OBJDIR)/%.cxx: $(SRCDIR)/%.pyx $(INCDIR)/*.pxd
+$(OBJDIR)/%.cxx: $(SRCDIR)/python/%.pyx $(INCDIR)/python/*.pxd
 	$(PYXC) $(PYXCFLAGS) $< -o $@
 
 $(OBJDIR)/%.pyo.so: $(OBJDIR)/%.cxx
