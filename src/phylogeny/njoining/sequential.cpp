@@ -273,19 +273,23 @@ namespace
                 range<size_t> partition;
                 njoining::joinable vote;
 
-                const size_t total = utils::nchoose(star.count);
+                onlyslaves if(star.count > static_cast<size_t>(node::rank)) {
+                    const size_t total = utils::nchoose(star.count);
 
-                // Let's split the total amount of work to be done between our compute
-                // nodes. Each node must pick its local best joinable candidate.
-                #if !defined(__museqa_runtime_cython)
-                    onlyslaves partition = utils::partition(total, node::count - 1, node::rank - 1);
-                #else
-                    partition = range<size_t> {0, total};
-                #endif
+                    // Let's split the total amount of work to be done between our compute
+                    // nodes. Each node must pick its local best joinable candidate.
+                    #if !defined(__museqa_runtime_cython)
+                        const auto workers = utils::min<size_t>(node::count - 1, star.count - 1);
+                        onlyslaves partition = utils::partition(total, workers, node::rank - 1);
+                    #else
+                        partition = range<size_t> {0, total};
+                    #endif
 
-                // After finding each compute node's local best joinable candidate,
-                // we must gather the votes and find the best one globally.
-                onlyslaves vote = pick_joinable(star, partition);
+                    // After finding each compute node's local best joinable candidate,
+                    // we must gather the votes and find the best one globally.
+                    vote = pick_joinable(star, partition);
+                }
+
                 vote = this->reduce(vote);
 
                 // At last, we join the selected pair, rebuild our distance matrix
