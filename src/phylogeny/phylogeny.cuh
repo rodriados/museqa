@@ -6,6 +6,7 @@
  */
 #pragma once
 
+#include <limits>
 #include <string>
 #include <vector>
 #include <cstdint>
@@ -15,7 +16,7 @@
 #include "functor.hpp"
 #include "pairwise.cuh"
 #include "allocator.hpp"
-#include "dendogram.hpp"
+#include "binarytree.hpp"
 
 namespace museqa
 {
@@ -44,6 +45,24 @@ namespace museqa
         using otu = oturef;
 
         /**
+         * Represents an OTU node in a phylogenetic tree. The OTU node must also
+         * keep track of its height on the tree, and its distance to its parent.
+         * @since 0.1.1
+         */
+        struct otunode
+        {
+            using otu_type = otu;                   /// The node's contents type.
+            using distance_type = score;            /// The type of the distance between nodes.
+
+            static constexpr distance_type farthest = std::numeric_limits<distance_type>::max();
+
+            otu_type id;                            /// The node's id on the tree.
+            distance_type distance = farthest;      /// The distance from this node to its parent.
+
+            uint32_t level = 0;                     /// The node's level or height in dendogram.
+        };
+
+        /**
          * Represents a phylogenetic tree. Our phylogenetic tree will be treated
          * as a dendogram, and each node in this dendogram is effectively an OTU.
          * The nodes on this tree are stored contiguously in memory, as the number
@@ -54,19 +73,24 @@ namespace museqa
          * the tree's leaves occupy the lowest references on its addressing space.
          * @since 0.1.1
          */
-        class tree : protected dendogram<otu, score, oturef>
+        class tree : public binarytree<otunode, oturef>
         {
             protected:
-                using distance_type = score;
-                using reference_type = oturef;
-                using underlying_type = dendogram<otu, score, oturef>;
+                using underlying_tree = binarytree<otunode, oturef>;
+
+            protected:
+                using distance_type = otunode::distance_type;
+                using node_type = typename underlying_tree::node;
+                using reference_type = typename underlying_tree::reference_type;
+                using buffer_type = buffer<node_type>;
 
             public:
-                static constexpr reference_type undefined = node_type::undefined;
+                static constexpr reference_type undefined = node::undefined;
 
             protected:
                 /**
-                 * Gathers all information needed to join a node to a new parent.
+                 * Gathers all information needed to perform a join operation between
+                 * two nodes to a new resulting parent node.
                  * @since 0.1.1
                  */
                 struct joininfo
@@ -74,6 +98,10 @@ namespace museqa
                     reference_type node;        /// The child node's reference.
                     distance_type distance;     /// The node's distance to its new parent.
                 };
+
+            protected:
+                buffer_type m_buffer;           /// The buffer of all nodes in tree.
+                uint32_t m_leaves = 0;          /// The total number of leaves in tree.
 
             public:
                 inline tree() noexcept = default;
@@ -83,24 +111,48 @@ namespace museqa
                 inline tree& operator=(const tree&) = default;
                 inline tree& operator=(tree&&) = default;
 
-                using underlying_type::operator[];
+                /**
+                 * Retrieves a node from the tree by it's reference value.
+                 * @param ref The node reference value to be retrieved.
+                 * @return The requested node.
+                 */
+                inline const node_type& operator[](reference_type ref) const
+                {
+                    return m_buffer[ref];
+                }
 
                 /**
-                 * Joins a pair of OTUs into a common parent.
+                 * Joins a pair of OTUs into a common parent node.
                  * @param parent The parent node reference to join children OTUs to.
                  * @param fst The joining information for the parent's first child.
                  * @param snd The joining information for the parent's second child.
                  */
                 inline void join(reference_type parent, const joininfo& fst, const joininfo& snd)
                 {
-                    auto& father = underlying_type::operator[](parent);
-
+                    auto &father = m_buffer[parent];
                     const auto rheight = branch(father, fst, 0);
                     const auto lheight = branch(father, snd, 1);
+
                     father.level = utils::max(rheight, lheight) + 1;
                 }
 
-                using underlying_type::leaves;
+                /**
+                 * Gives access to the tree's root node.
+                 * @return The tree's root node.
+                 */
+                inline const node_type& root() const noexcept
+                {
+                    return operator[](underlying_tree::root());
+                }
+
+                /**
+                 * Informs the number of leaves in the tree.
+                 * @return The total amount of leaf nodes in the tree.
+                 */
+                inline uint32_t leaves() const noexcept
+                {
+                    return m_leaves;
+                }
 
                 /**
                  * Creates a new tree with given number of nodes as leaves.
@@ -109,7 +161,7 @@ namespace museqa
                  */
                 static inline tree make(uint32_t leaves) noexcept
                 {
-                    return tree {underlying_type::make(leaves)};
+                    return tree {buffer_type::make((leaves << 1) - 1), leaves};
                 }
 
                 /**
@@ -120,22 +172,10 @@ namespace museqa
                  */
                 static inline tree make(const museqa::allocator& allocator, uint32_t leaves) noexcept
                 {
-                    return tree {underlying_type::make(allocator, leaves)};
+                    return tree {buffer_type::make(allocator, (leaves << 1) - 1), leaves};
                 }
 
             protected:
-                /**
-                 * Builds a new tree from an underlying dendogram. It is assumed
-                 * that the given dendogram is empty, without relevant hierarchy.
-                 * @param raw The tree's underlying dendogram instance.
-                 */
-                inline tree(underlying_type&& raw)
-                : underlying_type {std::forward<decltype(raw)>(raw)}
-                {
-                    for(size_t i = 0; i < this->m_size; ++i)
-                        this->m_ptr[i].contents = (otu) i;
-                }
-
                 /**
                  * Updates a node's branch according to the given joining action
                  * being performed. The given node instance will be used as parent.
@@ -146,13 +186,29 @@ namespace museqa
                  */
                 inline auto branch(node_type& parent, const joininfo& info, int relation) -> uint32_t
                 {
-                    auto& child = underlying_type::operator[](info.node);
+                    auto& child = m_buffer[info.node];
 
-                    child.parent = parent.contents;
+                    child.parent = parent.id;
                     child.distance = info.distance;
                     parent.child[relation] = info.node;
 
                     return child.level;
+                }
+
+            private:
+                /**
+                 * Builds a new tree from an underlying tree nodes buffer. It is
+                 * assumed that the given tree is empty, without relevant hierarchy.
+                 * @param raw The tree's underlying buffer instance.
+                 * @param leaves The number of leaf nodes in tree.
+                 */
+                inline tree(buffer_type&& raw, uint32_t leaves)
+                :   underlying_tree {static_cast<oturef>(raw.size() - 1)}
+                ,   m_buffer {std::forward<decltype(raw)>(raw)}
+                ,   m_leaves {leaves}
+                {
+                    for(size_t i = 0; i < m_buffer.size(); ++i)
+                        m_buffer[i].id = (otu) i;
                 }
         };
 
