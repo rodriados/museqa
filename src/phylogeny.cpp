@@ -4,8 +4,6 @@
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2020-present Rodrigo Siqueira
  */
-#include <string>
-
 #include "io.hpp"
 #include "pipeline.hpp"
 #include "exception.hpp"
