@@ -86,7 +86,12 @@ def list():
 # @return The resulting distance matrix.
 def run(Database db, **kwargs):
     table = kwargs.pop('table', ScoringTable())
-    algoname = kwargs.pop('algorithm', 'default').encode('ascii')
+    algorithm = kwargs.pop('algorithm', 'default')
 
     cdef ScoringTable s_table = table if type(table) is not str else ScoringTable(table)
-    return DistanceMatrix.wrap(c_run(db.thisptr, s_table.thisptr, algoname))
+
+    if type(algorithm) is str:
+        return DistanceMatrix.wrap(c_run(db.thisptr, s_table.thisptr, algorithm.encode('ascii')))
+
+    cdef DistanceMatrix matrix = algorithm(db, table = s_table)
+    return matrix
