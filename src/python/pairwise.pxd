@@ -22,6 +22,7 @@ cdef extern from "pairwise/pairwise.cuh" namespace "museqa::pairwise":
 
         c_dist_matrix()
         c_dist_matrix(c_dist_matrix&)
+        c_dist_matrix(vector[c_score]&, size_t)
 
         c_dist_matrix& operator=(c_dist_matrix&)
         element_type at "operator[]" (c_point2[size_t]&) except +RuntimeError

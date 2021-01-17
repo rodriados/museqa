@@ -78,6 +78,16 @@ namespace museqa
                 ,   m_count {count}
                 {}
 
+                /**
+                 * Instantiates a new distance matrix from a vector containing the
+                 * pairwise distances between all sequences.
+                 * @param vector The vector of pairwise distances.
+                 * @param count The total number of sequences represented.
+                 */
+                inline distance_matrix(const std::vector<score>& vector, size_t count) noexcept
+                :   distance_matrix {underlying_type::copy(vector), count}
+                {}
+
                 inline distance_matrix& operator=(const distance_matrix&) = default;
                 inline distance_matrix& operator=(distance_matrix&&) = default;
 

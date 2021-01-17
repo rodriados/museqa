@@ -1,7 +1,8 @@
 obj/
 tex/
 .idea/
-bin/museqa
+bin/
+!bin/__init__.py
 test/museqa
 
 *.o

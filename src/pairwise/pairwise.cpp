@@ -25,8 +25,11 @@ namespace museqa
          */
         static const dispatcher<factory> factory_dispatcher = {
             {"default",               needleman::hybrid}
+        ,   {"hybrid",                needleman::hybrid}
         ,   {"needleman",             needleman::hybrid}
         ,   {"needleman-hybrid",      needleman::hybrid}
+        ,   {"sequential",            needleman::sequential}
+        ,   {"distributed",           needleman::sequential}
         ,   {"needleman-sequential",  needleman::sequential}
         ,   {"needleman-distributed", needleman::sequential}
         };

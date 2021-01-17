@@ -37,18 +37,19 @@ namespace
             line[i] = i * -table.penalty();
 
         for(size_t i = 0; i < one.length(); ++i) {
-            // If the current line is at sequence end, then we can already finish the
-            // algorithm, as no changes are expected to occur after the end of sequence.
+            // If the current line is at sequence end, then we can already finish
+            // the algorithm, as no changes are expected to occur after the end
+            // of sequence.
             if(one[i] == encoder::end)
                 break;
 
-            // Initialize the 0-th column values. It will always be initialized with
-            // penalties, in the same manner as the 0-th line.
+            // Initialize the 0-th column values. It will always be initialized
+            // with penalties, in the same manner as the 0-th line.
             score done = line[0];
             line[0] = (i + 1) * -table.penalty();
 
-            // Iterate over the second sequence, calculating the best alignment possible
-            // for each of its characters.
+            // Iterate over the second sequence, calculating the best alignment
+            // possible for each of its characters.
             for(size_t j = 1; j <= two.length(); ++j) {
                 score value = line[j - 1];
 
@@ -74,7 +75,7 @@ namespace
      * @param table The scoring table to use.
      * @return The score of aligned pairs.
      */
-    static auto align_db(const buffer<pair>& pairs, const database& db, const scoring_table& table)
+    static auto align(const buffer<pair>& pairs, const database& db, const scoring_table& table)
     -> buffer<score>
     {
         const size_t count = pairs.size();
@@ -115,7 +116,7 @@ namespace
 
             onlyslaves {
                 auto pairs = this->generate(nsequences);
-                result = align_db(pairs, ctx.db, ctx.table);
+                result = align(pairs, ctx.db, ctx.table);
             }
 
             return distance_matrix {this->gather(result), nsequences};

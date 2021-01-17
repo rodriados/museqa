@@ -56,7 +56,7 @@ OBJFILES     = $(GCCCFILES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)                         
                $(NVCCFILES:$(SRCDIR)/%.cu=$(OBJDIR)/%.o)
 TESTFILES    = $(PYXCFILES:$(SRCDIR)/python/%.pyx=$(TGTDIR)/%.so)                                   \
                $(PYFILES:$(SRCDIR)/python/%.py=$(TGTDIR)/%.py)
-STATICFILES  = $(filter $(PYXCFILES:$(SRCDIR)/python/%.pyx=$(OBJDIR)/%.pya.a),$(OBJFILES:%.o=%.pya.a))
+STATICFILES  = $(filter $(PYXCFILES:$(SRCDIR)/python/%.pyx=$(OBJDIR)/%.a),$(OBJFILES:%.o=%.a))
 
 OBJHIERARCHY = $(sort $(dir $(OBJFILES)))
 
@@ -90,7 +90,7 @@ clean:
 # Creates dependency on header files. This is valuable so that whenever a header
 # file is changed, all objects depending on it will be recompiled.
 ifneq ($(wildcard $(OBJDIR)/.),)
--include testing.d $(shell find $(OBJDIR) -name '*.d')
+-include $(shell find $(OBJDIR) -name '*.d')
 endif
 
 # Creates the hierarchy of folders needed to compile the project. This rule should
@@ -103,43 +103,44 @@ $(OBJHIERARCHY):
 $(TGTDIR)/$(NAME): $(OBJFILES)
 	$(NVCC) $(LINKFLAGS) $^ -o $@
 
-$(OBJDIR)/%.o $(OBJDIR)/%.pya.a: $(SRCDIR)/%.c
+$(OBJDIR)/%.o $(OBJDIR)/%.a: $(SRCDIR)/%.c
 	$(GCCC) $(GCCCFLAGS) -MMD -c $< -o $@
 
-$(OBJDIR)/%.o $(OBJDIR)/%.pya.a: $(SRCDIR)/%.cpp
+$(OBJDIR)/%.o $(OBJDIR)/%.a: $(SRCDIR)/%.cpp
 	$(GCPP) $(GCPPFLAGS) -MMD -c $< -o $@
 
-$(OBJDIR)/%.o $(OBJDIR)/%.pya.a: $(SRCDIR)/%.cu
+$(OBJDIR)/%.o $(OBJDIR)/%.a: $(SRCDIR)/%.cu
 	@$(NVCC) $(NVCCFLAGS) -M $< -odir $(patsubst %/,%,$(dir $@)) > $(@:%.o=%.d)
 	$(NVCC) $(NVCCFLAGS) -dc $< -o $@
 
 # The step rules to build the testing environment modules. This setting will result
 # into many modules that can be directly imported used into a python module.
-$(TGTDIR)/%.so: $(OBJDIR)/%.pyo.so $(OBJDIR)/libmodules.a
-	$(NVCC) -shared -L$(OBJDIR) -lmodules $< -o $@
+$(TGTDIR)/%.so: $(OBJDIR)/%.py.so $(OBJDIR)/libmuseqa.a
+	$(NVCC) -shared -L$(OBJDIR) -lmuseqa $< -o $@
 
-$(TGTDIR)/%.py: $(SRCDIR)/%.py
-	cp $< $@
+$(TGTDIR)/%.py: $(SRCDIR)/python/%.py
+	@mkdir -p $(dir $@)
+	cp -l $< $@
 
 $(OBJDIR)/%.cxx: $(SRCDIR)/python/%.pyx $(INCDIR)/python/*.pxd
 	$(PYXC) $(PYXCFLAGS) $< -o $@
 
-$(OBJDIR)/%.pyo.so: $(OBJDIR)/%.cxx
+$(OBJDIR)/%.py.so: $(OBJDIR)/%.cxx
 	$(PYPP) $(PYPPFLAGS) -MMD -c $< -o $@
 
-$(OBJDIR)/libmodules.a: $(OBJDIR)/cuda.pya.a
-$(OBJDIR)/libmodules.a: $(OBJDIR)/encoder.pya.a
-$(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/pairwise.pya.a
-$(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/table.pya.a
-$(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/database.pya.a
-$(OBJDIR)/libmodules.a: $(OBJDIR)/io/loader/database.pya.a
-$(OBJDIR)/libmodules.a: $(OBJDIR)/io/loader/parser/fasta.pya.a
-$(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/needleman/hybrid.pya.a
-$(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/needleman/sequential.pya.a
-$(OBJDIR)/libmodules.a: $(OBJDIR)/pairwise/needleman/needleman.pya.a
-$(OBJDIR)/libmodules.a: $(STATICFILES)
+$(OBJDIR)/libmuseqa.a: $(OBJDIR)/cuda.a
+$(OBJDIR)/libmuseqa.a: $(OBJDIR)/encoder.a
+$(OBJDIR)/libmuseqa.a: $(OBJDIR)/pairwise/table.a
+$(OBJDIR)/libmuseqa.a: $(OBJDIR)/pairwise/database.a
+$(OBJDIR)/libmuseqa.a: $(OBJDIR)/pairwise/pairwise.a
+$(OBJDIR)/libmuseqa.a: $(OBJDIR)/io/loader/database.a
+$(OBJDIR)/libmuseqa.a: $(OBJDIR)/io/loader/parser/fasta.a
+$(OBJDIR)/libmuseqa.a: $(OBJDIR)/pairwise/needleman/needleman.a
+$(OBJDIR)/libmuseqa.a: $(OBJDIR)/pairwise/needleman/impl/hybrid.a
+$(OBJDIR)/libmuseqa.a: $(OBJDIR)/pairwise/needleman/impl/sequential.a
+$(OBJDIR)/libmuseqa.a: $(STATICFILES)
 	ar rcs $@ $^
 
 .PHONY: all install production debug testing clean
 
-.PRECIOUS: $(OBJDIR)/%.cxx $(OBJDIR)/%.pyo.so $(OBJDIR)/%.pya.a
+.PRECIOUS: $(OBJDIR)/%.cxx $(OBJDIR)/%.a $(OBJDIR)/%.py.so

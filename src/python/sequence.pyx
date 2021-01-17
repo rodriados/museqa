@@ -15,6 +15,10 @@ __all__ = ["Sequence"]
 # Python code to the underlying C++ sequence object.
 # @since 0.1.1
 cdef class Sequence:
+    # The character to indicate padding after a sequence has already been finished.
+    # @since 0.1.1
+    padding  = "*"
+
     # Instantiates a new sequence.
     # @param contents The sequence contents.
     def __cinit__(self, contents = bytes()):

@@ -400,7 +400,7 @@ namespace
      * @param table The scoring table to use.
      * @return The score of aligned pairs.
      */
-    static auto align_db(const buffer<pair>& pairs, const museqa::database& db, const scoring_table& table)
+    static auto align(const buffer<pair>& pairs, const museqa::database& db, const scoring_table& table)
     -> buffer<score>
     {
         const size_t count = pairs.size();
@@ -449,7 +449,7 @@ namespace
             onlyslaves {
                 auto pairs = this->generate(nsequences);
                 const scoring_table table = ctx.table.to_device();
-                result = align_db(pairs, ctx.db, table);
+                result = align(pairs, ctx.db, table);
             }
 
             return distance_matrix {this->gather(result), nsequences};

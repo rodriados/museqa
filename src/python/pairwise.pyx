@@ -14,6 +14,13 @@ from pairwise cimport *
 # Exposes the module's resulting distance matrix.
 # @since 0.1.1
 cdef class DistanceMatrix:
+    # Instantiates a new distance matrix from a list of pairwise sequence scores.
+    # @param score The list of pair distances.
+    # @param count The total number of sequences represented.
+    def __cinit__(self, list score = [], int count = 0):
+        cdef vector[c_score] buf = score
+        self.thisptr = c_dist_matrix(buf, count)
+
     # Accesses a value on the distance matrix.
     # @param offset The requested matrix position to access.
     # @return The score of given position.
