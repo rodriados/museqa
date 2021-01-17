@@ -36,9 +36,9 @@ using namespace museqa;
  */
 using element_type = typename phylogeny::matrix<>::element_type;
 
-// Unfortunately, NVCC gives us false-positives warnings regarding to declared but
-// unused functions on anonymous namespaces. For that reason, we brute-force suppress
-// this diagnostic here, as this bug had not yet been fixed by the version we use.
+// Unfortunately, NVCC gives us false warnings regarding declared but not used functions
+// on anonymous namespaces. For that reason, we brute-force suppress this diagnostic
+// here, as this bug had not yet been fixed by the version we use.
 #pragma push
 #pragma diag_suppress 177
 

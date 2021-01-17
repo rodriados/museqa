@@ -165,7 +165,7 @@ namespace
 
             __syncthreads();
 
-            // Now that out shared array is ready to be reduced, and all exceeding
+            // Now that our shared array is ready to be reduced, and all exceeding
             // elements have been summed, we can perform our reduce operation.
             reduce<sum>(sums, blockDim.x, threadIdx.x);
 
@@ -513,10 +513,10 @@ namespace
          */
         auto run(const context& ctx) const -> tree override
         {
-            if (ctx.total < 2)
+            if (ctx.matrix.count() < 2)
                 return tree {};
 
-            auto star = initialize<T>(ctx.matrix, ctx.total);
+            auto star = initialize<T>(ctx.matrix, ctx.matrix.count());
             auto result = build_tree(star);
 
             return result;

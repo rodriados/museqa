@@ -26,7 +26,7 @@ namespace museqa
             auto algoname = io.cmd.get("phylogeny", "default");
             const auto conduit = pipeline::convert<phylogeny::previous>(*pipe);
 
-            auto result = pg::run(conduit.distances, conduit.total, algoname);
+            auto result = pg::run(conduit.distances, algoname);
 
             auto ptr = new phylogeny::conduit {conduit.db, result};
             return phylogeny::pipe {ptr};

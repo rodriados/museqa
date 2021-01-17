@@ -229,7 +229,6 @@ namespace museqa
         struct context
         {
             const pairwise::distance_matrix matrix;
-            const size_t total;
         };
 
         /**
@@ -264,20 +263,18 @@ namespace museqa
         /**
          * Runs the module when not on a pipeline.
          * @param dmat The distance matrix between sequences.
-         * @param total The total number of sequences being aligned.
          * @param algorithm The chosen phylogeny algorithm.
          * @return The chosen algorithm's resulting phylogenetic tree.
          */
         inline tree run(
                 const pairwise::distance_matrix& dmat
-            ,   const size_t total
             ,   const std::string& algorithm = "default"
             )
         {
             auto lambda = phylogeny::algorithm::make(algorithm);
             
             const phylogeny::algorithm *worker = lambda ();
-            auto result = worker->run({dmat, total});
+            auto result = worker->run({dmat});
             
             delete worker;
             return result;
