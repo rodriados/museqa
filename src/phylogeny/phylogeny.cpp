@@ -23,9 +23,14 @@ namespace museqa
          */
         static const dispatcher<factory> factory_dispatcher = {
             {"default",                     njoining::hybrid_symmetric}
+        ,   {"hybrid",                      njoining::hybrid_symmetric}
+        ,   {"linear",                      njoining::hybrid_linear}
+        ,   {"symmetric",                   njoining::hybrid_symmetric}
         ,   {"njoining",                    njoining::hybrid_symmetric}
         ,   {"njoining-linear",             njoining::hybrid_linear}
         ,   {"njoining-symmetric",          njoining::hybrid_symmetric}
+        ,   {"sequential",                  njoining::sequential_symmetric}
+        ,   {"distributed",                 njoining::sequential_symmetric}
         ,   {"njoining-sequential",         njoining::sequential_symmetric}
         ,   {"njoining-sequential-linear",  njoining::sequential_linear}
         ,   {"njoining-distributed",        njoining::sequential_symmetric}

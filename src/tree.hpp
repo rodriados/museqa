@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <utility>
 
+#include "utils.hpp"
 #include "hierarchy.hpp"
 
 namespace museqa
@@ -21,7 +22,7 @@ namespace museqa
      * @since 0.1.1
      */
     template <typename T, typename R = void>
-    class binarytree
+    class tree
     {
         public:
             struct node;                        /// The binary tree's nodes' type.
@@ -37,28 +38,26 @@ namespace museqa
             reference_type m_root = undefined;  /// The tree's root node reference.
 
         public:
-            inline binarytree() noexcept = default;
-            inline binarytree(const binarytree&) noexcept = default;
-            inline binarytree(binarytree&&) noexcept = default;
+            inline tree() noexcept = default;
+            inline tree(const tree&) noexcept = default;
+            inline tree(tree&&) noexcept = default;
 
             /**
              * Creates a new binary tree by acquiring a root node reference.
              * @param root The tree's root node's reference.
              */
-            inline binarytree(reference_type root) noexcept
+            inline tree(reference_type root) noexcept
             :   m_root {root}
             {}
 
-            virtual ~binarytree() = default;
-
-            inline binarytree& operator=(const binarytree&) noexcept = default;
-            inline binarytree& operator=(binarytree&&) noexcept = default;
+            inline tree& operator=(const tree&) noexcept = default;
+            inline tree& operator=(tree&&) noexcept = default;
 
             /**
              * Gives access to the tree's root node reference.
              * @return The tree's root node reference.
              */
-            inline reference_type root() const noexcept
+            __host__ __device__ inline reference_type root() const noexcept
             {
                 return m_root;
             }
@@ -66,7 +65,7 @@ namespace museqa
 
     namespace detail
     {
-        namespace binarytree
+        namespace tree
         {
             /**#@+
              * Represents a generic binary tree node.
@@ -94,7 +93,7 @@ namespace museqa
      * @since 0.1.1
      */
     template <typename T, typename R>
-    struct binarytree<T, R>::node : public detail::binarytree::node<T, R>
+    struct tree<T, R>::node : public detail::tree::node<T, R>
     {
         using element_type = T;         /// The binary tree's nodes' element type.
     };

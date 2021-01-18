@@ -62,7 +62,7 @@ namespace museqa
 
             const pointer<database> db;         /// The loaded sequences' database.
             const distance_matrix distances;    /// The sequences' pairwise distances.
-            const size_t total;                 /// The total number of sequences.
+            const size_t count;                 /// The total number of sequences.
 
             inline conduit() noexcept = delete;
             inline conduit(const conduit&) = default;
@@ -76,7 +76,7 @@ namespace museqa
             inline conduit(const pointer<database>& db, const distance_matrix& dmat) noexcept
             :   db {db}
             ,   distances {dmat}
-            ,   total {db->count()}
+            ,   count {db->count()}
             {}
 
             inline conduit& operator=(const conduit&) = delete;

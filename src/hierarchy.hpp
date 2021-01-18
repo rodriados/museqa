@@ -1,6 +1,6 @@
 /**
  * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
- * @file Implements a base for a general hierarchical data structure.
+ * @file Implements a base for a generic hierarchically binary data structure.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2020-present Rodrigo Siqueira
  */
@@ -12,7 +12,7 @@
 namespace museqa
 {
     /**
-     * A generic hierarchical data structure node.
+     * A generic hierarchically binary data structure node.
      * @tparam R The hierarchical nodes' reference type.
      * @since 0.1.1
      */
