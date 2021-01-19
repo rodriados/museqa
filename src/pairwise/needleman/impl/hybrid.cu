@@ -119,14 +119,14 @@ namespace
                 if(current_line < one.length() && 0 <= current_column && current_column < batch_size) {
                     // If the column to be processed at the moment represents the
                     // end of sequence, then there is nothing left to do.
-                    if((unit[1] = two[current_column]) != encoder::end) {
+                    if((unit[1] = two[current_column]) != sequence::padding) {
                         value = line[current_column];
 
                         // The new value of the line is obtained from the maximum
                         // value between the previous line or column plus the corresponding
                         // penalty or gain. If the line represents the end of sequence,
                         // the line will be simply copied.
-                        if(unit[0] != encoder::end) {
+                        if(unit[0] != sequence::padding) {
                             const auto insertd = left - table.penalty();
                             const auto removed = value - table.penalty();
                             const auto matched = done + table[{unit[0], unit[1]}];
@@ -192,7 +192,7 @@ namespace
             for(size_t i = threadIdx.x; i < batch_size; i += blockDim.x) {
                 decoded[i] = (column_offset + i) < two.length()
                     ? two[column_offset + i]
-                    : encoder::end;
+                    : sequence::padding;
                 line[i] = (column_offset + i + 1) * -table.penalty();
             }
 

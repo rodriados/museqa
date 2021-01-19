@@ -27,6 +27,9 @@ namespace museqa
             using underlying_buffer = encoder::buffer;      /// The underlying sequence buffer.
 
         public:
+            static constexpr encoder::unit padding = encoder::end;
+
+        public:
             inline sequence() noexcept = default;
             inline sequence(const sequence&) noexcept = default;
             inline sequence(sequence&&) noexcept = default;

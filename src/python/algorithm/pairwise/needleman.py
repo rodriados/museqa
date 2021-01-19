@@ -3,9 +3,9 @@
 # @file A reference implementation for the Needleman-Wunsch algorithm.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
 # @copyright 2021-present Rodrigo Siqueira
-from ..pairwise import ScoringTable, DistanceMatrix
-from ..database import Database
-from ..sequence import Sequence
+from museqa.pairwise import ScoringTable, DistanceMatrix
+from museqa.database import Database
+from museqa.sequence import Sequence
 
 from typing import Optional, Iterable
 
@@ -62,9 +62,9 @@ def needleman(db: Database, table: Optional[ScoringTable] = None) -> DistanceMat
     # @param db The database to retrieve the sequences to be aligned from.
     # @yield The pairs of sequences to be aligned.
     def generate(db: Database) -> Iterable:
-        for i in range(db.count - 1):
-            for j in range(i + 1, db.count):
-                yield map(lambda i: db[i].contents, [i, j])
+        for i in range(1, db.count):
+            for j in range(i):
+                yield (i, j)
 
-    dbscore = [align(*pair) for pair in generate(db)]
+    dbscore = [align(*map(lambda i: db[i].contents, pair)) for pair in generate(db)]
     return DistanceMatrix(dbscore, db.count)

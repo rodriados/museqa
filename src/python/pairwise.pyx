@@ -42,7 +42,8 @@ cdef class DistanceMatrix:
 cdef class ScoringTable:
     # Instantiates a new scoring table instance.
     # @param name The selected scoring table name.
-    def __cinit__(self, str name = 'default'):
+    def __cinit__(self, str name = None):
+        name = name if name is not None else 'default'
         cdef string tablename = name.encode('ascii')
         self.thisptr = c_scoring_table.make(tablename)
 
@@ -88,7 +89,7 @@ def run(Database db, **kwargs):
     table = kwargs.pop('table', ScoringTable())
     algorithm = kwargs.pop('algorithm', 'default')
 
-    cdef ScoringTable s_table = table if type(table) is not str else ScoringTable(table)
+    cdef ScoringTable s_table = table if type(table) is ScoringTable else ScoringTable(table)
 
     if type(algorithm) is str:
         return DistanceMatrix.wrap(c_run(db.thisptr, s_table.thisptr, algorithm.encode('ascii')))

@@ -22,7 +22,7 @@ showhelp()
     echo "  -r, --report-only                Indicates whether only time reports should be printed."
     echo "  -s, --scoring-matrix <matrix>    The scoring table name or file to align sequences with."
     echo "  -f, --hostfile       <hostfile>  Use or generate the given cluster configuration file."
-    echo "  -d, --device         <device>    The id of first GPU to use for computation"
+    echo "  -d, --device         <device>    The id of first GPU to use for computation."
     echo "  -1, --pairwise       <algorithm> The algorithm to use in pairwise module."
     echo "  -2, --phylogeny      <algorithm> The algorithm to use in phylogeny module."
 }

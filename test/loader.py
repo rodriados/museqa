@@ -40,11 +40,12 @@ class TestLoader(unittest.TestCase):
     # @since 0.1.1
     def fasta(self):
         for fixture, contents in TestLoader.fixtures['fasta'].items():
-            database = Database.load(fixture)
+            with self.subTest(fixture = fixture):
+                database = Database.load(fixture)
 
-            for key, digest in contents.items():
-                self.assertEqual(key, database[key].description)
-                self.assertEqual(digest, md5(str(database[key].contents).encode()).hexdigest())
+                for key, digest in contents.items():
+                    self.assertEqual(key, database[key].description)
+                    self.assertEqual(digest, md5(str(database[key].contents).encode()).hexdigest())
 
     # Tests whether an exception is thrown when trying to parse unknown file.
     # @since 0.1.1
@@ -52,8 +53,8 @@ class TestLoader(unittest.TestCase):
         with self.assertRaises(RuntimeError) as context:
             Database.load("fixtures/unknown")
 
-    testCanParseFasta = fasta
-    testThrowOnUnknwon = unknown
-
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(defaultTest = [
+        'TestLoader.fasta'
+    ,   'TestLoader.unknown'
+    ])

@@ -23,21 +23,22 @@ class TestDatabase(unittest.TestCase):
     # Compares entries to fixtures. This allows us to test different type constructors.
     # @param entries The database entries to compare fixtures with.
     # @since 0.1.1
-    def compare(self, entries):
+    def _compare(self, entries):
         db = Database()
         db.add(entries)
 
         for fixture, contents in TestDatabase.fixtures.items():
-            self.assertEqual(fixture, db[fixture].description)
-            self.assertEqual(contents, str(db[fixture].contents))
+            with self.subTest(fixture = fixture):
+                self.assertEqual(fixture, db[fixture].description)
+                self.assertEqual(contents, str(db[fixture].contents))
 
         self.assertEqual(len(TestDatabase.fixtures), db.count)
 
     # Tests whether sequences can be added to the database.
     # @since 0.1.1
     def add(self):
-        self.compare(TestDatabase.fixtures)
-        self.compare([(key, val) for key, val in TestDatabase.fixtures.items()])
+        self._compare(TestDatabase.fixtures)
+        self._compare([(key, val) for key, val in TestDatabase.fixtures.items()])
 
     # Tests whether sequences can be accessed via index and description.
     # @since 0.1.1
@@ -46,8 +47,9 @@ class TestDatabase(unittest.TestCase):
         db.add(TestDatabase.fixtures)
 
         for i, fixture in enumerate(TestDatabase.fixtures):
-            self.assertEqual(fixture, db[i].description)
-            self.assertEqual(fixture, db[fixture].description)
+            with self.subTest(fixture = fixture):
+                self.assertEqual(fixture, db[i].description)
+                self.assertEqual(fixture, db[fixture].description)
 
     # Tests whether two databases can be merged into a single one.
     # @since 0.1.1
@@ -63,12 +65,13 @@ class TestDatabase(unittest.TestCase):
         db[0].merge(db[1])
 
         for fixture, contents in TestDatabase.fixtures.items():
-            self.assertEqual(fixture, db[0][fixture].description)
-            self.assertEqual(contents, str(db[0][fixture].contents))
-
-    testCanAddSequences = add
-    testSequencesAccess = access
-    testCanMerge = merge
+            with self.subTest(fixture = fixture):
+                self.assertEqual(fixture, db[0][fixture].description)
+                self.assertEqual(contents, str(db[0][fixture].contents))
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(defaultTest = [
+        'TestDatabase.add'
+    ,   'TestDatabase.access'
+    ,   'TestDatabase.merge'
+    ])

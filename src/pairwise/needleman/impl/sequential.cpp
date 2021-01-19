@@ -8,7 +8,6 @@
 
 #include "node.hpp"
 #include "buffer.hpp"
-#include "encoder.hpp"
 #include "database.hpp"
 #include "sequence.hpp"
 
@@ -40,7 +39,7 @@ namespace
             // If the current line is at sequence end, then we can already finish
             // the algorithm, as no changes are expected to occur after the end
             // of sequence.
-            if(one[i] == encoder::end)
+            if(one[i] == sequence::padding)
                 break;
 
             // Initialize the 0-th column values. It will always be initialized
@@ -53,7 +52,7 @@ namespace
             for(size_t j = 1; j <= two.length(); ++j) {
                 score value = line[j - 1];
 
-                if(two[j - 1] != encoder::end) {                
+                if(two[j - 1] != sequence::padding) {
                     const auto insertd = value - table.penalty();
                     const auto removed = line[j] - table.penalty();
                     const auto matched = done + table[{one[i], two[j - 1]}];

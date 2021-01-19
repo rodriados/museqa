@@ -85,7 +85,7 @@ testing: $(TESTFILES)
 clean:
 	@rm -rf $(OBJDIR)
 	@rm -rf $(SRCDIR)/*~ *~
-	@rm -rf $(TGTDIR)/*.so $(TGTDIR)/$(NAME)
+	@rm -rf $(TGTDIR)/*.so $(TGTDIR)/*/
 
 # Creates dependency on header files. This is valuable so that whenever a header
 # file is changed, all objects depending on it will be recompiled.
