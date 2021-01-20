@@ -68,12 +68,12 @@ namespace museqa
 
             /**
              * Instantiates a new conduit.
-             * @param db The sequence database to transfer to the next module.
-             * @param dmat The database's resulting pairwise distance matrix.
+             * @param mdb The sequence database to transfer to the next module.
+             * @param mmat The database's resulting pairwise distance matrix.
              */
-            inline conduit(database& db, distance_matrix& dmat) noexcept
-            :   db {std::move(db)}
-            ,   distances {std::move(dmat)}
+            inline conduit(database& mdb, distance_matrix& mmat) noexcept
+            :   db {std::move(mdb)}
+            ,   distances {std::move(mmat)}
             ,   count {db.count()}
             {}
 

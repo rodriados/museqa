@@ -71,11 +71,11 @@ namespace museqa
 
             /**
              * Instantiates a new conduit.
-             * @param db The sequence database to transfer to the next module.
+             * @param mdb The sequence database to transfer to the next module.
              */
-            inline explicit conduit(database& db) noexcept
-            :   db {std::move(db)}
-            ,   total {this->db.count()}
+            inline explicit conduit(database& mdb) noexcept
+            :   db {std::move(mdb)}
+            ,   total {db.count()}
             {}
 
             inline conduit& operator=(const conduit&) = default;

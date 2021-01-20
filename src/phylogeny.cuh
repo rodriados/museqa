@@ -67,12 +67,12 @@ namespace museqa
 
             /**
              * Instantiates a new conduit.
-             * @param db The sequence database to transfer to the next module.
-             * @param ptree The alignment guiding tree to transfer to the next module.
+             * @param mdb The sequence database to transfer to the next module.
+             * @param mtree The alignment guiding tree to transfer to the next module.
              */
-            inline conduit(database& db, phylotree& tree) noexcept
-            :   db {std::move(db)}
-            ,   tree {std::move(tree)}
+            inline conduit(database& mdb, phylotree& mtree) noexcept
+            :   db {std::move(mdb)}
+            ,   tree {std::move(mtree)}
             ,   total {db.count()}
             {}
 
