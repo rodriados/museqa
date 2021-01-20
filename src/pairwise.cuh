@@ -34,9 +34,7 @@ namespace museqa
         struct pairwise : public pipeline::module
         {
             struct conduit;                                 /// The module's conduit type.
-
             typedef museqa::module::bootstrap previous;     /// The expected previous module.
-            typedef pointer<pipeline::conduit> pipe;        /// The generic conduit type alias.
 
             /**
              * Returns an string identifying the module's name.
@@ -47,7 +45,7 @@ namespace museqa
                 return "pairwise";
             }
 
-            auto run(const io::manager&, const pipe&) const -> pipe override;
+            auto run(const io::manager&, pipeline::pipe&) const -> pipeline::pipe override;
             auto check(const io::manager&) const -> bool override;
         };
 
@@ -60,9 +58,9 @@ namespace museqa
         {
             typedef museqa::pairwise::distance_matrix distance_matrix;
 
-            const pointer<database> db;         /// The loaded sequences' database.
-            const distance_matrix distances;    /// The sequences' pairwise distances.
-            const size_t count;                 /// The total number of sequences.
+            database db;                    /// The loaded sequences' database.
+            distance_matrix distances;      /// The sequences' pairwise distances.
+            const size_t count;             /// The total number of sequences.
 
             inline conduit() noexcept = delete;
             inline conduit(const conduit&) = default;
@@ -73,10 +71,10 @@ namespace museqa
              * @param db The sequence database to transfer to the next module.
              * @param dmat The database's resulting pairwise distance matrix.
              */
-            inline conduit(const pointer<database>& db, const distance_matrix& dmat) noexcept
-            :   db {db}
-            ,   distances {dmat}
-            ,   count {db->count()}
+            inline conduit(database& db, distance_matrix& dmat) noexcept
+            :   db {std::move(db)}
+            ,   distances {std::move(dmat)}
+            ,   count {db.count()}
             {}
 
             inline conduit& operator=(const conduit&) = delete;

@@ -12,6 +12,7 @@
 #include "encoder.hpp"
 #include "pointer.hpp"
 #include "database.hpp"
+#include "pipeline.hpp"
 #include "sequence.hpp"
 
 #include "bootstrap.hpp"
@@ -25,13 +26,13 @@ namespace museqa
          * @param io The IO service instance to get file names from.
          * @return The sequences database with all loaded sequences.
          */
-        static auto load(const io::manager& io) -> pointer<database>
+        static auto load(const io::manager& io) -> database
         {
-            auto db = pointer<database>::make();
+            auto db = database {32};
             auto dblist = io.load<database>();
 
-            for(const auto& current : dblist)
-                db->merge(current);
+            for(auto& current : dblist)
+                db.merge(std::move(current));
 
             return db;
         }
@@ -43,16 +44,15 @@ namespace museqa
          * @param blocks The flattened database blocks.
          * @return The reconstructed database.
          */
-        static auto unpack(
+        static database unpack(
                 const std::vector<size_t>& sizes
             ,   const std::vector<encoder::block>& blocks
             )
-        -> pointer<database>
         {
-            auto db = pointer<database>::make();
+            auto db = database {sizes.size()};
 
             for(size_t i = 0, j = 0, n = sizes.size(); i < n; ++i) {
-                db->add(sequence::copy(&blocks[j], sizes[i]));
+                db.add(sequence::copy(&blocks[j], sizes[i]));
                 j += sizes[i];
             }
 
@@ -68,15 +68,15 @@ namespace museqa
          * @param io The pipeline's IO service instance.
          * @return A conduit with the module's processed results.
          */
-        auto bootstrap::run(const io::manager& io, const bootstrap::pipe&) const -> bootstrap::pipe
+        auto bootstrap::run(const io::manager& io, pipeline::pipe&) const -> pipeline::pipe
         {
-            pointer<database> db;
+            database db;
             std::vector<size_t> sizes;
             std::vector<encoder::block> blocks;
 
             onlymaster db = load(io);
 
-            onlymaster for(const auto& entry : *db) {
+            onlymaster for(const auto& entry : db) {
                 sizes.push_back(entry.contents.size());
                 blocks.insert(blocks.end(), entry.contents.begin(), entry.contents.end());
             }
@@ -89,7 +89,7 @@ namespace museqa
             auto ptr = new bootstrap::conduit {db};
             mpi::barrier();
 
-            return bootstrap::pipe {ptr};
+            return pipeline::pipe {ptr};
         }
     }
 }

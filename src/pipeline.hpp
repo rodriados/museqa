@@ -37,6 +37,17 @@ namespace museqa
         };
 
         /**
+         * A pipe wraps a conduit and carries it to its destination module. A pipe
+         * is simply a pointer to a generic conduit. After all, a pipe is simply
+         * a mechanism for erasing the target and destination module's types, thus
+         * we can keep types more clean. On the other hand, each module receiving
+         * a conduit through a pipe must check its whether it comes from an expected
+         * source module.
+         * @since 0.1.1
+         */
+        using pipe = pointer<conduit>;
+
+        /**
          * The base of a pipeline module. Modules can be chained in a pipeline so
          * they are executed sequentially, one after the other. All modules in a
          * pipeline must inherit from this struct. Also, they all must indicate
@@ -51,7 +62,7 @@ namespace museqa
             using conduit = pipeline::conduit;      /// The module's conduit type.
 
             virtual auto check(const io::manager&) const -> bool = 0;
-            virtual auto run(const io::manager&, const pointer<conduit>&) const -> pointer<conduit> = 0;
+            virtual auto run(const io::manager&, pipe&) const -> pipe = 0;
             virtual auto name() const -> const char * = 0;
         };
 
@@ -59,18 +70,18 @@ namespace museqa
          * Converts an unknown conduit reference to that of the expected conduit
          * type of a module. This function checks whether the conversion is possible.
          * @tparam T The type of module receiving the conduit to be converted.
-         * @param target The instance to be converted into the expected type.
+         * @param pipe The instance to be converted into the expected type.
          * @return The converted instance reference.
          */
         template <typename T>
-        inline auto convert(const conduit& target) noexcept
+        inline auto convert(pipeline::pipe& pipe) noexcept
         -> typename std::enable_if<
                 std::is_base_of<module, T>::value &&
                 std::is_base_of<conduit, typename T::conduit>::value
-            ,   const typename T::conduit&
+            ,   typename T::conduit *
             >::type
         {
-            return dynamic_cast<const typename T::conduit&>(target);
+            return dynamic_cast<typename T::conduit *>(&pipe);
         }
     }
 
@@ -125,7 +136,6 @@ namespace museqa
 
             protected:
                 using module_tuple = tuple<T...>;               /// The tuple of chained modules types.
-                using pipe = pointer<pipeline::conduit>;        /// The return type expected from modules.
 
             public:
                 /**
@@ -172,12 +182,12 @@ namespace museqa
                  */
                 inline virtual pipe execute(const module *modules[], const io::manager& io) const
                 {
-                    auto previous = pipe {};
+                    auto pipe = pipeline::pipe {};
 
                     for(size_t i = 0; i < count; ++i)
-                        previous = std::move(modules[i]->run(io, previous));
+                        pipe = std::move(modules[i]->run(io, pipe));
 
-                    return previous;
+                    return pipe;
                 }
         };
     }

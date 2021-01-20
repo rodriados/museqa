@@ -21,20 +21,21 @@ namespace museqa
         /**
          * Execute the module's task when on a pipeline.
          * @param io The pipeline's IO service instance.
+         * @param pipe The previous module's conduit.
          * @return A conduit with the module's processed results.
          */
-        auto pairwise::run(const io::manager& io, const pairwise::pipe& pipe) const -> pairwise::pipe
+        auto pairwise::run(const io::manager& io, pipeline::pipe& pipe) const -> pipeline::pipe
         {
             auto algoname = io.cmd.get("pairwise", "default");
             auto tablename = io.cmd.get("scoring-table", "default");
-
-            const auto conduit = pipeline::convert<pairwise::previous>(*pipe);
+            auto previous = pipeline::convert<pairwise::previous>(pipe);
 
             auto table = pw::scoring_table::make(tablename);
-            auto result = pw::run(*conduit.db, table, algoname);
+            
+            auto result = pw::run(previous->db, table, algoname);
+            auto ptr = new pairwise::conduit {previous->db, result};
 
-            auto ptr = new pairwise::conduit {conduit.db, result};
-            return pairwise::pipe {ptr};
+            return pipeline::pipe {ptr};
         }
 
         /**

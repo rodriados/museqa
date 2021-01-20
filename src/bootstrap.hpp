@@ -30,10 +30,8 @@ namespace museqa
          */
         struct bootstrap : public pipeline::module
         {
-            struct conduit;                             /// The module's conduit type.
-
-            typedef void previous;                      /// The expected previous module.
-            typedef pointer<pipeline::conduit> pipe;    /// The generic conduit type alias.
+            struct conduit;                     /// The module's conduit type.
+            typedef void previous;              /// The expected previous module.
 
             /**
              * Returns an string identifying the module's name.
@@ -54,7 +52,7 @@ namespace museqa
                 return io.cmd.all().size() > 0;
             }
 
-            auto run(const io::manager&, const pipe&) const -> pipe override;
+            auto run(const io::manager&, pipeline::pipe&) const -> pipeline::pipe override;
         };
 
         /**
@@ -64,7 +62,7 @@ namespace museqa
          */
         struct bootstrap::conduit : public pipeline::conduit
         {
-            const pointer<database> db;     /// The database with loaded sequences.
+            database db;                    /// The database with loaded sequences.
             const size_t total;             /// The total number of sequences.
 
             inline conduit() noexcept = delete;
@@ -75,9 +73,9 @@ namespace museqa
              * Instantiates a new conduit.
              * @param db The sequence database to transfer to the next module.
              */
-            inline explicit conduit(const pointer<database>& db) noexcept
-            :   db {db}
-            ,   total {db->count()}
+            inline explicit conduit(database& db) noexcept
+            :   db {std::move(db)}
+            ,   total {this->db.count()}
             {}
 
             inline conduit& operator=(const conduit&) = default;

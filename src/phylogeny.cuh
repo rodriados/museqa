@@ -33,9 +33,7 @@ namespace museqa
         struct phylogeny : public pipeline::module
         {
             struct conduit;                                 /// The module's conduit type.
-
             typedef museqa::module::pairwise previous;      /// The expected previous module.
-            typedef pointer<pipeline::conduit> pipe;        /// The generic conduit type alias.
 
             /**
              * Returns an string identifying the module's name.
@@ -46,7 +44,7 @@ namespace museqa
                 return "phylogeny";
             }
 
-            auto run(const io::manager&, const pipe&) const -> pipe override;
+            auto run(const io::manager&, pipeline::pipe&) const -> pipeline::pipe override;
             auto check(const io::manager&) const -> bool override;
         };
 
@@ -59,8 +57,8 @@ namespace museqa
         {
             typedef museqa::phylogeny::phylotree phylotree;
 
-            const pointer<database> db;     /// The loaded sequences' database.
-            const phylotree tree;           /// The sequences' alignment guiding tree.
+            database db;                    /// The loaded sequences' database.
+            phylotree tree;                 /// The sequences' alignment guiding tree.
             const size_t total;             /// The total number of sequences.
 
             inline conduit() noexcept = delete;
@@ -72,10 +70,10 @@ namespace museqa
              * @param db The sequence database to transfer to the next module.
              * @param ptree The alignment guiding tree to transfer to the next module.
              */
-            inline conduit(const pointer<database>& db, const phylotree& tree) noexcept
-            :   db {db}
-            ,   tree {tree}
-            ,   total {db->count()}
+            inline conduit(database& db, phylotree& tree) noexcept
+            :   db {std::move(db)}
+            ,   tree {std::move(tree)}
+            ,   total {db.count()}
             {}
 
             inline conduit& operator=(const conduit&) = delete;

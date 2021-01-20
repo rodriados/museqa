@@ -53,6 +53,16 @@ namespace museqa
             inline database(const database&) = default;
             inline database(database&&) = default;
 
+            /**
+             * Initializes a new database by setting the internal vector's initial
+             * capacity. Note, though, that it might increase if needed.
+             * @param capacity The database's initial capacity.
+             */
+            inline database(size_t capacity)
+            {
+                m_entries.reserve(capacity);
+            }
+
             inline database& operator=(const database&) = default;
             inline database& operator=(database&&) = default;
 

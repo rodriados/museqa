@@ -54,12 +54,6 @@ namespace museqa
     namespace step
     {
         /**
-         * Aliases the common conduit type for all pipeline's modules.
-         * @since 0.1.1
-         */
-        using pipe = pointer<pipeline::conduit>;
-
-        /**
          * Initializes and bootstraps the pipeline. Loads all sequence database
          * files given via command line and feeds to following module.
          * @since 0.1.1
@@ -72,13 +66,13 @@ namespace museqa
              * @param pipe The previous module's conduit instance.
              * @return The resulting conduit to send to the next module.
              */
-            auto run(const io::manager& io, const step::pipe& pipe) const -> step::pipe override
+            auto run(const io::manager& io, pipeline::pipe& pipe) const -> pipeline::pipe override
             {
                 auto mresult = museqa::module::bootstrap::run(io, pipe);
-                auto conduit = pipeline::convert<bootstrap>(*mresult);
+                auto conduit = pipeline::convert<bootstrap>(mresult);
 
-                onlymaster if(conduit.total > 0)
-                    watchdog::info("loaded a total of <bold>%d</> sequences", conduit.total);
+                onlymaster if(conduit->total > 0)
+                    watchdog::info("loaded a total of <bold>%d</> sequences", conduit->total);
 
                 return mresult;
             }
@@ -106,16 +100,17 @@ namespace museqa
              * @param pipe The previous module's conduit instance.
              * @return The resulting conduit to send to the next module.
              */
-            auto run(const io::manager& io, const step::pipe& pipe) const -> step::pipe override
+            auto run(const io::manager& io, pipeline::pipe& pipe) const -> pipeline::pipe override
             {
                 onlymaster {
                     auto algoname = io.cmd.get("pairwise", "default");
                     auto tablename = io.cmd.get("scoring-table", "default");
-                    const auto& conduit = pipeline::convert<pairwise::previous>(*pipe);
+
+                    auto previous = pipeline::convert<pairwise::previous>(pipe);
 
                     watchdog::info("chosen pairwise algorithm <bold>%s</>", algoname);
                     watchdog::info("chosen pairwise scoring table <bold>%s</>", tablename);
-                    watchdog::init("pairwise", "aligning <bold>%llu</> pairs", utils::nchoose(conduit.total));
+                    watchdog::init("pairwise", "aligning <bold>%llu</> pairs", utils::nchoose(previous->total));
                 }
 
                 auto mresult = museqa::pairwise::module::run(io, pipe);
@@ -138,7 +133,7 @@ namespace museqa
              * @param pipe The previous module's conduit instance.
              * @return The resulting conduit to send to the next module.
              */
-            auto run(const io::manager& io, const step::pipe& pipe) const -> step::pipe override
+            auto run(const io::manager& io, pipeline::pipe& pipe) const -> pipeline::pipe override
             {
                 onlymaster {
                     auto algoname = io.cmd.get("phylogeny", "default");
@@ -182,15 +177,15 @@ namespace museqa
              * @return The pipeline's final module's result.
              */
             inline auto execute(const pipeline::module *modules[], const io::manager& io) const
-            -> heuristic::pipe override
+            -> pipeline::pipe override
             {
-                auto previous = heuristic::pipe {};
-                auto lambda = [&](size_t i) { return std::move(modules[i]->run(io, previous)); };
+                auto pipe = pipeline::pipe {};
+                auto lambda = [&](size_t i) { return std::move(modules[i]->run(io, pipe)); };
 
                 for(size_t i = 0; i < heuristic::count; ++i)
-                    watchdog::report(modules[i]->name(), benchmark::run(previous, lambda, i));
+                    watchdog::report(modules[i]->name(), benchmark::run(pipe, lambda, i));
 
-                return previous;
+                return pipe;
             }
     };
 

@@ -19,17 +19,18 @@ namespace museqa
         /**
          * Execute the module's task when on a pipeline.
          * @param io The pipeline's IO service instance.
+         * @param pipe The previous module's conduit.
          * @return A conduit with the module's processed results.
          */
-        auto phylogeny::run(const io::manager& io, const phylogeny::pipe& pipe) const -> phylogeny::pipe
+        auto phylogeny::run(const io::manager& io, pipeline::pipe& pipe) const -> pipeline::pipe
         {
             auto algoname = io.cmd.get("phylogeny", "default");
-            const auto conduit = pipeline::convert<phylogeny::previous>(*pipe);
+            auto previous = pipeline::convert<phylogeny::previous>(pipe);
 
-            auto result = pg::run(conduit.distances, conduit.count, algoname);
+            auto result = pg::run(previous->distances, previous->count, algoname);
+            auto ptr = new phylogeny::conduit {previous->db, result};
 
-            auto ptr = new phylogeny::conduit {conduit.db, result};
-            return phylogeny::pipe {ptr};
+            return pipeline::pipe {ptr};
         }
 
         /**
