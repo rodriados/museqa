@@ -1,0 +1,13 @@
+language: cpp
+
+services:
+  - docker
+
+before_install:
+  - docker build -t museqa .
+  - docker ps -a
+
+script:
+  - docker run museqa bash -c "python3 -m unittest -v"
+
+sudo: false
