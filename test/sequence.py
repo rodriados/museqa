@@ -50,7 +50,7 @@ class TestSequence(unittest.TestCase):
 
     # Tests whether a sequence can be created and if they are created correctly.
     # @since 0.1.1
-    def instantiate(self):
+    def testInstantiate(self):
         for i, fixture in enumerate(TestSequence.fixtures):
             with self.subTest(fixture = i):
                 expected = encode(fixture)
@@ -59,7 +59,7 @@ class TestSequence(unittest.TestCase):
 
     # Tests whether one can access a random element in the sequence.
     # @since 0.1.1
-    def access(self):
+    def testAccess(self):
         for i, fixture in enumerate(TestSequence.fixtures):
             with self.subTest(fixture = i):
                 expected = encode(fixture)
@@ -70,7 +70,7 @@ class TestSequence(unittest.TestCase):
 
     # Tests whether sequence knows its correct length.
     # @since 0.1.1
-    def length(self):
+    def testLength(self):
         for i, fixture in enumerate(TestSequence.fixtures):
             with self.subTest(fixture = i):
                 expected = encode(fixture)
@@ -79,7 +79,7 @@ class TestSequence(unittest.TestCase):
 
     # Tests whether sequence raises correctly when accessing out of bounds.
     # @since 0.1.1
-    def indexError(self):
+    def testIndexError(self):
         for i, fixture in enumerate(TestSequence.fixtures):
             with self.subTest(fixture = i):
                 sequence = Sequence(fixture)
@@ -88,10 +88,19 @@ class TestSequence(unittest.TestCase):
                     length = sequence.length
                     ouch = sequence[length]
 
+# Defines the list of tests declared in the module. This is done manually for greater
+# control on what is considered a test case or not.
+cases = [
+    TestSequence
+]
+
+# Loads all test methods listed on the file from the list of test cases that must
+# be present on the file.
+# @since 0.1.1
+def load_tests(loader, *_):
+    tests = [loader.loadTestsFromTestCase(case) for case in cases]
+    return unittest.TestSuite(tests)
+
 if __name__ == '__main__':
-    unittest.main(defaultTest = [
-        'TestSequence.instantiate'
-    ,   'TestSequence.access'
-    ,   'TestSequence.length'
-    ,   'TestSequence.indexError'
-    ])
+    loader = unittest.TestLoader()
+    unittest.main(testLoader = loader)

@@ -38,7 +38,7 @@ class TestLoader(unittest.TestCase):
 
     # Tests whether can parse FASTA files correctly.
     # @since 0.1.1
-    def fasta(self):
+    def testFasta(self):
         for fixture, contents in TestLoader.fixtures['fasta'].items():
             with self.subTest(fixture = fixture):
                 database = Database.load(fixture)
@@ -49,12 +49,23 @@ class TestLoader(unittest.TestCase):
 
     # Tests whether an exception is thrown when trying to parse unknown file.
     # @since 0.1.1
-    def unknown(self):
+    def testUnknown(self):
         with self.assertRaises(RuntimeError) as context:
             Database.load("fixtures/unknown")
 
+# Defines the list of tests declared in the module. This is done manually for greater
+# control on what is considered a test case or not.
+cases = [
+    TestLoader
+]
+
+# Loads all test methods listed on the file from the list of test cases that must
+# be present on the file.
+# @since 0.1.1
+def load_tests(loader, *_):
+    tests = [loader.loadTestsFromTestCase(case) for case in cases]
+    return unittest.TestSuite(tests)
+
 if __name__ == '__main__':
-    unittest.main(defaultTest = [
-        'TestLoader.fasta'
-    ,   'TestLoader.unknown'
-    ])
+    loader = unittest.TestLoader()
+    unittest.main(testLoader = loader)

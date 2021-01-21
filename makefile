@@ -28,7 +28,7 @@ STDCU  ?= c++11
 
 MPILIBDIR ?= /usr/lib/openmpi/lib
 MPILKFLAG ?= -lmpi_cxx -lmpi
-PY3INCDIR ?= $(shell python -c "import sysconfig as s; print(s.get_paths()['include'])")
+PY3INCDIR ?= $(shell python3 -c "import sysconfig as s; print(s.get_paths()['include'])")
 
 # Defining macros inside code at compile time. This can be used to enable or disable
 # certain features on code or affect the projects compilation.

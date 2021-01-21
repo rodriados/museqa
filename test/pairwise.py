@@ -48,7 +48,7 @@ class TestPairwise(unittest.TestCase):
 class TestPairwiseSequential(TestPairwise):
     # Tests whether the sequential needleman algorithm returns the expected matrix.
     # @since 0.1.1
-    def needleman(self):
+    def testNeedleman(self):
         self._run('sequential', algorithm.needleman)
         self._run('sequential', algorithm.needleman, table = 'blosum62')
 
@@ -58,12 +58,24 @@ class TestPairwiseHybrid(TestPairwise):
     # Tests whether the hybrid needleman algorithm returns the expected matrix.
     # @since 0.1.1
     @unittest.skipIf(True, "a CUDA device may not be available")
-    def needleman(self):
+    def testNeedleman(self):
         self._run('hybrid', algorithm.needleman)
         self._run('hybrid', algorithm.needleman, table = 'blosum62')
 
+# Defines the list of tests declared in the module. This is done manually for greater
+# control on what is considered a test case or not.
+cases = [
+    TestPairwiseHybrid
+,   TestPairwiseSequential
+]
+
+# Loads all test methods listed on the file from the list of test cases that must
+# be present on the file.
+# @since 0.1.1
+def load_tests(loader, *_):
+    tests = [loader.loadTestsFromTestCase(case) for case in cases]
+    return unittest.TestSuite(tests)
+
 if __name__ == '__main__':
-    unittest.main(defaultTest = [
-        'TestPairwiseSequential.needleman'
-    ,   'TestPairwiseHybrid.needleman'
-    ])
+    loader = unittest.TestLoader()
+    unittest.main(testLoader = loader)

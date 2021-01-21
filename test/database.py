@@ -36,13 +36,13 @@ class TestDatabase(unittest.TestCase):
 
     # Tests whether sequences can be added to the database.
     # @since 0.1.1
-    def add(self):
+    def testAdd(self):
         self._compare(TestDatabase.fixtures)
         self._compare([(key, val) for key, val in TestDatabase.fixtures.items()])
 
     # Tests whether sequences can be accessed via index and description.
     # @since 0.1.1
-    def access(self):
+    def testAccess(self):
         db = Database()
         db.add(TestDatabase.fixtures)
 
@@ -53,7 +53,7 @@ class TestDatabase(unittest.TestCase):
 
     # Tests whether two databases can be merged into a single one.
     # @since 0.1.1
-    def merge(self):
+    def testMerge(self):
         db = [Database(), Database()]
         subset = [["SQ01", "SQ03"], ["SQ04", "SQ02", "SQ05"]]
 
@@ -69,9 +69,19 @@ class TestDatabase(unittest.TestCase):
                 self.assertEqual(fixture, db[0][fixture].description)
                 self.assertEqual(contents, str(db[0][fixture].contents))
 
+# Defines the list of tests declared in the module. This is done manually for greater
+# control on what is considered a test case or not.
+cases = [
+    TestDatabase
+]
+
+# Loads all test methods listed on the file from the list of test cases that must
+# be present on the file.
+# @since 0.1.1
+def load_tests(loader, *_):
+    tests = [loader.loadTestsFromTestCase(case) for case in cases]
+    return unittest.TestSuite(tests)
+
 if __name__ == '__main__':
-    unittest.main(defaultTest = [
-        'TestDatabase.add'
-    ,   'TestDatabase.access'
-    ,   'TestDatabase.merge'
-    ])
+    loader = unittest.TestLoader()
+    unittest.main(testLoader = loader)
