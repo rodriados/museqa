@@ -1,106 +1,57 @@
 #!/usr/bin/env python
 # Museqa: Multiple Sequence Aligner using hybrid parallel computing.
-# @file Unit tests for the software's sequence module.
+# @file Unit tests for the project's sequence module.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
 # @copyright 2019-present Rodrigo Siqueira
-from museqa.sequence import Sequence
-import unittest
+from museqa.sequence import Sequence, encode
+import pytest
 
-# The list of available alphabets for sequences generation.
+# Defines some fixture sequences to use for different test cases.
 # @since 0.1.1
-alphabet = "ACTGRNDQEHILKMFPSWYVBJUZ"
-
-# The character to use as a placeholder when an invalid sequence character is found.
-# @since 0.1.1
-invalid  = "X"
-
-# The character to indicate padding after a sequence has already been finished.
-# @since 0.1.1
-padding  = "*"
-
-# Implements the encoding algorithm for testing. We prefer reimplementing the
-# algorithm, instead of simply showing the expected result to avoid using the
-# original algorithm's outputs as correct result.
-# @param sequence The sequence to be encoded.
-# @return The encoded sequence.
-def encode(sequence):
-    length = len(sequence)
-    result = []
-
-    for letter in sequence:
-        result.append(letter if letter in alphabet else invalid)
-
-    if length % 3 != 0:
-        result += padding * (3 - (length % 3))
-
-    return str.join("", result)
-
-# Groups up a list of tests for sequence objects.
-# @since 0.1.1
-class TestSequence(unittest.TestCase):
-    # Defines some fixtures cases for different test cases.
-    # @since 0.1.1
-    fixtures = [
-        "MNNQRKKTGRPSFNMLKRARNRVSTGSQLAKRFSKGLLSGQGPMKLVMAFIAFLRFLAIPPTAGILARWS"
-    ,   "TEVKGYTKGXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-    ,   "MKNPKKKSGGFRIVNMLKRGVARVSPFGGLKRLPAGLLLGHGPIRMVLAILAFLRFTAIKPSLGLINRW"
-    ,   "AAAAATCGATCAAGCAATCTCTCAGTCTCTCAGTTTACAGCAATCTTTGCAAACACACGAACCACAAA"
-    ,   "LLNRFTMAHMKPTYERDVDLGAGTRHVAVEPEVANLDIIGQRIENIKNEHKSTWHYDEDNPYKTWAY"
-    ]
-
-    # Tests whether a sequence can be created and if they are created correctly.
-    # @since 0.1.1
-    def testInstantiate(self):
-        for i, fixture in enumerate(TestSequence.fixtures):
-            with self.subTest(fixture = i):
-                expected = encode(fixture)
-                sequence = str(Sequence(fixture))
-                self.assertEqual(sequence, expected)
-
-    # Tests whether one can access a random element in the sequence.
-    # @since 0.1.1
-    def testAccess(self):
-        for i, fixture in enumerate(TestSequence.fixtures):
-            with self.subTest(fixture = i):
-                expected = encode(fixture)
-                sequence = Sequence(fixture)
-
-                for j in range(len(expected)):
-                    self.assertEqual(sequence[i], expected[i])
-
-    # Tests whether sequence knows its correct length.
-    # @since 0.1.1
-    def testLength(self):
-        for i, fixture in enumerate(TestSequence.fixtures):
-            with self.subTest(fixture = i):
-                expected = encode(fixture)
-                sequence = Sequence(fixture)
-                self.assertEqual(sequence.length, len(expected))
-
-    # Tests whether sequence raises correctly when accessing out of bounds.
-    # @since 0.1.1
-    def testIndexError(self):
-        for i, fixture in enumerate(TestSequence.fixtures):
-            with self.subTest(fixture = i):
-                sequence = Sequence(fixture)
-
-                with self.assertRaises(IndexError) as context:
-                    length = sequence.length
-                    ouch = sequence[length]
-
-# Defines the list of tests declared in the module. This is done manually for greater
-# control on what is considered a test case or not.
-cases = [
-    TestSequence
+fixtures = [
+    "MNNQRKKTGRPSFNMLKRARNRVSTGSQLAKRFSKGLLSGQGPMKLVMAFIAFLRFLAIPPTAGILARWS"
+,   "TEVKGYTKGIDJAOIJDOADUIHDAIOAFAOIFJAOIFJOAIJFOAICJOAIMCOQIOIDUAITGYRQQ"
+,   "MKNPKKKSGGFRIVNMLKRGVARVSPFGGLKRLPAGLLLGHGPIRMVLAILAFLRFTAIKPSLGLINRW"
+,   "AAAAATCGATCAAGCAATCTCTCAGTCTCTCAGTTTACAGCAATCTTTGCAAACACACGAACCACAAA"
+,   "LLNRFTMAHMKPTYERDVDLGAGTRHVAVEPEVANLDIIGQRIENIKNEHKSTWHYDEDNPYKTWAY"
 ]
 
-# Loads all test methods listed on the file from the list of test cases that must
-# be present on the file.
+# Creates a fixture for test sequences.
+# @param request The test context to run the fixture with.
 # @since 0.1.1
-def load_tests(loader, *_):
-    tests = [loader.loadTestsFromTestCase(case) for case in cases]
-    return unittest.TestSuite(tests)
+@pytest.fixture(params = fixtures)
+def sequence(request):
+    return map(lambda f: f(request.param), [Sequence, encode])
 
-if __name__ == '__main__':
-    loader = unittest.TestLoader()
-    unittest.main(testLoader = loader)
+# Tests whether a sequence can be created and if they are created correctly.
+# @param sequence The sequence to run the test with.
+# @since 0.1.1
+def testCanInstantiateSequence(sequence):
+    target, expected = sequence
+    assert expected == str(target)
+
+# Tests whether one can access a random element in the sequence.
+# @param sequence The sequence to run the test with.
+# @since 0.1.1
+def testCanAccessSequenceElement(sequence):
+    target, expected = sequence
+
+    for i in range(len(expected)):
+        assert expected[i] == target[i]
+
+# Tests whether sequence knows its correct length.
+# @param sequence The sequence to run the test with.
+# @since 0.1.1
+def testIfSequenceHasCorrectLength(sequence):
+    target, expected = sequence
+    assert len(expected) == target.length
+
+# Tests whether sequence raises correctly when accessing out of bounds.
+# @param sequence The sequence to run the test with.
+# @since 0.1.1
+def testIfRaisesOnIndexError(sequence):
+    target, _ = sequence
+
+    with pytest.raises(IndexError):
+        length = target.length
+        ouch = target[length]

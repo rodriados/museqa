@@ -90,22 +90,18 @@ cdef class Database:
         def overload(*values):
             raise TypeError("could not select sequences")
 
-        cdef c_database result
-
         @overload.register(bytes)
         def from_keys(*values):
             cdef set[string] selected = values
-            result = self.thisptr.only(selected)
+            return Database.wrap(self.thisptr.only(selected))
 
         @overload.register(int)
         def from_offsets(*values):
             cdef set[ptrdiff_t] selected = values
-            result = self.thisptr.only(selected)
+            return Database.wrap(self.thisptr.only(selected))
 
         overload.register(str, lambda *values: from_keys(*[val.encode() for val in values]))
-        overload(*keys)
-
-        return Database.wrap(result)
+        return overload(*keys)
 
     # Loads a new database from the given files.
     # @param filenames The files to load a new database from.

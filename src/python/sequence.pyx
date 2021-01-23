@@ -4,12 +4,15 @@
 # @author Rodrigo Siqueira <rodriados@gmail.com>
 # @copyright 2018-present Rodrigo Siqueira
 from libcpp.string cimport string
-from encoder cimport c_unit, c_decode
+from encoder cimport c_unit, c_encode, c_decode, c_end
 from sequence cimport c_sequence
 
 from functools import singledispatch
 
-__all__ = ["Sequence"]
+__all__ = [
+    "Sequence"
+,   "encode"
+]
 
 # Sequence wrapper. This class is responsible for interfacing all interactions between
 # Python code to the underlying C++ sequence object.
@@ -17,7 +20,7 @@ __all__ = ["Sequence"]
 cdef class Sequence:
     # The character to indicate padding after a sequence has already been finished.
     # @since 0.1.1
-    padding  = "*"
+    padding = chr(c_decode(c_end))
 
     # Instantiates a new sequence.
     # @param contents The sequence contents.
@@ -53,3 +56,15 @@ cdef class Sequence:
     @property
     def length(self):
         return self.thisptr.length()
+
+# Encodes a character string into the project's internal sequence format.
+# @param sequence The sequence to be encoded.
+# @return The encoded sequence.
+def encode(sequence):
+    units = [c_encode(ord(unit)) for unit in sequence]
+    units = [chr(c_decode(unit)) for unit in units]
+
+    padding = len(sequence) % 3
+    padding = [Sequence.padding] * ((3 - padding) if padding > 0 else 0)
+
+    return str.join("", units + padding)

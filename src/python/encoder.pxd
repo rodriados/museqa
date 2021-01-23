@@ -15,5 +15,9 @@ cdef extern from "encoder.hpp" namespace "museqa::encoder" nogil:
     # @since 0.1.1
     ctypedef uint16_t c_block "museqa::encoder::block"
 
+    # Defining the unit symbol for final of sequence.
+    # @since 0.1.1
+    cdef c_unit c_end "museqa::encoder::end"
+
     cdef c_unit c_encode "museqa::encoder::encode" (char)
     cdef char c_decode "museqa::encoder::decode" (c_unit) except +RuntimeError
