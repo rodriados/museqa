@@ -21,3 +21,4 @@ run
 test.cpp
 .hostfile
 .gdb_history
+*junkyard*

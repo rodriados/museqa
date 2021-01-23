@@ -23,6 +23,13 @@ fixtures = [
 def database(request):
     return Database.load(request.param)
 
+# Creates a fixture for different scoring tables.
+# @param request The test context to run the fixture with.
+# @since 0.1.1
+@pytest.fixture(params = ['default', 'blosum62', 'pam250'])
+def table(request):
+    return request.param
+
 # Compares whether two distance matrices and asserts whether they're equal.
 # @param expected The expected distance matrix to be asserted.
 # @param produced The produced distance matrix to be asserted.
@@ -45,15 +52,15 @@ def assertAlgorithmExecution(db, reference, target, **extra):
 
 # Tests whether the sequential needleman algorithm produces the expected matrix.
 # @param database The database to test the algorithm with.
+# @param table The scoring table to run the algorothm with.
 # @since 0.1.1
-def testSequentialNeedleman(database):
-    assertAlgorithmExecution(database, 'sequential', algorithm.needleman)
-    assertAlgorithmExecution(database, 'sequential', algorithm.needleman, table = 'blosum62')
+def testSequentialNeedleman(database, table):
+    assertAlgorithmExecution(database, 'sequential', algorithm.needleman, table = table)
 
 # Tests whether the hybrid needleman algorithm produces the expected matrix.
 # @param database The database to test the algorithm with.
+# @param table The scoring table to run the algorothm with.
 # @since 0.1.1
 @pytest.mark.skip(reason = "a CUDA device may not be available")
-def testHybridNeedleman(database):
-    assertAlgorithmExecution(database, 'hybrid', algorithm.needleman)
-    assertAlgorithmExecution(database, 'hybrid', algorithm.needleman, table = 'blosum62')
+def testHybridNeedleman(database, table):
+    assertAlgorithmExecution(database, 'hybrid', algorithm.needleman, table = table)
