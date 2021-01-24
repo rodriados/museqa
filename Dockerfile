@@ -9,10 +9,8 @@ FROM nvidia/cuda:10.2-devel-ubuntu18.04
 
 LABEL maintainer="rodriados@gmail.com"
 
-ENV USER museqa
-
+ENV HOMEDIR=/museqa
 ENV DEBIAN_FRONTEND=noninteractive
-ENV HOME=/home/${USER}
 
 # Installing all project's dependencies such as MPI and Cython.
 # These are used to compile and run the project.
@@ -27,9 +25,7 @@ RUN rm -rf /var/lib/apt/lists/*
 
 # Compiles the project. The docker container is created with the project's code
 # already compiled, so it's easier to use.
-WORKDIR /museqa
-COPY . /museqa
+WORKDIR ${HOMEDIR}
+COPY . ${HOMEDIR}
 
-RUN ["make", "clean"]
-RUN ["make", "production", "-j4"]
-RUN ["make", "testing", "-j4"]
+RUN make production

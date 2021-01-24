@@ -1,0 +1,10 @@
+.git
+.gitignore
+
+db
+obj
+bin
+!bin/__init__.py
+
+.hostfile
+.pytest_cache
