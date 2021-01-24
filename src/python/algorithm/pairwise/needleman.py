@@ -6,10 +6,11 @@
 from museqa.pairwise import ScoringTable, DistanceMatrix
 from museqa.database import Database
 from museqa.sequence import Sequence
+from typing import Optional
 
-from typing import Optional, Iterable
+from .utils import generator
 
-__all__ = ['needleman']
+__all__ = ["needleman"]
 
 # Executes the sequential Needleman-Wunsch algorithm.
 # @param db The sequences available for alignment.
@@ -58,13 +59,5 @@ def needleman(db: Database, table: Optional[ScoringTable] = None) -> DistanceMat
 
         return line[-1]
 
-    # Generates the list of sequence pairs to be aligned from a database.
-    # @param db The database to retrieve the sequences to be aligned from.
-    # @yield The pairs of sequences to be aligned.
-    def generate(db: Database) -> Iterable:
-        for i in range(1, db.count):
-            for j in range(i):
-                yield (i, j)
-
-    dbscore = [align(*map(lambda i: db[i].contents, pair)) for pair in generate(db)]
-    return DistanceMatrix(dbscore, db.count)
+    distances = [align(*pair) for pair in generator(db)]
+    return DistanceMatrix(distances, db.count)

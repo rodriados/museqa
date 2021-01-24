@@ -5,4 +5,4 @@
 # @copyright 2021-present Rodrigo Siqueira
 from .needleman import needleman
 
-__all__ = ['needleman']
+__all__ = ["needleman"]
