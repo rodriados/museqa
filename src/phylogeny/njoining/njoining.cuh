@@ -85,6 +85,7 @@ namespace museqa
             /*
              * The list of all available neighbor-joining algorithm implementations.
              */
+            extern auto best() -> phylogeny::algorithm *;
             extern auto hybrid_linear() -> phylogeny::algorithm *;
             extern auto hybrid_symmetric() -> phylogeny::algorithm *;
             extern auto sequential_linear() -> phylogeny::algorithm *;

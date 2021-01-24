@@ -799,19 +799,19 @@ namespace museqa
              * new operators is highly recommended.
              * @since 0.1.1
              */
-            static op::id const& max      = MPI_MAX;
-            static op::id const& min      = MPI_MIN;
-            static op::id const& add      = MPI_SUM;
-            static op::id const& mul      = MPI_PROD;
-            static op::id const& andl     = MPI_LAND;
-            static op::id const& andb     = MPI_BAND;
-            static op::id const& orl      = MPI_LOR;
-            static op::id const& orb      = MPI_BOR;
-            static op::id const& xorl     = MPI_LXOR;
-            static op::id const& xorb     = MPI_BXOR;
-            static op::id const& minloc   = MPI_MINLOC;
-            static op::id const& maxloc   = MPI_MAXLOC;
-            static op::id const& replace  = MPI_REPLACE;
+            static constexpr op::id const max      = MPI_MAX;
+            static constexpr op::id const min      = MPI_MIN;
+            static constexpr op::id const add      = MPI_SUM;
+            static constexpr op::id const mul      = MPI_PROD;
+            static constexpr op::id const andl     = MPI_LAND;
+            static constexpr op::id const andb     = MPI_BAND;
+            static constexpr op::id const orl      = MPI_LOR;
+            static constexpr op::id const orb      = MPI_BOR;
+            static constexpr op::id const xorl     = MPI_LXOR;
+            static constexpr op::id const xorb     = MPI_BXOR;
+            static constexpr op::id const minloc   = MPI_MINLOC;
+            static constexpr op::id const maxloc   = MPI_MAXLOC;
+            static constexpr op::id const replace  = MPI_REPLACE;
             /**#@-*/
         }
 

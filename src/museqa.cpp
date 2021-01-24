@@ -226,14 +226,15 @@ try {
     enforce(!io.cmd.all().empty(), "no input files given");
     enforce(node::count >= 2, "at least one slave node is needed");
 
-    global_state.report_only = io.cmd.has("report-only");
-    onlyslaves global_state.use_multigpu = io.cmd.has("multigpu");
-
     onlyslaves try {
         global_state.local_devices = cuda::device::count();
     } catch(const cuda::exception&) {
         global_state.local_devices = 0;
     }
+
+    global_state.report_only = io.cmd.has("report-only");
+    onlyslaves global_state.use_multigpu = io.cmd.has("multigpu");
+    global_state.use_devices = mpi::allreduce(global_state.local_devices, mpi::op::min);
 
     museqa::run(io);
     mpi::finalize();

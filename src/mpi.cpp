@@ -8,6 +8,8 @@
 #include <vector>
 #include <cstdint>
 
+#include "museqa.hpp"
+
 #include "mpi.hpp"
 #include "node.hpp"
 
@@ -109,8 +111,10 @@ namespace museqa
         auto comm = mpi::communicator::build(MPI_COMM_WORLD);
         new (&world) mpi::communicator {comm};
 
-        node::count = comm.size();
+        global_state.mpi_running = true;
+
         node::rank = comm.rank();
+        node::count = comm.size();
     }
 
     /**
@@ -121,10 +125,12 @@ namespace museqa
     {
         for(datatype::id& typeref : datatype::ref_type)
             mpi::check(MPI_Type_free(&typeref));
-     
+
         for(op::id& opref : op::ref_op)
             mpi::check(MPI_Op_free(&opref));
-     
+
+        global_state.mpi_running = false;
+
         MPI_Finalize();
     }
 }

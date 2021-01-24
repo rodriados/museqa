@@ -41,6 +41,7 @@ namespace museqa
         bool report_only = false;       /// Should only time report messages be printed?
         bool mpi_running = false;       /// Is the MPI runtime running?
         bool use_multigpu = false;      /// Should MPI nodes use more than one GPU?
+        bool use_devices = false;       /// Indicates whether devices should be used by default.
         int local_devices = 0;          /// The number of GPU devices available on node.
 
         const env environment;          /// The execution runtime's environment.

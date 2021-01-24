@@ -4,6 +4,8 @@
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2019-present Rodrigo Siqueira
  */
+#include "museqa.hpp"
+
 #include "mpi.hpp"
 #include "environment.h"
 
@@ -42,6 +44,24 @@ namespace museqa
                 #else
                     return candidate;
                 #endif
+            }
+
+            /**
+             * Picks the module's default algorithm according to the program's global
+             * state conditions and devices availability.
+             * @return The picked algorithm instance.
+             */
+            auto best() -> phylogeny::algorithm *
+            {
+                if (node::count > 1 || global_state.mpi_running) {
+                    return global_state.use_devices
+                        ? njoining::hybrid_symmetric()
+                        : njoining::sequential_symmetric();
+                } else {
+                    return global_state.local_devices > 0
+                        ? njoining::hybrid_symmetric()
+                        : njoining::sequential_symmetric();
+                }
             }
         }
     }

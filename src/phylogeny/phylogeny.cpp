@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include "museqa.hpp"
+
 #include "exception.hpp"
 #include "dispatcher.hpp"
 
@@ -22,11 +24,11 @@ namespace museqa
          * @since 0.1.1
          */
         static const dispatcher<factory> factory_dispatcher = {
-            {"default",                     njoining::hybrid_symmetric}
+            {"default",                     njoining::best}
+        ,   {"njoining",                    njoining::best}
         ,   {"hybrid",                      njoining::hybrid_symmetric}
         ,   {"linear",                      njoining::hybrid_linear}
         ,   {"symmetric",                   njoining::hybrid_symmetric}
-        ,   {"njoining",                    njoining::hybrid_symmetric}
         ,   {"njoining-linear",             njoining::hybrid_linear}
         ,   {"njoining-symmetric",          njoining::hybrid_symmetric}
         ,   {"sequential",                  njoining::sequential_symmetric}

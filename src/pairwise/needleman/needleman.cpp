@@ -1,9 +1,11 @@
 /**
  * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
- * @file Implementation for the pairwise module's needleman algorithm.
+ * @file Implementation for the pairwise module's needleman-wunsch algorithm.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018-present Rodrigo Siqueira
  */
+#include "museqa.hpp"
+
 #include "mpi.hpp"
 #include "oeis.hpp"
 #include "utils.hpp"
@@ -61,6 +63,24 @@ namespace museqa
                 #else
                     return input;
                 #endif
+            }
+
+            /**
+             * Picks the default needleman algorithm instance according to the executions's
+             * global state conditions and devices availability.
+             * @return The picked algorithm instance.
+             */
+            auto best() -> pairwise::algorithm *
+            {
+                if (node::count > 1 || global_state.mpi_running) {
+                    return global_state.use_devices
+                        ? needleman::hybrid()
+                        : needleman::sequential();
+                } else {
+                    return global_state.local_devices > 0
+                        ? needleman::hybrid()
+                        : needleman::sequential();
+                }
             }
         }
     }
