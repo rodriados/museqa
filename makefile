@@ -86,6 +86,7 @@ clean:
 	@rm -rf $(OBJDIR)
 	@rm -rf $(SRCDIR)/*~ *~
 	@rm -rf $(TGTDIR)/*.so $(TGTDIR)/*/
+	@rm -rf .pytest_cache
 
 # Creates dependency on header files. This is valuable so that whenever a header
 # file is changed, all objects depending on it will be recompiled.
