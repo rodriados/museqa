@@ -83,7 +83,7 @@ namespace museqa
              * @param arg The value to format.
              * @return The formatted value.
              */
-            static inline auto parse(const T& arg) noexcept -> return_type
+            inline auto parse(const T& arg) noexcept -> return_type
             {
                 return arg;
             }
@@ -103,7 +103,7 @@ namespace museqa
              * @param arg The string to format.
              * @return The string's internal pointer.
              */
-            static inline auto parse(const std::string& arg) noexcept -> return_type
+            inline auto parse(const std::string& arg) noexcept -> return_type
             {
                 return arg.c_str();
             }
@@ -118,10 +118,10 @@ namespace museqa
         template <typename T>
         struct adapter : public formatter<T>
         {
-            T temporary;                                    /// Temporary value to be formatted.
+            T temporary;                        /// Holds a reference to a temporary value.
 
-            using base = formatter<T>;                      /// The base formatter.
-            using return_type = typename base::return_type; /// The raw format return type.
+            using base_formatter = formatter<T>;
+            using return_type = typename base_formatter::return_type;
 
             /**
              * Calls the base formatter and returns the formatted value.
@@ -130,7 +130,7 @@ namespace museqa
              */
             inline auto adapt(const T& value) -> return_type
             {
-                return this->parse(temporary = value);
+                return base_formatter::parse(temporary = value);
             }
         };
 
@@ -155,7 +155,7 @@ namespace museqa
         template <typename F, typename ...T>
         inline std::string format(const F& fmtstr, T&&... args) noexcept
         {
-            return &detail::fmt::format(fmtstr, formatter_g<T>::parse(args)...);
+            return &detail::fmt::format(fmtstr, formatter_g<T>().parse(args)...);
         }
 
         /**
@@ -169,7 +169,7 @@ namespace museqa
         template <typename F, typename ...T>
         inline void fprint(FILE *file, const F& fmtstr, T&&... args) noexcept
         {
-            fputs(&detail::fmt::format(fmtstr, formatter_g<T>::parse(args)...), file);
+            fputs(&detail::fmt::format(fmtstr, formatter_g<T>().parse(args)...), file);
         }
 
         /**

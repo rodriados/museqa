@@ -79,7 +79,7 @@ testing: install
 testing: override GCPP = $(PYPP)
 testing: override ENV = -g -DTESTING
 testing: override NVCCFLAGS = -std=$(STDCU) -I$(SRCDIR) -g -arch $(NVARCH) -lcuda -lcudart -w       \
-        -D_MWAITXINTRIN_H_INCLUDED $(ENV) --compiler-options -fPIC
+        -O3 -Xptxas -O3 -Xcompiler -O3 -D_MWAITXINTRIN_H_INCLUDED $(ENV) --compiler-options -fPIC
 testing: $(TESTFILES)
 
 clean:

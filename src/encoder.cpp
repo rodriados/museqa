@@ -6,9 +6,9 @@
  */
 #include <cctype>
 #include <string>
-#include <vector>
 
 #include "buffer.hpp"
+#include "format.hpp"
 #include "encoder.hpp"
 #include "exception.hpp"
 #include "environment.h"
@@ -46,7 +46,14 @@ namespace museqa
     encoder::unit encoder::encode(char value) noexcept
     {
         const char upper = toupper(value);
-        return ('A' <= upper && upper <= 'Z') ? encode_table[upper - 'A'] : encoder::end;
+
+        if('A' <= upper && upper <= 'Z') {
+            return encode_table[upper - 'A'];
+        } else if(value == '-') {
+            return encoder::gap;
+        } else {
+            return encoder::end;
+        }
     }
 
     /**
@@ -69,20 +76,25 @@ namespace museqa
     encoder::buffer encoder::encode(const char *ptr, size_t size)
     {
         static constexpr uint8_t shift[] = {1, 6, 11, 17, 22, 27};
-        std::vector<encoder::block> encoded;
+
+        const auto full_blocks = size / encoder::block_size;
+        const auto has_padding = size % encoder::block_size;
+
+        auto encoded = encoder::buffer::make(full_blocks + !!has_padding);
 
         for(size_t i = 0, n = 0; n < size; ++i) {
-            encoder::block current = 0x01;
+            // The last bit on a block indicates whether the block has padding.
+            encoder::block current = (n + encoder::block_size > size);
 
             for(uint8_t j = 0; j < encoder::block_size; ++j, ++n) {
                 const auto value = (n < size) ? encoder::encode(ptr[n]) : encoder::end;
                 current |= value << shift[j];
             }
 
-            encoded.push_back(current);
+            encoded[i] = current;
         }
 
-        return encoder::buffer::copy(encoded);
+        return encoded;
     }
 
     /**

@@ -42,6 +42,12 @@ namespace museqa
         enum : unit { end = 0x18 };
 
         /**
+         * Defining the unit symbol for a sequence gap.
+         * @since 0.1.1
+         */
+        enum : unit { gap = 0x19 };
+
+        /**
          * Indicates the number of units held by each block.
          * @since 0.1.1
          */
