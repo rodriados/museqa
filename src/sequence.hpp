@@ -68,7 +68,7 @@ namespace museqa
              */
             template <size_t N>
             inline sequence(const char (&str)[N]) noexcept
-            :   sequence {str, N}
+            :   sequence {str, N - 1}
             {}
 
             inline sequence& operator=(const sequence&) = default;
