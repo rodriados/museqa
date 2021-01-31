@@ -118,17 +118,17 @@ namespace museqa
      * and will have boundaries checked according to view pointers.
      * @since 0.1.1
      */
-    class sequence_view : public slice_buffer<encoder::block>
+    class sequence_view : public buffer_slice<encoder::block>
     {
         protected:
-            using underlying_buffer = slice_buffer<encoder::block>; /// The underlying sequence buffer.
+            using underlying_buffer = buffer_slice<encoder::block>; /// The underlying sequence buffer.
 
         public:
             inline sequence_view() noexcept = default;
             inline sequence_view(const sequence_view&) noexcept = default;
             inline sequence_view(sequence_view&&) noexcept = default;
 
-            using underlying_buffer::slice_buffer;
+            using underlying_buffer::buffer_slice;
 
             inline sequence_view& operator=(const sequence_view&) = default; 
             inline sequence_view& operator=(sequence_view&&) = default;

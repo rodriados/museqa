@@ -246,7 +246,7 @@ namespace museqa
      * @since 0.1.1
      */
     template <typename T>
-    class slice_buffer : public buffer<T>
+    class buffer_slice : public buffer<T>
     {
         protected:
             using underlying_buffer = buffer<T>;    /// The underlying buffer type.
@@ -255,9 +255,9 @@ namespace museqa
             ptrdiff_t m_displ = 0;      /// The slice displacement in relation to original buffer.
 
         public:
-            inline slice_buffer() noexcept = default;
-            inline slice_buffer(const slice_buffer&) noexcept = default;
-            inline slice_buffer(slice_buffer&&) noexcept = default;
+            inline buffer_slice() noexcept = default;
+            inline buffer_slice(const buffer_slice&) noexcept = default;
+            inline buffer_slice(buffer_slice&&) noexcept = default;
 
             /**
              * Instantiates a new slice buffer.
@@ -265,7 +265,7 @@ namespace museqa
              * @param displ The initial displacement of slice.
              * @param size The number of elements in the slice.
              */
-            inline slice_buffer(underlying_buffer& tgt, ptrdiff_t displ = 0, size_t size = 0)
+            inline buffer_slice(underlying_buffer& tgt, ptrdiff_t displ = 0, size_t size = 0)
             :   underlying_buffer {std::move(tgt.offset(displ)), size}
             ,   m_displ {displ}
             {
@@ -277,15 +277,15 @@ namespace museqa
              * @param tgt The target buffer to which the slice shall relate to.
              * @param base The slice data to be put into the new target.
              */
-            inline slice_buffer(underlying_buffer& tgt, const slice_buffer& base)
+            inline buffer_slice(underlying_buffer& tgt, const buffer_slice& base)
             :   underlying_buffer {std::move(tgt.offset(base.displ())), base.size()}
             ,   m_displ {base.displ()}
             {
                 enforce(size_t(m_displ + base.size()) <= tgt.size(), "slice out of buffer's range");
             }
 
-            inline slice_buffer& operator=(const slice_buffer&) = default;
-            inline slice_buffer& operator=(slice_buffer&&) = default;
+            inline buffer_slice& operator=(const buffer_slice&) = default;
+            inline buffer_slice& operator=(buffer_slice&&) = default;
 
             /**
              * Informs the pointer displacement in relation to the original buffer.

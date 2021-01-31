@@ -83,9 +83,9 @@ namespace museqa
                  * Retrieves a buffer containing all of the tree's leaf-nodes.
                  * @return The list of leaf-nodes on the tree.
                  */
-                inline auto leaves() const noexcept -> const slice_buffer<node_type>
+                inline auto leaves() const noexcept -> const buffer_slice<node_type>
                 {
-                    return slice_buffer<node_type> {m_buffer, 0, m_leaves};
+                    return buffer_slice<node_type> {m_buffer, 0, m_leaves};
                 }
 
             protected:

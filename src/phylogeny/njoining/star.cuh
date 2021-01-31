@@ -117,8 +117,8 @@ namespace museqa
                     inline star(underlying_tree&& tree)
                     :   underlying_tree {std::forward<decltype(tree)>(tree)}
                     {
-                        for(size_t i = 0, n = this->m_buffer.size(); i < n; ++i)
-                            this->m_buffer[i].id = (oturef) i;
+                        for(size_t i = 0, n = m_buffer.size(); i < n; ++i)
+                            m_buffer[i].id = (oturef) i;
                     }
             };
         }
