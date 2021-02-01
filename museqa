@@ -23,8 +23,9 @@ showhelp()
     echo "  -s, --scoring-matrix <matrix>    The scoring table name or file to align sequences with."
     echo "  -f, --hostfile       <hostfile>  Use or generate the given cluster configuration file."
     echo "  -d, --device         <device>    The id of first GPU to use for computation."
-    echo "  -1, --pairwise       <algorithm> The algorithm to use in pairwise module."
-    echo "  -2, --phylogeny      <algorithm> The algorithm to use in phylogeny module."
+    echo "  -1, --pairwise       <algorithm> Picks the algorithm to use within the pairwise module."
+    echo "  -2, --phylogeny      <algorithm> Picks the algorithm to use within the phylogeny module."
+    echo "  -3, --pgalign        <algorithm> Picks the algorithm to use within the profile-aligner."
 }
 
 # Shows the current software version. This message is always shown during the application's

@@ -19,6 +19,7 @@
 #include "bootstrap.hpp"
 #include "pairwise.cuh"
 #include "phylogeny.cuh"
+#include "pgalign.cuh"
 
 using namespace museqa;
 
@@ -34,6 +35,7 @@ static const std::vector<terminal::option> options = {
 ,   {"scoring-table", {"-s", "--scoring-table"}, "The scoring table name or file to align sequences with.", true}
 ,   {"pairwise",      {"-1", "--pairwise"},      "Picks the algorithm to use within the pairwise module.", true}
 ,   {"phylogeny",     {"-2", "--phylogeny"},     "Picks the algorithm to use within the phylogeny module.", true}
+,   {"pgalign",       {"-3", "--pgalign"},       "Picks the algorithm to use within the profile-aligner.", true}
 };
 
 namespace museqa
@@ -148,6 +150,35 @@ namespace museqa
                 return mresult;
             }
         };
+
+        /**
+         * Executes the heuristic's profile-aligner module. This module produces
+         * the final global alignment of all sequences given as input.
+         * @since 0.1.1
+         */
+        struct pgalign : public museqa::module::pgalign
+        {
+            /**
+             * Executes the pipeline module's logic.
+             * @param io The pipeline's IO service instance.
+             * @param pipe The previous module's conduit instance.
+             * @return The resulting conduit to send to the next module.
+             */
+            auto run(const io::manager& io, pipeline::pipe& pipe) const -> pipeline::pipe override
+            {
+                onlymaster {
+                    auto algoname = io.cmd.get("pgalign", "default");
+
+                    watchdog::info("chosen profile-aligner algorithm <bold>%s</>", algoname);
+                    watchdog::init("pgalign", "aligning sequence profiles");
+                }
+
+                auto mresult = museqa::pgalign::module::run(io, pipe);
+                onlymaster watchdog::finish("pgalign", "sequences alignment is completed");
+
+                return mresult;
+            }
+        };
     }
 
     /**
@@ -159,6 +190,7 @@ namespace museqa
             step::bootstrap
         ,   step::pairwise
         ,   step::phylogeny
+        ,   step::pgalign
         >;
 
     /**

@@ -104,6 +104,21 @@ namespace museqa
             }
 
             /**
+             * Retrieves the sequence's unpadded length.
+             * @return The sequence's length without any padding.
+             */
+            __host__ __device__ inline size_t unpadded() const noexcept
+            {
+                encoder::block last_block = block(size() - 1);
+                size_t length = this->length();
+
+                for(size_t i = 1; i < encoder::block_size; ++i)
+                    length -= (padding == encoder::access(last_block, i));
+
+                return length;
+            }
+
+            /**
              * Transforms the sequence into a string.
              * @return The sequence representation as a string.
              */
