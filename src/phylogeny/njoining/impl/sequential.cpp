@@ -318,10 +318,10 @@ namespace
          * step. This method is responsible for coordinating the execution.
          * @return The module's result value.
          */
-        auto run(const context& ctx) const -> phylotree override
+        auto run(const context& ctx) const -> guidetree override
         {
             if(ctx.count < 2)
-                return phylotree {};
+                return guidetree {};
 
             auto state = initialize<T>(ctx.matrix, ctx.count);
             auto result = build_tree(state);

@@ -28,7 +28,7 @@ namespace museqa
         struct context
         {
             const museqa::database& db;         /// The loaded sequences' database.
-            const phylogeny::phylotree& tree;   /// The sequences' alignment guiding tree.
+            const phylogeny::guidetree& tree;   /// The sequences' alignment guiding tree.
             const size_t count;                 /// The total number of sequences being aligned.
         };
 
@@ -71,7 +71,7 @@ namespace museqa
          */
         inline alignment run(
                 const museqa::database& db
-            ,   const phylogeny::phylotree& tree
+            ,   const phylogeny::guidetree& tree
             ,   const size_t count
             ,   const std::string& algorithm = "default"
             )

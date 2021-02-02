@@ -26,10 +26,10 @@ namespace museqa
              * connected to a common parent node.
              * @since 0.1.1
              */
-            class star : public phylogeny::phylotree
+            class star : public phylogeny::guidetree
             {
                 protected:
-                    using underlying_tree = phylotree;
+                    using underlying_tree = guidetree;
                     using distance_type = typename node_type::distance_type;
 
                 protected:

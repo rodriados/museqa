@@ -58,7 +58,7 @@ namespace museqa
          * is the module's final result type.
          * @since 0.1.1
          */
-        using phylotree = tree<otu, oturef>;
+        using guidetree = tree<otu, oturef>;
 
         /**
          * We use the highest available reference in our pseudo-addressing-space
@@ -68,7 +68,7 @@ namespace museqa
          * issues with this approach.
          * @since 0.1.1
          */
-        enum : oturef { undefined = phylotree::undefined };
+        enum : oturef { undefined = guidetree::undefined };
 
         /**
          * Represents a common phylogeny algorithm context.
@@ -102,7 +102,7 @@ namespace museqa
             inline algorithm& operator=(const algorithm&) = default;
             inline algorithm& operator=(algorithm&&) = default;
 
-            virtual auto run(const context&) const -> phylotree = 0;
+            virtual auto run(const context&) const -> guidetree = 0;
 
             static auto has(const std::string&) -> bool;
             static auto make(const std::string&) -> const factory&;
@@ -116,7 +116,7 @@ namespace museqa
          * @param algorithm The chosen phylogeny algorithm.
          * @return The chosen algorithm's resulting phylogenetic tree.
          */
-        inline phylotree run(
+        inline guidetree run(
                 const pairwise::distance_matrix& matrix
             ,   const size_t count
             ,   const std::string& algorithm = "default"

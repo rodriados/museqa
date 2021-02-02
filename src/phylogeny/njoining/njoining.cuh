@@ -79,7 +79,7 @@ namespace museqa
             struct algorithm : public phylogeny::algorithm
             {
                 virtual auto reduce(joinable&) const -> joinable;
-                virtual auto run(const context&) const -> phylotree = 0;
+                virtual auto run(const context&) const -> guidetree = 0;
             };
 
             /*

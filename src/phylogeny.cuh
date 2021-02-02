@@ -55,10 +55,10 @@ namespace museqa
          */
         struct phylogeny::conduit : public pipeline::conduit
         {
-            typedef museqa::phylogeny::phylotree phylotree;
+            typedef museqa::phylogeny::guidetree guidetree;
 
             database db;                    /// The loaded sequences' database.
-            phylotree tree;                 /// The sequences' alignment guiding tree.
+            guidetree tree;                 /// The sequences' alignment guiding tree.
             const size_t total;             /// The total number of sequences.
 
             inline conduit() noexcept = delete;
@@ -68,11 +68,11 @@ namespace museqa
             /**
              * Instantiates a new conduit.
              * @param mdb The sequence database to transfer to the next module.
-             * @param mtree The alignment guiding tree to transfer to the next module.
+             * @param gtree The alignment guiding tree to transfer to the next module.
              */
-            inline conduit(database& mdb, phylotree& mtree) noexcept
+            inline conduit(database& mdb, guidetree& gtree) noexcept
             :   db {std::move(mdb)}
-            ,   tree {std::move(mtree)}
+            ,   tree {std::move(gtree)}
             ,   total {db.count()}
             {}
 
@@ -108,5 +108,5 @@ namespace museqa
      * This tree's nodes are addressed by OTUs references.
      * @since 0.1.1
      */
-    using phylotree = phylogeny::phylotree;
+    using guidetree = phylogeny::guidetree;
 }
