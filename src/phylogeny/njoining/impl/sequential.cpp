@@ -81,6 +81,10 @@ namespace
     static void cache_init(state<T>& state)
     {
         for(size_t i = 0; i < state.count - 1; ++i) {
+            state.cache[i] = (distance_type) 0;
+        }
+
+        for(size_t i = 0; i < state.count - 1; ++i) {
             for(size_t j = i + 1; j < state.count; ++j) {
                 const auto current = state.matrix[{i, j}];
                 state.cache[i] += current;
@@ -277,7 +281,7 @@ namespace
 
             // We must keep joining OTU pairs until there are only three OTUs left
             // in our star tree, so all the other OTUs have been joined.
-            while(state.count >= 3) {
+            while(state.count > 3) {
                 range<size_t> partition;
                 njoining::joinable vote;
 
