@@ -173,7 +173,7 @@ namespace
                 const auto distance = q_transform(state, {i, j});
 
                 if(distance > chosen.distance)
-                    chosen = {oturef(i), oturef(j), distance};
+                    chosen = njoining::candidate {oturef(i), oturef(j), distance};
             }
 
         /// Now that we have our partition's best candidate, we must calculate its
@@ -281,7 +281,7 @@ namespace
 
             // We must keep joining OTU pairs until there are only three OTUs left
             // in our star tree, so all the other OTUs have been joined.
-            while(state.count > 3) {
+            while(state.count > 1) {
                 range<size_t> partition;
                 njoining::joinable vote;
 

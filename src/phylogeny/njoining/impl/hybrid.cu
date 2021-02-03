@@ -480,7 +480,7 @@ namespace
 
             // We must keep joining OTU pairs until there are only three OTUs left
             // in our star tree, so all the other OTUs have been joined.
-            while(state.count > 3) {
+            while(state.count > 1) {
                 range<size_t> partition;
                 njoining::joinable vote;
 
