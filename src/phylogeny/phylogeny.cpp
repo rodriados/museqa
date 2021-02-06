@@ -29,6 +29,7 @@ namespace museqa
         ,   {"hybrid",                      njoining::hybrid_symmetric}
         ,   {"linear",                      njoining::hybrid_linear}
         ,   {"symmetric",                   njoining::hybrid_symmetric}
+        ,   {"njoining-hybrid",             njoining::hybrid_symmetric}
         ,   {"njoining-linear",             njoining::hybrid_linear}
         ,   {"njoining-symmetric",          njoining::hybrid_symmetric}
         ,   {"sequential",                  njoining::sequential_symmetric}
