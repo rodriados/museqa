@@ -16,6 +16,8 @@ NVCC ?= nvcc
 PYPP ?= g++
 PYXC ?= cython
 
+OPTLEVEL = -O3
+
 # Target architecture for CUDA compilation. This indicates the minimum support required
 # for the codebase but can be changed with environment variables.
 NVARCH ?= sm_30
@@ -34,10 +36,10 @@ PY3INCDIR ?= $(shell python3 -c "import sysconfig as s; print(s.get_paths()['inc
 # certain features on code or affect the projects compilation.
 FLAGS ?=
 
-GCCCFLAGS = -std=$(STDC) -I$(INCDIR) -Wall -lm -fPIC -O3 $(ENV) $(FLAGS)
-GCPPFLAGS = -std=$(STDCPP) -I$(INCDIR) -Wall -fPIC -O3 $(ENV) $(FLAGS)
-NVCCFLAGS = -std=$(STDCU) -I$(INCDIR) -arch $(NVARCH) -lmpi -lcuda -lcudart -w -O3 -Xptxas -O3      \
-        -Xcompiler -O3 -D_MWAITXINTRIN_H_INCLUDED $(ENV) $(FLAGS)
+GCCCFLAGS = -std=$(STDC) -I$(INCDIR) -Wall -lm -fPIC $(OPTLEVEL) $(ENV) $(FLAGS)
+GCPPFLAGS = -std=$(STDCPP) -I$(INCDIR) -Wall -fPIC $(OPTLEVEL) $(ENV) $(FLAGS)
+NVCCFLAGS = -std=$(STDCU) -I$(INCDIR) -arch $(NVARCH) -lmpi -lcuda -lcudart -w $(OPTLEVEL) $(ENV)	\
+		-Xptxas $(OPTLEVEL) -Xcompiler $(OPTLEVEL) -D_MWAITXINTRIN_H_INCLUDED $(ENV) $(FLAGS)
 PYPPFLAGS = -std=$(STDCPP) -I$(INCDIR) -I$(PY3INCDIR) -shared -pthread -fPIC -fwrapv -O2 -Wall      \
         -fno-strict-aliasing $(ENV) $(FLAGS)
 PYXCFLAGS = --cplus -I$(INCDIR) -3
@@ -72,6 +74,7 @@ production: override ENV = -DPRODUCTION
 production: $(TGTDIR)/$(NAME)
 
 debug: install
+debug: override OPTLEVEL = -O0
 debug: override ENV = -g -DDEBUG
 debug: $(TGTDIR)/$(NAME)
 
