@@ -41,7 +41,7 @@ NVCCFLAGS = -std=$(STDCU) -I$(INCDIR) -arch $(NVARCH) -lmpi -lcuda -lcudart -w -
 PYPPFLAGS = -std=$(STDCPP) -I$(INCDIR) -I$(PY3INCDIR) -shared -pthread -fPIC -fwrapv -O2 -Wall      \
         -fno-strict-aliasing $(ENV) $(FLAGS)
 PYXCFLAGS = --cplus -I$(INCDIR) -3
-LINKFLAGS = -L$(MPILIBDIR) $(MPILKFLAG) $(ENV) $(FLAGS)
+LINKFLAGS = -L$(MPILIBDIR) -arch $(NVARCH) $(MPILKFLAG) $(ENV) $(FLAGS)
 
 # Lists all files to be compiled and separates them according to their corresponding
 # compilers. Changes in any of these files in will trigger conditional recompilation.
