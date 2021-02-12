@@ -67,6 +67,19 @@ namespace museqa
         };
 
         /**
+         * A wrapper around a pipeline module. The wrapper allows a module to have
+         * its functionality easily extended. The wrapper is responsible for calling
+         * the base module functionality, as it is not directly known by the runner.
+         * @tparam M The wrapped module type.
+         * @since 0.1.1
+         */
+        template <typename M, typename = typename std::enable_if<std::is_base_of<module, M>::value>::type>
+        struct wrapper : public M
+        {
+            using wrapped_module = M;
+        };
+
+        /**
          * Converts an unknown conduit reference to that of the expected conduit
          * type of a module. This function checks whether the conversion is possible.
          * @tparam T The type of module receiving the conduit to be converted.
