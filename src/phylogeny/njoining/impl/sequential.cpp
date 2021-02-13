@@ -182,41 +182,45 @@ namespace
     }
 
     /**
-     * Swaps the given pair of OTUs and removes one of them from the star tree.
-     * @tparam T The algorithm's distance matrix's spatial transformation.
+     * Updates the linear star tree's cache structures by removing an OTU.
      * @param state The algorithm's state data structures.
-     * @param keep The OTU to be swapped but kept in the star tree.
-     * @param remove The OTU to be swapped and removed from the star tree.
+     * @param target The OTU to be removed from the star tree's caches and matrix.
      */
-    template <typename T>
-    static void swap_remove(state<T>& state, oturef keep, oturef remove)
+    static void update_cache(state<transform::linear<2>>& state, oturef target)
     {
         onlyslaves {
-            utils::swap(state.cache[keep], state.cache[remove]);
-            state.matrix.swap(keep, remove);
-            state.matrix.remove(remove);
+            if(target != state.count - 1) {
+                utils::swap(state.cache[target], state.cache[state.count - 1]);
+                state.matrix.swap(target, state.count - 1);
+            }
+
+            state.matrix.remove(state.count - 1);
+            state.cache = buffer_slice<distance_type> {state.cache, 0, state.count - 1};
         }
 
-        ptrdiff_t shift = (remove == 0);
-        utils::swap(state.map[keep], state.map[remove]);
-        state.map = map_type {state.map.offset(shift), state.map.size() - 1};
-        onlyslaves state.cache = cache_type {state.cache.offset(shift), state.cache.size() - 1};
+        utils::swap(state.map[target], state.map[state.count - 1]);
+        state.map = buffer_slice<oturef> {state.map, 0, state.count - 1};
     }
 
     /**
-     * Updates the star tree's cache structures by removing an OTU.
-     * @tparam T The algorithm's distance matrix's spatial transformation.
+     * Updates the symmetric star tree's cache structures by removing an OTU.
      * @param state The algorithm's state data structures.
-     * @param x The OTU to be removed from the star tree's caches and matrix.
+     * @param target The OTU to be removed from the star tree's caches and matrix.
      */
-    template <typename T>
-    static void update_cache(state<T>& state, oturef x)
+    static void update_cache(state<transform::symmetric>& state, oturef target)
     {
-        if(std::is_same<transform::symmetric, T>::value) {
-            swap_remove(state, x, 0);
-        } else {
-            swap_remove(state, x, state.count - 1);
+        onlyslaves {
+            if(target != 0) {
+                utils::swap(state.cache[0], state.cache[target]);
+                state.matrix.swap(0, target);
+            }
+
+            state.matrix.remove(0);
+            state.cache = buffer_slice<distance_type> {state.cache, 1, state.count - 1};
         }
+
+        utils::swap(state.map[0], state.map[target]);
+        state.map = buffer_slice<oturef> {state.map, 1, state.count - 1};
     }
 
     /**
@@ -240,15 +244,27 @@ namespace
         // store the new OTU's distances.
         tree.join(parent, {state.map[x], join.delta[0]}, {state.map[y], join.delta[1]});
 
-        // Let's calculate the distances between the OTU being created and the others
-        // which have not been affected by the current joining operation.
-        onlyslaves for(size_t i = 0; i < state.count; ++i) {
-            const auto previous = state.matrix[{i, x}] + state.matrix[{i, y}];
-            const auto current = .5 * (previous - state.matrix[{x, y}]);
+        onlyslaves {
+            const distance_type distance_xy = state.matrix[{x, y}];
+            auto new_distances = buffer<distance_type>::make(state.count);
 
-            state.matrix[{i, x}] = state.matrix[{x, i}] = current;
-            state.cache[i] += current - previous;
-            new_sum += current;
+            // Let's calculate the distances between the OTU being created and the
+            // others which have not been affected by the current joining operation.
+            for(size_t i = 0; i < state.count; ++i) {
+                const auto previous = state.matrix[{i, x}] + state.matrix[{i, y}];
+                const auto updated = (previous - distance_xy) * .5;
+
+                new_distances[i] = updated;
+                state.cache[i] += updated - previous;
+                new_sum += updated;
+            }
+
+            // Copies the new OTU's distances to the global distance matrix. These
+            // distances are calculated out-of-place to not interfere with the previous
+            // values while calculating the new ones.
+            for(size_t i = 0; i < state.count; ++i) {
+                state.matrix[{i, x}] = state.matrix[{x, i}] = new_distances[i];
+            }
         }
 
         // Finally, let's take advantage from our data structures' layouts and always
@@ -257,7 +273,7 @@ namespace
         state.map[x] = parent;
 
         update_cache(state, y);
-        --state.count;
+        state.count--;
     }
 
     /**

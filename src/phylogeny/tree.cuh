@@ -39,11 +39,13 @@ namespace museqa
 
             protected:
                 using underlying_tree = museqa::tree<T, R>;
-                using node_type = typename underlying_tree::node;
-                using buffer_type = buffer<node_type>;
 
             public:
+                using node_type = typename underlying_tree::node;
                 using reference_type = typename underlying_tree::reference_type;
+
+            protected:
+                using buffer_type = buffer<node_type>;
 
             public:
                 static constexpr reference_type undefined = node_type::undefined;

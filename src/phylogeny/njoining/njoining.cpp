@@ -25,9 +25,15 @@ namespace museqa
              * @param b The second join pair candidate to compare.
              * @return The candidate with the minimum distance.
              */
-            auto closest(const joinable& a, const joinable& b) -> joinable
+            static auto closest(const joinable& a, const joinable& b) -> joinable
             {
-                return a.distance > b.distance ? a : b;
+                if(a.distance != b.distance) {
+                    return a.distance > b.distance ? a : b;
+                } else if(a.ref[0] != b.ref[0]) {
+                    return a.ref[0] < b.ref[0] ? a : b;
+                } else {
+                    return a.ref[1] < b.ref[1] ? a : b;
+                }
             }
 
             /**
