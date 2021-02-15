@@ -350,40 +350,41 @@ namespace
     }
 
     /**
-     * Swaps the given pair of OTUs and removes one of them from the star tree.
-     * @tparam T The algorithm's distance matrix's spatial transformation.
+     * Updates the linear star tree's cache structures by removing an OTU.
      * @param state The algorithm's state data structures.
-     * @param keep The OTU to be swapped but kept in the star tree.
-     * @param remove The OTU to be swapped and removed from the star tree.
+     * @param target The OTU to be removed from the star tree's caches and matrix.
      */
-    template <typename T>
-    static void swap_remove(state<T>& state, oturef keep, oturef remove)
+    static void update_cache(state<transform::linear<2>>& state, oturef target)
     {
         onlyslaves {
-            state.matrix.swap(keep, remove);
-            state.matrix.remove(remove);
+            if(target != state.count - 1)
+                state.matrix.swap(target, state.count - 1);
+
+            state.matrix.remove(state.count - 1);
+            state.cache = buffer_slice<distance_type> {state.cache, 0, state.count - 1};
         }
 
-        ptrdiff_t shift = (remove == 0);
-        utils::swap(state.map[keep], state.map[remove]);
-        state.map = map_type {state.map.offset(shift), state.map.size() - 1};
-        onlyslaves state.cache = cache_type {state.cache.offset(shift), state.cache.size() - 1};
+        utils::swap(state.map[target], state.map[state.count - 1]);
+        state.map = buffer_slice<oturef> {state.map, 0, state.count - 1};
     }
 
     /**
-     * Updates the star tree's cache structures by removing an OTU.
-     * @tparam T The algorithm's distance matrix's spatial transformation.
+     * Updates the symmetric star tree's cache structures by removing an OTU.
      * @param state The algorithm's state data structures.
-     * @param x The OTU to be removed from the star tree's caches and matrix.
+     * @param target The OTU to be removed from the star tree's caches and matrix.
      */
-    template <typename T>
-    static void update_cache(state<T>& state, oturef x)
+    static void update_cache(state<transform::symmetric>& state, oturef target)
     {
-        if(std::is_same<transform::symmetric, T>::value) {
-            swap_remove(state, x, 0);
-        } else {
-            swap_remove(state, x, state.count - 1);
+        onlyslaves {
+            if(target != 0)
+                state.matrix.swap(0, target);
+
+            state.matrix.remove(0);
+            state.cache = buffer_slice<distance_type> {state.cache, 1, state.count - 1};
         }
+
+        utils::swap(state.map[0], state.map[target]);
+        state.map = buffer_slice<oturef> {state.map, 1, state.count - 1};
     }
 
     /**
@@ -395,10 +396,13 @@ namespace
     template <typename T>
     __global__ void rebuild(state<T> state, const pair_type pair)
     {
-        __shared__ distance_type new_sum;
+        __shared__ distance_type distance_xy, new_sum;
+        extern __shared__ distance_type new_distances[];
         
-        if(threadIdx.x == 0)
+        if(threadIdx.x == 0) {
+            distance_xy = state.matrix[pair];
             new_sum = 0;
+        }
 
         __syncthreads();
 
@@ -406,12 +410,20 @@ namespace
         // of the two given OTUs, to all other unmodified OTUs.
         for(size_t i = threadIdx.x; i < state.count; i += blockDim.x) {
             const auto previous = state.matrix[{i, pair.x}] + state.matrix[{i, pair.y}];
-            const auto current = .5 * (previous - state.matrix[pair]);
+            const auto updated = (previous - distance_xy) * .5;
 
-            state.matrix[{i, pair.x}] = state.matrix[{pair.x, i}] = current;
-            state.cache[i] += current - previous;
+            new_distances[i] = updated;
+            state.cache[i] += updated - previous;
+            atomicAdd(&new_sum, updated);
+        }
 
-            atomicAdd(&new_sum, current);
+        __syncthreads();
+
+        // Copies the new OTU's distances to the global distance matrix. These distances
+        // are calculated out-of-place to not interfere with the previous values
+        // while calculating the new ones.
+        for(size_t i = threadIdx.x; i < state.count; i += blockDim.x) {
+            state.matrix[{i, pair.x}] = state.matrix[{pair.x, i}] = new_distances[i];
         }
 
         __syncthreads();
@@ -449,14 +461,14 @@ namespace
 
         // Let's calculate the distances between the OTU being created and the others
         // which have not been affected by the current joining operation.
-        onlyslaves rebuild<<<1, d::threads(state.count)>>>(state, {x, y});
+        onlyslaves rebuild<<<1, d::threads(state.count), sizeof(distance_type) * state.count>>>(state, {x, y});
 
         // Finally, let's take advantage from our data structures' layouts and always remove
         // the cheapest column from our star tree's distance matrix.
         state.map[x] = parent;
 
         update_cache(state, y);
-        --state.count;
+        state.count--;
     }
 
     /**
