@@ -62,13 +62,13 @@ namespace museqa
                     {
                         auto& father = m_buffer[parent];
 
-                        const auto& lchild = connect(father, one);
-                        const auto& rchild = connect(father, two);
+                        const auto& c1 = connect(father, one.id < two.id ? one : two);
+                        const auto& c2 = connect(father, one.id < two.id ? two : one);
 
-                        father.child[0] = lchild.id;
-                        father.child[1] = rchild.id;
+                        father.level = utils::max(c1.level, c2.level) + 1;
 
-                        father.level = utils::max(lchild.level, rchild.level) + 1;
+                        father.child[0] = c1.id;
+                        father.child[1] = c2.id;
                     }
 
                     /**
