@@ -67,6 +67,49 @@ namespace museqa
         };
 
         /**
+         * A wrapper around a pipeline module. A wrapper checks whether the given
+         * type is a module and places it around a minimal type wrapper.
+         * @tparam M The module to be wrapped.
+         * @since 0.1.1
+         */
+        template <typename M>
+        struct wrapper : public std::enable_if<std::is_base_of<module, M>::value, M>::type
+        {
+            using wrapped_type = M;
+        };
+
+        /**
+         * The base for a module middleware. A middleware allows a module to have
+         * its functionality easily extended. The middleware is responsible for
+         * bubbling the module's call if its logic so request. This is done so a
+         * middleware is able to interrupt or skip the module's execution if needed.
+         * Therefore, the base module functionality is not directly called.
+         * @tparam M The wrapped module type.
+         * @since 0.1.1
+         */
+        template <typename M>
+        struct middleware : public wrapper<M>
+        {
+            inline auto next(const io::manager&, pipeline::pipe&) const -> pipeline::pipe;
+            virtual auto run(const io::manager&, pipeline::pipe&) const -> pipeline::pipe = 0;
+        };
+
+        /**
+         * Bubbles the pipeline execution to the next middleware in line or
+         * to the wrapped module. If this method is not called by the current
+         * middleware, then the next middlewares and the module will be skipped.
+         * @tparam M The wrapped module type.
+         * @param io The pipeline's IO service instance.
+         * @param pipe The previous module's conduit instance.
+         * @return The resulting conduit to send to the next module.
+         */
+        template <typename M>
+        inline auto middleware<M>::next(const io::manager& io, pipeline::pipe& pipe) const -> pipeline::pipe
+        {
+            return middleware::wrapped_type::run(io, pipe);
+        }
+
+        /**
          * Converts an unknown conduit reference to that of the expected conduit
          * type of a module. This function checks whether the conversion is possible.
          * @tparam T The type of module receiving the conduit to be converted.
@@ -118,6 +161,27 @@ namespace museqa
 
     namespace pipeline
     {
+        /**#@+
+         * Automatically composes a list of middlewares around a module to allow
+         * the extended functionalities to be bubbled down to the wrapped module.
+         * @tparam T The module to have its functionality extended.
+         * @tparam M The list of middlewares to wrap the module with.
+         * @since 0.1.1
+         */
+        template <typename T, template <class> class ...M>
+        struct autowire;
+
+        template <typename T>
+        struct autowire<T> : public wrapper<T>::wrapped_type
+        {};
+
+        template <typename T, template <class> class M, template <class> class ...W>
+        struct autowire<T, M, W...> : public M<autowire<T, W...>>
+        {
+            static_assert(std::is_base_of<middleware<T>, M<T>>::value, "autowire expects list of middlewares");
+        };
+        /**#@-*/
+
         /**
          * Manages the pipelined modules execution. From the given list of pipelined
          * modules, verify whether they can be actually chained and run them.
