@@ -85,7 +85,7 @@ namespace museqa
          * @tparam T The scalar type to which duration must be represented by.
          * @tparam F The given functor type.
          * @tparam P The functor's parameter types.
-         * @param ret The functor's execution return value.
+         * @param result The functor's execution return value.
          * @param lambda The functor to be executed.
          * @param params The functor's parameters.
          * @return The time spent by functor's execution.
@@ -94,16 +94,16 @@ namespace museqa
         inline auto run(F&& lambda, P&&... params) -> duration<T>
         {
             const time_point<T> start = now<T>();
-            lambda(std::forward<decltype(params)>(params)...);
+            lambda (std::forward<decltype(params)>(params)...);
             return elapsed(start);
         }
 
         template <typename R, typename T = double, typename F, typename ...P>
-        inline auto run(R& ret, F&& lambda, P&&... params)
+        inline auto run(R& result, F&& lambda, P&&... params)
         -> typename std::enable_if<std::is_copy_assignable<R>::value, duration<T>>::type
         {
             const time_point<T> start = now<T>();
-            ret = lambda(std::forward<decltype(params)>(params)...);
+            result = lambda (std::forward<decltype(params)>(params)...);
             return elapsed(start);
         }
         /**#@-*/

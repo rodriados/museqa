@@ -53,8 +53,29 @@ namespace museqa
       #endif
     };
 
-    namespace step
+    namespace heuristic
     {
+        template <typename T>
+        struct timer : public pipeline::middleware<T>
+        {
+            /**
+             * Executes the pipeline module's logic.
+             * @param io The pipeline's IO service instance.
+             * @param pipe The previous module's conduit instance.
+             * @return The resulting conduit to send to the next module.
+             */
+            auto run(const io::manager& io, pipeline::pipe& pipe) const -> pipeline::pipe override
+            {
+                pipeline::pipe mresult;
+
+                const auto lambda = [&]() { return std::move(this->next(io, pipe)); };
+                const auto duration = benchmark::run(mresult, lambda);
+
+                watchdog::report(this->name(), duration);
+                return mresult;
+            }
+        };
+
         /**
          * Initializes and bootstraps the pipeline. Loads all sequence database
          * files given via command line and feeds to following module.
@@ -186,40 +207,12 @@ namespace museqa
      * for executing this project's proposed heuristics.
      * @since 0.1.1
      */
-    using heuristic = pipeline::runner<
-            step::bootstrap
-        ,   step::pairwise
-        ,   step::phylogeny
-        ,   step::pgalign
+    using runner = pipeline::runner<
+            heuristic::timer<heuristic::bootstrap>
+        ,   heuristic::timer<heuristic::pairwise>
+        ,   heuristic::timer<heuristic::phylogeny>
+        ,   heuristic::timer<heuristic::pgalign>
         >;
-
-    /**
-     * Definition of the heuristic's pipeline's runner. As we're interested on how
-     * long our heuristics stages take to run, we will implement an special runner.
-     * @since 0.1.1
-     */
-    class runner : public heuristic
-    {
-        protected:
-            /**
-             * Runs the pipeline's modules and reports how long they individually
-             * take to execute and send each duration to the watchdog process.
-             * @param modules The list pipeline's modules' instances to execute.
-             * @param io The IO module service instance.
-             * @return The pipeline's final module's result.
-             */
-            inline auto execute(const pipeline::module *modules[], const io::manager& io) const
-            -> pipeline::pipe override
-            {
-                auto pipe = pipeline::pipe {};
-                auto lambda = [&](size_t i) { return std::move(modules[i]->run(io, pipe)); };
-
-                for(size_t i = 0; i < heuristic::count; ++i)
-                    watchdog::report(modules[i]->name(), benchmark::run(pipe, lambda, i));
-
-                return pipe;
-            }
-    };
 
     /**
      * Runs the application's heuristic's pipeline. This function measures the application's
