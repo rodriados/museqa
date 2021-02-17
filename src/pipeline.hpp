@@ -133,6 +133,23 @@ namespace museqa
         namespace pipeline
         {
             /**#@+
+             * Automatically composes a list of middlewares around a module to allow
+             * the extended functionalities to be bubbled down to the wrapped module.
+             * @tparam T The module to have its functionality extended.
+             * @tparam M The list of middlewares to wrap the module with.
+             * @since 0.1.1
+             */
+            template <typename T>
+            constexpr auto autowire() -> typename museqa::pipeline::wrapper<T>::wrapped_type;
+
+            template <typename T, template <class> class M, template <class> class ...W>
+            constexpr auto autowire() -> typename std::enable_if<
+                    std::is_base_of<museqa::pipeline::middleware<T>, M<T>>::value
+                ,   M<decltype(autowire<T, W...>())>
+                >::type;
+            /**#@-*/
+
+            /**#@+
              * Auxiliary funciton for checking whether the pipelined modules are
              * chainable. To achieve such task, we look at each module's previous
              * type, as they should match the previous module in the pipeline.
@@ -161,26 +178,15 @@ namespace museqa
 
     namespace pipeline
     {
-        /**#@+
-         * Automatically composes a list of middlewares around a module to allow
-         * the extended functionalities to be bubbled down to the wrapped module.
+        /**
+         * Automatically creates a composition of middlewares, allowing the wrapped
+         * module to have its functionality easily extended.
          * @tparam T The module to have its functionality extended.
          * @tparam M The list of middlewares to wrap the module with.
          * @since 0.1.1
          */
         template <typename T, template <class> class ...M>
-        struct autowire;
-
-        template <typename T>
-        struct autowire<T> : public wrapper<T>::wrapped_type
-        {};
-
-        template <typename T, template <class> class M, template <class> class ...W>
-        struct autowire<T, M, W...> : public M<autowire<T, W...>>
-        {
-            static_assert(std::is_base_of<middleware<T>, M<T>>::value, "autowire expects list of middlewares");
-        };
-        /**#@-*/
+        using autowire = decltype(detail::pipeline::autowire<T, M...>());
 
         /**
          * Manages the pipelined modules execution. From the given list of pipelined
