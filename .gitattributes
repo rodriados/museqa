@@ -1,0 +1,17 @@
+[attr]spaces        whitespace=trailing-space,space-before-tab,tabs-in-indent
+[attr]makefile      whitespace=trailing-space,space-before-tab,indent-with-non-tab,tabwidth=4
+
+*                   text eol=lf
+make*               makefile
+*.mk                makefile
+*.make              makefile
+*.cpp               spaces diff=cpp
+*.cuh               spaces diff=cpp
+*.hpp               spaces diff=cpp
+*.py                spaces diff=python
+*.pxd               spaces diff=python
+*.pyx               spaces diff=python
+*.md                spaces diff=markdown
+*.fasta             binary
+
+*.txt               spaces
