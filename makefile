@@ -114,7 +114,7 @@ $(OBJDIR)/%.o $(OBJDIR)/%.a: $(SRCDIR)/%.cpp
 	$(GCPP) $(GCPPFLAGS) -MMD -c $< -o $@
 
 $(OBJDIR)/%.o $(OBJDIR)/%.a: $(SRCDIR)/%.cu
-	$(NVCC) $(NVCCFLAGS) -MMD -dc $< -o $@
+	$(NVCC) $(NVCCFLAGS) -dc $< -o $@
 
 # The step rules to build the testing environment modules. This setting will result
 # into many modules that can be directly imported used into a python module.

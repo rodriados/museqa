@@ -6,6 +6,7 @@
  */
 #include <string>
 #include <vector>
+#include <fstream>
 
 #include "io.hpp"
 #include "mpi.hpp"
@@ -36,6 +37,7 @@ static const std::vector<terminal::option> options = {
 ,   {"pairwise",      {"-1", "--pairwise"},      "Picks the algorithm to use within the pairwise module.", true}
 ,   {"phylogeny",     {"-2", "--phylogeny"},     "Picks the algorithm to use within the phylogeny module.", true}
 ,   {"pgalign",       {"-3", "--pgalign"},       "Picks the algorithm to use within the profile-aligner.", true}
+,   {"output",        {"-o", "--output"},        "Sets the name of the output files", true}
 };
 
 namespace museqa
@@ -150,6 +152,8 @@ namespace museqa
          */
         struct phylogeny : public museqa::module::phylogeny
         {
+            mutable database db;
+
             /**
              * Executes the pipeline module's logic.
              * @param io The pipeline's IO service instance.
@@ -168,7 +172,44 @@ namespace museqa
                 auto mresult = museqa::phylogeny::module::run(io, pipe);
                 onlymaster watchdog::finish("phylogeny", "phylogenetic tree produced");
 
+                const auto contents = pipeline::convert<phylogeny>(mresult);
+                const auto& tree = contents->tree;
+                this->db = contents->db;
+
+                const auto filename = io.cmd.get<std::string>("output", "output") + ".dnd";
+
+                onlymaster {
+
+                    std::ofstream file (filename, std::ofstream::out);
+
+                    print_tree(tree, file);
+                }
+
                 return mresult;
+            }
+
+            void print_tree(const museqa::phylogeny::tree<museqa::phylogeny::otu, unsigned int>& tree, std::ofstream& file) const
+            {
+                print_node(tree, tree.root(), file);
+            }
+
+            using tree_type = museqa::phylogeny::tree<museqa::phylogeny::otu, unsigned int>;
+            using node_type = typename museqa::phylogeny::tree<museqa::phylogeny::otu, unsigned int>::node_type;
+
+            void print_node(const tree_type& tree, const node_type& node, std::ofstream& file) const
+            {
+                if (node.child[0] == museqa::phylogeny::undefined &&
+                    node.child[1] == museqa::phylogeny::undefined) {
+                    file << db[node.id].description << ":" << 0.434343;
+                } else {
+                    file << "(" << std::endl;
+                    print_node(tree, tree[node.child[0]], file); file << "," << std::endl;
+                    print_node(tree, tree[node.child[1]], file); file << ")" << std::endl;
+
+                    if (node.distance != museqa::phylogeny::otu::farthest) {
+                        file << ":" << 0.423434 << std::endl;
+                    }
+                }
             }
         };
 
