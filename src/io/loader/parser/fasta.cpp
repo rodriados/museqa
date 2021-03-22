@@ -38,8 +38,9 @@ namespace
 
         description = line.substr(1);
 
-        while(file.peek() != 0x3E && std::getline(file, line) && line.size() > 0)
-            contents.append(line);
+        while(file.peek() != 0x3E && std::getline(file, line))
+            if(line.size() > 0)
+                contents.append(line);
 
         db.add(description, contents);
         return true;
