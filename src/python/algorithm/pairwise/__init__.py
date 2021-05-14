@@ -3,6 +3,10 @@
 # @file The pairwise algorithm's module entry point.
 # @author Rodrigo Siqueira <rodriados@gmail.com>
 # @copyright 2021-present Rodrigo Siqueira
+from .myers import myers
 from .needleman import needleman
 
-__all__ = ["needleman"]
+__all__ = [
+    "myers"
+,   "needleman"
+]

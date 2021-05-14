@@ -6,7 +6,6 @@
 from museqa.pairwise import ScoringTable, DistanceMatrix
 from museqa.database import Database
 from museqa.sequence import Sequence
-from typing import Optional
 
 from .utils import generator
 
@@ -15,9 +14,25 @@ __all__ = ["needleman"]
 # Executes the sequential Needleman-Wunsch algorithm.
 # @param db The sequences available for alignment.
 # @param table The scoring table to use.
+# @param gap The gap opening penalty.
+# @param extend The gap extending penalty.
 # @return The distance matrix of score between sequence pairs.
-def needleman(db: Database, table: Optional[ScoringTable] = None) -> DistanceMatrix:
+def needleman(
+    db: Database
+,   *
+,   table: ScoringTable = None
+,   gap: float = None
+,   extend: float = None
+) -> DistanceMatrix:
+
+    # Checking validating and initializing the parameters given to the function.
     table = table if table is not None else ScoringTable()
+    #extend = extend if extend is not None else table.penalty
+    #gap = gap if gap is not None else 0.0
+
+    gap = gap if gap is not None else table.penalty
+    
+    assert type(table) is ScoringTable
 
     # Sequentially aligns two sequences using Needleman-Wunsch algorithm.
     # @param one The first sequence to align.
@@ -29,7 +44,7 @@ def needleman(db: Database, table: Optional[ScoringTable] = None) -> DistanceMat
 
         # Filling 0-th line with penalties. This is the only initialization needed
         # for sequential algorithm.
-        line = [i * -table.penalty for i in range(two.length + 1)]
+        line = [i * -gap for i in range(two.length + 1)]
 
         for i in range(one.length):
             # If the current line is at sequence end, then we can already finish
@@ -41,7 +56,7 @@ def needleman(db: Database, table: Optional[ScoringTable] = None) -> DistanceMat
             # Initialize the 0-th column values. It will always be initialized with
             # penalties, in the same manner as the 0-th line.
             done = line[0]
-            line[0] = (i + 1) * -table.penalty
+            line[0] = (i + 1) * -gap
 
             # Iterate over the second sequence, calculating the best alignment possible
             # for each of its characters.
@@ -49,8 +64,8 @@ def needleman(db: Database, table: Optional[ScoringTable] = None) -> DistanceMat
                 value = line[j - 1]
 
                 if two[j - 1] != Sequence.padding:
-                    insertd = value - table.penalty
-                    removed = line[j] - table.penalty
+                    insertd = value - gap
+                    removed = line[j] - gap
                     matched = done + table[one[i], two[j - 1]]
                     value = max(insertd, removed, matched)
 
