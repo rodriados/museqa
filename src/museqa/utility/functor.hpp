@@ -1,49 +1,57 @@
-/**
+/** 
  * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
- * @file Implements a general function abstraction data structure.
+ * @file A general functor abstraction implementation.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018-present Rodrigo Siqueira
  */
 #pragma once
 
-#include "utils.hpp"
+#include <utility>
+
+#include <museqa/utility.hpp>
 
 namespace museqa
 {
-    /**#@+
-     * Wraps a function pointer into a functor.
-     * @tparam F The full function signature type.
-     * @tparam R The function return type.
-     * @tparam P The function parameter types.
-     * @since 0.1.1
-     */
-    template <typename F>
-    class functor
+    namespace utility
     {
-        static_assert(std::is_function<F>::value, "a functor must have a function signature type");
-    };
+        /**
+         * Wraps and manages a general function pointer.
+         * @tparam F The given functor type.
+         * @since 1.0
+         */
+        template <typename F>
+        class functor
+        {
+            static_assert(std::is_function<F>::value, "a functor must have a function-like type");
+        };
 
-    template <typename R, typename ...P>
-    class functor<R(P...)>
-    {
-        public:
-            using return_type = R;                  /// The functor's return type.
+        /**
+         * Wraps a general function by describing its return and parameters types.
+         * @tparam R The functor's return type.
+         * @tparam P The functor's parameter types.
+         * @since 1.0
+         */
+        template <typename R, typename ...P>
+        class functor<R(P...)>
+        {
+          public:
+            using return_type = R;                  /// The functor's returning type.
             using function_type = R (*)(P...);      /// The functor's raw pointer type.
 
-        protected:
+          protected:
             function_type m_function = nullptr;     /// The raw functor's pointer.
 
-        public:
+          public:
             __host__ __device__ inline constexpr functor() noexcept = default;
             __host__ __device__ inline constexpr functor(const functor&) noexcept = default;
             __host__ __device__ inline constexpr functor(functor&&) noexcept = default;
 
             /**
              * Instantiates a new functor.
-             * @param function The function pointer to be encapsulated by functor.
+             * @param function The function pointer to be encapsulated by the functor.
              */
             __host__ __device__ inline constexpr functor(function_type function) noexcept
-            :   m_function {function}
+              : m_function {function}
             {}
 
             __host__ __device__ inline functor& operator=(const functor&) noexcept = default;
@@ -53,19 +61,19 @@ namespace museqa
              * The functor call operator.
              * @tparam T The given parameter types.
              * @param param The given functor parameters.
-             * @return The functor return value.
+             * @return The functor execution return value.
              */
             template <typename ...T>
-            __host__ __device__ inline constexpr return_type operator()(T&&... param) const
+            __host__ __device__ inline constexpr return_type operator()(T&&... params) const
             {
-                return (m_function)(param...);
+                return (m_function)(params...);
             }
 
             /**
              * Allows the raw functor type to be directly accessed or called.
              * @return The raw function pointer.
              */
-            __host__ __device__ inline constexpr function_type operator&() const
+            __host__ __device__ inline constexpr function_type operator*() const
             {
                 return m_function;
             }
@@ -78,6 +86,6 @@ namespace museqa
             {
                 return (m_function == nullptr);
             }
-    };
-    /**#@-*/
+        };
+    }
 }
