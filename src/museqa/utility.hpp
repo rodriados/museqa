@@ -139,5 +139,18 @@ namespace museqa
             for(size_t i = 0; i < N; ++i)
                 swap(a[i], b[i]);
         }
+
+        /**
+         * Swallows a variadic list of parameters and returns the first one. This
+         * functions is useful when dealing with type-packs.
+         * @tparam T The type of the value to be returned.
+         * @tparam U The type of the values to ignore.
+         * @return The given return value.
+         */
+        template <typename T, typename ...U>
+        __host__ __device__ inline constexpr T swallow(T&& target, U&&...) noexcept
+        {
+            return target;
+        }
     }
 }
