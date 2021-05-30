@@ -21,6 +21,8 @@
   #define __device__
 #endif
 
+#include <museqa/utility/operators.hpp>
+
 namespace museqa
 {
     /**
