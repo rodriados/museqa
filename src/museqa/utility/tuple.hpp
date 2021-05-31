@@ -783,4 +783,32 @@ namespace museqa
             return {lambda(impl::get<I>(a), impl::get<I>(b))...};
         }
     }
+
+    namespace factory
+    {
+        /**
+         * Builds a new tuple from the given parameters.
+         * @tparam T The list of given parameter types.
+         * @param value The list of values to create the tuple with.
+         * @return The new tuple instance.
+         */
+        template <typename ...T>
+        __host__ __device__ inline constexpr auto tuple(const T&... value) -> utility::tuple<T...>
+        {
+            return {value...};
+        }
+
+        /**
+         * Builds a new N-tuple from the given array.
+         * @tparam T The array's elements' type.
+         * @tparam N The total number of elements on the array.
+         * @param arr The array to build the tuple from.
+         * @return The new tuple instance.
+         */
+        template <typename T, size_t N>
+        __host__ __device__ inline constexpr auto ntuple(T (&arr)[N]) noexcept -> utility::ntuple<T, N>
+        {
+            return {arr};
+        }
+    }
 }

@@ -88,4 +88,19 @@ namespace museqa
             }
         };
     }
+
+    namespace factory
+    {
+        /**
+         * Builds a new functor from a generic function.
+         * @tparam R The functor's return type.
+         * @tparam P The functor's parameter types.
+         * @param func The function to be wrapped in a new functor instance.
+         */
+        template <typename R, typename ...P>
+        __host__ __device__ inline auto functor(R (*func)(P...)) noexcept -> utility::functor<R(P...)>
+        {
+            return {func};
+        }
+    }
 }
