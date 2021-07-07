@@ -9,4 +9,5 @@
 #if !defined(MUSEQA_AVOID_MPI)
   #include <museqa/mpi/common.hpp>
   #include <museqa/mpi/type.hpp>
+  #include <museqa/mpi/status.hpp>
 #endif
