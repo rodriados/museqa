@@ -53,10 +53,10 @@ namespace museqa
 
                 /**
                  * Builds a new instance from a raw pointer and its allocator.
-                 * @param ptr The pointer to be encapsulated.
                  * @param allocator The allocator of given pointer.
+                 * @param ptr The pointer to be encapsulated.
                  */
-                inline shared(element_type *ptr, const allocator_type& allocator) noexcept
+                inline shared(const allocator_type& allocator, element_type *ptr) noexcept
                   : shared {ptr, metadata_type::acquire(ptr, allocator)}
                 {}
 

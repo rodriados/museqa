@@ -173,7 +173,7 @@ namespace museqa
                  * Gives access to the raw owned pointer.
                  * @return The raw encapsulated pointer.
                  */
-                __host__ __device__ inline element_type *get() const noexcept
+                __host__ __device__ inline element_type *raw() const noexcept
                 {
                     return m_ptr;
                 }
@@ -230,7 +230,7 @@ namespace museqa
                  * Gives access to the raw owned pointer.
                  * @return The raw encapsulated pointer.
                  */
-                __host__ __device__ inline void *get() const noexcept
+                __host__ __device__ inline void *raw() const noexcept
                 {
                     return m_ptr;
                 }
