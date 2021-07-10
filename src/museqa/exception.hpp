@@ -79,7 +79,7 @@ namespace museqa
     {
         static_assert(std::is_base_of<museqa::exception, E>::value, "only exception-like types are throwable");
 
-        #if !defined(MUSEQA_RUNTIME_DEVICE) && !defined(MUSEQA_PRODUCTION)
+        #if !defined(MUSEQA_UNSAFE)
             #if defined(MUSEQA_COMPILER_GNUC)
                 if (__builtin_expect(!condition, 0)) {
                     throw E {std::forward<decltype(params)>(params)...};

@@ -26,6 +26,19 @@
 namespace museqa
 {
     /**
+     * Informs whether unsafe mode is turned on.
+     * @since 1.0
+     */
+    enum : bool
+    {
+      #if !defined(MUSEQA_UNSAFE)
+        unsafe = false
+      #else
+        unsafe = true
+      #endif
+    };
+
+    /**
      * A general memory storage container.
      * @tparam S The number of bytes in storage.
      * @tparam A The byte alignment the storage should use.

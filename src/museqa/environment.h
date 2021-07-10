@@ -146,3 +146,13 @@
   #define MUSEQA_RUNTIME_HOST 1
   #define MUSEQA_RUNTIME (0x10)
 #endif
+
+/*
+ * Determines whether the software should run in unsafe mode. By default, safe mode
+ * is turned off in production builds in exchange to performance.
+ */
+#if defined(MUSEQA_PRODUCTION) || defined(MUSEQA_RUNTIME_DEVICE)
+  #if !defined(MUSEQA_UNSAFE)
+    #define MUSEQA_UNSAFE 1
+  #endif
+#endif
