@@ -29,6 +29,8 @@ namespace museqa
             template <typename T>
             class shared : public impl::pointer<T>
             {
+                template <typename> friend class shared;
+
               private:
                 typedef impl::pointer<T> underlying_type;
                 typedef impl::metadata metadata_type;
@@ -48,7 +50,7 @@ namespace museqa
                  * @param ptr The pointer to be encapsulated.
                  */
                 inline explicit shared(element_type *ptr) noexcept
-                  : shared {ptr, factory::allocator<element_type>()}
+                  : shared {factory::allocator<element_type>(), ptr}
                 {}
 
                 /**

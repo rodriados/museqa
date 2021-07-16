@@ -186,6 +186,9 @@ namespace museqa
             template <>
             class pointer<void>
             {
+              public:
+                typedef void element_type;                      /// The generic pointer element type.
+
               protected:
                 void *m_ptr = nullptr;                          /// The raw encapsulated pointer.
 

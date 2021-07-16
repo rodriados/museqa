@@ -105,12 +105,12 @@ namespace museqa
     {
         /**
          * Creates an allocator for the specified pointer type, which is not an
-         * array and has its default contructor called.
+         * array and has its default constructor called.
          * @tparam T The type of pointer element to build.
          * @return The new allocator for given type.
          */
         template <typename T>
-        inline constexpr auto allocator() noexcept
+        inline auto allocator() noexcept
         -> typename std::enable_if<!std::is_array<T>::value, memory::allocator>::type
         {
             return memory::allocator {
@@ -121,17 +121,31 @@ namespace museqa
 
         /**
          * Creates an allocator for the specified pointer type, which has its default
-         * contructor called for each instance.
+         * constructor called for each instance.
          * @tparam T The type of pointer element to build.
          * @return The new allocator for given type.
          */
         template <typename T>
-        inline constexpr auto allocator() noexcept
+        inline auto allocator() noexcept
         -> typename std::enable_if<std::is_array<T>::value, memory::allocator>::type
         {
             return memory::allocator {
                 [](void **ptr, size_t, size_t n) { *ptr = new pure<T>[n]; }
               , [](void *ptr) { delete[] (reinterpret_cast<pure<T> *>(ptr)); }
+            };
+        }
+
+        /**
+         * Creates an allocator for a generic, untyped pointer. Due to its untypeness,
+         * the allocator does not call any constructors on the allocated memory.
+         * @return The new generic memory allocator.
+         */
+        template <>
+        inline auto allocator<void>() noexcept -> memory::allocator
+        {
+            return memory::allocator {
+                [](void **ptr, size_t, size_t n) { *ptr = operator new(n); }
+              , [](void *ptr) { operator delete(ptr); }
             };
         }
     }
