@@ -33,13 +33,12 @@ namespace museqa
              * Creates the description for a type that may transit as a message
              * via MPI. A descriptor must receive the type's member properties pointers
              * as constructor parameters in order to describe a type.
-             * @see museqa::mpi::describer
+             * @see museqa::mpi::type::describe
              * @since 1.0 
              */
             struct descriptor
             {
-                typedef type::id identifier_type;       /// The type identifier's type.
-                identifier_type id;                     /// The target type's identifier.
+                type::id id;                    /// The target type's raw identifier.
 
                 inline descriptor() noexcept = delete;
                 inline descriptor(const descriptor&) noexcept = delete;
@@ -53,71 +52,52 @@ namespace museqa
                 inline descriptor& operator=(const descriptor&) noexcept = delete;
                 inline descriptor& operator=(descriptor&&) noexcept = delete;
             };
-        }
 
-        /**
-         * Describes a type and allows it to be sent to different nodes via MPI.
-         * @tparam T The type to be described.
-         * @return The target type's descriptor instance.
-         * @see museqa::mpi::descriptor
-         */
-        template <typename T>
-        inline type::descriptor describe()
-        {
-            return {};
-        }
-
-        namespace type
-        {
             /**
-             * Retrieves a datatype identifier for the given type. To perform this
-             * task, a descriptor must be available for the requested type.
-             * @tparam T The type to be identified.
-             * @since 1.0
+             * Describes a type and allows it to be sent to different nodes via MPI.
+             * @tparam T The type to be described.
+             * @return The target type's descriptor instance.
+             * @see museqa::mpi::type::descriptor
              */
             template <typename T>
-            struct identifier
+            inline descriptor describe()
             {
-                static_assert(!std::is_union<T>::value, "union types cannot be sent via MPI");
-                static_assert(!std::is_reference<T>::value, "references cannot be sent via MPI");
-                static_assert(std::is_trivial<T>::value, "only trivial types can be sent via MPI");
-
-                /**
-                 * Requests the target type's identifier. This method invokes the
-                 * type describer only once and caches its result for later use.
-                 * @return The type's identifier.
-                 */
-                inline static auto get() -> id
-                {
-                    static auto descriptor = describe<T>();
-                    return descriptor.id;
-                }
-            };
+                return {};
+            }
 
             /**
              * Identifies the given type by retrieving its raw datatype id.
              * @tparam T The type to get the raw datatype id of.
              * @return The requested type's id.
              */
-            template <typename T> inline id identify() { return identifier<T>::get(); }
+            template <typename T>
+            inline type::id identify()
+            {
+                static_assert(!std::is_union<T>::value, "union types cannot be sent via MPI");
+                static_assert(!std::is_reference<T>::value, "references cannot be sent via MPI");
+                static_assert(std::is_trivial<T>::value, "only trivial types can be sent via MPI");
+
+                static auto descriptor = describe<T>();
+                return descriptor.id;
+            }
 
             /**#@+
              * Specializations for identifiers of built-in types. These native types
              * have their identities created built-in by MPI and can be used directly.
              * @since 1.0
              */
-            template <> inline id identify<bool>()     { return MPI_C_BOOL; };
-            template <> inline id identify<char>()     { return MPI_CHAR; };
-            template <> inline id identify<float>()    { return MPI_FLOAT; };
-            template <> inline id identify<double>()   { return MPI_DOUBLE; };
-            template <> inline id identify<int8_t>()   { return MPI_INT8_T; };
-            template <> inline id identify<int16_t>()  { return MPI_INT16_T; };
-            template <> inline id identify<int32_t>()  { return MPI_INT32_T; };
-            template <> inline id identify<int64_t>()  { return MPI_INT64_T; };
-            template <> inline id identify<uint8_t>()  { return MPI_UINT8_T; };
-            template <> inline id identify<uint16_t>() { return MPI_UINT16_T; };
-            template <> inline id identify<uint32_t>() { return MPI_UINT32_T; };
-            template <> inline id identify<uint64_t>() { return MPI_UINT64_T; };
+            template <> inline type::id identify<bool>()     { return MPI_C_BOOL; };
+            template <> inline type::id identify<char>()     { return MPI_CHAR; };
+            template <> inline type::id identify<float>()    { return MPI_FLOAT; };
+            template <> inline type::id identify<double>()   { return MPI_DOUBLE; };
+            template <> inline type::id identify<int8_t>()   { return MPI_INT8_T; };
+            template <> inline type::id identify<int16_t>()  { return MPI_INT16_T; };
+            template <> inline type::id identify<int32_t>()  { return MPI_INT32_T; };
+            template <> inline type::id identify<int64_t>()  { return MPI_INT64_T; };
+            template <> inline type::id identify<uint8_t>()  { return MPI_UINT8_T; };
+            template <> inline type::id identify<uint16_t>() { return MPI_UINT16_T; };
+            template <> inline type::id identify<uint32_t>() { return MPI_UINT32_T; };
+            template <> inline type::id identify<uint64_t>() { return MPI_UINT64_T; };
             /**#@-*/
         }
 
