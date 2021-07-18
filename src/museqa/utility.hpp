@@ -47,7 +47,7 @@ namespace museqa
     template <size_t S, size_t A = S>
     struct alignas(A) storage
     {
-        alignas(A) char storage[S];
+        alignas(A) uint8_t storage[S];
     };
 
     /**

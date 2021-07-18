@@ -149,7 +149,7 @@ namespace museqa
 
                 __host__ __device__ inline constexpr leaf() noexcept = delete;
                 __host__ __device__ inline constexpr leaf(const leaf&) noexcept = default;
-                __host__ __device__ inline constexpr leaf(leaf&&) noexcept = delete;
+                __host__ __device__ inline constexpr leaf(leaf&&) noexcept = default;
 
                 /**
                  * Constructs a new tuple reference leaf.
