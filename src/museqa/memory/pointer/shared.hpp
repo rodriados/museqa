@@ -77,7 +77,7 @@ namespace museqa
                  */
                 template <typename U>
                 __host__ __device__ inline shared(const shared<U>& other) noexcept
-                 : shared {static_cast<element_type *>(other.m_ptr), metadata_type::acquire(other.m_meta)}
+                 : shared {static_cast<element_type*>(other.m_ptr), metadata_type::acquire(other.m_meta)}
                 {}
 
                 /**
@@ -96,7 +96,7 @@ namespace museqa
                  */
                 template <typename U>
                 __host__ __device__ inline shared(shared<U>&& other) noexcept
-                  : shared {static_cast<element_type *>(other.m_ptr), metadata_type::acquire(other.m_meta)}
+                  : shared {static_cast<element_type*>(other.m_ptr), metadata_type::acquire(other.m_meta)}
                 {
                     other.reset();
                 }
@@ -188,7 +188,7 @@ namespace museqa
                     utility::swap(m_meta, other.m_meta);
                 }
 
-              private:
+              protected:
                 /**
                  * Builds a new instance from a raw pointer and its metadata.
                  * @param ptr The raw pointer object.

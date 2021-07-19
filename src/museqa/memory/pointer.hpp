@@ -8,3 +8,4 @@
 
 #include <museqa/memory/pointer/common.hpp>
 #include <museqa/memory/pointer/shared.hpp>
+#include <museqa/memory/pointer/weak.hpp>
