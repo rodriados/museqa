@@ -10,6 +10,7 @@
 
 #include <cstdint>
 
+#include <museqa/utility.hpp>
 #include <museqa/mpi/type.hpp>
 #include <museqa/memory/pointer/shared.hpp>
 
@@ -43,7 +44,7 @@ namespace museqa
             template <typename T>
             inline message(memory::pointer::shared<T>& ptr, size_t size = 1) noexcept
               : ptr {ptr}
-              , type {mpi::type::identify<T>()}
+              , type {mpi::type::identify<pure<T>>()}
               , size {static_cast<int32_t>(size)}
             {}
 
@@ -78,7 +79,7 @@ namespace museqa
             template <typename T>
             inline auto message(size_t size = 1) noexcept -> museqa::mpi::message
             {
-                auto ptr = memory::pointer::shared<void> {operator new(size * sizeof(T))};
+                auto ptr = memory::pointer::shared<void> {operator new(sizeof(T) * size)};
                 auto type = museqa::mpi::type::identify<T>();
                 return {ptr, type, size};
             }
