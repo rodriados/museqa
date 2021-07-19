@@ -10,11 +10,17 @@
 
 #include <mpi.h>
 
+#include <array>
 #include <cstdint>
 #include <utility>
 
 #include <museqa/utility.hpp>
+#include <museqa/utility/tuple.hpp>
 #include <museqa/mpi/common.hpp>
+
+#if !defined(MUSEQA_AVOID_REFLECTION)
+  #include <museqa/utility/reflection.hpp>
+#endif
 
 namespace museqa
 {
@@ -47,6 +53,9 @@ namespace museqa
                 template <typename T, typename ...U>
                 inline descriptor(U T::*...);
 
+                template <size_t ...I, typename ...T>
+                inline descriptor(const utility::tuple<utility::indexer<I...>, T...>&);
+
                 inline ~descriptor();
 
                 inline descriptor& operator=(const descriptor&) noexcept = delete;
@@ -60,10 +69,21 @@ namespace museqa
              * @see museqa::mpi::type::descriptor
              */
             template <typename T>
+            inline descriptor describe();
+
+          #if MUSEQA_CPP >= 201402L && !defined(MUSEQA_AVOID_REFLECTION)
+            /**
+             * Creates a type description for MPI transportation using reflection
+             * over the target type.
+             * @tparam T The type to be described.
+             * @return The target type's description instance.
+             */
+            template <typename T>
             inline descriptor describe()
             {
-                return {};
+                return descriptor {typename utility::reflector<T>::reflection_tuple {}};
             }
+          #endif
 
             /**
              * Identifies the given type by retrieving its raw datatype id.
@@ -105,21 +125,19 @@ namespace museqa
         {
             /**
              * Creates a description identifier for a custom type.
-             * @tparam T The custom type to be described.
-             * @tparam U The target type's property member types.
-             * @param members The static pointers for the target type's properties.
+             * @tparam T The list of member types within the custom type.
+             * @param array The list of the type's property member offsets.
              * @return The target type's description identifier.
              */
-            template <typename T, typename ...U>
-            inline static auto describe(U T::*... members) -> type::id
+            template <typename ...T>
+            inline static auto describe(const std::array<ptrdiff_t, sizeof...(T)>& array) -> type::id
             {
-                constexpr const size_t count = sizeof...(U);
-
                 type::id result;
+                constexpr const size_t count = sizeof...(T);
 
-                int blocks[count] = {utility::max((int) std::extent<U>::value, 1)...};
-                MPI_Aint offsets[count] = {((char *) &(((T*) nullptr)->*members) - (char *) nullptr)...};
-                type::id types[count] = {type::identify<typename std::remove_extent<U>::type>()...};
+                int blocks[count] = {utility::max((int) std::extent<T>::value, 1)...};
+                type::id types[count] = {type::identify<typename std::remove_extent<T>::type>()...};
+                const MPI_Aint *offsets = array.data();
 
                 mpi::check(MPI_Type_create_struct(count, blocks, offsets, types, &result));
                 mpi::check(MPI_Type_commit(&result));
@@ -137,7 +155,18 @@ namespace museqa
          */
         template <typename T, typename ...U>
         inline type::descriptor::descriptor(U T::*... members)
-          : id {impl::describe(members...)}
+          : id {impl::describe<U...>({(char*) &(((T*) nullptr)->*members) - (char*) nullptr...})}
+        {}
+
+        /**
+         * Constructs a new type description from a tuple. The given tuple must contain
+         * aligned members to those of the original type.
+         * @tparam T The list of property member types within the tuple.
+         * @param tuple A type-describing tuple instance.
+         */
+        template <size_t ...I, typename ...T>
+        inline type::descriptor::descriptor(const utility::tuple<utility::indexer<I...>, T...>& tuple)
+          : id {impl::describe<T...>({(char*) &tuple.template get<I>() - (char*) &tuple.template get<0>()...})}
         {}
 
         /**
