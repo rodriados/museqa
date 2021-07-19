@@ -136,10 +136,10 @@ namespace museqa
             struct analyzer;
 
           protected:
-            using function_type = F *;              /// The functor's raw pointer type.
+            using function_type = F*;               /// The functor's raw pointer type.
 
           public:
-            using result_type = decltype(analyzer::get(std::declval<F *>()));
+            using result_type = decltype(analyzer::get(std::declval<F*>()));
 
           protected:
             function_type m_function = nullptr;     /// The raw functor's pointer.

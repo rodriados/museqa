@@ -249,7 +249,7 @@ namespace museqa
                  * @param allocator The pointer's allocator.
                  * @return The new pointer's metadata instance.
                  */
-                inline static auto acquire(void *ptr, const allocator_type& allocator) noexcept -> metadata *
+                inline static auto acquire(void *ptr, const allocator_type& allocator) noexcept -> metadata*
                 {
                     return new metadata {ptr, allocator};
                 }
@@ -259,7 +259,7 @@ namespace museqa
                  * @param meta The metadata of pointer to be acquired.
                  * @return The acquired metadata pointer.
                  */
-                __host__ __device__ inline static auto acquire(metadata *meta) noexcept -> metadata *
+                __host__ __device__ inline static auto acquire(metadata *meta) noexcept -> metadata*
                 {
                   #if defined(MUSEQA_RUNTIME_HOST)
                     if (nullptr != meta) { ++meta->m_counter; }

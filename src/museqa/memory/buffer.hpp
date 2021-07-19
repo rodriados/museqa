@@ -46,24 +46,6 @@ namespace museqa
             __host__ __device__ inline buffer(buffer&&) noexcept = default;
 
             /**
-             * Creates a new buffer with the given capacity.
-             * @param capacity The new buffer's total capacity.
-             */
-            inline explicit buffer(size_t capacity) noexcept
-              : buffer {factory::allocator<element_type[]>(), capacity}
-            {}
-
-            /**
-             * Creates a new buffer from allocator and buffer capacity value.
-             * @param allocator The buffer's allocator instance.
-             * @param capacity The new buffer's total capacity.
-             */
-            inline explicit buffer(const memory::allocator& allocator, size_t capacity) noexcept
-              : m_ptr {allocator, (element_type *) allocator.allocate(capacity)}
-              , m_capacity {capacity}
-            {}
-
-            /**
              * Acquires ownership of a buffer pointer.
              * @param ptr The pointer instance to acquire ownership of.
              * @param capacity The acquired pointer's total capacity
@@ -106,7 +88,7 @@ namespace museqa
              */
             __host__ __device__ inline element_type *begin() const noexcept
             {
-                return (element_type *) m_ptr;
+                return (element_type*) m_ptr;
             }
 
             /**
@@ -115,7 +97,7 @@ namespace museqa
              */
             __host__ __device__ inline element_type *end() const noexcept
             {
-                return ((element_type *) m_ptr) + m_capacity;
+                return ((element_type*) m_ptr) + m_capacity;
             }
 
             /**
@@ -141,6 +123,34 @@ namespace museqa
     namespace factory
     {
         /**
+         * Allocates a new buffer with the given allocator and capacity.
+         * @tparam T The buffer's elements type.
+         * @param allocator The allocator to create the new buffer with.
+         * @param capacity The new buffer's total capacity.
+         * @return The new allocated buffer.
+         */
+        template <typename T>
+        inline auto buffer(const memory::allocator& allocator, size_t capacity = 1) noexcept -> memory::buffer<T>
+        {
+            auto raw = (T*) allocator.allocate<T>(capacity);
+            auto ptr = typename memory::buffer<T>::pointer_type {allocator, raw};
+            return memory::buffer<T> {std::move(ptr), capacity};
+        }
+
+        /**
+         * Allocates a new buffer with the requested capacity.
+         * @tparam T The buffer's elements type.
+         * @param capacity The new buffer's total capacity.
+         * @return The new allocated buffer.
+         */
+        template <typename T>
+        inline auto buffer(size_t capacity = 1) noexcept -> memory::buffer<T>
+        {
+            auto allocator = factory::allocator<T[]>();
+            return factory::buffer<T>(allocator, capacity);
+        }
+
+        /**
          * Copies data from a raw pointer into a buffer instance.
          * @tparam T The buffer's elements type.
          * @param ptr The target pointer to copy data from.
@@ -150,21 +160,21 @@ namespace museqa
         template <typename T>
         inline auto buffer(const T *ptr, size_t count = 1) noexcept -> memory::buffer<T>
         {
-            auto buf = memory::buffer<T> {count};
-            memcpy(buf.begin(), ptr, sizeof(T) * count);
-            return buf;
+            auto buffer = factory::buffer<T>(count);
+            memcpy(buffer.begin(), ptr, sizeof(T) * count);
+            return buffer;
         }
 
         /**
          * Copies data from an already existing buffer instance.
          * @tparam T The buffer's elements type.
-         * @param buf The buffer to be copied into a new instance.
+         * @param buffer The buffer to be copied into a new instance.
          * @return The new buffer with copied contents.
          */
         template <typename T>
-        inline auto buffer(const memory::buffer<T>& buf) noexcept -> memory::buffer<T>
+        inline auto buffer(const memory::buffer<T>& buffer) noexcept -> memory::buffer<T>
         {
-            return factory::buffer(buf.raw(), buf.capacity());
+            return factory::buffer(buffer.begin(), buffer.capacity());
         }
 
         /**

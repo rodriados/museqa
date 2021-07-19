@@ -23,8 +23,8 @@ namespace museqa
         class allocator
         {
           public:
-            typedef utility::functor<void(void **, size_t, size_t)> allocator_type;
-            typedef utility::functor<void(void *)> deallocator_type;
+            typedef utility::functor<void(void**, size_t, size_t)> allocator_type;
+            typedef utility::functor<void(void*)> deallocator_type;
 
           protected:
             allocator_type m_allocator;             /// The memory allocator functor.
@@ -68,10 +68,10 @@ namespace museqa
              * @return The allocated pointer.
              */
             template <typename T = void>
-            inline auto allocate(T **ptr, size_t n = 1) const -> T *
+            inline auto allocate(T **ptr, size_t n = 1) const -> T*
             {
                 using target_type = typename std::conditional<std::is_void<T>::value, char, T>::type;
-                (m_allocator)(reinterpret_cast<void **>(ptr), sizeof(target_type), n);
+                (m_allocator)(reinterpret_cast<void**>(ptr), sizeof(target_type), n);
                 return *ptr;
             }
 
@@ -82,7 +82,7 @@ namespace museqa
              * @return The newly allocated pointer.
              */
             template <typename T = void>
-            inline auto allocate(size_t n = 1) const -> T *
+            inline auto allocate(size_t n = 1) const -> T*
             {
                 T *ptr;
                 return allocate<T>(&ptr, n);
@@ -96,7 +96,7 @@ namespace museqa
             template <typename T>
             inline void deallocate(T *ptr) const
             {
-                (m_deallocator)(reinterpret_cast<void *>(ptr));
+                (m_deallocator)(reinterpret_cast<void*>(ptr));
             }
         };
     }
@@ -115,7 +115,7 @@ namespace museqa
         {
             return memory::allocator {
                 [](void **ptr, size_t, size_t) { *ptr = new pure<T>; }
-              , [](void *ptr) { delete (reinterpret_cast<pure<T> *>(ptr)); }
+              , [](void *ptr) { delete (reinterpret_cast<pure<T>*>(ptr)); }
             };
         }
 
@@ -131,7 +131,7 @@ namespace museqa
         {
             return memory::allocator {
                 [](void **ptr, size_t, size_t n) { *ptr = new pure<T>[n]; }
-              , [](void *ptr) { delete[] (reinterpret_cast<pure<T> *>(ptr)); }
+              , [](void *ptr) { delete[] (reinterpret_cast<pure<T>*>(ptr)); }
             };
         }
 
