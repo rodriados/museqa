@@ -133,7 +133,7 @@ namespace museqa
         inline auto buffer(const memory::allocator& allocator, size_t capacity = 1) noexcept -> memory::buffer<T>
         {
             auto raw = (T*) allocator.allocate<T>(capacity);
-            auto ptr = typename memory::buffer<T>::pointer_type {allocator, raw};
+            auto ptr = typename memory::buffer<T>::pointer_type {raw, allocator};
             return memory::buffer<T> {std::move(ptr), capacity};
         }
 

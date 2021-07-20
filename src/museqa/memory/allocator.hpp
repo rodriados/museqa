@@ -57,6 +57,16 @@ namespace museqa
               : allocator {allocator_type {allocf}, deallocator_type {deallocf}}
             {}
 
+            /**
+             * Instantiates a new allocator containing only a deallocator.
+             * @tparam D The deallocator functor lambda type.
+             * @param deallocf The deallocator lambda.
+             */
+            template <typename D>
+            inline constexpr allocator(const D& deallocf) noexcept
+              : allocator {allocator_type {}, deallocator_type {deallocf}}
+            {}
+
             inline allocator& operator=(const allocator&) noexcept = default;
             inline allocator& operator=(allocator&&) noexcept = default;
 
