@@ -15,6 +15,7 @@
 #include <utility>
 
 #include <museqa/node.hpp>
+#include <museqa/utility.hpp>
 #include <museqa/exception.hpp>
 
 namespace museqa
@@ -180,7 +181,7 @@ namespace museqa
          * @param err The error code obtained from the operation.
          * @throw The MPI error raised to an exception.
          */
-        inline void check(error::code err)
+        inline void check(error::code err) noexcept(museqa::unsafe)
         {
             museqa::assert<mpi::exception>(error::success == err, err);
         }

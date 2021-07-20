@@ -75,7 +75,7 @@ namespace museqa
      * @param params The assertion message's format parameters.
      */
     template <typename E = museqa::exception, typename ...T>
-    __host__ __device__ inline void assert(bool condition, T&&... params)
+    __host__ __device__ inline void assert(bool condition, T&&... params) noexcept(museqa::unsafe)
     {
         static_assert(std::is_base_of<museqa::exception, E>::value, "only exception-like types are throwable");
 
