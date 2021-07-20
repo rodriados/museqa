@@ -107,14 +107,6 @@ namespace museqa
         namespace impl
         {
             /**
-             * Latch or flip-flop function responsible for binding a type to a member
-             * of a reflected type. The latch is declared here so that its scope
-             * is limited to the current namespace.
-             * @see museqa::utility::reflection
-             */
-            constexpr auto latch() noexcept -> void;
-
-            /**
              * Tags a member property type to an index for overload resolution.
              * @tparam T The target type for reflection processing.
              * @tparam N The index of extracted property member type.

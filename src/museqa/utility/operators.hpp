@@ -22,7 +22,7 @@ namespace museqa
          */
         template <typename X, typename Y = X>
         __host__ __device__ inline static constexpr auto andl(const X& x, const Y& y) noexcept
-        -> bool {  return x && y; }
+        -> bool { return x && y; }
 
         /**
          * The logical OR operator.
