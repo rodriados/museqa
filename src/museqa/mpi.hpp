@@ -10,4 +10,5 @@
   #include <museqa/mpi/common.hpp>
   #include <museqa/mpi/type.hpp>
   #include <museqa/mpi/status.hpp>
+  #include <museqa/mpi/lambda.hpp>
 #endif

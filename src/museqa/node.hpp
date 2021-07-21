@@ -25,13 +25,13 @@ namespace museqa
          * node within the cluster.
          * @see museqa::mpi::init
          */
-        #if !defined(MUSEQA_AVOID_MPI)
-            extern node::id rank;
-            extern int32_t count;
-        #else
-            enum : node::id { rank = 0 };
-            enum : int32_t { count = 1 };
-        #endif
+      #if !defined(MUSEQA_AVOID_MPI)
+        extern node::id rank;
+        extern int32_t count;
+      #else
+        enum : node::id { rank = 0 };
+        enum : int32_t { count = 1 };
+      #endif
         /**#@-*/
 
         /*
