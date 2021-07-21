@@ -81,7 +81,7 @@ namespace museqa
                  * Converts the pointer wrapper into the element type pointer.
                  * @return The internally owned pointer.
                  */
-                __host__ __device__ inline explicit operator element_type*() const noexcept
+                __host__ __device__ inline operator element_type*() const noexcept
                 {
                     return m_ptr;
                 }
@@ -146,6 +146,15 @@ namespace museqa
                 __host__ __device__ inline pointer& operator=(pointer&&) noexcept = default;
 
               public:
+                /**
+                 * Exposes the owned pointer as its original type.
+                 * @return The internally owned pointer.
+                 */
+                __host__ __device__ inline operator void*() const noexcept
+                {
+                    return m_ptr;
+                }
+
                 /**
                  * Reinterprets the owned pointer to a dereferenceable pointer.
                  * @tparam T The type to reinterpret the pointer to.

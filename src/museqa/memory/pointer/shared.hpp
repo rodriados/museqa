@@ -50,7 +50,7 @@ namespace museqa
                  * @param ptr The pointer to be encapsulated.
                  */
                 inline explicit shared(element_type *ptr) noexcept
-                  : shared {factory::allocator<element_type>(), ptr}
+                  : shared {ptr, factory::allocator<element_type>()}
                 {}
 
                 /**
