@@ -175,7 +175,7 @@ namespace museqa
                 __host__ __device__ inline void reset() noexcept
                 {
                     metadata_type::release(m_meta);
-                    new (this) shared {};
+                    new (this) shared {nullptr, nullptr};
                 }
 
                 /**

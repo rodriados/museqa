@@ -176,6 +176,20 @@ namespace museqa
         };
 
         /**
+         * Globally initiliazes the internal MPI machinery. This function must be
+         * called before any other MPI calls or operations.
+         * @since 1.0
+         */
+        extern void init(int&, char**&);
+
+        /**
+         * Finalizes and frees the resources used by MPI. No MPI function can be
+         * called after this function is called.
+         * @since 1.0.
+         */
+        extern void finalize();
+
+        /**
          * Checks whether a MPI function call or operation has been successful and
          * throws an exception otherwise.
          * @param err The error code obtained from the operation.
