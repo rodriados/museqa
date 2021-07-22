@@ -58,7 +58,7 @@ namespace museqa
      * @param channel The channel reference to build a communicator from.
      * @return The new communicator instance.
      */
-    auto mpi::communicator::build(mpi::channel channel) noexcept(museqa::unsafe) -> mpi::communicator
+    auto mpi::communicator::build(reference_type channel) noexcept(museqa::unsafe) -> mpi::communicator
     {
         int32_t rank, size;
 
@@ -81,7 +81,7 @@ namespace museqa
      */
     auto mpi::communicator::split(int color, int key) noexcept(museqa::unsafe) -> mpi::communicator
     {
-        mpi::channel channel;
+        reference_type channel;
         mpi::check(MPI_Comm_split(*this, color, (key > 0 ? key : rank), &channel));
         return build(channel);
     }
@@ -92,7 +92,7 @@ namespace museqa
      */
     auto mpi::communicator::duplicate() noexcept(museqa::unsafe) -> mpi::communicator
     {
-        mpi::channel channel;
+        reference_type channel;
         mpi::check(MPI_Comm_dup(*this, &channel));
         return build(channel);
     }
@@ -106,7 +106,7 @@ namespace museqa
     {
         mpi::check(MPI_Init(&argc, &argv));
 
-        auto global = mpi::communicator::unmanaged(MPI_COMM_WORLD);
+        auto global = mpi::communicator::global(MPI_COMM_WORLD);
         new (&world) mpi::communicator {global.duplicate()};
     }
 

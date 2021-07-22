@@ -35,16 +35,14 @@ namespace museqa
          * different nodes within a MPI execution.
          * @since 1.0
          */
-        class communicator : private memory::pointer::shared<typename std::remove_pointer<channel>::type>
+        class communicator : private memory::pointer::shared<void>
         {
             friend void mpi::init(int&, char**&);
             friend void mpi::finalize();
 
-          protected:
-            typedef typename std::remove_pointer<channel>::type naked_type;
-
           private:
-            typedef memory::pointer::shared<naked_type> underlying_type;
+            typedef mpi::channel reference_type;
+            typedef memory::pointer::shared<void> underlying_type;
 
           public:
             const mpi::node rank = 0;           /// The current node's rank within communicator.
@@ -59,7 +57,7 @@ namespace museqa
              * Initializes a new communicator from a raw channel reference.
              * @param channel The channel to build a new communicator from.
              */
-            inline communicator(mpi::channel channel) noexcept(museqa::unsafe)
+            inline communicator(reference_type channel) noexcept(museqa::unsafe)
               : communicator {build(channel)}
             {}
 
@@ -71,9 +69,9 @@ namespace museqa
              * allowing it to be seamlessly used with native MPI functions.
              * @return The underlying communicator channel.
              */
-            inline operator channel() const noexcept
+            inline operator reference_type() const noexcept
             {
-                return (channel) this->m_ptr;
+                return (reference_type) this->m_ptr;
             }
 
             communicator split(int, int = mpi::any) noexcept(museqa::unsafe);
@@ -86,7 +84,7 @@ namespace museqa
              * @param size The total number of nodes connected to the channel.
              * @param channel The channel to build a new communicator from.
              */
-            inline communicator(mpi::node rank, int32_t size, mpi::channel channel) noexcept
+            inline communicator(mpi::node rank, int32_t size, reference_type channel) noexcept
               : communicator {rank, size, wrap(channel)}
             {}
 
@@ -102,17 +100,17 @@ namespace museqa
               , size {size}
             {}
 
-            static auto build(mpi::channel) noexcept(museqa::unsafe) -> communicator;
+            static auto build(reference_type) noexcept(museqa::unsafe) -> communicator;
 
           private:
             /**
-             * Helper method for initializing an unmanaged communicator.
+             * Helper method for initializing a global communicator.
              * @param channel The raw MPI channel reference.
-             * @return The unmanaged communicator instance.
+             * @return The global communicator instance.
              */
-            inline static auto unmanaged(mpi::channel channel) noexcept -> communicator
+            inline static auto global(reference_type channel) noexcept -> communicator
             {
-                auto ptr = memory::pointer::weak<naked_type> {channel};
+                auto ptr = memory::pointer::weak<void> {channel};
                 return {node::master, 1, ptr};
             }
 
@@ -121,9 +119,9 @@ namespace museqa
              * @param channel The raw MPI channel reference to be wrapped.
              * @return The wrapped pointer instance.
              */
-            inline static auto wrap(mpi::channel channel) noexcept -> underlying_type
+            inline static auto wrap(reference_type channel) noexcept -> underlying_type
             {
-                auto destructor = [](void *ptr) { mpi::check(MPI_Comm_free((mpi::channel*) &ptr)); };
+                auto destructor = [](void *ptr) { mpi::check(MPI_Comm_free((reference_type*) &ptr)); };
                 return underlying_type {channel, destructor};
             }
         };

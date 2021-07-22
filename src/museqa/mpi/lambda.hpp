@@ -52,12 +52,11 @@ namespace museqa
          * operations, such as reduce, all-reduce and scan.
          * @since 1.0
          */
-        class lambda : private memory::pointer::shared<typename std::remove_pointer<function::id>::type>
+        class lambda : private memory::pointer::shared<void>
         {
           private:
-            typedef function::id identifier_type;
-            typedef typename std::remove_pointer<identifier_type>::type naked_type;
-            typedef memory::pointer::shared<naked_type> underlying_type;
+            typedef function::id reference_type;
+            typedef memory::pointer::shared<void> underlying_type;
 
           public:
             typedef function::raw *functor_type;    /// The native MPI operator function type.
@@ -80,13 +79,13 @@ namespace museqa
             inline lambda& operator=(lambda&&) = default;
 
             /**
-             * Converts this object into a raw MPI operator identifier, thus allowing
+             * Converts this object into a raw MPI operator reference, thus allowing
              * the user to seamlessly use the lambda with native MPI functions.
              * @return The raw MPI operator identifier.
              */
-            inline operator identifier_type() const noexcept
+            inline operator reference_type() const noexcept
             {
-                return (identifier_type) this->m_ptr;
+                return (reference_type) this->m_ptr;
             }
 
           private:
@@ -99,9 +98,9 @@ namespace museqa
             inline auto create(functor_type functor, bool commutative = true) noexcept(museqa::unsafe)
             -> underlying_type
             {
-                mpi::check(MPI_Op_create(functor, commutative, &this->m_ptr));
-                auto destructor = [](void *ptr) { mpi::check(MPI_Op_free((function::id*) &ptr)); };
-                return {this->m_ptr, destructor};
+                mpi::check(MPI_Op_create(functor, commutative, (reference_type*) &this->m_ptr));
+                auto destructor = [](void *ptr) { mpi::check(MPI_Op_free((reference_type*) &ptr)); };
+                return underlying_type {this->m_ptr, destructor};
             }
         };
 
