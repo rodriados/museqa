@@ -96,7 +96,7 @@ namespace museqa
              * Seamlessly converts the payload into its message contents type.
              * @return The payload's message contents.
              */
-            inline operator element_type&() noexcept(museqa::unsafe)
+            inline operator element_type&() noexcept(!safe)
             {
                 return underlying_type::operator[](0);
             }

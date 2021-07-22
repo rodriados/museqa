@@ -71,7 +71,7 @@ namespace museqa
              * @param functor The user-defined function pointer.
              * @param commutative Is the operator commutative?
              */
-            inline lambda(functor_type functor, bool commutative = true) noexcept(museqa::unsafe)
+            inline lambda(functor_type functor, bool commutative = true) noexcept(!safe)
               : underlying_type {create(functor, commutative)}
             {}
 
@@ -95,7 +95,7 @@ namespace museqa
              * @param commutative Is the operator commutative?
              * @return The internal pointer instance.
              */
-            inline auto create(functor_type functor, bool commutative = true) noexcept(museqa::unsafe)
+            inline auto create(functor_type functor, bool commutative = true) noexcept(!safe)
             -> underlying_type
             {
                 mpi::check(MPI_Op_create(functor, commutative, (reference_type*) &this->m_ptr));
@@ -175,7 +175,7 @@ namespace museqa
             inline auto lambda(
                 T (*functor)(const T&, const T&)
               , bool commutative = true
-            ) noexcept(museqa::unsafe) -> museqa::mpi::lambda
+            ) noexcept(!safe) -> museqa::mpi::lambda
             {
                 namespace mpi = museqa::mpi;
                 auto lambda = mpi::lambda {mpi::function::wrapper<T>, commutative};
@@ -194,7 +194,7 @@ namespace museqa
             inline auto lambda(
                 const utility::functor<T(const T&, const T&)>& functor
               , bool commutative = true
-            ) noexcept(museqa::unsafe) -> museqa::mpi::lambda
+            ) noexcept(!safe) -> museqa::mpi::lambda
             {
                 return factory::mpi::lambda(*functor, commutative);
             }

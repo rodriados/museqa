@@ -172,7 +172,7 @@ namespace museqa
                  * Releases the pointer ownership and returns to an empty state.
                  * @see shared::shared
                  */
-                __host__ __device__ inline void reset() noexcept
+                __host__ __device__ inline void reset()
                 {
                     metadata_type::release(m_meta);
                     new (this) shared {nullptr, nullptr};

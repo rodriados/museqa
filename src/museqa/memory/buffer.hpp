@@ -63,7 +63,7 @@ namespace museqa
              * @param offset The requested buffer offset to be retrieved.
              * @return The element at the requested buffer offset.
              */
-            __host__ __device__ inline element_type& operator[](ptrdiff_t offset) const noexcept(museqa::unsafe)
+            __host__ __device__ inline element_type& operator[](ptrdiff_t offset) const noexcept(!safe)
             {
                 museqa::assert(offset >= 0 && (size_t) offset < m_capacity, "buffer offset out of range");
                 return m_ptr[offset];
@@ -75,7 +75,7 @@ namespace museqa
              * @param count The number of elements to slice from buffer.
              * @return The buffer's requested slice.
              */
-            __host__ __device__ inline buffer slice(ptrdiff_t offset, size_t count = 0) noexcept(museqa::unsafe)
+            __host__ __device__ inline buffer slice(ptrdiff_t offset, size_t count = 0) noexcept(!safe)
             {
                 museqa::assert(offset >= 0 && (size_t) offset < m_capacity, "buffer offset out of range");
                 museqa::assert((size_t) offset + count <= m_capacity, "buffer slice out of range");

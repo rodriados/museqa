@@ -195,7 +195,7 @@ namespace museqa
          * @param err The error code obtained from the operation.
          * @throw The MPI error raised to an exception.
          */
-        inline void check(error::code err) noexcept(museqa::unsafe)
+        inline void check(error::code err) noexcept(!safe)
         {
             museqa::assert<mpi::exception>(error::success == err, err);
         }

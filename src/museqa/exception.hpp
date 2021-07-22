@@ -69,13 +69,12 @@ namespace museqa
      * Checks whether given a condition is met, and throws an exception otherwise.
      * This function acts just like an assertion, but throwing our own exception.
      * @tparam E The exception type to be raised in case of error.
-     * @tparam T The format string's parameter types.
+     * @tparam T The exception's parameters' types.
      * @param condition The condition that must be evaluated as true.
-     * @param fmtstr The error format to be sent to an eventual thrown exception.
-     * @param params The assertion message's format parameters.
+     * @param params The assertion exception's parameters.
      */
     template <typename E = museqa::exception, typename ...T>
-    __host__ __device__ inline void assert(bool condition, T&&... params) noexcept(museqa::unsafe)
+    __host__ __device__ inline void assert(bool condition, T&&... params) noexcept(!safe)
     {
         static_assert(std::is_base_of<museqa::exception, E>::value, "only exception-like types are throwable");
 

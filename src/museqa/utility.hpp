@@ -26,15 +26,16 @@
 namespace museqa
 {
     /**
-     * Informs whether unsafe mode is turned on.
+     * Informs whether safe mode is turned on. When safe mode is turned on, bound
+     * checks and API call validations will be performed.
      * @since 1.0
      */
     enum : bool
     {
       #if !defined(MUSEQA_UNSAFE)
-        unsafe = false
+        safe = true
       #else
-        unsafe = true
+        safe = false
       #endif
     };
 
