@@ -190,6 +190,19 @@ namespace museqa
         extern void finalize();
 
         /**
+         * Asserts whether the given condition is met and throws exception otherwise.
+         * @tparam E The exception type to be raised in case of error.
+         * @tparam T The exception's parameters' types.
+         * @param condition The condition that must be evaluated as true.
+         * @param params The assertion exception's parameters.
+         */
+        template <typename E = mpi::exception, typename ...T>
+        inline void assert(bool condition, T&&... params) noexcept(!safe)
+        {
+            museqa::assert<E>(condition, std::forward<decltype(params)>(params)...);
+        }
+
+        /**
          * Checks whether a MPI function call or operation has been successful and
          * throws an exception otherwise.
          * @param err The error code obtained from the operation.
@@ -197,7 +210,7 @@ namespace museqa
          */
         inline void check(error::code err) noexcept(!safe)
         {
-            museqa::assert<mpi::exception>(error::success == err, err);
+            mpi::assert(error::success == err, err);
         }
     }
 }
