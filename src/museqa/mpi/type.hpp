@@ -42,10 +42,15 @@ namespace museqa
              * @see museqa::mpi::type::describe
              * @since 1.0 
              */
-            struct descriptor
+            class descriptor
             {
-                type::id id;                    /// The target type's raw identifier.
+              private:
+                typedef type::id reference_type;
 
+              private:
+                reference_type m_id;        /// The target type's raw identifier.
+
+              public:
                 inline descriptor() noexcept = delete;
                 inline descriptor(const descriptor&) noexcept = delete;
                 inline descriptor(descriptor&&) noexcept = default;
@@ -60,6 +65,8 @@ namespace museqa
 
                 inline descriptor& operator=(const descriptor&) noexcept = delete;
                 inline descriptor& operator=(descriptor&&) noexcept = delete;
+
+                inline operator reference_type() const noexcept;
             };
 
             /**
@@ -98,7 +105,7 @@ namespace museqa
                 static_assert(std::is_trivial<T>::value, "only trivial types can be sent via MPI");
 
                 static auto descriptor = describe<T>();
-                return descriptor.id;
+                return (type::id) descriptor;
             }
 
             /**#@+
@@ -155,7 +162,7 @@ namespace museqa
          */
         template <typename T, typename ...U>
         inline type::descriptor::descriptor(U T::*... members)
-          : id {impl::describe<U...>({(char*) &(((T*) nullptr)->*members) - (char*) nullptr...})}
+          : m_id {impl::describe<U...>({(char*) &(((T*) nullptr)->*members) - (char*) nullptr...})}
         {}
 
         /**
@@ -166,7 +173,7 @@ namespace museqa
          */
         template <size_t ...I, typename ...T>
         inline type::descriptor::descriptor(const utility::tuple<utility::indexer<I...>, T...>& tuple)
-          : id {impl::describe<T...>({(char*) &tuple.template get<I>() - (char*) &tuple.template get<0>()...})}
+          : m_id {impl::describe<T...>({(char*) &tuple.template get<I>() - (char*) &tuple.template get<0>()...})}
         {}
 
         /**
@@ -177,7 +184,17 @@ namespace museqa
          */
         inline type::descriptor::~descriptor()
         {
-            mpi::check(MPI_Type_free(&id));
+            mpi::check(MPI_Type_free(&m_id));
+        }
+
+        /**
+         * Converts the type descriptor into the raw MPI type identifier, so that
+         * it can be seamlessly used with native MPI functions.
+         * @return The internal type identifier.
+         */
+        inline type::descriptor::operator reference_type() const noexcept
+        {
+            return m_id;
         }
     }
 }
