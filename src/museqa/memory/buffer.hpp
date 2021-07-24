@@ -11,6 +11,8 @@
 #include <cstring>
 #include <utility>
 
+#include <fmt/format.h>
+
 #include <museqa/utility.hpp>
 #include <museqa/exception.hpp>
 #include <museqa/memory/allocator.hpp>
@@ -63,7 +65,18 @@ namespace museqa
              * @param offset The requested buffer offset to be retrieved.
              * @return The element at the requested buffer offset.
              */
-            __host__ __device__ inline element_type& operator[](ptrdiff_t offset) const noexcept(!safe)
+            __host__ __device__ inline element_type& operator[](ptrdiff_t offset) noexcept(!safe)
+            {
+                museqa::assert(offset >= 0 && (size_t) offset < m_capacity, "buffer offset out of range");
+                return m_ptr[offset];
+            }
+
+            /**
+             * Gives access to a const-qualified element in the buffer by its offset.
+             * @param offset The requested buffer offset to be retrieved.
+             * @return The const-qualified element at the requested buffer offset.
+             */
+            __host__ __device__ inline const element_type& operator[](ptrdiff_t offset) const noexcept(!safe)
             {
                 museqa::assert(offset >= 0 && (size_t) offset < m_capacity, "buffer offset out of range");
                 return m_ptr[offset];
@@ -86,18 +99,36 @@ namespace museqa
              * The buffer's initial point as an iterator.
              * @return The pointer to the first element of iterator.
              */
-            __host__ __device__ inline element_type *begin() const noexcept
+            __host__ __device__ inline element_type *begin() noexcept
             {
                 return (element_type*) m_ptr;
+            }
+
+            /**
+             * The buffer's initial point as a const-qualified iterator.
+             * @return The pointer to the first element of const-qualified iterator.
+             */
+            __host__ __device__ inline const element_type *begin() const noexcept
+            {
+                return (const element_type*) m_ptr;
             }
 
             /**
              * The buffer's final point as an iterator.
              * @return The pointer to the last element of iterator.
              */
-            __host__ __device__ inline element_type *end() const noexcept
+            __host__ __device__ inline element_type *end() noexcept
             {
                 return ((element_type*) m_ptr) + m_capacity;
+            }
+
+            /**
+             * The buffer's final point as a const-qualified iterator.
+             * @return The pointer to the last element of const-qualified iterator.
+             */
+            __host__ __device__ inline const element_type *end() const noexcept
+            {
+                return ((const element_type*) m_ptr) + m_capacity;
             }
 
             /**
@@ -105,6 +136,15 @@ namespace museqa
              * @return The buffer's internal pointer.
              */
             __host__ __device__ inline pointer_type& raw() noexcept
+            {
+                return m_ptr;
+            }
+
+            /**
+             * Gives access to the buffer's internal pointer.
+             * @return The buffer's internal const-qualified pointer.
+             */
+            __host__ __device__ inline const pointer_type& raw() const noexcept
             {
                 return m_ptr;
             }
@@ -166,6 +206,18 @@ namespace museqa
         }
 
         /**
+         * Creates a new buffer with the given content.
+         * @tparam T The buffer's elements type.
+         * @param list The list of elements to fill the buffer with.
+         * @return The new buffer with the given contents.
+         */
+        template <typename T>
+        inline auto buffer(std::initializer_list<T> list) noexcept -> memory::buffer<T>
+        {
+            return factory::buffer(list.begin(), list.size());
+        }
+
+        /**
          * Copies data from an already existing buffer instance.
          * @tparam T The buffer's elements type.
          * @param buffer The buffer to be copied into a new instance.
@@ -190,3 +242,42 @@ namespace museqa
         }
     }
 }
+
+/**
+ * Implements a string formatter for a generic buffer type, thus giving generic
+ * buffer instances ease of printing whenever its contents type is printable.
+ * @tparam T The buffer's contents type.
+ * @since 1.0
+ */
+template <typename T>
+class fmt::formatter<museqa::memory::buffer<T>>
+{
+  private:
+    typedef museqa::memory::buffer<T> target_type;
+
+  public:
+    /**
+     * Evaluates the formatter's parsing context.
+     * @tparam P The parsing context type.
+     * @param ctx The parsing context instance.
+     * @return The processed and evaluated parsing context.
+     */
+    template <typename P>
+    constexpr auto parse(P& ctx) -> decltype(ctx.begin())
+    {
+        return ctx.begin();
+    }
+
+    /**
+     * Formats the buffer into a printable string.
+     * @tparam F The formatting context type.
+     * @param buffer The buffer to be formatted into a string.
+     * @param ctx The formatting context instance.
+     * @return The formatting context instance.
+     */
+    template <typename F>
+    auto format(const target_type& buffer, F& ctx) -> decltype(ctx.out())
+    {
+        return fmt::format_to(ctx.out(), "[{}]", fmt::join(buffer.begin(), buffer.end(), ", "));
+    }
+};

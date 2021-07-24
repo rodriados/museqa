@@ -11,6 +11,7 @@
 #include <exception>
 
 #include <fmt/format.h>
+
 #include <museqa/utility.hpp>
 #include <museqa/environment.h>
 
