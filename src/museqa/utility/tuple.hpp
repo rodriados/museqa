@@ -6,8 +6,11 @@
  */
 #pragma once
 
+#include <string>
 #include <cstdint>
 #include <utility>
+
+#include <fmt/format.h>
 
 #include <museqa/utility.hpp>
 #include <museqa/utility/indexer.hpp>
@@ -812,3 +815,68 @@ namespace museqa
         }
     }
 }
+
+/**
+ * Implements a string formatter for a generic tuple type, thus allowing tuples
+ * to be printed whenever its contents are also printable.
+ * @tparam T The list of tuple's element types.
+ * @since 1.0
+ */
+template <typename ...T>
+class fmt::formatter<museqa::utility::tuple<T...>>
+{
+  private:
+    typedef museqa::utility::tuple<T...> target_type;
+    static constexpr size_t count = target_type::count;
+
+  public:
+    /**
+     * Evaluates the formatter's parsing context.
+     * @tparam C The parsing context type.
+     * @param ctx The parsing context instance.
+     * @return The processed and evaluated parsing context.
+     */
+    template <typename C>
+    constexpr auto parse(C& ctx) -> decltype(ctx.begin())
+    {
+        return ctx.begin();
+    }
+
+    /**
+     * Formats the tuple into a printable string.
+     * @tparam F The formatting context type.
+     * @param tuple The tuple to be formatted into a string.
+     * @param ctx The formatting context instance.
+     * @return The formatting context instance.
+     */
+    template <size_t ...I, typename F>
+    auto format(const museqa::utility::tuple<museqa::utility::indexer<I...>, T...>& tuple, F& ctx)
+    -> decltype(ctx.out())
+    {
+        std::string args[] = {fmt::format("{}", tuple.template get<I>())...};
+        return fmt::format_to(ctx.out(), "({})", fmt::join(args, args + count, ", "));
+    }
+};
+
+/**
+ * Implements a string formatter for a generic pair-tuple type, which will be printed
+ * as a regular tuple with 2 elements of possibly distinct types.
+ * @tparam T The pair's first element type.
+ * @tparam U The pair's second element type.
+ * @since 1.0
+ */
+template <typename T, typename U>
+struct fmt::formatter<museqa::utility::pair<T, U>> : fmt::formatter<museqa::utility::tuple<T, U>>
+{};
+
+/**
+ * Implements a string formatter for a generic n-tuple type, which will be printed
+ * as a regular tuple with many elements of the same type.
+ * @tparam T The tuple's elements type.
+ * @tparam N The number of elements in tuple.
+ * @since 1.0
+ */
+template <typename T, size_t N>
+struct fmt::formatter<museqa::utility::ntuple<T, N>> : fmt::formatter<
+    decltype(museqa::utility::impl::repeater<T>(typename museqa::utility::indexer<N>::type ()))
+>{};
