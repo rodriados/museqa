@@ -118,6 +118,13 @@ namespace museqa
                 return 0 != flag;
             }
         };
+
+        /**
+         * Stores the last collective operation's status.
+         * @see museqa::mpi::status
+         * @since 1.0
+         */
+        extern status last_status;
     }
 }
 

@@ -39,6 +39,13 @@ namespace museqa
     const int32_t& node::count = world.size;
 
     /**
+     * Stores the last collective operation execution's status.
+     * @see museqa::mpi::probe
+     * @since 1.0
+     */
+    mpi::status mpi::last_status;
+
+    /**
      * Informs the currently active MPI operator function. This is necessary to
      * recover a wrapped function from within MPI execution.
      * @since 1.0
