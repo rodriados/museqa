@@ -117,6 +117,7 @@ namespace museqa
                  */
                 __host__ __device__ inline shared& operator=(const shared& other)
                 {
+                    if (other.m_ptr == this->m_ptr) { return *this; }
                     metadata_type::release(m_meta);
                     return *new (this) shared {other};
                 }
@@ -130,6 +131,7 @@ namespace museqa
                 template <typename U>
                 __host__ __device__ inline shared& operator=(const shared<U>& other)
                 {
+                    if (other.m_ptr == this->m_ptr) { return *this; }
                     metadata_type::release(m_meta);
                     return *new (this) shared {other};
                 }
@@ -141,6 +143,7 @@ namespace museqa
                  */
                 __host__ __device__ inline shared& operator=(shared&& other)
                 {
+                    if (other.m_ptr == this->m_ptr) { return *this; }
                     metadata_type::release(m_meta);
                     return *new (this) shared {std::forward<decltype(other)>(other)};
                 }
@@ -154,6 +157,7 @@ namespace museqa
                 template <typename U>
                 __host__ __device__ inline shared& operator=(shared<U>&& other)
                 {
+                    if (other.m_ptr == this->m_ptr) { return *this; }
                     metadata_type::release(m_meta);
                     return *new (this) shared {std::forward<decltype(other)>(other)};
                 }
