@@ -12,4 +12,5 @@
   #include <museqa/mpi/status.hpp>
   #include <museqa/mpi/lambda.hpp>
   #include <museqa/mpi/communicator.hpp>
+  #include <museqa/mpi/collective.hpp>
 #endif

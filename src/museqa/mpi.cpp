@@ -14,6 +14,7 @@
 #include <museqa/exception.hpp>
 #include <museqa/mpi/common.hpp>
 #include <museqa/mpi/lambda.hpp>
+#include <museqa/mpi/status.hpp>
 #include <museqa/mpi/communicator.hpp>
 
 namespace museqa

@@ -19,8 +19,8 @@ namespace museqa
     namespace mpi
     {
         /**
-         * Represents a type-agnostic message, which can hold a reference to a MPI
-         * message of any type.
+         * Represents a type-agnostic message, which is capable to carry a reference
+         * to MPI messages of any type.
          * @since 1.0
          */
         struct message
@@ -36,8 +36,8 @@ namespace museqa
             inline message(message&&) noexcept = default;
 
             /**
-             * Initializes a new message from a generic pointer.
-             * @tparam T The message's contents type.
+             * Initializes a new message from a foreign pointer.
+             * @tparam T The foreign message's contents type.
              * @param ptr The message's contents pointer.
              * @param size The total number of elements in message.
              */
@@ -73,14 +73,27 @@ namespace museqa
              * Builds a new empty MPI message instance whose allocated memory is
              * enough to store the given number of elements.
              * @tparam T The message's contents type.
-             * @param size The total number of elements in message.
+             * @param size The total number of elements to allocate within message.
              * @return The new empty message instance.
              */
             template <typename T>
-            inline auto message(size_t size = 1) noexcept -> museqa::mpi::message
+            inline auto message(size_t size = 1) noexcept(!safe) -> museqa::mpi::message
             {
                 auto ptr = memory::pointer::shared<void> {operator new(sizeof(T) * size)};
                 auto type = museqa::mpi::type::identify<T>();
+                return {ptr, type, size};
+            }
+
+            /**
+             * Builds a new empty MPI message from the given type and size.
+             * @param type The message's contents type identifier.
+             * @param size The total number of elements to allocate in message.
+             * @return The new empty message instance.
+             */
+            inline auto message(museqa::mpi::type::id type, size_t size = 1) noexcept(!safe) -> museqa::mpi::message
+            {
+                auto typesize = museqa::mpi::type::size(type);
+                auto ptr = memory::pointer::shared<void> {operator new(typesize * size)};
                 return {ptr, type, size};
             }
         }

@@ -108,6 +108,19 @@ namespace museqa
                 return (type::id) descriptor;
             }
 
+            /**
+             * Informs the total size in bytes of the concrete type represented
+             * by the given type identifier.
+             * @param type The target type identifier.
+             * @return The requested type's concrete size.
+             */
+            inline size_t size(type::id type) noexcept(!safe)
+            {
+                int result;
+                mpi::check(MPI_Type_size(type, &result));
+                return static_cast<size_t>(result);
+            }
+
             /**#@+
              * Specializations for identifiers of built-in types. These native types
              * have their identities created built-in by MPI and can be used directly.
