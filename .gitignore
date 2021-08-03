@@ -19,6 +19,7 @@ todo.*
 
 run
 test.cpp
+test.cu
 .hostfile
 .gdb_history
 *junkyard*
