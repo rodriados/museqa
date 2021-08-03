@@ -360,8 +360,8 @@ namespace museqa
                 {
                   #if defined(MUSEQA_RUNTIME_HOST)
                     if (nullptr != meta) { ++meta->m_counter; }
-                    return meta;
                   #endif
+                    return meta;
                 }
 
                 /**
