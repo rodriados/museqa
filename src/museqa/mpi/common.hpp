@@ -197,9 +197,9 @@ namespace museqa
          * @param params The assertion exception's parameters.
          */
         template <typename E = mpi::exception, typename ...T>
-        inline void assert(bool condition, T&&... params) noexcept(!safe)
+        inline void ensure(bool condition, T&&... params) noexcept(!safe)
         {
-            museqa::assert<E>(condition, std::forward<decltype(params)>(params)...);
+            museqa::ensure<E>(condition, std::forward<decltype(params)>(params)...);
         }
 
         /**
@@ -210,7 +210,7 @@ namespace museqa
          */
         inline void check(error::code err) noexcept(!safe)
         {
-            mpi::assert(error::success == err, err);
+            mpi::ensure(error::success == err, err);
         }
     }
 }

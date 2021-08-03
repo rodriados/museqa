@@ -10,10 +10,19 @@
 #include <utility>
 #include <exception>
 
-#include <fmt/format.h>
-
 #include <museqa/utility.hpp>
 #include <museqa/environment.h>
+
+#if defined(MUSEQA_COMPILER_NVCC)
+  #pragma push
+  #pragma diag_suppress = unrecognized_gcc_pragma
+#endif
+
+#include <fmt/format.h>
+
+#if defined(MUSEQA_COMPILER_NVCC)
+  #pragma pop
+#endif
 
 namespace museqa
 {
@@ -75,7 +84,7 @@ namespace museqa
      * @param params The assertion exception's parameters.
      */
     template <typename E = museqa::exception, typename ...T>
-    __host__ __device__ inline void assert(bool condition, T&&... params) noexcept(!safe)
+    __host__ __device__ inline void ensure(bool condition, T&&... params) noexcept(!safe)
     {
         static_assert(std::is_base_of<museqa::exception, E>::value, "only exception-like types are throwable");
 

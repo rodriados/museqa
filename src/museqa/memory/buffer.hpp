@@ -67,7 +67,7 @@ namespace museqa
              */
             __host__ __device__ inline element_type& operator[](ptrdiff_t offset) noexcept(!safe)
             {
-                museqa::assert(offset >= 0 && (size_t) offset < m_capacity, "buffer offset out of range");
+                museqa::ensure(offset >= 0 && (size_t) offset < m_capacity, "buffer offset out of range");
                 return m_ptr[offset];
             }
 
@@ -78,7 +78,7 @@ namespace museqa
              */
             __host__ __device__ inline const element_type& operator[](ptrdiff_t offset) const noexcept(!safe)
             {
-                museqa::assert(offset >= 0 && (size_t) offset < m_capacity, "buffer offset out of range");
+                museqa::ensure(offset >= 0 && (size_t) offset < m_capacity, "buffer offset out of range");
                 return m_ptr[offset];
             }
 
@@ -90,8 +90,8 @@ namespace museqa
              */
             __host__ __device__ inline buffer slice(ptrdiff_t offset, size_t count = 0) noexcept(!safe)
             {
-                museqa::assert(offset >= 0 && (size_t) offset < m_capacity, "buffer offset out of range");
-                museqa::assert((size_t) offset + count <= m_capacity, "buffer slice out of range");
+                museqa::ensure(offset >= 0 && (size_t) offset < m_capacity, "buffer offset out of range");
+                museqa::ensure((size_t) offset + count <= m_capacity, "buffer slice out of range");
                 return buffer {m_ptr.offset(offset), 0 == count ? m_capacity - (size_t) offset : count};
             }
 
