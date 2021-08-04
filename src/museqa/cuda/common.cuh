@@ -17,8 +17,6 @@
 #include <museqa/environment.h>
 
 #if defined(MUSEQA_COMPILER_NVCC)
-  #include <cuda.h>
-
   /*
    * Checks whether the compilation is targeting a minimally compatible device.
    * If not, compilation must fail and an error must be shown.
@@ -26,6 +24,8 @@
   #if defined(MUSEQA_RUNTIME_DEVICE) && (__CUDA_ARCH__ < 200)
     #error CUDA compilation must target devices of compute capability 2.0 or higher
   #endif
+
+  #include <cuda.h>
 #endif
 
 namespace museqa
@@ -240,6 +240,18 @@ namespace museqa
             cuda::ensure((error::code) error::success == err, err);
         }
       #endif
+
+        /**
+         * The NVCC CUDA compiler allows the use of the `warpSize` constant, without
+         * us having to manually define it. Unfortunatelly, though, this is not
+         * a compile-time constant, such that it is replaced at some point with
+         * the appropriate immediate value which goes into it the SASS instruction
+         * as a literal. According to Nvidia, this is due to the theoretical possibility
+         * of different warp sizes in the future. Nonetheless, it is useful to have
+         * the size of a warp available at compile time.
+         * @since 1.0
+         */
+        enum : word { warp_size = 32 };
     }
 }
 
