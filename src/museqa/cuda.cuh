@@ -9,5 +9,6 @@
 #if !defined(MUSEQA_AVOID_CUDA)
 
 #include <museqa/cuda/common.cuh>
+#include <museqa/cuda/device.cuh>
 
 #endif

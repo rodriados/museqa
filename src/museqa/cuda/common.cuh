@@ -37,7 +37,7 @@ namespace museqa
          * architectures, it is good enough for now.
          * @since 1.0
          */
-        using word = uint32_t;
+        using word = int32_t;
 
         namespace error
         {
@@ -53,12 +53,12 @@ namespace museqa
             using code = word;
           #endif
 
-          #if defined(MUSEQA_COMPILER_NVCC)
             /**
              * Enumerates all CUDA error types and codes that can be returned by
              * the CUDA API.
              * @since 1.0
              */
+          #if defined(MUSEQA_COMPILER_NVCC)
             enum : std::underlying_type<code>::type
             {
                 success                        = cudaSuccess
@@ -237,7 +237,17 @@ namespace museqa
          */
         inline void check(error::code err) noexcept(!safe)
         {
-            cuda::ensure((error::code) error::success == err, err);
+            cuda::ensure(static_cast<error::code>(error::success) == err, err);
+        }
+
+        /**
+         * Blocks host CPU execution until the currently active device has finished
+         * processing all previously queued tasks, such as kernel launches.
+         * @see museqa::cuda::stream
+         */
+        inline void synchronize() noexcept(!safe)
+        {
+            cuda::check(cudaDeviceSynchronize());
         }
       #endif
 

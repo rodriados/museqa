@@ -8,6 +8,8 @@
 
 #if !defined(MUSEQA_AVOID_CUDA)
 
+#include <museqa/utility.hpp>
+
 #include <museqa/cuda/common.cuh>
 
 namespace museqa
@@ -31,6 +33,58 @@ namespace museqa
              * @since 1.0
              */
             enum : id { default_device = 0 };
+
+            namespace memory
+            {
+                extern auto available() noexcept(!safe) -> size_t;
+                extern auto available(device::id) noexcept(!safe) -> size_t;
+
+                extern auto total() noexcept(!safe) -> size_t;
+                extern auto total(device::id) noexcept(!safe) -> size_t;
+            }
+
+            namespace current
+            {
+                /**
+                 * A RAII-based mechanism for setting the CUDA runtime API's current
+                 * device for what remains of the scope, changing it back to the
+                 * previous device when exiting the scope.
+                 * @since 1.0
+                 */
+                class scope
+                {
+                  private:
+                    const device::id m_previous = device::default_device;
+
+                  public:
+                    /**
+                     * Sets the given device as the currently active one and remembers
+                     * the one previously active for restoring after scope end.
+                     * @param target The target device to be currently active.
+                     */
+                    inline scope(device::id target) noexcept(!safe)
+                      : m_previous {replace(target)}
+                    {}
+
+                    /**
+                     * Restores the previously active device. Although we cannot
+                     * guarantee the device has been manually changed after the
+                     * constructor, we set it back to what it was.
+                     */
+                    inline ~scope() noexcept(!safe)
+                    {
+                        replace(m_previous);
+                    }
+
+                  protected:
+                    static device::id replace(device::id) noexcept(!safe);
+                };
+
+                extern auto get() noexcept(!safe) -> device::id;
+                extern void set(device::id = device::default_device) noexcept(!safe);
+            }
+
+            extern auto count() noexcept(!safe) -> size_t;
         }
     }
 }
