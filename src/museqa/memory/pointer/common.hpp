@@ -49,7 +49,7 @@ namespace museqa
                  * Builds a new instance from a raw pointer.
                  * @param ptr The pointer to be encapsulated.
                  */
-                inline pointer(element_type *ptr) noexcept
+                __host__ __device__ inline pointer(element_type *ptr) noexcept
                   : m_ptr {ptr}
                 {}
 
@@ -187,7 +187,7 @@ namespace museqa
                  * Builds a new instance from a raw generic pointer.
                  * @param ptr The pointer to be encapsulated.
                  */
-                inline pointer(void *ptr) noexcept
+                __host__ __device__ inline pointer(void *ptr) noexcept
                   : m_ptr {ptr}
                 {}
 
