@@ -10,5 +10,7 @@
 
 #include <museqa/cuda/common.cuh>
 #include <museqa/cuda/device.cuh>
+#include <museqa/cuda/stream.cuh>
+#include <museqa/cuda/event.cuh>
 
 #endif
