@@ -9,7 +9,6 @@
 #if !defined(MUSEQA_AVOID_CUDA)
 
 #include <museqa/utility.hpp>
-
 #include <museqa/cuda/common.cuh>
 
 namespace museqa
@@ -80,11 +79,11 @@ namespace museqa
                     static device::id replace(device::id) noexcept(!safe);
                 };
 
-                extern auto get() noexcept(!safe) -> device::id;
+                extern __host__ __device__ auto get() noexcept(!safe) -> device::id;
                 extern void set(device::id = device::default_device) noexcept(!safe);
             }
 
-            extern auto count() noexcept(!safe) -> size_t;
+            extern __host__ __device__ auto count() noexcept(!safe) -> size_t;
         }
     }
 }

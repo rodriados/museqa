@@ -51,7 +51,7 @@ namespace museqa
      */
     auto cuda::device::memory::available(device::id target) noexcept(!safe) -> size_t
     {
-        cuda::device::current::scope _device {target};
+        cuda::device::current::scope temporary {target};
         return cuda::device::memory::available();
     }
 
@@ -75,7 +75,7 @@ namespace museqa
      */
     auto cuda::device::memory::total(device::id target) noexcept(!safe) -> size_t
     {
-        cuda::device::current::scope _device {target};
+        cuda::device::current::scope temporary {target};
         return cuda::device::memory::total();
     }
 
@@ -83,7 +83,7 @@ namespace museqa
      * Retrieves the currently active device.
      * @return The current active device.
      */
-    auto cuda::device::current::get() noexcept(!safe) -> cuda::device::id
+    __host__ __device__ auto cuda::device::current::get() noexcept(!safe) -> cuda::device::id
     {
         cuda::device::id device;
         cuda::check(cudaGetDevice(&device));
@@ -116,7 +116,7 @@ namespace museqa
      * and directly accessible to the current process.
      * @return The total number of directly accessible devices.
      */
-    auto cuda::device::count() noexcept(!safe) -> size_t
+    __host__ __device__ auto cuda::device::count() noexcept(!safe) -> size_t
     {
         int total = 0;
         cuda::check(cudaGetDeviceCount(&total));

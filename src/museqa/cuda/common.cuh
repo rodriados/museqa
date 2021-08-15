@@ -225,19 +225,30 @@ namespace museqa
          * @param params The assertion exception's parameters.
          */
         template <typename E = cuda::exception, typename ...T>
-        inline void ensure(bool condition, T&&... params) noexcept(!safe)
+        __host__ __device__ inline void ensure(bool condition, T&&... params) noexcept(!safe)
         {
             museqa::ensure<E>(condition, std::forward<decltype(params)>(params)...);
         }
 
         /**
          * Checks whether a CUDA has been successful and throws error otherwise.
-         * @param code The status code obtained from a function.
+         * @param err The status code obtained from a function call.
          * @throw The error status code obtained raised to exception.
          */
-        inline void check(error::code err) noexcept(!safe)
+        __host__ __device__ inline void check(error::code err) noexcept(!safe)
         {
-            cuda::ensure(static_cast<error::code>(error::success) == err, err);
+            cuda::ensure((error::code) error::success == err, err);
+        }
+
+        /**
+         * Checks the completion status of an operation from the given error code.
+         * @param err The status code obtained from a function call.
+         * @return Has the operation completed already?
+         */
+        __host__ __device__ inline bool ready(error::code err) noexcept(!safe)
+        {
+            cuda::ensure((error::code) error::success == err || (error::code) error::not_ready == err, err);
+            return (error::code) error::success == err;
         }
 
         /**
@@ -245,7 +256,7 @@ namespace museqa
          * processing all previously queued tasks, such as kernel launches.
          * @see museqa::cuda::stream
          */
-        inline void synchronize() noexcept(!safe)
+        __host__ __device__ inline void synchronize() noexcept(!safe)
         {
             cuda::check(cudaDeviceSynchronize());
         }
