@@ -89,34 +89,9 @@ namespace museqa
                 return (event_type) this->m_ptr;
             }
 
-            /**
-             * Checks whether event's recorded stream has completed its the work.
-             * @return Has all recorded work been completed?
-             */
-            inline bool ready() const noexcept(!safe)
-            {
-                return cuda::ready(cudaEventQuery((event_type) this->m_ptr));
-            }
-
-            /**
-             * Captures the contents of a stream at the time of this call.
-             * @param stream The stream to have its contents captured by the event.
-             * @note Both the event and the stream must be in the same device.
-             */
-            inline void record(cuda::stream::id stream = cuda::stream::default_stream) noexcept(!safe)
-            {
-                cuda::check(cudaEventRecord((event_type) this->m_ptr, stream));
-            }
-
-            /**
-             * Waits until the completion of all work currently captured by event.
-             * @see museqa::cuda::synchronize
-             */
-            inline void synchronize() const noexcept(!safe)
-            {
-                cuda::device::current::scope temporary {m_device};
-                cuda::check(cudaEventSynchronize((event_type) this->m_ptr));
-            }
+            bool ready() const noexcept(!safe);
+            void record(cuda::stream::id = cuda::stream::default_stream) noexcept(!safe);
+            void synchronize() const noexcept(!safe);
 
           private:
             /**

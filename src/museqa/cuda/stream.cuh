@@ -92,36 +92,9 @@ namespace museqa
                 return (stream_type) this->m_ptr;
             }
 
-            /**
-             * Checks whether the given stream has finished executing its queue.
-             * @return Has the stream completed all its tasks?
-             */
-            inline bool ready() const noexcept(!safe)
-            {
-                return cuda::ready(cudaStreamQuery((stream_type) this->m_ptr));
-            }
-
-            /**
-             * Blocks execution and waits for all stream tasks to complete.
-             * @see museqa::cuda::synchronize
-             */
-            inline void synchronize() const noexcept(!safe)
-            {
-                cuda::device::current::scope temporary {m_device};
-                cuda::check(cudaStreamSynchronize((stream_type) this->m_ptr));
-            }
-
-            /**
-             * Blocks stream execution and waits for the given event to be fired.
-             * The event does not need to be on the same device as the stream, thus
-             * allowing synchronization between different devices.
-             * @param event The event to waited on.
-             * @see museqa::cuda::event
-             */
-            inline void wait(event_type event) const noexcept(!safe)
-            {
-                cuda::check(cudaStreamWaitEvent((stream_type) this->m_ptr, event, 0u));
-            }
+            bool ready() const noexcept(!safe);
+            void synchronize() const noexcept(!safe);
+            void wait(event_type) const noexcept(!safe);
 
           private:
             /**

@@ -15,6 +15,8 @@
 
 #include <museqa/cuda/common.cuh>
 #include <museqa/cuda/device.cuh>
+#include <museqa/cuda/stream.cuh>
+#include <museqa/cuda/event.cuh>
 
 namespace museqa
 {
@@ -121,6 +123,66 @@ namespace museqa
         int total = 0;
         cuda::check(cudaGetDeviceCount(&total));
         return static_cast<size_t>(total);
+    }
+
+    /**
+     * Checks whether the given stream has finished executing its queue.
+     * @return Has the stream completed all its tasks?
+     */
+    bool cuda::stream::ready() const noexcept(!safe)
+    {
+        return cuda::ready(cudaStreamQuery(*this));
+    }
+
+    /**
+     * Blocks execution and waits for all stream tasks to complete.
+     * @see museqa::cuda::synchronize
+     */
+    void cuda::stream::synchronize() const noexcept(!safe)
+    {
+        cuda::device::current::scope temporary {m_device};
+        cuda::check(cudaStreamSynchronize(*this));
+    }
+
+    /**
+     * Blocks stream execution and waits for the given event to be fired.
+     * The event does not need to be on the same device as the stream, thus
+     * allowing synchronization between different devices.
+     * @param event The event to waited on.
+     * @see museqa::cuda::event
+     */
+    void cuda::stream::wait(cuda::event::id event) const noexcept(!safe)
+    {
+        cuda::check(cudaStreamWaitEvent(*this, event, 0u));
+    }
+
+    /**
+     * Checks whether event's recorded stream has completed its the work.
+     * @return Has all recorded work been completed?
+     */
+    bool cuda::event::ready() const noexcept(!safe)
+    {
+        return cuda::ready(cudaEventQuery(*this));
+    }
+
+    /**
+     * Captures the contents of a stream at the time of this call.
+     * @param stream The stream to have its contents captured by the event.
+     * @note Both the event and the stream must be in the same device.
+     */
+    void cuda::event::record(cuda::stream::id stream) noexcept(!safe)
+    {
+        cuda::check(cudaEventRecord(*this, stream));
+    }
+
+    /**
+     * Waits until the completion of all work currently captured by event.
+     * @see museqa::cuda::synchronize
+     */
+    void cuda::event::synchronize() const noexcept(!safe)
+    {
+        cuda::device::current::scope temporary {m_device};
+        cuda::check(cudaEventSynchronize(*this));
     }
 }
 
