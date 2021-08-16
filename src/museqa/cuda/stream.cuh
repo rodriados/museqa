@@ -15,7 +15,6 @@
 #include <cstdint>
 
 #include <museqa/utility.hpp>
-#include <museqa/environment.h>
 #include <museqa/memory/pointer/shared.hpp>
 
 #include <museqa/cuda/common.cuh>
@@ -92,9 +91,9 @@ namespace museqa
                 return (stream_type) this->m_ptr;
             }
 
-            bool ready() const noexcept(!safe);
-            void synchronize() const noexcept(!safe);
-            void wait(event_type) const noexcept(!safe);
+            static bool ready(const stream&) noexcept(!safe);
+            static void synchronize(const stream&) noexcept(!safe);
+            static void wait(const stream&, event_type) noexcept(!safe);
 
           private:
             /**

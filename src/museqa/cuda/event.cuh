@@ -35,6 +35,7 @@ namespace museqa
         {
           protected:
             typedef cudaEvent_t event_type;
+            typedef cuda::stream::id stream_type;
             typedef museqa::memory::pointer::shared<void> underlying_type;
 
           public:
@@ -89,9 +90,9 @@ namespace museqa
                 return (event_type) this->m_ptr;
             }
 
-            bool ready() const noexcept(!safe);
-            void record(cuda::stream::id = cuda::stream::default_stream) noexcept(!safe);
-            void synchronize() const noexcept(!safe);
+            static bool ready(const event&) noexcept(!safe);
+            static void record(event&, stream_type = cuda::stream::default_stream) noexcept(!safe);
+            static void synchronize(const event&) noexcept(!safe);
 
           private:
             /**

@@ -127,62 +127,68 @@ namespace museqa
 
     /**
      * Checks whether the given stream has finished executing its queue.
+     * @param stream The stream to check completion of.
      * @return Has the stream completed all its tasks?
      */
-    bool cuda::stream::ready() const noexcept(!safe)
+    bool cuda::stream::ready(const cuda::stream& stream) noexcept(!safe)
     {
-        return cuda::ready(cudaStreamQuery(*this));
+        return cuda::ready(cudaStreamQuery(stream));
     }
 
     /**
      * Blocks execution and waits for all stream tasks to complete.
+     * @param stream The stream to be synchronized.
      * @see museqa::cuda::synchronize
      */
-    void cuda::stream::synchronize() const noexcept(!safe)
+    void cuda::stream::synchronize(const cuda::stream& stream) noexcept(!safe)
     {
-        cuda::device::current::scope temporary {m_device};
-        cuda::check(cudaStreamSynchronize(*this));
+        cuda::device::current::scope temporary {stream.m_device};
+        cuda::check(cudaStreamSynchronize(stream));
     }
 
     /**
      * Blocks stream execution and waits for the given event to be fired.
      * The event does not need to be on the same device as the stream, thus
      * allowing synchronization between different devices.
+     * @param stream The stream to wait on given the event.
      * @param event The event to waited on.
      * @see museqa::cuda::event
      */
-    void cuda::stream::wait(cuda::event::id event) const noexcept(!safe)
+    void cuda::stream::wait(const cuda::stream& stream, cuda::event::id event) noexcept(!safe)
     {
-        cuda::check(cudaStreamWaitEvent(*this, event, 0u));
+        cuda::check(cudaStreamWaitEvent(stream, event, 0u));
     }
 
     /**
      * Checks whether event's recorded stream has completed its the work.
+     * @param event The event to check completion of.
      * @return Has all recorded work been completed?
      */
-    bool cuda::event::ready() const noexcept(!safe)
+    bool cuda::event::ready(const cuda::event& event) noexcept(!safe)
     {
-        return cuda::ready(cudaEventQuery(*this));
+        return cuda::ready(cudaEventQuery(event));
     }
 
     /**
      * Captures the contents of a stream at the time of this call.
+     * @param event The target event to capture the given stream.
      * @param stream The stream to have its contents captured by the event.
      * @note Both the event and the stream must be in the same device.
      */
-    void cuda::event::record(cuda::stream::id stream) noexcept(!safe)
+    void cuda::event::record(cuda::event& event, cuda::stream::id stream) noexcept(!safe)
     {
-        cuda::check(cudaEventRecord(*this, stream));
+        cuda::check(cudaEventRecord(event, stream));
     }
 
     /**
      * Waits until the completion of all work currently captured by event.
+     * @param event The event to be synchronized.
      * @see museqa::cuda::synchronize
      */
-    void cuda::event::synchronize() const noexcept(!safe)
+    void cuda::event::synchronize(const cuda::event& event) noexcept(!safe)
     {
-        cuda::device::current::scope temporary {m_device};
-        cuda::check(cudaEventSynchronize(*this));
+        cuda::device::current::scope temporary {event.m_device};
+        cuda::check(cudaEventSynchronize(event));
     }
 }
 
