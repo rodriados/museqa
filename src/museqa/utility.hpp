@@ -21,14 +21,11 @@ namespace museqa
      * checks and API call validations will be performed.
      * @since 1.0
      */
-    enum : bool
-    {
-      #if !defined(MUSEQA_UNSAFE)
-        safe = true
-      #else
-        safe = false
-      #endif
-    };
+  #if !defined(MUSEQA_UNSAFE)
+    enum : bool { safe = true };
+  #else
+    enum : bool { safe = false };
+  #endif
 
     /**
      * A general memory storage container.

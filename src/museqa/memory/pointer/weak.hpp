@@ -9,6 +9,7 @@
 #include <museqa/utility.hpp>
 #include <museqa/memory/pointer/common.hpp>
 #include <museqa/memory/pointer/shared.hpp>
+#include <museqa/memory/pointer/metadata.hpp>
 
 namespace museqa
 {
@@ -17,19 +18,19 @@ namespace museqa
         namespace pointer
         {
             /**
-             * Encapsulates a non-owning pointer into the common structure of a shared
-             * pointer. This object does not perform any validation whether its raw
-             * pointer is valid, still allocated whatsoever. Such precautions are
-             * up to be done by its user.
+             * Encapsulates a non-owning pointer into the common structure of a
+             * shared pointer. This object does not perform any validation whether
+             * its raw pointer is valid, still allocated whatsoever. Such precautions
+             * are up to be done by its user.
              * @tparam T The type of pointer to be held.
              * @since 1.0
              */
             template <typename T>
-            class weak : public shared<T>
+            class weak : public memory::pointer::shared<T>
             {
               private:
-                typedef shared<T> underlying_type;
-                typedef impl::metadata metadata_type;
+                typedef memory::pointer::shared<T> underlying_type;
+                typedef memory::pointer::metadata metadata_type;
 
               public:
                 using typename underlying_type::element_type;

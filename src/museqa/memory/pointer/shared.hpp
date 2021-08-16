@@ -12,6 +12,7 @@
 #include <museqa/utility.hpp>
 #include <museqa/memory/allocator.hpp>
 #include <museqa/memory/pointer/common.hpp>
+#include <museqa/memory/pointer/metadata.hpp>
 
 namespace museqa
 {
@@ -27,13 +28,13 @@ namespace museqa
              * @since 1.0
              */
             template <typename T>
-            class shared : public impl::pointer<T>
+            class shared : public memory::pointer::pointer<T>
             {
                 template <typename> friend class shared;
 
               private:
-                typedef impl::pointer<T> underlying_type;
-                typedef impl::metadata metadata_type;
+                typedef memory::pointer::pointer<T> underlying_type;
+                typedef memory::pointer::metadata metadata_type;
 
               public:
                 using typename underlying_type::element_type;

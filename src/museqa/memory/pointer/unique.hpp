@@ -23,10 +23,10 @@ namespace museqa
              * @since 1.0
              */
             template <typename T>
-            class unique : public shared<T>
+            class unique : public memory::pointer::shared<T>
             {
               private:
-                typedef shared<T> underlying_type;
+                typedef memory::pointer::shared<T> underlying_type;
 
               public:
                 using typename underlying_type::allocator_type;
