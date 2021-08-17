@@ -13,40 +13,18 @@
 #include <map>
 #include <utility>
 
-#include <museqa/mpi/type.hpp>
-#include <museqa/mpi/common.hpp>
 #include <museqa/utility.hpp>
 #include <museqa/utility/functor.hpp>
 #include <museqa/memory/pointer/shared.hpp>
+#include <museqa/memory/pointer/weak.hpp>
+
+#include <museqa/mpi/type.hpp>
+#include <museqa/mpi/common.hpp>
 
 namespace museqa
 {
     namespace mpi
     {
-        /**
-         * Represents a user-defined MPI aggregation operator which can be directly
-         * used with native MPI functions.
-         * @since 1.0
-         */
-        class lambda;
-
-        namespace function
-        {
-            /**
-             * The type for a MPI operator instance. An identifier must exist for
-             * every operator to be used with MPI collective operations.
-             * @since 1.0
-             */
-            using id = MPI_Op;
-
-            /**
-             * The raw function type required by MPI to create a new operator for
-             * its collective operations.
-             * @since 1.0
-             */
-            using raw = void(void*, void*, int*, type::id*);
-        }
-
         /**
          * Represents a function that can be used as an aggregator with MPI collective
          * operations, such as reduce, all-reduce and scan.
@@ -55,16 +33,25 @@ namespace museqa
         class lambda : private memory::pointer::shared<void>
         {
           private:
-            typedef function::id reference_type;
+            typedef MPI_Op reference_type;
             typedef memory::pointer::shared<void> underlying_type;
 
           public:
-            typedef function::raw *functor_type;    /// The native MPI operator function type.
+            typedef reference_type id;
+            using functor_type = void (*)(void*, void*, int*, type::id*);
 
           public:
             inline lambda() noexcept = default;
             inline lambda(const lambda&) noexcept = default;
             inline lambda(lambda&&) noexcept = default;
+
+            /**
+             * Creates a new non-owning lambda from an already existing operator.
+             * @param ref The operator to be wrapped into a lambda.
+             */
+            inline lambda(reference_type ref) noexcept
+              : underlying_type {memory::pointer::weak<void>{ref}}
+            {}
 
             /**
              * Creates a new MPI operator function for collective operations.
@@ -102,61 +89,59 @@ namespace museqa
                 auto destructor = [](void *ptr) { mpi::check(MPI_Op_free((reference_type*) &ptr)); };
                 return underlying_type {this->m_ptr, destructor};
             }
+
+          public:
+            static constexpr reference_type const max     = MPI_MAX;
+            static constexpr reference_type const min     = MPI_MIN;
+            static constexpr reference_type const add     = MPI_SUM;
+            static constexpr reference_type const mul     = MPI_PROD;
+            static constexpr reference_type const andl    = MPI_LAND;
+            static constexpr reference_type const andb    = MPI_BAND;
+            static constexpr reference_type const orl     = MPI_LOR;
+            static constexpr reference_type const orb     = MPI_BOR;
+            static constexpr reference_type const xorl    = MPI_LXOR;
+            static constexpr reference_type const xorb    = MPI_BXOR;
+            static constexpr reference_type const minloc  = MPI_MINLOC;
+            static constexpr reference_type const maxloc  = MPI_MAXLOC;
+            static constexpr reference_type const replace = MPI_REPLACE;
         };
 
-        namespace function
+        namespace impl
         {
-            /**
-             * Informs the currently active MPI operator function. This is necessary
-             * to recover a wrapped function from within MPI execution.
-             * @since 1.0
-             */
-            extern function::id active;
-
-            /**
-             * Maps a function identifier to its actual user-defined implementation.
-             * Unfortunately, this is maybe the only reliable way to inject a wrapped
-             * function into the operator actually called by MPI.
-             * @since 1.0
-             */
-            extern std::map<function::id, void*> fmapper;
-
-            /**
-             * Wraps a typed function transforming it into a generic MPI operator.
-             * @tparam T The type the operator works onto.
-             * @param a The operation's first operand reference.
-             * @param b The operation's second operand and output values reference.
-             * @param count The total number of elements to process during execution.
-             */
-            template <typename T>
-            void wrapper(void *a, void *b, int *count, type::id *)
+            namespace lambda
             {
-                using function_type = T(*)(const T&, const T&);
-                auto f = reinterpret_cast<function_type>(fmapper[active]);
+                /**
+                 * Informs the currently active MPI operator function. This is necessary
+                 * to recover a wrapped function from within MPI execution.
+                 * @since 1.0
+                 */
+                extern mpi::lambda::id active;
 
-                for (int i = 0; i < *count; ++i)
-                    static_cast<T*>(b)[i] = f(static_cast<T*>(a)[i], static_cast<T*>(b)[i]);
+                /**
+                 * Maps a function identifier to its actual user-defined implementation.
+                 * Unfortunately, this is maybe the only reliable way to inject
+                 * a wrapped function into the operator actually called by MPI.
+                 * @since 1.0
+                 */
+                extern std::map<mpi::lambda::id, void*> fmapper;
+
+                /**
+                 * Wraps a typed function transforming it into a generic MPI operator.
+                 * @tparam T The type the operator works onto.
+                 * @param a The operation's first operand reference.
+                 * @param b The operation's second operand and output values reference.
+                 * @param count The total number of elements to process during execution.
+                 */
+                template <typename T>
+                void wrapper(void *a, void *b, int *count, type::id *)
+                {
+                    using function_type = T(const T&, const T&);
+                    auto f = reinterpret_cast<function_type*>(fmapper[active]);
+
+                    for (int i = 0; i < *count; ++i)
+                        static_cast<T*>(b)[i] = (f)(static_cast<T*>(a)[i], static_cast<T*>(b)[i]);
+                }
             }
-
-            /**#@+
-             * Declaration of built-in MPI operators. The use of these is highly
-             * recommended and preferred if possible.
-             * @since 1.0
-             */
-            static constexpr function::id const max     = MPI_MAX;
-            static constexpr function::id const min     = MPI_MIN;
-            static constexpr function::id const add     = MPI_SUM;
-            static constexpr function::id const mul     = MPI_PROD;
-            static constexpr function::id const andl    = MPI_LAND;
-            static constexpr function::id const andb    = MPI_BAND;
-            static constexpr function::id const orl     = MPI_LOR;
-            static constexpr function::id const orb     = MPI_BOR;
-            static constexpr function::id const xorl    = MPI_LXOR;
-            static constexpr function::id const xorb    = MPI_BXOR;
-            static constexpr function::id const minloc  = MPI_MINLOC;
-            static constexpr function::id const maxloc  = MPI_MAXLOC;
-            static constexpr function::id const replace = MPI_REPLACE;
-            /**#@-*/
         }
     }
 
@@ -178,8 +163,8 @@ namespace museqa
             ) noexcept(!safe) -> museqa::mpi::lambda
             {
                 namespace mpi = museqa::mpi;
-                auto lambda = mpi::lambda {mpi::function::wrapper<T>, commutative};
-                mpi::function::fmapper[lambda] = reinterpret_cast<void*>(functor);
+                auto lambda = mpi::lambda {mpi::impl::lambda::wrapper<T>, commutative};
+                mpi::impl::lambda::fmapper[lambda] = reinterpret_cast<void*>(functor);
                 return lambda;
             }
 

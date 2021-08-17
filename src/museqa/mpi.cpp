@@ -51,7 +51,7 @@ namespace museqa
      * recover a wrapped function from within MPI execution.
      * @since 1.0
      */
-    mpi::function::id mpi::function::active;
+    mpi::lambda::id mpi::impl::lambda::active;
 
     /**
      * Maps a function identifier to its actual user-defined implementation. Unfortunately,
@@ -59,7 +59,7 @@ namespace museqa
      * operator actually called by MPI.
      * @since 1.0
      */
-    std::map<mpi::function::id, void*> mpi::function::fmapper;
+    std::map<mpi::lambda::id, void*> mpi::impl::lambda::fmapper;
 
     /**
      * Initializes MPI's internal machinery and nodes communication.

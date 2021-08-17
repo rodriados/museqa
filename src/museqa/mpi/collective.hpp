@@ -225,12 +225,12 @@ namespace museqa
          */
         inline message mallreduce(
             const message& in
-          , function::id lambda
+          , lambda::id lambda
           , const communicator& comm = world
         ) noexcept(!safe)
         {
             auto out = factory::mpi::message(in.type, in.size);
-            mpi::check(MPI_Allreduce(in.ptr, out.ptr, out.size, out.type, function::active = lambda, comm));
+            mpi::check(MPI_Allreduce(in.ptr, out.ptr, out.size, out.type, impl::lambda::active = lambda, comm));
             return out;
         }
 
@@ -247,7 +247,7 @@ namespace museqa
         inline typename payload<T>::return_type allreduce(
             T *data
           , size_t size
-          , function::id lambda
+          , lambda::id lambda
           , const communicator& comm = world
         ) noexcept(!safe)
         {
@@ -266,7 +266,7 @@ namespace museqa
         template <typename T>
         inline typename payload<T>::return_type allreduce(
             T& data
-          , function::id lambda
+          , lambda::id lambda
           , const communicator& comm = world
         ) noexcept(!safe)
         {
@@ -284,13 +284,13 @@ namespace museqa
          */
         inline message mreduce(
             const message& in
-          , function::id lambda
+          , lambda::id lambda
           , node root = museqa::node::master
           , const communicator& comm = world
         ) noexcept(!safe)
         {
             auto out = (root != comm.rank) ? in : factory::mpi::message(in.type, in.size);
-            mpi::check(MPI_Reduce(in.ptr, out.ptr, out.size, out.type, function::active = lambda, root, comm));
+            mpi::check(MPI_Reduce(in.ptr, out.ptr, out.size, out.type, impl::lambda::active = lambda, root, comm));
             return out;
         }
 
@@ -308,7 +308,7 @@ namespace museqa
         inline typename payload<T>::return_type reduce(
             T *data
           , size_t size
-          , function::id lambda
+          , lambda::id lambda
           , node root = museqa::node::master
           , const communicator& comm = world
         ) noexcept(!safe)
@@ -329,7 +329,7 @@ namespace museqa
         template <typename T>
         inline typename payload<T>::return_type reduce(
             T& data
-          , function::id lambda
+          , lambda::id lambda
           , node root = museqa::node::master
           , const communicator& comm = world
         ) noexcept(!safe)
