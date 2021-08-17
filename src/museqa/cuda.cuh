@@ -12,5 +12,6 @@
 #include <museqa/cuda/device.cuh>
 #include <museqa/cuda/stream.cuh>
 #include <museqa/cuda/event.cuh>
+#include <museqa/cuda/memory.cuh>
 
 #endif
