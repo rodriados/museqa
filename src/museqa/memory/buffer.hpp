@@ -8,15 +8,25 @@
 
 #include <vector>
 #include <cstdint>
-#include <cstring>
 #include <utility>
+
+#include <museqa/environment.h>
+
+#if defined(MUSEQA_COMPILER_NVCC)
+  #pragma push
+  #pragma diag_suppress = unrecognized_gcc_pragma
+#endif
 
 #include <fmt/format.h>
 
+#if defined(MUSEQA_COMPILER_NVCC)
+  #pragma pop
+#endif
+
 #include <museqa/utility.hpp>
 #include <museqa/exception.hpp>
+#include <museqa/memory/pointer.hpp>
 #include <museqa/memory/allocator.hpp>
-#include <museqa/memory/pointer/shared.hpp>
 
 namespace museqa
 {
@@ -158,6 +168,31 @@ namespace museqa
                 return m_capacity;
             }
         };
+
+        /**
+         * Copies data from the source buffer to the target buffer.
+         * @tparam T The buffer's contents type.
+         * @param target The buffer to copy data into.
+         * @param source The buffer to copy data from.
+         * @param count The total number of elements to copy.
+         */
+        template <typename T>
+        inline void copy(memory::buffer<T>& target, const memory::buffer<T>& source) noexcept
+        {
+            const auto count = utility::min(target.capacity(), source.capacity());
+            memory::copy(target.begin(), source.begin(), count);
+        }
+
+        /**
+         * Initializes a buffer to zero.
+         * @tparam T The buffer's contents type.
+         * @param target The target buffer to be zero-initialized.
+         */
+        template <typename T>
+        inline void zero(memory::buffer<T>& target) noexcept
+        {
+            memory::zero(target.begin(), target.capacity());
+        }
     }
 
     namespace factory
@@ -201,7 +236,7 @@ namespace museqa
         inline auto buffer(const T *ptr, size_t count = 1) noexcept -> memory::buffer<T>
         {
             auto buffer = factory::buffer<T>(count);
-            memcpy(buffer.begin(), ptr, sizeof(T) * count);
+            memory::copy(buffer.begin(), ptr, count);
             return buffer;
         }
 
