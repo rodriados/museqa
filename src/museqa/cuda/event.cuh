@@ -42,7 +42,7 @@ namespace museqa
             using id = event_type;
 
           protected:
-            const cuda::device::id m_device;    /// The device the event is associated with.
+            cuda::device::id m_device = cuda::device::default_device;
 
           public:
             inline event(const event&) noexcept = default;

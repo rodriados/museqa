@@ -41,7 +41,7 @@ namespace museqa
             static constexpr stream_type default_stream = nullptr;
 
           protected:
-            const cuda::device::id m_device;    /// The device the stream is associated with.
+            cuda::device::id m_device = cuda::device::default_device;
 
           public:
             inline stream(const stream&) noexcept = default;
