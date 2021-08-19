@@ -8,6 +8,8 @@
 
 #if !defined(MUSEQA_AVOID_CUDA)
 
+#include <cuda.h>
+
 #include <museqa/utility.hpp>
 #include <museqa/cuda/common.cuh>
 
@@ -41,6 +43,23 @@ namespace museqa
                 extern auto total() noexcept(!safe) -> size_t;
                 extern auto total(device::id) noexcept(!safe) -> size_t;
             }
+
+          #if defined(MUSEQA_COMPILER_NVCC)
+            /**
+             * Hardware, firmware and physical properties about and attributes of
+             * a CUDA compute-capable device. Although extremely useful, the request
+             * for the properties of a device is expensive due to the overwhelming
+             * amount of information gathered about it.
+             * @since 1.0
+             */
+            struct properties : public cudaDeviceProp
+            {
+                __host__ inline properties(device::id device) noexcept(!safe)
+                {
+                    cuda::check(cudaGetDeviceProperties(this, device));
+                }
+            };
+          #endif
 
             namespace current
             {
@@ -81,6 +100,19 @@ namespace museqa
 
                 extern __host__ __device__ auto get() noexcept(!safe) -> device::id;
                 extern void set(device::id = device::default_device) noexcept(!safe);
+
+              #if defined(MUSEQA_COMPILER_NVCC)
+                /**
+                 * Retrieves hardware, firmware and physical properties about the
+                 * CUDA compute-capable device that is currently active.
+                 * @note This function is expensive and should be called with care.
+                 * @return The retrieved device properties.
+                 */
+                inline auto properties() noexcept(!safe) -> properties
+                {
+                    return device::properties {device::current::get()};
+                }
+              #endif
             }
 
             extern __host__ __device__ auto count() noexcept(!safe) -> size_t;
