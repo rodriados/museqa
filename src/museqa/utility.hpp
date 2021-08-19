@@ -33,7 +33,7 @@ namespace museqa
      * @tparam A The byte alignment the storage should use.
      * @since 1.0
      */
-    template <size_t S, size_t A = S>
+    template <size_t S, size_t A = 8>
     struct alignas(A) storage
     {
         alignas(A) uint8_t storage[S];
