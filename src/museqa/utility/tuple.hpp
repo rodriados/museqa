@@ -10,7 +10,18 @@
 #include <cstdint>
 #include <utility>
 
+#include <museqa/environment.h>
+
+#if defined(MUSEQA_COMPILER_NVCC)
+  #pragma push
+  #pragma diag_suppress = unrecognized_gcc_pragma
+#endif
+
 #include <fmt/format.h>
+
+#if defined(MUSEQA_COMPILER_NVCC)
+  #pragma pop
+#endif
 
 #include <museqa/utility.hpp>
 #include <museqa/utility/indexer.hpp>
@@ -854,7 +865,7 @@ class fmt::formatter<museqa::utility::tuple<T...>>
     -> decltype(ctx.out())
     {
         std::string args[] = {fmt::format("{}", tuple.template get<I>())...};
-        return fmt::format_to(ctx.out(), "({})", fmt::join(args, args + count, ", "));
+        return fmt::format_to(ctx.out(), "<{}>", fmt::join(args, args + count, ", "));
     }
 };
 
