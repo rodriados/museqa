@@ -235,15 +235,17 @@ namespace museqa
         {
             static_assert(!std::is_union<T>::value, "union types cannot be reflected");
             static_assert(std::is_trivial<T>::value, "reflected type must be trivial");
-            static_assert(std::is_class<T>::value, "reflected type must be class or struct");
+
+          private:
+            template <typename A, typename B>
+            using compatible = std::integral_constant<bool, sizeof(A) == sizeof(B) && alignof(A) == alignof(B)>;
 
           public:
             using reflection_tuple = decltype(impl::loophole<T>());
             using reference_tuple = decltype(impl::reference(std::declval<reflection_tuple>()));
             using storage_tuple = decltype(impl::storage(std::declval<reflection_tuple>()));
 
-            static_assert(sizeof(reflection_tuple) == sizeof(T), "reflection tuple is not compatible with type");
-            static_assert(alignof(reflection_tuple) == alignof(T), "reflection tuple is not compatible with type");
+            static_assert(compatible<reflection_tuple, T>(), "reflection tuple is not compatible with type");
 
           public:
             /**
@@ -269,15 +271,19 @@ namespace museqa
             /**
              * Retrieves the a property member from an instance by its index.
              * @tparam N The requested property member index.
+             * @tparam U The compatible introspection target type.
              * @param target The target type instance to retrieve member from.
              * @return The extracted member reference.
              */
-            template <size_t N>
-            __host__ __device__ inline static constexpr auto member(T& target) noexcept
-            -> tuple_element<reference_tuple, N>
+            template <size_t N, typename U>
+            __host__ __device__ inline static constexpr auto member(U& target) noexcept
+            -> typename std::enable_if<
+                compatible<reflection_tuple, U>::value
+              , tuple_element<reference_tuple, N>
+            >::type
             {
-                using U = tuple_element<reflection_tuple, N>;
-                return *reinterpret_cast<U*>(reinterpret_cast<uint8_t*>(&target) + offset<N>());
+                using E = tuple_element<reflection_tuple, N>;
+                return *reinterpret_cast<E*>(reinterpret_cast<uint8_t*>(&target) + offset<N>());
             }
 
           private:
