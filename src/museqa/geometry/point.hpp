@@ -42,7 +42,7 @@ namespace museqa
          * @tparam T The point's dimensions' type.
          * @since 1.0
          */
-        template <size_t D, typename T = size_t>
+        template <size_t D, typename T = int64_t>
         struct point;
 
         namespace impl
@@ -264,6 +264,52 @@ namespace museqa
               : point {other.dim[I]...}
             {}
         };
+
+        /**
+         * The equality operator for two points of equal dimensionality.
+         * @tparam D The points' dimensionality value.
+         * @tparam T The first point's dimension type.
+         * @tparam U The second point's dimension type.
+         * @param a The first point instance.
+         * @param b The second point instance.
+         * @return Are both points equal?
+         */
+        template <size_t D, typename T, typename U>
+        __host__ __device__ inline constexpr bool operator==(const point<D, T>& a, const point<D, U>& b) noexcept
+        {
+            namespace m = museqa::utility;
+            return m::foldl(m::andl<bool>, true, m::zipwith(m::eq<T, U>, m::tie(a.dim), m::tie(b.dim)));
+        }
+
+        /**
+         * The equality operator for points with different dimensionality.
+         * @tparam A The first point's dimensionality value.
+         * @tparam B The second point's dimensionality value.
+         * @tparam T The first point's dimension type.
+         * @tparam U The second point's dimension type.
+         * @return Are both points equal?
+         */
+        template <size_t A, size_t B, typename T, typename U>
+        __host__ __device__ inline constexpr bool operator==(const point<A, T>&, const point<B, U>&) noexcept
+        {
+            return false;
+        }
+
+        /**
+         * The inequality operator for two generic points.
+         * @tparam A The first point's dimensionality value.
+         * @tparam B The second point's dimensionality value.
+         * @tparam T The first point's dimension type.
+         * @tparam U The second point's dimension type.
+         * @param a The first point instance.
+         * @param b The second point instance.
+         * @return Are the points different?
+         */
+        template <size_t A, size_t B, typename T, typename U>
+        __host__ __device__ inline constexpr bool operator!=(const point<A, T>& a, const point<B, U>& b) noexcept
+        {
+            return !operator==(a, b);
+        }
     }
 
   #if !defined(MUSEQA_AVOID_REFLECTION)
