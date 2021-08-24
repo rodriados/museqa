@@ -6,6 +6,7 @@
  */
 #pragma once
 
+#include <cmath>
 #include <cstdint>
 #include <utility>
 
@@ -62,10 +63,10 @@ namespace museqa
 
                 static constexpr size_t dimensionality = D;
                 static_assert(dimensionality > 0, "a point must be at least 1-dimensional");
-                static_assert(std::is_arithmetic<dimension_type>::type, "a point has arithmetic dimension type");
+                static_assert(std::is_arithmetic<dimension_type>(), "a point has arithmetic dimension type");
 
                 union {
-                    dimension_type dim[dimensionality];
+                    dimension_type dim[dimensionality] {};
                 };
             };
 
@@ -85,7 +86,7 @@ namespace museqa
                 static_assert(std::is_arithmetic<dimension_type>(), "a point has arithmetic dimension type");
 
                 union {
-                    dimension_type value, dim[1];
+                    dimension_type value, dim[1] {};
                     struct { dimension_type a; };
                     struct { dimension_type i; };
                     struct { dimension_type x; };
@@ -118,7 +119,7 @@ namespace museqa
                 static_assert(std::is_arithmetic<dimension_type>(), "a point has arithmetic dimension type");
 
                 union {
-                    dimension_type dim[dimensionality];
+                    dimension_type dim[2] {};
                     struct { dimension_type a, b; };
                     struct { dimension_type i, j; };
                     struct { dimension_type x, y; };
@@ -141,7 +142,7 @@ namespace museqa
                 static_assert(std::is_arithmetic<dimension_type>(), "a point has arithmetic dimension type");
 
                 union {
-                    dimension_type dim[dimensionality];
+                    dimension_type dim[3] {};
                     struct { dimension_type a, b, c; };
                     struct { dimension_type i, j, k; };
                     struct { dimension_type x, y, z; };
@@ -164,7 +165,7 @@ namespace museqa
                 static_assert(std::is_arithmetic<dimension_type>(), "a point has arithmetic dimension type");
 
                 union {
-                    dimension_type dim[dimensionality];
+                    dimension_type dim[4] {};
                     struct { dimension_type a, b, c, d; };
                     struct { dimension_type x, y, z, w; };
                 };
@@ -277,8 +278,10 @@ namespace museqa
         template <size_t D, typename T, typename U>
         __host__ __device__ inline constexpr bool operator==(const point<D, T>& a, const point<D, U>& b) noexcept
         {
-            namespace m = museqa::utility;
-            return m::foldl(m::andl<bool>, true, m::zipwith(m::eq<T, U>, m::tie(a.dim), m::tie(b.dim)));
+            return utility::foldl(
+                utility::andl<bool>, true
+              , utility::zipwith(utility::eq<T, U>, utility::tie(a.dim), utility::tie(b.dim))
+            );
         }
 
         /**
@@ -309,6 +312,28 @@ namespace museqa
         __host__ __device__ inline constexpr bool operator!=(const point<A, T>& a, const point<B, U>& b) noexcept
         {
             return !operator==(a, b);
+        }
+
+        /**
+         * The distance operator for two generic points.
+         * @tparam D The points' dimensionality value.
+         * @tparam T The first point's dimension type.
+         * @tparam U The second point's dimension type.
+         * @param a The first point instance.
+         * @param b The second point instance.
+         * @return The Euclidean distance between the points.
+         */
+        template <size_t D, typename T, typename U>
+        __host__ __device__ inline constexpr double distance(const point<D, T>& a, const point<D, U>& b) noexcept
+        {
+            return sqrt(utility::foldl(
+                utility::add<double>, 0.0
+              , utility::zipwith(
+                    [](const T& a, const U& b) { return pow(b - a, 2.0); }
+                  , utility::tie(a.dim)
+                  , utility::tie(b.dim)
+                )
+            ));
         }
     }
 
