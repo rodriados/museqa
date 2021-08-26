@@ -24,6 +24,8 @@
 
 #include <museqa/utility.hpp>
 #include <museqa/utility/tuple.hpp>
+
+#include <museqa/geometry/coordinate.hpp>
 #include <museqa/geometry/point.hpp>
 
 #if !defined(MUSEQA_AVOID_REFLECTION)
@@ -66,7 +68,7 @@ namespace museqa
         __host__ __device__ inline constexpr auto operator+(const vector<D, T>& a, const vector<D, U>& b) noexcept
         -> vector<D, decltype(utility::add(a[0], b[0]))>
         {
-            return utility::zipwith(utility::add<T, U>, utility::tie(a.dim), utility::tie(b.dim));
+            return utility::zipwith(utility::add<T, U>, utility::tie(a.value), utility::tie(b.value));
         }
 
         /**
@@ -82,7 +84,7 @@ namespace museqa
         __host__ __device__ inline constexpr auto operator-(const vector<D, T>& a, const vector<D, U>& b) noexcept
         -> vector<D, decltype(utility::sub(a[0], b[0]))>
         {
-            return utility::zipwith(utility::sub<T, U>, utility::tie(a.dim), utility::tie(b.dim));
+            return utility::zipwith(utility::sub<T, U>, utility::tie(a.value), utility::tie(b.value));
         }
 
         /**
@@ -98,7 +100,7 @@ namespace museqa
         __host__ __device__ inline constexpr auto operator*(const vector<D, T>& v, const S& scalar) noexcept
         -> vector<D, decltype(utility::mul(v[0], scalar))>
         {
-            return utility::apply(utility::mul<T, S>, utility::tie(v.dim), scalar);
+            return utility::apply(utility::mul<T, S>, utility::tie(v.value), scalar);
         }
 
         /**
@@ -132,7 +134,7 @@ namespace museqa
         {
             return utility::foldl(
                 utility::add<decltype(utility::mul(a[0], b[0]))>, 0
-              , utility::zipwith(utility::mul<T, U>, utility::tie(a.dim), utility::tie(b.dim))
+              , utility::zipwith(utility::mul<T, U>, utility::tie(a.value), utility::tie(b.value))
             );
         }
 
@@ -161,7 +163,7 @@ namespace museqa
         template <size_t D, typename T>
         __host__ __device__ inline constexpr auto length(const vector<D, T>& v) noexcept -> double
         {
-            return sqrt(utility::foldl(utility::add<double>, 0.0, utility::apply(pow, utility::tie(v.dim), 2.0)));
+            return sqrt(utility::foldl(utility::add<double>, 0.0, utility::apply(pow, utility::tie(v.value), 2.0)));
         }
 
         /**
@@ -175,8 +177,8 @@ namespace museqa
         __host__ __device__ inline constexpr auto normalize(const vector<D, T>& v) noexcept -> vector<D, double>
         {
             return utility::apply(
-                [](double dim, double length) { return length > 0.0 ? (dim / length) : 0.0; }
-              , utility::tie(v.dim)
+                [](double value, double length) { return length > 0.0 ? (value / length) : 0.0; }
+              , utility::tie(v.value)
               , geometry::length(v)
             );
         }
@@ -192,7 +194,7 @@ namespace museqa
      */
     template <size_t D, typename T>
     class utility::reflector<geometry::vector<D, T>>
-      : public utility::reflector<geometry::point<D, T>>
+      : public utility::reflector<geometry::coordinate<D, T>>
     {};
   #endif
 }
@@ -205,5 +207,5 @@ namespace museqa
  * @since 1.0
  */
 template <size_t D, typename T>
-struct fmt::formatter<museqa::geometry::vector<D, T>> : fmt::formatter<museqa::geometry::point<D, T>>
+struct fmt::formatter<museqa::geometry::vector<D, T>> : fmt::formatter<museqa::geometry::coordinate<D, T>>
 {};
