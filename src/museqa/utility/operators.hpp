@@ -13,211 +13,192 @@ namespace museqa
     namespace utility
     {
         /**
-         * The logical AND operator.
-         * @tparam X The first operand type.
-         * @tparam Y The second operand type.
-         * @param x The first operand value.
-         * @param y The second operand value.
-         * @return The logical AND result between operands.
+         * A macro for generating the anonymous type of an operator on its definition.
+         * @param f The operation to be wrapped by an operator type.
+         * @since 1.0
          */
-        template <typename X, typename Y = X>
-        __host__ __device__ inline static constexpr auto andl(const X& x, const Y& y) noexcept
-        -> bool { return x && y; }
+        #define museqa_binary_operator_type(f) struct {                                             \
+            template <typename X, typename Y>                                                       \
+            __host__ __device__ inline constexpr auto operator()(const X& x, const Y& y) const      \
+            noexcept -> decltype((f)) {                                                             \
+                return (f);                                                                         \
+            }                                                                                       \
+        }
 
-        /**
-         * The logical OR operator.
-         * @tparam X The first operand type.
-         * @tparam Y The second operand type.
-         * @param x The first operand value.
-         * @param y The second operand value.
-         * @return The logical OR result between operands.
-         */
-        template <typename X, typename Y = X>
-        __host__ __device__ inline static constexpr auto orl(const X& x, const Y& y) noexcept
-        -> bool { return x || y; }
+        namespace
+        {
+            /**
+             * The logical AND operator.
+             * @param x The first operand value.
+             * @param y The second operand value.
+             * @return The logical AND result between operands.
+             */
+            static constexpr const museqa_binary_operator_type((x && y)) andl, logic_and;
 
-        /**
-         * The less-than operator.
-         * @tparam X The first operand type.
-         * @tparam Y The second operand type.
-         * @param x The first operand value.
-         * @param y The second operand value.
-         * @return The less-than result between operands.
-         */
-        template <typename X, typename Y = X>
-        __host__ __device__ inline static constexpr auto lt(const X& x, const Y& y) noexcept
-        -> bool { return x < y; }
+            /**
+             * The logical OR operator.
+             * @param x The first operand value.
+             * @param y The second operand value.
+             * @return The logical OR result between operands.
+             */
+            static constexpr const museqa_binary_operator_type((x || y)) orl, logic_or;
 
-        /**
-         * The greater-than operator.
-         * @tparam X The first operand type.
-         * @tparam Y The second operand type.
-         * @param x The first operand value.
-         * @param y The second operand value.
-         * @return The greater-than result between operands.
-         */
-        template <typename X, typename Y = X>
-        __host__ __device__ inline static constexpr auto gt(const X& x, const Y& y) noexcept
-        -> bool { return x > y; }
+            /**
+             * The less-than operator.
+             * @param x The first operand value.
+             * @param y The second operand value.
+             * @return The less-than result between operands.
+             */
+            static constexpr const museqa_binary_operator_type((x < y)) lt, less;
 
-        /**
-         * The less-than-or-equal operator.
-         * @tparam X The first operand type.
-         * @tparam Y The second operand type.
-         * @param x The first operand value.
-         * @param y The second operand value.
-         * @return The less-than-or-equal result between operands.
-         */
-        template <typename X, typename Y = X>
-        __host__ __device__ inline static constexpr auto lte(const X& x, const Y& y) noexcept
-        -> bool { return x <= y; }
+            /**
+             * The greater-than operator.
+             * @param x The first operand value.
+             * @param y The second operand value.
+             * @return The greater-than result between operands.
+             */
+            static constexpr const museqa_binary_operator_type((x > y)) gt, greater;
 
-        /**
-         * The greater-than-or-equal operator.
-         * @tparam X The first operand type.
-         * @tparam Y The second operand type.
-         * @param x The first operand value.
-         * @param y The second operand value.
-         * @return The greater-than-or-equal result between operands.
-         */
-        template <typename X, typename Y = X>
-        __host__ __device__ inline static constexpr auto gte(const X& x, const Y& y) noexcept
-        -> bool { return x >= y; }
+            /**
+             * The less-than-or-equal operator.
+             * @param x The first operand value.
+             * @param y The second operand value.
+             * @return The less-than-or-equal result between operands.
+             */
+            static constexpr const museqa_binary_operator_type((x <= y)) lte, less_equal;
 
-        /**
-         * The equality operator.
-         * @tparam X The first operand type.
-         * @tparam Y The second operand type.
-         * @param x The first operand value.
-         * @param y The second operand value.
-         * @return The equality result between operands.
-         */
-        template <typename X, typename Y = X>
-        __host__ __device__ inline static constexpr auto eq(const X& x, const Y& y) noexcept
-        -> bool { return x == y; }
+            /**
+             * The greater-than-or-equal operator.
+             * @param x The first operand value.
+             * @param y The second operand value.
+             * @return The greater-than-or-equal result between operands.
+             */
+            static constexpr const museqa_binary_operator_type((x >= y)) gte, greater_equal;
 
-        /**
-         * The addition operator.
-         * @tparam X The first operand type.
-         * @tparam Y The second operand type.
-         * @param x The first operand value.
-         * @param y The second operand value.
-         * @return The addition result between operands.
-         */
-        template <typename X, typename Y = X>
-        __host__ __device__ inline static constexpr auto add(const X& x, const Y& y) noexcept
-        -> decltype(x + y) { return x + y; }
+            /**
+             * The equality operator.
+             * @param x The first operand value.
+             * @param y The second operand value.
+             * @return The equality result between operands.
+             */
+            static constexpr const museqa_binary_operator_type((x == y)) equ, equals;
 
-        /**
-         * The subtraction operator.
-         * @tparam X The first operand type.
-         * @tparam Y The second operand type.
-         * @param x The first operand value.
-         * @param y The second operand value.
-         * @return The subtraction result between operands.
-         */
-        template <typename X, typename Y = X>
-        __host__ __device__ inline static constexpr auto sub(const X& x, const Y& y) noexcept
-        -> decltype(x - y) { return x - y; }
+            /**
+             * The addition operator.
+             * @param x The first operand value.
+             * @param y The second operand value.
+             * @return The addition result between operands.
+             */
+            static constexpr const museqa_binary_operator_type((x + y)) add;
 
-        /**
-         * The multiplication operator.
-         * @tparam X The first operand type.
-         * @tparam Y The second operand type.
-         * @param x The first operand value.
-         * @param y The second operand value.
-         * @return The multiplication result between operands.
-         */
-        template <typename X, typename Y = X>
-        __host__ __device__ inline static constexpr auto mul(const X& x, const Y& y) noexcept
-        -> decltype(x * y) { return x * y; }
+            /**
+             * The subtraction operator.
+             * @param x The first operand value.
+             * @param y The second operand value.
+             * @return The subtraction result between operands.
+             */
+            static constexpr const museqa_binary_operator_type((x - y)) sub;
 
-        /**
-         * The division operator.
-         * @tparam X The first operand type.
-         * @tparam Y The second operand type.
-         * @param x The first operand value.
-         * @param y The second operand value.
-         * @return The division result between operands.
-         */
-        template <typename X, typename Y = X>
-        __host__ __device__ inline static constexpr auto div(const X& x, const Y& y) noexcept
-        -> decltype(x / y) { return x / y; }
+            /**
+             * The multiplication operator.
+             * @param x The first operand value.
+             * @param y The second operand value.
+             * @return The multiplication result between operands.
+             */
+            static constexpr const museqa_binary_operator_type((x * y)) mul;
 
-        /**
-         * The modulo operator.
-         * @tparam X The first operand type.
-         * @tparam Y The second operand type.
-         * @param x The first operand value.
-         * @param y The second operand value.
-         * @return The modulo result between operands.
-         */
-        template <typename X, typename Y = X>
-        __host__ __device__ inline static constexpr auto mod(const X& x, const Y& y) noexcept
-        -> decltype(x % y) { return x % y; }
+            /**
+             * The division operator.
+             * @param x The first operand value.
+             * @param y The second operand value.
+             * @return The division result between operands.
+             */
+            static constexpr const museqa_binary_operator_type((x / y)) div;
 
-        /**
-         * The minimum operator.
-         * @tparam X The first operand type.
-         * @tparam Y The second operand type.
-         * @param x The first operand value.
-         * @param y The second operand value.
-         * @return The minimum between the operands.
-         */
-        template <typename X>
-        __host__ __device__ inline static constexpr auto min(const X& x, const X& y) noexcept
-        -> const X& { return x <= y ? x : y; }
+            /**
+             * The modulo operator.
+             * @param x The first operand value.
+             * @param y The second operand value.
+             * @return The modulo result between operands.
+             */
+            static constexpr const museqa_binary_operator_type((x % y)) mod;
 
-        /**
-         * The maximum operator.
-         * @tparam X The first operand type.
-         * @tparam Y The second operand type.
-         * @param x The first operand value.
-         * @param y The second operand value.
-         * @return The maximum between the operands.
-         */
-        template <typename X>
-        __host__ __device__ inline static constexpr auto max(const X& x, const X& y) noexcept
-        -> const X& { return x >= y ? x : y; }
+            /**
+             * The minimum operator.
+             * @param x The first operand value.
+             * @param y The second operand value.
+             * @param z The list of other operand values.
+             * @return The minimum between the operands.
+             */
+            static constexpr const struct {
+                template <typename T>
+                __host__ __device__ inline constexpr auto operator()(const T& x) const
+                noexcept -> const T& { return x; }
 
-        /**#@+
-         * Checks whether all given values are truth-y.
-         * @tparam Y The given parameters' types.
-         * @param x The first parameter in line to be checked.
-         * @param y The list of following parameters to be checked.
-         * @return Are all given values truth-y?
-         */
-        __host__ __device__ inline static constexpr auto all() noexcept
-        -> bool { return true; }
+                template <typename T, typename ...U>
+                __host__ __device__ inline constexpr auto operator()(const T& x, const T& y, const U&... z) const
+                noexcept -> const T& { return operator()(x <= y ? x : y, z...); }
+            } min;
 
-        template <typename ...Y>
-        __host__ __device__ inline static constexpr auto all(bool x, Y&&... y) noexcept
-        -> bool { return x && all(y...); }
-        /**#@-*/
+            /**
+             * The maximum operator.
+             * @param x The first operand value.
+             * @param y The second operand value.
+             * @param z The list of other operand values.
+             * @return The maximum between the operands.
+             */
+            static constexpr const struct {
+                template <typename T>
+                __host__ __device__ inline constexpr auto operator()(const T& x) const
+                noexcept -> const T& { return x; }
 
-        /**#@+
-         * Checks whether at least one of the given values is truth-y.
-         * @tparam Y The given parameters' types.
-         * @param x The first parameter in line to be checked.
-         * @param y The list of following parameters to be checked.
-         * @return Is there at least one given value that is truth-y?
-         */
-        __host__ __device__ inline static constexpr auto any() noexcept
-        -> bool { return false; }
+                template <typename T, typename ...U>
+                __host__ __device__ inline constexpr auto operator()(const T& x, const T& y, const U&... z) const
+                noexcept -> const T& { return operator()(x >= y ? x : y, z...); }
+            } max;
 
-        template <typename ...Y>
-        __host__ __device__ inline static constexpr auto any(bool x, Y&&... y) noexcept
-        -> bool { return x || any(y...); }
-        /**#@-*/
+            /**
+             * The all-truthy validation operator.
+             * @param x The first parameter in line to be checked.
+             * @param z The list of following parameters to be checked.
+             * @return Are all given values truthy?
+             */
+            static constexpr const struct {
+                __host__ __device__ inline constexpr auto operator()() const
+                noexcept -> bool { return true; }
 
-        /**
-         * Checks whether none of the given values is truth-y.
-         * @tparam X The given parameters' types.
-         * @param x The list of parameters to be checked.
-         * @return Are all given values false-y?
-         */
-        template <typename ...X>
-        __host__ __device__ inline static constexpr auto none(X&&... x) noexcept
-        -> bool { return !any(x...); }
+                template <typename ...T>
+                __host__ __device__ inline constexpr auto operator()(bool x, T&&... z) const
+                noexcept -> bool { return x && operator()(z...); }
+            } all;
+
+            /**
+             * The any-truthy validation operator.
+             * @param x The first parameter in line to be checked.
+             * @param z The list of following parameters to be checked.
+             * @return Is there at least one given value that is truth-y?
+             */
+            static constexpr const struct {
+                __host__ __device__ inline constexpr auto operator()() const
+                noexcept -> bool { return false; }
+
+                template <typename ...T>
+                __host__ __device__ inline constexpr auto operator()(bool x, T&&... z) const
+                noexcept -> bool { return x || operator()(z...); }
+            } any;
+
+            /**
+             * The no-truthy validation operator.
+             * @param z The list of parameters to be checked.
+             * @return Are all given values false-y?
+             */
+            static constexpr const struct {
+                template <typename ...T>
+                __host__ __device__ inline constexpr auto operator()(T&&... z) const
+                noexcept -> bool { return !any(z...); }
+            } none;
+        }
+
+        #undef museqa_binary_operator_type
     }
 }

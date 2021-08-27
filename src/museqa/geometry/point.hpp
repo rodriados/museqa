@@ -145,7 +145,7 @@ namespace museqa
         __host__ __device__ inline constexpr double distance(const point<D, T>& a, const point<D, U>& b) noexcept
         {
             return sqrt(utility::foldl(
-                utility::add<double>, 0.0
+                utility::add, double(0)
               , utility::zipwith(
                     [](const T& a, const U& b) { return pow(b - a, 2.0); }
                   , utility::tie(a.value)

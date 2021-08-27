@@ -149,8 +149,8 @@ namespace museqa
         ) noexcept
         {
             return utility::foldl(
-                utility::andl<bool>, true
-              , utility::zipwith(utility::eq<T, U>, utility::tie(a.value), utility::tie(b.value))
+                utility::logic_and, true
+              , utility::zipwith(utility::equals, utility::tie(a.value), utility::tie(b.value))
             );
         }
 

@@ -68,7 +68,7 @@ namespace museqa
         __host__ __device__ inline constexpr auto operator+(const vector<D, T>& a, const vector<D, U>& b) noexcept
         -> vector<D, decltype(utility::add(a[0], b[0]))>
         {
-            return utility::zipwith(utility::add<T, U>, utility::tie(a.value), utility::tie(b.value));
+            return utility::zipwith(utility::add, utility::tie(a.value), utility::tie(b.value));
         }
 
         /**
@@ -84,7 +84,7 @@ namespace museqa
         __host__ __device__ inline constexpr auto operator-(const vector<D, T>& a, const vector<D, U>& b) noexcept
         -> vector<D, decltype(utility::sub(a[0], b[0]))>
         {
-            return utility::zipwith(utility::sub<T, U>, utility::tie(a.value), utility::tie(b.value));
+            return utility::zipwith(utility::sub, utility::tie(a.value), utility::tie(b.value));
         }
 
         /**
@@ -100,7 +100,7 @@ namespace museqa
         __host__ __device__ inline constexpr auto operator*(const vector<D, T>& v, const S& scalar) noexcept
         -> vector<D, decltype(utility::mul(v[0], scalar))>
         {
-            return utility::apply(utility::mul<T, S>, utility::tie(v.value), scalar);
+            return utility::apply(utility::mul, utility::tie(v.value), scalar);
         }
 
         /**
@@ -133,8 +133,8 @@ namespace museqa
         -> decltype(utility::mul(a[0], b[0]))
         {
             return utility::foldl(
-                utility::add<decltype(utility::mul(a[0], b[0]))>, 0
-              , utility::zipwith(utility::mul<T, U>, utility::tie(a.value), utility::tie(b.value))
+                utility::add, 0
+              , utility::zipwith(utility::mul, utility::tie(a.value), utility::tie(b.value))
             );
         }
 
@@ -163,7 +163,7 @@ namespace museqa
         template <size_t D, typename T>
         __host__ __device__ inline constexpr auto length(const vector<D, T>& v) noexcept -> double
         {
-            return sqrt(utility::foldl(utility::add<double>, 0.0, utility::apply(pow, utility::tie(v.value), 2.0)));
+            return sqrt(utility::foldl(utility::add, 0.0, utility::apply(pow, utility::tie(v.value), 2.0)));
         }
 
         /**
