@@ -848,7 +848,7 @@ class fmt::formatter<museqa::utility::tuple<T...>>
      * @return The processed and evaluated parsing context.
      */
     template <typename C>
-    constexpr auto parse(C& ctx) -> decltype(ctx.begin())
+    constexpr auto parse(C& ctx) const -> decltype(ctx.begin())
     {
         return ctx.begin();
     }
@@ -861,7 +861,7 @@ class fmt::formatter<museqa::utility::tuple<T...>>
      * @return The formatting context instance.
      */
     template <size_t ...I, typename F>
-    auto format(const museqa::utility::tuple<museqa::utility::indexer<I...>, T...>& tuple, F& ctx)
+    auto format(const museqa::utility::tuple<museqa::utility::indexer<I...>, T...>& tuple, F& ctx) const
     -> decltype(ctx.out())
     {
         std::string args[] = {fmt::format("{}", tuple.template get<I>())...};

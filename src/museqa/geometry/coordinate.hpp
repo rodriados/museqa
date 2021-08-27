@@ -226,7 +226,7 @@ class fmt::formatter<museqa::geometry::coordinate<D, T>>
      * @return The processed and evaluated parsing context.
      */
     template <typename C>
-    auto parse(C& ctx) -> decltype(ctx.begin())
+    constexpr auto parse(C& ctx) const -> decltype(ctx.begin())
     {
         return ctx.begin();
     }
@@ -239,7 +239,7 @@ class fmt::formatter<museqa::geometry::coordinate<D, T>>
      * @return The formatting context instance.
      */
     template <typename F>
-    auto format(const target_type& coordinate, F& ctx) -> decltype(ctx.out())
+    auto format(const target_type& coordinate, F& ctx) const -> decltype(ctx.out())
     {
         return fmt::format_to(ctx.out(), "({})", fmt::join(coordinate.value, coordinate.value + count, ", "));
     }

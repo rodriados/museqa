@@ -298,7 +298,7 @@ class fmt::formatter<museqa::memory::buffer<T>>
      * @return The processed and evaluated parsing context.
      */
     template <typename P>
-    constexpr auto parse(P& ctx) -> decltype(ctx.begin())
+    constexpr auto parse(P& ctx) const -> decltype(ctx.begin())
     {
         return ctx.begin();
     }
@@ -311,7 +311,7 @@ class fmt::formatter<museqa::memory::buffer<T>>
      * @return The formatting context instance.
      */
     template <typename F>
-    auto format(const target_type& buffer, F& ctx) -> decltype(ctx.out())
+    auto format(const target_type& buffer, F& ctx) const -> decltype(ctx.out())
     {
         return fmt::format_to(ctx.out(), "[{}]", fmt::join(buffer.begin(), buffer.end(), ", "));
     }
