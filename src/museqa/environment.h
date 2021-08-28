@@ -45,7 +45,7 @@
  * codebase is written in C++, we must check whether its available or not.
  */
 #if !defined(__cplusplus) || __cplusplus < 201103L
-  #error "This software requires a C++11 enabled compiler."
+  #error "This software requires at least a C++11 enabled compiler."
 #else
   #define MUSEQA_CPP __cplusplus
 #endif
@@ -154,5 +154,15 @@
 #if defined(MUSEQA_PRODUCTION) || defined(MUSEQA_RUNTIME_DEVICE)
   #if !defined(MUSEQA_UNSAFE)
     #define MUSEQA_UNSAFE 1
+  #endif
+#endif
+
+/*
+ * Determines features that must be disabled depending on the current language version
+ * available for compilation.
+ */
+#if MUSEQA_CPP < 201402L
+  #if !defined(MUSEQA_AVOID_REFLECTION)
+    #define MUSEQA_AVOID_REFLECTION
   #endif
 #endif
