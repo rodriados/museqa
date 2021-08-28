@@ -39,7 +39,7 @@ namespace museqa
         /**
          * Represents a simple generic geometric vector in a D-dimensional space.
          * @tparam D The vector's dimensionality.
-         * @tparam T The vector's dimensions' type.
+         * @tparam T The vector's coordinates' type.
          * @since 1.0
          */
         template <size_t D, typename T = int64_t>
@@ -51,6 +51,16 @@ namespace museqa
 
             using geometry::point<D, T>::point;
 
+            /**
+             * Instantiates a new vector from a point instance.
+             * @tparam U The foreign point's coordinates' type.
+             * @param point The foreign point instance to create a new vector from.
+             */
+            template <typename U>
+            __host__ __device__ inline constexpr vector(const geometry::point<D, U>& point) noexcept
+              : geometry::point<D, T> {point}
+            {}
+
             __host__ __device__ inline vector& operator=(const vector&) noexcept = default;
             __host__ __device__ inline vector& operator=(vector&&) noexcept = default;
         };
@@ -58,8 +68,8 @@ namespace museqa
         /**
          * The operator for the sum of two vectors.
          * @tparam D The vectors' dimensionality.
-         * @tparam T The first vector's dimensions type.
-         * @tparam U The second vector's dimensions type.
+         * @tparam T The first vector's coordinates' type.
+         * @tparam U The second vector's coordinates' type.
          * @param a The first vector's instance.
          * @param b The second vector's instance.
          * @return The resulting vector sum.
@@ -74,8 +84,8 @@ namespace museqa
         /**
          * The operator for the subtraction of two vectors.
          * @tparam D The vectors' dimensionality.
-         * @tparam T The first vector's dimensions type.
-         * @tparam U The second vector's dimensions type.
+         * @tparam T The first vector's coordinates' type.
+         * @tparam U The second vector's coordinates' type.
          * @param a The first vector's instance.
          * @param b The second vector's instance.
          * @return The resulting vector subtraction.
@@ -90,7 +100,7 @@ namespace museqa
         /**
          * The operator for a vector's scalar product.
          * @tparam D The vector's dimensionality.
-         * @tparam T The vector's dimensions type.
+         * @tparam T The vector's coordinates' type.
          * @tparam S The scalar type.
          * @param v The vector's instance.
          * @param scalar The scalar value.
@@ -107,7 +117,7 @@ namespace museqa
          * The operator for a vector's scalar product with commutativity assumed.
          * @tparam S The scalar type.
          * @tparam D The vector's dimensionality.
-         * @tparam T The vector's dimensions type.
+         * @tparam T The vector's coordinates' type.
          * @param scalar The scalar value.
          * @param v The vector's instance.
          * @return The resulting vector.
@@ -122,8 +132,8 @@ namespace museqa
         /**
          * The operator for the dot product of two vectors.
          * @tparam D The vectors' dimensionality.
-         * @tparam T The first vector's dimensions type.
-         * @tparam U The second vector's dimensions type.
+         * @tparam T The first vector's coordinates' type.
+         * @tparam U The second vector's coordinates' type.
          * @param a The first vector's instance.
          * @param b The second vector's instance.
          * @return The resulting dot product value.
@@ -140,8 +150,8 @@ namespace museqa
 
         /**
          * The operator for the cross product of two 3-dimensional vectors.
-         * @tparam T The first vector's dimensions type.
-         * @tparam U The second vector's dimensions type.
+         * @tparam T The first vector's coordinates' type.
+         * @tparam U The second vector's coordinates' type.
          * @param a The first vector's instance.
          * @param b The second vector's instance.
          * @return The resulting vector.
@@ -156,7 +166,7 @@ namespace museqa
         /**
          * The operator for the length of a vector.
          * @tparam D The vector's dimensionality.
-         * @tparam T The vector's dimensions type.
+         * @tparam T The vector's coordinates' type.
          * @param v The vector's instance.
          * @return The resulting length value.
          */
@@ -169,7 +179,7 @@ namespace museqa
         /**
          * The operator for the normalization of a vector.
          * @tparam D The vector's dimensionality.
-         * @tparam T The vector's dimensions type.
+         * @tparam T The vector's coordinates' type.
          * @param v The vector's instance.
          * @return The resulting normalized vector.
          */
@@ -189,7 +199,7 @@ namespace museqa
      * Explicitly defines the reflector for a vector. Although a trivial type, a
      * vector cannot be automatically reflected over due to its inheritance.
      * @tparam D The vector's dimensionality.
-     * @tparam T The vector's dimensions' type.
+     * @tparam T The vector's coordinates' type.
      * @since 1.0
      */
     template <size_t D, typename T>
@@ -203,7 +213,7 @@ namespace museqa
  * Implements a string formatter for a generic vector type, thus allowing vectors
  * to be seamlessly printed as scalar types.
  * @tparam D The vector's dimensionality.
- * @tparam T The vector's dimensions' type.
+ * @tparam T The vector's coordinates' type.
  * @since 1.0
  */
 template <size_t D, typename T>
