@@ -9,7 +9,6 @@
 #include <utility>
 
 #include <museqa/utility.hpp>
-#include <museqa/utility/functor.hpp>
 
 namespace museqa
 {
@@ -23,24 +22,24 @@ namespace museqa
         class allocator
         {
           public:
-            typedef utility::functor<void(void**, size_t, size_t)> allocator_type;
-            typedef utility::functor<void(void*)> deallocator_type;
+            using allocator_type = void (*)(void**, size_t, size_t);
+            using deallocator_type = void (*)(void*);
 
           protected:
-            allocator_type m_allocator;             /// The memory allocator functor.
-            deallocator_type m_deallocator;         /// The memory deallocator functor.
+            allocator_type m_allocator = nullptr;       /// The memory allocator functor.
+            deallocator_type m_deallocator = nullptr;   /// The memory deallocator functor.
 
           public:
-            inline constexpr allocator() noexcept = default;
-            inline constexpr allocator(const allocator&) noexcept = default;
-            inline constexpr allocator(allocator&&) noexcept = default;
+            __host__ __device__ inline constexpr allocator() noexcept = default;
+            __host__ __device__ inline constexpr allocator(const allocator&) noexcept = default;
+            __host__ __device__ inline constexpr allocator(allocator&&) noexcept = default;
 
             /**
              * Instantiates a new allocator with the given functors.
              * @param allocf The allocator functor.
              * @param deallocf The deallocator functor.
              */
-            inline constexpr allocator(const allocator_type& allocf, const deallocator_type& deallocf) noexcept
+            __host__ __device__ inline constexpr allocator(allocator_type allocf, deallocator_type deallocf) noexcept
               : m_allocator {allocf}
               , m_deallocator {deallocf}
             {}
@@ -53,7 +52,7 @@ namespace museqa
              * @param deallocf The deallocator lambda.
              */
             template <typename A, typename D>
-            inline constexpr allocator(const A& allocf, const D& deallocf) noexcept
+            __host__ __device__ inline constexpr allocator(const A& allocf, const D& deallocf) noexcept
               : allocator {allocator_type {allocf}, deallocator_type {deallocf}}
             {}
 
@@ -63,12 +62,12 @@ namespace museqa
              * @param deallocf The deallocator lambda.
              */
             template <typename D>
-            inline constexpr allocator(const D& deallocf) noexcept
-              : allocator {allocator_type {}, deallocator_type {deallocf}}
+            __host__ __device__ inline constexpr allocator(const D& deallocf) noexcept
+              : allocator {nullptr, deallocator_type {deallocf}}
             {}
 
-            inline allocator& operator=(const allocator&) noexcept = default;
-            inline allocator& operator=(allocator&&) noexcept = default;
+            __host__ __device__ inline allocator& operator=(const allocator&) noexcept = default;
+            __host__ __device__ inline allocator& operator=(allocator&&) noexcept = default;
 
             /**
              * Invokes the allocator functor and allocates a given pointer.
@@ -78,7 +77,7 @@ namespace museqa
              * @return The allocated pointer.
              */
             template <typename T = void>
-            inline auto allocate(T **ptr, size_t n = 1) const -> T*
+            __host__ __device__ inline auto allocate(T **ptr, size_t n = 1) const -> T*
             {
                 using target_type = typename std::conditional<std::is_void<T>::value, char, T>::type;
                 (m_allocator)(reinterpret_cast<void**>(ptr), sizeof(target_type), n);
@@ -92,7 +91,7 @@ namespace museqa
              * @return The newly allocated pointer.
              */
             template <typename T = void>
-            inline auto allocate(size_t n = 1) const -> T*
+            __host__ __device__ inline auto allocate(size_t n = 1) const -> T*
             {
                 T *ptr;
                 return allocate<T>(&ptr, n);
@@ -104,7 +103,7 @@ namespace museqa
              * @param ptr The pointer of which memory must be freed.
              */
             template <typename T>
-            inline void deallocate(T *ptr) const
+            __host__ __device__ inline void deallocate(T *ptr) const
             {
                 (m_deallocator)(reinterpret_cast<void*>(ptr));
             }
@@ -120,7 +119,7 @@ namespace museqa
          * @return The new allocator for given type.
          */
         template <typename T>
-        inline auto allocator() noexcept
+        __host__ __device__ inline auto allocator() noexcept
         -> typename std::enable_if<!std::is_array<T>::value, memory::allocator>::type
         {
             return memory::allocator {
@@ -136,7 +135,7 @@ namespace museqa
          * @return The new allocator for given type.
          */
         template <typename T>
-        inline auto allocator() noexcept
+        __host__ __device__ inline auto allocator() noexcept
         -> typename std::enable_if<std::is_array<T>::value, memory::allocator>::type
         {
             return memory::allocator {
@@ -151,7 +150,7 @@ namespace museqa
          * @return The new generic memory allocator.
          */
         template <>
-        inline auto allocator<void>() noexcept -> memory::allocator
+        __host__ __device__ inline auto allocator<void>() noexcept -> memory::allocator
         {
             return memory::allocator {
                 [](void **ptr, size_t, size_t n) { *ptr = operator new(n); }
