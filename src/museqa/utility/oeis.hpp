@@ -22,34 +22,31 @@
 
 namespace museqa
 {
-    namespace utility
+    namespace utility::oeis
     {
-        namespace oeis
+        /**
+         * The triangular numbers sequence. This sequence's elements are equal
+         * to the sum of all integers from zero to the given index.
+         * @param n The requested sequence element's index.
+         * @return The requested sequence element.
+         * @link http://oeis.org/A000217
+         */
+        __host__ __device__ inline auto a000217(int32_t n) noexcept -> int32_t
         {
-            /**
-             * The triangular numbers sequence. This sequence's elements are equal
-             * to the sum of all integers from zero to the given index.
-             * @param n The requested sequence element's index.
-             * @return The requested sequence element.
-             * @link http://oeis.org/A000217
-             */
-            __host__ __device__ inline auto a000217(int32_t n) noexcept -> int32_t
-            {
-                return (n * (n + 1)) / 2;
-            }
+            return (n * (n + 1)) / 2;
+        }
 
-            /**
-             * The integer reverse of the triangular numbers sequence, with a zero
-             * offset. Every integer n appears exactly n times, sequentially, on
-             * this sequence.
-             * @param n The requested sequence element's index.
-             * @return The requested sequence element.
-             * @link https://oeis.org/A002024
-             */
-            __host__ __device__ inline auto a002024(int32_t n) noexcept -> int32_t
-            {
-                return floor(.5f * sqrt(n * 2));
-            }
+        /**
+         * The integer reverse of the triangular numbers sequence, with a zero
+         * offset. Every integer n appears exactly n times, sequentially, on
+         * this sequence.
+         * @param n The requested sequence element's index.
+         * @return The requested sequence element.
+         * @link https://oeis.org/A002024
+         */
+        __host__ __device__ inline auto a002024(int32_t n) noexcept -> int32_t
+        {
+            return floor(.5f * sqrt(n * 2));
         }
     }
 
