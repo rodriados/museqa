@@ -44,8 +44,8 @@
  * Checks the current compiler's C++ language level. As the majority of this software's
  * codebase is written in C++, we must check whether its available or not.
  */
-#if !defined(__cplusplus) || __cplusplus < 201103L
-  #error "This software requires at least a C++11 enabled compiler."
+#if !defined(__cplusplus) || __cplusplus < 201703L
+  #error "This software requires at least a C++17 enabled compiler."
 #else
   #define MUSEQA_CPP __cplusplus
 #endif
