@@ -21,11 +21,25 @@ namespace museqa
      * checks and API call validations will be performed.
      * @since 1.0
      */
-  #if !defined(MUSEQA_UNSAFE)
-    enum : bool { safe = true };
-  #else
-    enum : bool { safe = false };
-  #endif
+    enum : bool {
+      #if !defined(MUSEQA_UNSAFE)
+        safe = true
+      #else
+        safe = false
+      #endif
+    };
+
+    /**
+     * Returns the type unchanged. This is useful to produce a repeating list of the
+     * given type parameter.
+     * @tpatam T The identity type.
+     * @since 1.0
+     */
+    template <typename T, size_t = 0>
+    struct identity
+    {
+        using type = T;
+    };
 
     /**
      * A general memory storage container.
@@ -61,13 +75,4 @@ namespace museqa
           , typename std::remove_reference<T>::type
           , typename std::remove_extent<T>::type
         >::type;
-
-    /**
-     * Returns the type unchanged. This is useful to produce a repeating list of the
-     * given type parameter.
-     * @tpatam T The identity type.
-     * @since 1.0
-     */
-    template <typename T, size_t = 0>
-    using identity = T;
 }
