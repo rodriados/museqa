@@ -9,16 +9,11 @@
 #include <string>
 #include <utility>
 
-/*
- * Definition of CUDA function flags for host code, so we don't need to care about
- * which compiler is working on the file when using these flags.
- */
-#if !defined(__host__) && !defined(__device__)
-  #define __host__
-  #define __device__
-#endif
+#include <museqa/environment.h>
 
-namespace museqa::utility
+MUSEQA_BEGIN_NAMESPACE
+
+namespace utility
 {
     /**
      * Parses the given string value into any other generic type.
@@ -104,3 +99,5 @@ namespace museqa::utility
         return target;
     }
 }
+
+MUSEQA_END_NAMESPACE
