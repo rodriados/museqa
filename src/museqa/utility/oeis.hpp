@@ -18,11 +18,13 @@
 #include <cmath>
 #include <cstdint>
 
-#include <museqa/utility.hpp>
+#include <museqa/environment.h>
 
-namespace museqa
+MUSEQA_BEGIN_NAMESPACE
+
+namespace utility
 {
-    namespace utility::oeis
+    inline namespace oeis
     {
         /**
          * The triangular numbers sequence. This sequence's elements are equal
@@ -49,6 +51,6 @@ namespace museqa
             return floor(.5f * sqrt(n * 2));
         }
     }
-
-    namespace oeis = utility::oeis;
 }
+
+MUSEQA_END_NAMESPACE
