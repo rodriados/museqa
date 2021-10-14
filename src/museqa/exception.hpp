@@ -1,42 +1,30 @@
 /**
  * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
- * @file A base class for generic exception types and assertion implementation.
+ * @file A base class for all generic exception types.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018-present Rodrigo Siqueira
  */
 #pragma once
 
 #include <string>
-#include <utility>
 #include <exception>
 
-#include <museqa/utility.hpp>
 #include <museqa/environment.h>
+#include <museqa/thirdparty/fmtlib.h>
 
-#if defined(MUSEQA_COMPILER_NVCC)
-  #pragma push
-  #pragma diag_suppress = unrecognized_gcc_pragma
-#endif
+MUSEQA_BEGIN_NAMESPACE
 
-#include <fmt/format.h>
-
-#if defined(MUSEQA_COMPILER_NVCC)
-  #pragma pop
-#endif
-
-namespace museqa
+/**
+ * Represents an exception that can be thrown and propagated through the code carrying
+ * a message about the error that was raised.
+ * @since 1.0
+ */
+class exception : public std::exception
 {
-    /**
-     * Represents an exception that can be thrown and propagated through the code
-     * carrying an error message.
-     * @since 1.0
-     */
-    class exception : public std::exception
-    {
-      private:
-        const std::string m_msg;        /// The wrapped exception's message.
+    private:
+        const std::string m_msg;
 
-      public:
+    public:
         inline exception() = delete;
         inline exception(const exception&) = default;
         inline exception(exception&&) = default;
@@ -49,6 +37,7 @@ namespace museqa
           : m_msg {msg}
         {}
 
+      #if !defined(MUSEQA_AVOID_FMTLIB)
         /**
          * Builds a new exception instance.
          * @tparam T The exception's message format parameter types.
@@ -59,6 +48,7 @@ namespace museqa
         inline explicit exception(const std::string& fmtstr, T&&... params)
           : exception {fmt::format(fmtstr, params...)}
         {}
+      #endif
 
         inline virtual ~exception() noexcept = default;
 
@@ -73,31 +63,6 @@ namespace museqa
         {
             return m_msg.c_str();
         }
-    };
+};
 
-    /**
-     * Checks whether given a condition is met, and throws an exception otherwise.
-     * This function acts just like an assertion, but throwing our own exception.
-     * @tparam E The exception type to be raised in case of error.
-     * @tparam T The exception's parameters' types.
-     * @param condition The condition that must be evaluated as true.
-     * @param params The assertion exception's parameters.
-     */
-    template <typename E = museqa::exception, typename ...T>
-    __host__ __device__ inline void ensure(bool condition, T&&... params) noexcept(!safe)
-    {
-        static_assert(std::is_base_of<museqa::exception, E>::value, "only exception-like types are throwable");
-
-        #if !defined(MUSEQA_UNSAFE)
-            #if defined(MUSEQA_COMPILER_GNUC)
-                if (__builtin_expect(!condition, 0)) {
-                    throw E {std::forward<decltype(params)>(params)...};
-                }
-            #else
-                if (!condition) {
-                    throw E {std::forward<decltype(params)>(params)...};
-                }
-            #endif
-        #endif
-    }
-}
+MUSEQA_END_NAMESPACE

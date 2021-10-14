@@ -22,7 +22,7 @@ MUSEQA_BEGIN_NAMESPACE
  * @since 1.0
  */
 enum : bool {
-  #if !defined(MUSEQA_UNSAFE)
+  #if !defined(MUSEQA_MODE_UNSAFE)
     safe = true
   #else
     safe = false
@@ -34,7 +34,7 @@ enum : bool {
  * safe mode, but that will not perform checks when safe mode is disabled.
  * @since 1.0
  */
-#define __museqasafe noexcept(!museqa::safe)
+#define __museqasafe__ noexcept(!museqa::safe)
 
 /**
  * Returns the type unchanged. This is useful to produce a repeating list of the
