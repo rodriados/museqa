@@ -10,9 +10,12 @@
 #include <cstdint>
 #include <utility>
 
+#include <museqa/environment.h>
 #include <museqa/utility.hpp>
 
-namespace museqa::utility
+MUSEQA_BEGIN_NAMESPACE
+
+namespace utility
 {
     /**
      * A tuple represents an indexable sequential list of elements of possibly
@@ -856,6 +859,8 @@ namespace museqa::utility
         return tuple(lambda(detail::get<I>(a), detail::get<I>(b))...);
     }
 }
+
+MUSEQA_END_NAMESPACE
 
 /**
  * Informs the size of a generic tuple, allowing it to be deconstructed.
