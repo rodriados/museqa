@@ -25,7 +25,7 @@ MUSEQA_DISABLE_GCC_WARNING_BEGIN("-Wattributes")
 #if defined(__has_cpp_attribute) && __has_cpp_attribute(unlikely)
   #define __museqaunlikely__(condition)                                         \
     ((condition)) [[unlikely]]
-#elif MUSEQA_HOST_COMPILER == MUSEQA_HOST_COMPILER_GCC || MUSEQA_HOST_COMPILER == MUSEQA_HOST_COMPILER_CLANG
+#elif MUSEQA_HOST_COMPILER == MUSEQA_HOST_COMPILER_GCC
   #define __museqaunlikely__(condition)                                         \
     (__builtin_expect((condition), 0))
 #else

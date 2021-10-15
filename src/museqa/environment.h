@@ -56,7 +56,7 @@
  * Should it not be compatible, then we emit a warning but try compiling anyway.
  */
 #if !defined(MUSEQA_IGNORE_COMPILER_CHECK) && MUSEQA_BUILD == MUSEQA_BUILD_PRODUCTION
-  #if MUSEQA_HOST_COMPILER != MUSEQA_HOST_COMPILER_GCC
+  #if MUSEQA_HOST_COMPILER == MUSEQA_HOST_COMPILER_UNKNOWN
     #warning This software has not been tested with the current compiler.
   #endif
 #endif
