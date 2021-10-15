@@ -6,8 +6,6 @@
  */
 #pragma once
 
-#if !defined(MUSEQA_AVOID_REFLECTION)
-
 /*
  * The Great Type Loophole (C++14)
  * Initial implementation by Alexandr Poltavsky, http://alexpolt.github.io
@@ -23,56 +21,52 @@
  * Note: CWG agreed that such techniques should be ill-formed, although the mechanism
  * for prohibiting them is as yet undetermined.
  */
-#include <museqa/environment.h>
-
-#if defined(MUSEQA_COMPILER_GCC)
-  #pragma GCC diagnostic push
-  #pragma GCC diagnostic ignored "-Wnon-template-friend"
-#endif
-
-/*
- * As the technique used for implementing the loophole that allows us to reflect
- * over the structures is only available from C++14 onwards, we must check whether
- * the current compilation supports it.
- */
-#if MUSEQA_CPP >= 201402L
-
 #include <cstddef>
 #include <cstdint>
 #include <utility>
 
 #include <museqa/utility.hpp>
 #include <museqa/utility/tuple.hpp>
-#include <museqa/utility/indexer.hpp>
+#include <museqa/environment.h>
 
-namespace museqa
+#if !defined(MUSEQA_AVOID_REFLECTION)
+
+/*
+ * As we are exploiting some "obscure" behaviors of the language, and using some
+ * tricks that upset compilers, we need to disable some warnings in order to force
+ * the compilation to take place without any problems.
+ */
+MUSEQA_DISABLE_NVCC_WARNING_BEGIN(1301)
+MUSEQA_DISABLE_GCC_WARNING_BEGIN("-Wnon-template-friend")
+
+MUSEQA_BEGIN_NAMESPACE
+
+namespace utility
 {
-    namespace utility
-    {
-        /**
-         * Reflects over the target data type, that is it extracts information about
-         * the member properties of the target type.
-         * @tparam T The target data type to be introspected.
-         * @since 1.0
-         */
-        template <typename T>
-        class reflector;
+    /**
+     * Reflects over the target data type, that is it extracts information about
+     * the member properties of the target type.
+     * @tparam T The target data type to be introspected.
+     * @since 1.0
+     */
+    template <typename T>
+    class reflector;
 
-        /**
-         * Extracts and manages references to each member property of the target
-         * type, thus numbering each of the target type's property members and allowing
-         * them to be directly accessed or updated.
-         * @tparam T The target data type to be introspected.
-         * @since 1.0
-         */
-        template <typename T>
-        class reflection : public reflector<T>::reference_tuple
-        {
-          protected:
+    /**
+     * Extracts and manages references to each member property of the target type,
+     * thus enumerating each of the target type's property members and allowing
+     * them to be directly accessed or updated.
+     * @tparam T The target data type to be introspected.
+     * @since 1.0
+     */
+    template <typename T>
+    class reflection : public reflector<T>::reference_tuple
+    {
+        protected:
             typedef reflector<T> reflector_type;
             typedef typename reflector_type::reference_tuple underlying_tuple;
 
-          public:
+        public:
             __host__ __device__ inline reflection() noexcept = delete;
             __host__ __device__ inline reflection(const reflection&) noexcept = default;
             __host__ __device__ inline reflection(reflection&&) noexcept = default;
@@ -88,7 +82,7 @@ namespace museqa
             __host__ __device__ inline reflection& operator=(const reflection&) = default;
             __host__ __device__ inline reflection& operator=(reflection&&) = default;
 
-          private:
+        private:
             /**
              * Retrieves references to the properties of a reflected instance.
              * @tparam U The list of property member types.
@@ -97,157 +91,163 @@ namespace museqa
              * @return The new reference tuple instance.
              */
             template <typename ...U, size_t ...I>
-            __host__ __device__ inline static auto extract(tuple<indexer<I...>, U...>&, T& target) noexcept
-            -> underlying_tuple
+            __host__ __device__ inline static auto extract(
+                tuple<identity<std::index_sequence<I...>>, U...>&, T& target
+            ) noexcept -> underlying_tuple
             {
                 return {reflector_type::template member<I>(target)...};
             }
-        };
+    };
 
-        namespace impl
-        {
-            /**
-             * Tags a member property type to an index for overload resolution.
-             * @tparam T The target type for reflection processing.
-             * @tparam N The index of extracted property member type.
-             * @since 1.0
-             */
-            template <typename T, size_t N>
-            struct tag
-            {
-                friend auto latch(tag<T, N>) noexcept;
-            };
-
-            /**
-             * Injects a friend function to couple a property type to its index.
-             * @tparam T The target type for reflection processing.
-             * @tparam U The extracted property type.
-             * @param N The index of extracted property member type.
-             * @since 1.0
-             */
-            template <typename T, typename U, size_t N>
-            struct injector
-            {
-                /**
-                 * Binds the extracted member type to its index within the target
-                 * reflected type. This function does not aim to have its concrete
-                 * return value used, but only its return type.
-                 * @return The extracted type bound to the member index.
-                 */
-                friend inline auto latch(tag<T, N>) noexcept
-                {
-                    return typename std::remove_all_extents<U>::type {};
-                }
-            };
-
-            /**
-             * Decoy type responsible for pretending to be a type instance required
-             * to build the target reflection type and latching the required type
-             * into the injector, so that it can be retrieved later on.
-             * @tparam T The target type for reflection processing.
-             * @tparam N The index of property member type to extract.
-             * @since 1.0
-             */
-            template <typename T, size_t N>
-            struct decoy
-            {
-                /**
-                 * Injects the extracted member type into a latch if it has not
-                 * yet been previously done so.
-                 * @tparam U The extracted property member type.
-                 * @tparam M The index of the property member being processed.
-                 */
-                template <typename U, size_t M>
-                static constexpr auto inject(...) -> injector<T, U, M>;
-
-                /**
-                 * Validates whether the type member being processed has already
-                 * been reflected over. If yes, avoids latch redeclaration.
-                 * @tparam M The index of the property member being processed.
-                 */
-                template <typename, size_t M>
-                static constexpr auto inject(int) -> decltype(latch(tag<T, M>{}));
-
-                /**
-                 * Morphs the decoy into the required type for constructing the
-                 * target reflection type and injects it into the type latch.
-                 * @tparam U The type to morph the decoy into.
-                 */
-                template <typename U, size_t = sizeof(inject<U, N>(0))>
-                constexpr operator U&() const noexcept;
-            };
-
-            /**#@+
-             * Recursively counts the number of property members in the target type
-             * of a reflection processing.
-             * @tparam T The target type for reflection processing.
-             * @return The total number of members within the target type.
-             */
-            template <typename T, size_t ...I>
-            inline constexpr auto count(...) noexcept
-            -> size_t { return sizeof...(I) - 1; }
-
-            template <typename T, size_t ...I, size_t = sizeof(T {decoy<T, I>{}...})>
-            inline constexpr auto count(int) noexcept
-            -> size_t { return count<T, I..., sizeof...(I)>(0); }
-            /**#@-*/
-
-            /**#@+
-             * Extracts the types of the property members within the target reflection
-             * object type into an instantiable tuple.
-             * @tparam T The target type for reflection processing.
-             * @return The tuple of extracted types.
-             */
-            template <typename T, size_t ...I, typename = decltype(T {decoy<T, I>{}...})>
-            inline constexpr auto loophole(indexer<I...>) noexcept
-            -> tuple<decltype(latch(tag<T, I>{}))...>;
-
-            template <typename T>
-            inline constexpr auto loophole() noexcept
-            -> decltype(loophole<T>(typename indexer<count<T>(0)>::type {}));
-            /**#@-*/
-
-            /**
-             * Transforms each member type of a tuple into its reference type.
-             * @tparam T The tuple's type list.
-             */
-            template <typename ...T>
-            inline constexpr auto reference(tuple<T...>) noexcept
-            -> tuple<T&...>;
-
-            /**
-             * Transforms each member type of a tuple into an aligned storage.
-             * @tparam T The tuple's type list.
-             */
-            template <typename ...T>
-            inline constexpr auto storage(tuple<T...>) noexcept
-            -> tuple<storage<sizeof(T), alignof(T)>...>;
-        }
-
+    namespace detail
+    {
         /**
-         * Reflects over an object type and extracts information about its internal
-         * property members, transforming it into instantiable tuples.
-         * @tparam T The type to be analyzed.
+         * Tags a member property type to an index for overload resolution.
+         * @tparam T The target type for reflection processing.
+         * @tparam N The index of extracted property member type.
          * @since 1.0
          */
-        template <typename T>
-        class reflector
+        template <typename T, size_t N>
+        struct tag
         {
-            static_assert(!std::is_union<T>::value, "union types cannot be reflected");
-            static_assert(std::is_trivial<T>::value, "reflected type must be trivial");
+            friend auto latch(tag<T, N>) noexcept;
+        };
 
-          private:
+        /**
+         * Injects a friend function to couple a property type to its index.
+         * @tparam T The target type for reflection processing.
+         * @tparam U The extracted property type.
+         * @param N The index of extracted property member type.
+         * @since 1.0
+         */
+        template <typename T, typename U, size_t N>
+        struct injector
+        {
+            /**
+             * Binds the extracted member type to its index within the target reflection
+             * type. This function does not aim to have its concrete return value
+             * used, but only its return type.
+             * @return The extracted type bound to the member index.
+             */
+            friend inline auto latch(tag<T, N>) noexcept
+            {
+                return typename std::remove_all_extents<U>::type {};
+            }
+        };
+
+        /**
+         * Decoy type responsible for pretending to be a type instance required
+         * to build the target reflection type and latching the required type into
+         * the injector, so that it can be retrieved later on.
+         * @tparam T The target type for reflection processing.
+         * @tparam N The index of property member type to extract.
+         * @since 1.0
+         */
+        template <typename T, size_t N>
+        struct decoy
+        {
+            /**
+             * Injects the extracted member type into a latch if it has not yet
+             * been previously done so.
+             * @tparam U The extracted property member type.
+             * @tparam M The index of the property member being processed.
+             */
+            template <typename U, size_t M>
+            static constexpr auto inject(...) -> injector<T, U, M>;
+
+            /**
+             * Validates whether the type member being processed has already been
+             * reflected over. If yes, avoids latch redeclaration.
+             * @tparam M The index of the property member being processed.
+             */
+            template <typename, size_t M>
+            static constexpr auto inject(int) -> decltype(latch(tag<T, M>()));
+
+            /**
+             * Morphs the decoy into the required type for constructing the target
+             * reflection type and injects it into the type latch.
+             * @tparam U The type to morph the decoy into.
+             */
+            template <typename U, size_t = sizeof(inject<U, N>(0))>
+            constexpr operator U&() const noexcept;
+        };
+
+        /**#@+
+         * Recursively counts the number of property members in the target type
+         * of a reflection processing.
+         * @tparam T The target type for reflection processing.
+         * @return The total number of members within the target type.
+         */
+        template <typename T, size_t ...I>
+        inline constexpr auto count(...) noexcept
+        -> size_t { return sizeof...(I) - 1; }
+
+        template <typename T, size_t ...I, size_t = sizeof(T{decoy<T, I>()...})>
+        inline constexpr auto count(int) noexcept
+        -> size_t { return count<T, I..., sizeof...(I)>(0); }
+        /**#@-*/
+
+        /**
+         * Extracts the types of the property members within the target reflection
+         * object type into an instantiable tuple.
+         * @tparam T The target type for reflection processing.
+         * @return The tuple of extracted types.
+         */
+        template <typename T, size_t ...I, typename = decltype(T{decoy<T, I>()...})>
+        inline constexpr auto loophole(std::index_sequence<I...>) noexcept
+        -> tuple<decltype(latch(tag<T, I>()))...>;
+
+        /**
+         * Retrieves the tuple of extracted property member types of the given target
+         * type to be reflected upon.
+         * @tparam T The target type for reflecting upon.
+         * @return The tuple of extracted types.
+         */
+        template <typename T>
+        inline constexpr auto loophole() noexcept
+        -> decltype(loophole<T>(std::make_index_sequence<count<T>(0)>()));
+
+        /**
+         * Transforms each member type of a tuple into its reference type.
+         * @tparam T The tuple's type list.
+         */
+        template <typename ...T>
+        inline constexpr auto reference(tuple<T...>) noexcept
+        -> tuple<T&...>;
+
+        /**
+         * Transforms each member type of a tuple into an aligned storage.
+         * @tparam T The tuple's type list.
+         */
+        template <typename ...T>
+        inline constexpr auto storage(tuple<T...>) noexcept
+        -> tuple<museqa::storage<sizeof(T), alignof(T)>...>;
+    }
+
+    /**
+     * Reflects over an object type and extracts information about its internal
+     * property members, transforming it into instantiable tuples.
+     * @tparam T The type to be analyzed.
+     * @since 1.0
+     */
+    template <typename T>
+    class reflector
+    {
+        static_assert(!std::is_union<T>::value, "union types cannot be reflected");
+        static_assert(std::is_trivial<T>::value, "reflected type must be trivial");
+
+        private:
             template <typename A, typename B>
             using compatible = std::integral_constant<bool, sizeof(A) == sizeof(B) && alignof(A) == alignof(B)>;
 
-          public:
-            using reflection_tuple = decltype(impl::loophole<T>());
-            using reference_tuple = decltype(impl::reference(std::declval<reflection_tuple>()));
-            using storage_tuple = decltype(impl::storage(std::declval<reflection_tuple>()));
+        public:
+            using reflection_tuple = decltype(detail::loophole<T>());
+            using reference_tuple = decltype(detail::reference(std::declval<reflection_tuple>()));
+            using storage_tuple = decltype(detail::storage(std::declval<reflection_tuple>()));
 
-            static_assert(compatible<reflection_tuple, T>(), "reflection tuple is not compatible with type");
+        static_assert(compatible<reflection_tuple, T>(), "reflection tuple is not compatible with type");
 
-          public:
+        public:
             /**
              * Retrieves the number of members within the reflected type.
              * @return The number of members composing the target type.
@@ -265,7 +265,7 @@ namespace museqa
             template <size_t N>
             __host__ __device__ inline static constexpr auto offset() noexcept -> ptrdiff_t
             {
-                return offset<N>(storage_tuple {});
+                return offset<N>(storage_tuple());
             }
 
             /**
@@ -299,14 +299,31 @@ namespace museqa
             {
                 return &tuple.template get<N>().storage[0] - &tuple.template get<0>().storage[0];
             }
-        };
-    }
+    };
 }
 
-#endif
+MUSEQA_END_NAMESPACE
 
-#if defined(MUSEQA_COMPILER_GCC)
-  #pragma GCC diagnostic pop
-#endif
+/**
+ * Informs the size of a generic reflection tuple, allowing it to be deconstructed.
+ * @tparam T The target type for reflection.
+ * @since 1.0
+ */
+template <typename T>
+struct std::tuple_size<museqa::utility::reflection<T>>
+  : std::integral_constant<size_t, museqa::utility::reflection<T>::count> {};
+
+/**
+ * Retrieves the deconstruction type of a reflection tuple's element.
+ * @tparam I The index of the requested tuple element.
+ * @tparam T The target type for reflection.
+ * @since 1.0
+ */
+template <size_t I, typename T>
+struct std::tuple_element<I, museqa::utility::reflection<T>>
+  : museqa::identity<museqa::utility::tuple_element<museqa::utility::reflection<T>, I>> {};
+
+MUSEQA_DISABLE_GCC_WARNING_END("-Wnon-template-friend")
+MUSEQA_DISABLE_NVCC_WARNING_END(1301)
 
 #endif
