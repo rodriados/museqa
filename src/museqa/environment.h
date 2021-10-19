@@ -75,7 +75,7 @@
  * Determines features that must be disabled depending on the current language version
  * available for compilation.
  */
-#if MUSEQA_CPP_DIALECT < 2014
+#if MUSEQA_CPP_DIALECT < 2014 || MUSEQA_HOST_COMPILER != MUSEQA_HOST_COMPILER_GCC
   #if !defined(MUSEQA_AVOID_REFLECTION)
     #define MUSEQA_AVOID_REFLECTION
   #endif
