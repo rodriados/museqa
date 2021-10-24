@@ -8,76 +8,88 @@
 
 #include <utility>
 
+#include <museqa/environment.h>
+
 #include <museqa/utility.hpp>
+#include <museqa/utility/delegate.hpp>
 
-namespace museqa
+MUSEQA_BEGIN_NAMESPACE
+
+namespace memory
 {
-    namespace memory
+    /**
+     * Describes and manages the memory allocation and deletion routines for pointers
+     * of generic types and located in generic memory spaces.
+     * @since 1.0
+     */
+    class allocator
     {
-        /**
-         * Describes and manages the memory allocation and deallocation routines
-         * for generic variable types and memory kinds.
-         * @since 1.0
-         */
-        class allocator
-        {
-          public:
-            using allocator_type = void (*)(void**, size_t, size_t);
-            using deallocator_type = void (*)(void*);
+        public:
+            using allocator_type = utility::delegate<void, void**, size_t, size_t>;
+            using deleter_type = utility::delegate<void, void*>;
 
-          protected:
-            allocator_type m_allocator = nullptr;       /// The memory allocator functor.
-            deallocator_type m_deallocator = nullptr;   /// The memory deallocator functor.
+        protected:
+            allocator_type m_allocator {};
+            deleter_type m_deleter {};
 
-          public:
+        public:
+            /**
+             * A default specialized allocator for a pointer of the given type.
+             * @tparam T The type to be allocated.
+             * @since 1.0
+             */
+            template <typename T = void, int = 0>
+            struct builtin;
+
+        public:
             __host__ __device__ inline constexpr allocator() noexcept = default;
             __host__ __device__ inline constexpr allocator(const allocator&) noexcept = default;
             __host__ __device__ inline constexpr allocator(allocator&&) noexcept = default;
 
             /**
-             * Instantiates a new allocator with the given functors.
-             * @param allocf The allocator functor.
-             * @param deallocf The deallocator functor.
+             * Instantiates a new allocator with the given delegates.
+             * @param falloc The allocation delegate.
+             * @param fdelete The deletion delegate.
              */
-            __host__ __device__ inline constexpr allocator(allocator_type allocf, deallocator_type deallocf) noexcept
-              : m_allocator {allocf}
-              , m_deallocator {deallocf}
+            __host__ __device__ inline constexpr allocator(allocator_type falloc, deleter_type fdelete) noexcept
+              : m_allocator {falloc}
+              , m_deleter {fdelete}
             {}
 
             /**
              * Instantiates a new allocator from given lambdas.
-             * @tparam A The allocator functor lambda type.
-             * @tparam D The deallocator functor lambda type.
-             * @param allocf The allocator lambda.
-             * @param deallocf The deallocator lambda.
+             * @tparam A The allocation lambda type.
+             * @tparam D The deletion lambda type.
+             * @param falloc The allocation lambda.
+             * @param fdelete The deletion lambda.
              */
             template <typename A, typename D>
-            __host__ __device__ inline constexpr allocator(const A& allocf, const D& deallocf) noexcept
-              : allocator {allocator_type {allocf}, deallocator_type {deallocf}}
+            __host__ __device__ inline constexpr allocator(const A& falloc, const D& fdelete) noexcept
+              : allocator {allocator_type(falloc), deleter_type(fdelete)}
             {}
 
             /**
-             * Instantiates a new allocator containing only a deallocator.
-             * @tparam D The deallocator functor lambda type.
-             * @param deallocf The deallocator lambda.
+             * Instantiates a new allocator containing only a deleter.
+             * @tparam D The deletion lambda type.
+             * @param fdelete The deletion lambda.
              */
             template <typename D>
-            __host__ __device__ inline constexpr allocator(const D& deallocf) noexcept
-              : allocator {nullptr, deallocator_type {deallocf}}
+            __host__ __device__ inline constexpr allocator(const D& fdelete) noexcept
+              : allocator {nullptr, deleter_type(fdelete)}
             {}
 
             __host__ __device__ inline allocator& operator=(const allocator&) noexcept = default;
             __host__ __device__ inline allocator& operator=(allocator&&) noexcept = default;
 
             /**
-             * Invokes the allocator functor and allocates a given pointer.
+             * Invokes the allocator and allocates the given pointer.
              * @tparam T The type of pointer to allocate memory to.
              * @param ptr The target pointer to allocate memory to.
              * @param n The number of elements to allocate memory for.
-             * @return The allocated pointer.
+             * @return The newly allocated pointer.
              */
             template <typename T = void>
-            __host__ __device__ inline auto allocate(T **ptr, size_t n = 1) const -> T*
+            __host__ __device__ inline T *allocate(T **ptr, size_t n = 1) const
             {
                 using target_type = typename std::conditional<std::is_void<T>::value, char, T>::type;
                 (m_allocator)(reinterpret_cast<void**>(ptr), sizeof(target_type), n);
@@ -85,77 +97,69 @@ namespace museqa
             }
 
             /**
-             * Invokes the allocator functor for a new memory pointer.
+             * Invokes the allocator for a new memory pointer.
              * @tparam T The type of pointer to allocate memory to.
              * @param n The number of elements to allocate memory for.
              * @return The newly allocated pointer.
              */
             template <typename T = void>
-            __host__ __device__ inline auto allocate(size_t n = 1) const -> T*
+            __host__ __device__ inline T *allocate(size_t n = 1) const
             {
                 T *ptr;
                 return allocate<T>(&ptr, n);
             }
 
             /**
-             * Invokes the deallocator functor and frees a memory pointer.
-             * @tparam T The type of pointer to deallocate memory from.
+             * Invokes the deleter and frees a memory pointer.
+             * @tparam T The type of pointer to free memory from.
              * @param ptr The pointer of which memory must be freed.
              */
             template <typename T>
             __host__ __device__ inline void deallocate(T *ptr) const
             {
-                (m_deallocator)(reinterpret_cast<void*>(ptr));
+                (m_deleter)(reinterpret_cast<void*>(ptr));
             }
+    };
+}
+
+namespace factory::memory
+{
+    /**
+     * Creates an allocator for pointers of the specified type, which must have
+     * a public and well-formed default constructor.
+     * @tparam T The type of pointer to allocate memory to.
+     * @return An allocator for given type.
+     */
+    template <typename T>
+    __host__ __device__ inline constexpr auto allocator() noexcept
+    -> typename std::enable_if<
+        std::is_default_constructible<T>::value
+      , museqa::memory::allocator
+    >::type
+    {
+        return museqa::memory::allocator {
+            [](void **ptr, size_t, size_t n) { *ptr = new pure<T>[n]; }
+          , [](void *ptr) { delete[] (reinterpret_cast<pure<T>*>(ptr)); }
         };
     }
 
-    namespace factory
+    /**
+     * Creates an allocator for a void pointer, effectively allocating the requested
+     * amount of bytes in memory, without the initialization of any specific type.
+     * @return A generic type-less memory allocator.
+     */
+    template <typename T = void>
+    __host__ __device__ inline constexpr auto allocator() noexcept
+    -> typename std::enable_if<
+        std::is_void<T>::value
+      , museqa::memory::allocator
+    >::type
     {
-        /**
-         * Creates an allocator for the specified pointer type, which is not an
-         * array and has its default constructor called.
-         * @tparam T The type of pointer element to build.
-         * @return The new allocator for given type.
-         */
-        template <typename T>
-        __host__ __device__ inline auto allocator() noexcept
-        -> typename std::enable_if<!std::is_array<T>::value, memory::allocator>::type
-        {
-            return memory::allocator {
-                [](void **ptr, size_t, size_t) { *ptr = new pure<T>; }
-              , [](void *ptr) { delete (reinterpret_cast<pure<T>*>(ptr)); }
-            };
-        }
-
-        /**
-         * Creates an allocator for the specified pointer type, which has its default
-         * constructor called for each instance.
-         * @tparam T The type of pointer element to build.
-         * @return The new allocator for given type.
-         */
-        template <typename T>
-        __host__ __device__ inline auto allocator() noexcept
-        -> typename std::enable_if<std::is_array<T>::value, memory::allocator>::type
-        {
-            return memory::allocator {
-                [](void **ptr, size_t, size_t n) { *ptr = new pure<T>[n]; }
-              , [](void *ptr) { delete[] (reinterpret_cast<pure<T>*>(ptr)); }
-            };
-        }
-
-        /**
-         * Creates an allocator for a generic, untyped pointer. Due to its untypeness,
-         * the allocator does not call any constructors on the allocated memory.
-         * @return The new generic memory allocator.
-         */
-        template <>
-        __host__ __device__ inline auto allocator<void>() noexcept -> memory::allocator
-        {
-            return memory::allocator {
-                [](void **ptr, size_t, size_t n) { *ptr = operator new(n); }
-              , [](void *ptr) { operator delete(ptr); }
-            };
-        }
+        return museqa::memory::allocator {
+            [](void **ptr, size_t, size_t n) { *ptr = operator new (n); }
+          , [](void *ptr) { operator delete(ptr); }
+        };
     }
 }
+
+MUSEQA_END_NAMESPACE
