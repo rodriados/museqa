@@ -10,7 +10,6 @@
 #include <exception>
 
 #include <museqa/environment.h>
-#include <museqa/thirdparty/fmtlib.h>
 
 MUSEQA_BEGIN_NAMESPACE
 
@@ -36,19 +35,6 @@ class exception : public std::exception
         inline explicit exception(const std::string& msg)
           : m_msg {msg}
         {}
-
-      #if !defined(MUSEQA_AVOID_FMTLIB)
-        /**
-         * Builds a new exception instance.
-         * @tparam T The exception's message format parameter types.
-         * @param fmtstr The message formating string.
-         * @param params The exception message's format parameters.
-         */
-        template <typename ...T>
-        inline explicit exception(const std::string& fmtstr, T&&... params)
-          : exception {fmt::format(fmtstr, params...)}
-        {}
-      #endif
 
         inline virtual ~exception() noexcept = default;
 
