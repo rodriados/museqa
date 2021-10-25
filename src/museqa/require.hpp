@@ -23,13 +23,13 @@ MUSEQA_DISABLE_GCC_WARNING_BEGIN("-Wattributes")
  * goes as expected, the great majority of times.
  */
 #if defined(__has_cpp_attribute) && __has_cpp_attribute(unlikely)
-  #define __museqa_unlikely__(condition)                                        \
+  #define __museqaunlikely__(condition)                                        \
     ((condition)) [[unlikely]]
 #elif MUSEQA_HOST_COMPILER == MUSEQA_HOST_COMPILER_GCC
-  #define __museqa_unlikely__(condition)                                        \
+  #define __museqaunlikely__(condition)                                        \
     (__builtin_expect((condition), 0))
 #else
-  #define __museqa_unlikely__(condition)                                        \
+  #define __museqaunlikely__(condition)                                        \
     ((condition))
 #endif
 
@@ -45,12 +45,12 @@ MUSEQA_BEGIN_NAMESPACE
  * @param params The assertion exception's parameters.
  */
 template <typename E = museqa::exception, typename ...T>
-__host__ __device__ inline constexpr void ensure(bool fact, T&&... params) __museqasafe__
+__host__ __device__ inline constexpr void require(bool fact, T&&... params) __museqasafe__
 {
     static_assert(std::is_base_of<museqa::exception, E>::value, "only exception types are throwable");
 
   #if !defined(MUSEQA_MODE_UNSAFE)
-    if __museqa_unlikely__ (!fact) {
+    if __museqaunlikely__ (!fact) {
         throw E (std::forward<decltype(params)>(params)...);
     }
   #endif
@@ -58,5 +58,5 @@ __host__ __device__ inline constexpr void ensure(bool fact, T&&... params) __mus
 
 MUSEQA_END_NAMESPACE
 
-#undef __museqa_unlikely__
+#undef __museqaunlikely__
 MUSEQA_DISABLE_GCC_WARNING_END("-Wattributes")

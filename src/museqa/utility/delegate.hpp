@@ -10,7 +10,7 @@
 
 #include <museqa/environment.h>
 
-#include <museqa/assert.hpp>
+#include <museqa/require.hpp>
 #include <museqa/utility.hpp>
 #include <museqa/utility/tuple.hpp>
 
@@ -125,7 +125,7 @@ namespace utility
             template <typename ...T>
             __host__ __device__ inline constexpr decltype(auto) operator()(T&&... params) const
             {
-                museqa::ensure(!empty(), "an empty delegate cannot be invoked");
+                museqa::require(!empty(), "an empty delegate cannot be invoked");
                 return m_function (std::forward<decltype(params)>(params)...);
             }
 
