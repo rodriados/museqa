@@ -158,6 +158,15 @@ namespace memory::pointer
             }
 
             /**
+             * Swaps the wrapped pointer with another pointer wrapper instance.
+             * @param other The wrapper to swap pointers with.
+             */
+            __host__ __device__ inline constexpr void swap(wrapper& other) noexcept
+            {
+                utility::swap(m_ptr, other.m_ptr);
+            }
+
+            /**
              * Unwraps and exposes the internal pointer.
              * @return The wrapped pointer.
              */
@@ -265,6 +274,15 @@ namespace memory::pointer
             __host__ __device__ inline constexpr operator bool() const noexcept
             {
                 return (nullptr != m_ptr);
+            }
+
+            /**
+             * Swaps the wrapped pointer with another pointer wrapper instance.
+             * @param other The wrapper to swap pointers with.
+             */
+            __host__ __device__ inline constexpr void swap(wrapper& other) noexcept
+            {
+                utility::swap(m_ptr, other.m_ptr);
             }
 
             /**
