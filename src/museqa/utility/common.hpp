@@ -63,7 +63,7 @@ namespace utility
      * @param b The second variable to have its contents swapped.
      */
     template <typename T>
-    __host__ __device__ inline void swap(T& a, T& b) noexcept(
+    __host__ __device__ inline constexpr void swap(T& a, T& b) noexcept(
         std::is_nothrow_move_constructible<T>::value &&
         std::is_nothrow_move_assignable<T>::value
     ) {
@@ -80,7 +80,7 @@ namespace utility
      * @param b The second array to have its elements swapped.
      */
     template <typename T, size_t N>
-    __host__ __device__ inline void swap(T (&a)[N], T (&b)[N]) noexcept(noexcept(swap(*a, *b)))
+    __host__ __device__ inline constexpr void swap(T (&a)[N], T (&b)[N]) noexcept(noexcept(swap(*a, *b)))
     {
         for(size_t i = 0; i < N; ++i)
             swap(a[i], b[i]);

@@ -303,6 +303,38 @@ namespace memory::pointer
                 return m_ptr;
             }
     };
+
+    /**
+     * Compares the memory addresses pointed by two pointer instances.
+     * @tparam T The first pointer contents type.
+     * @tparam U The second pointer contents type.
+     * @param a The first pointer to be compared.
+     * @param b The second pointer to be compared.
+     * @return Do both pointers point to the same memory address?
+     */
+    template <typename T, typename U>
+    __host__ __device__ inline constexpr bool operator==(
+        const wrapper<T>& a
+      , const wrapper<U>& b
+    ) noexcept {
+        return static_cast<void*>(a) == static_cast<void*>(b);
+    }
+
+    /**
+     * Compares the memory addresses pointed by two pointer instances.
+     * @tparam T The first pointer contents type.
+     * @tparam U The second pointer contents type.
+     * @param a The first pointer to be compared.
+     * @param b The second pointer to be compared.
+     * @return Do both pointers point to different memory addresses?
+     */
+    template <typename T, typename U>
+    __host__ __device__ inline constexpr bool operator!=(
+        const wrapper<T>& a
+      , const wrapper<U>& b
+    ) noexcept {
+        return static_cast<void*>(a) != static_cast<void*>(b);
+    }
 }
 
 MUSEQA_END_NAMESPACE
