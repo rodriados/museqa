@@ -92,7 +92,7 @@
 #if (MUSEQA_DEVICE_COMPILER == MUSEQA_DEVICE_COMPILER_NVCC)
   #define MUSEQA_DISABLE_NVCC_WARNING_BEGIN(x)            \
     MUSEQA_EMIT_PRAGMA_CALL(push)                         \
-    MUSEQA_EMIT_PRAGMA_CALL(diag_suppress = x)
+    MUSEQA_EMIT_PRAGMA_CALL(nv_diag_suppress = x)
   #define MUSEQA_DISABLE_NVCC_WARNING_END(x)              \
     MUSEQA_EMIT_PRAGMA_CALL(pop)
 #else
