@@ -33,15 +33,6 @@ namespace memory
             deleter_type m_deleter {};
 
         public:
-            /**
-             * A default specialized allocator for a pointer of the given type.
-             * @tparam T The type to be allocated.
-             * @since 1.0
-             */
-            template <typename T = void, int = 0>
-            struct builtin;
-
-        public:
             __host__ __device__ inline constexpr allocator() noexcept = default;
             __host__ __device__ inline constexpr allocator(const allocator&) noexcept = default;
             __host__ __device__ inline constexpr allocator(allocator&&) noexcept = default;
@@ -114,7 +105,7 @@ namespace memory
              * @tparam T The type of pointer to free memory from.
              * @param ptr The pointer of which memory must be freed.
              */
-            template <typename T>
+            template <typename T = void>
             __host__ __device__ inline void deallocate(T *ptr) const
             {
                 (m_deleter)(reinterpret_cast<void*>(ptr));
