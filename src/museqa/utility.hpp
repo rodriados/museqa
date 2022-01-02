@@ -37,6 +37,13 @@ enum : bool {
 #define __museqasafe__ noexcept(!museqa::safe)
 
 /**
+ * Annotation for functions and methods that may throw exceptions when running on
+ * host code, but that are exception-free when running on device.
+ * @since 1.0
+ */
+#define __devicesafe__ noexcept(MUSEQA_RUNTIME_DEVICE)
+
+/**
  * Returns the type unchanged. This is useful to produce a repeating list of the
  * given type parameter.
  * @tpatam T The identity type.

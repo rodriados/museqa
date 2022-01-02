@@ -15,6 +15,8 @@
 
 #include <museqa/memory/pointer/exception.hpp>
 
+MUSEQA_DISABLE_NVCC_WARNING_BEGIN(815)
+
 MUSEQA_BEGIN_NAMESPACE
 
 namespace memory::pointer
@@ -338,3 +340,5 @@ namespace memory::pointer
 }
 
 MUSEQA_END_NAMESPACE
+
+MUSEQA_DISABLE_NVCC_WARNING_END(815)

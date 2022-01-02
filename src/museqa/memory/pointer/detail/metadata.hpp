@@ -43,7 +43,7 @@ namespace memory::pointer::detail
              * @param allocator The pointer's allocator.
              * @return The new pointer's metadata instance.
              */
-            inline static auto acquire(pointer_type ptr, const allocator_type& allocator) noexcept -> metadata *
+            inline static metadata *acquire(pointer_type ptr, const allocator_type& allocator) noexcept
             {
                 return new metadata {ptr, allocator};
             }
@@ -53,10 +53,13 @@ namespace memory::pointer::detail
              * @param meta The metadata instance of pointer to be acquired.
              * @return The acquired metadata pointer.
              */
-            inline static auto acquire(metadata *meta) noexcept -> metadata *
+            __host__ __device__ inline static metadata *acquire(metadata *meta) noexcept
             {
-                if (nullptr != meta) { ++meta->m_counter; }
-                return meta;
+              #if MUSEQA_RUNTIME_HOST
+                if (meta != nullptr) { ++meta->m_counter; } return meta;
+              #else
+                return nullptr;
+              #endif
             }
 
             /**
@@ -64,9 +67,11 @@ namespace memory::pointer::detail
              * memory resources when the reference counter reaches zero.
              * @param meta The metadata of a pointer to be released.
              */
-            inline static void release(metadata *meta)
+            __host__ __device__ inline static void release(metadata *meta) __devicesafe__
             {
-                if (nullptr != meta && --meta->m_counter <= 0) { delete meta; }
+              #if MUSEQA_RUNTIME_HOST
+                if (meta != nullptr && --meta->m_counter <= 0) { delete meta; }
+              #endif
             }
 
         private:
@@ -87,7 +92,7 @@ namespace memory::pointer::detail
              */
             inline ~metadata()
             {
-                if (nullptr != m_ptr) { m_allocator.deallocate(static_cast<void*>(m_ptr)); }
+                if (m_ptr != nullptr) { m_allocator.deallocate(static_cast<void*>(m_ptr)); }
             }
     };
 }
