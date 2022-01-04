@@ -79,8 +79,9 @@ namespace memory::pointer
              * @param other The instance to be moved.
              */
             __host__ __device__ inline shared(shared&& other) noexcept
+              : shared {other.m_ptr, metadata_type::acquire(other.m_meta)}
             {
-                other.swap(*this);
+                other.reset();
             }
 
             /**

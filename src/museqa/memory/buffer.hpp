@@ -1,318 +1,295 @@
 /**
  * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
- * @file A generic CUDA-compatible memory buffer.
+ * @file An automatically managed memory buffer implementation.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018-present Rodrigo Siqueira
  */
 #pragma once
 
 #include <vector>
-#include <cstdint>
+#include <cstddef>
 #include <utility>
 
 #include <museqa/environment.h>
-
-#if defined(MUSEQA_COMPILER_NVCC)
-  #pragma push
-  #pragma diag_suppress = unrecognized_gcc_pragma
-#endif
-
-#include <fmt/format.h>
-
-#if defined(MUSEQA_COMPILER_NVCC)
-  #pragma pop
-#endif
-
+#include <museqa/require.hpp>
 #include <museqa/utility.hpp>
-#include <museqa/exception.hpp>
+
 #include <museqa/memory/pointer.hpp>
 #include <museqa/memory/allocator.hpp>
+#include <museqa/memory/exception.hpp>
 
-namespace museqa
+MUSEQA_BEGIN_NAMESPACE
+
+namespace memory
 {
-    namespace memory
+    /**
+     * Implements a generic automatically-managed contiguous memory buffer specialized
+     * for storage of a defined number of elements of the given type.
+     * @tparam T The buffer's elements' type.
+     * @see std::string
+     * @see std::vector
+     * @since 1.0
+     */
+    template <typename T>
+    class buffer : protected memory::pointer::shared<T>
     {
-        /**
-         * Represents a contiguous memory region reserved for the storage of a defined
-         * number of elements of the given type.
-         * @see std::string
-         * @see std::vector
-         * @since 1.0
-         */
-        template <typename T>
-        class buffer
-        {
-            static_assert(!std::is_array<T>::value, "buffer elements cannot have array type");
+        static_assert(!std::is_array<T>::value, "buffer element cannot be an array");
+        static_assert(!std::is_reference<T>::value, "buffer element cannot have reference type");
 
-          public:
-            typedef T element_type;                                 /// The buffer's element type.
-            typedef pointer::shared<element_type[]> pointer_type;   /// The buffer's internal pointer type.
+        private:
+            typedef memory::pointer::shared<T> underlying_type;
 
-          protected:
-            pointer_type m_ptr;         /// The buffer's shared pointer instance.
-            size_t m_capacity = 0;      /// The buffer's total capacity.
+        public:
+            using typename underlying_type::element_type;
+            using typename underlying_type::pointer_type;
 
-          public:
+        protected:
+            size_t m_capacity = 0;
+
+        public:
             __host__ __device__ inline buffer() noexcept = default;
             __host__ __device__ inline buffer(const buffer&) noexcept = default;
-            __host__ __device__ inline buffer(buffer&&) noexcept = default;
 
             /**
-             * Acquires ownership of a buffer pointer.
+             * Builds a buffer by acquiring ownership of a buffer pointer.
              * @param ptr The pointer instance to acquire ownership of.
-             * @param capacity The acquired pointer's total capacity
+             * @param capacity The acquired pointer's buffer capacity.
              */
-            __host__ __device__ inline explicit buffer(pointer_type&& ptr, size_t capacity) noexcept
-              : m_ptr {std::forward<decltype(ptr)>(ptr)}
+            __host__ __device__ inline explicit buffer(underlying_type&& ptr, size_t capacity) noexcept
+              : underlying_type {std::forward<decltype(ptr)>(ptr)}
               , m_capacity {capacity}
             {}
 
-            __host__ __device__ inline buffer& operator=(const buffer&) = default;
-            __host__ __device__ inline buffer& operator=(buffer&&) = default;
+            /**
+             * The buffer's move constructor.
+             * @param other The instance to be moved.
+             */
+            __host__ __device__ inline buffer(buffer&& other) noexcept
+              : buffer {std::forward<decltype(other)>(other), other.m_capacity}
+            {
+                other.reset();
+            }
+
+            __host__ __device__ inline buffer& operator=(const buffer&) __devicesafe__ = default;
 
             /**
-             * Gives access to an element in the buffer by its offset.
-             * @param offset The requested buffer offset to be retrieved.
+             * The move-assignment operator.
+             * @param other The instance to be moved.
+             * @return This buffer object.
+             */
+            __host__ __device__ inline buffer& operator=(buffer&& other) __devicesafe__
+            {
+                reset(); return *new (this) buffer {std::forward<decltype(other)>(other)};
+            }
+
+            /**
+             * Accesses an element in the buffer via its offset.
+             * @param offset The requested buffer offset to be accessed.
              * @return The element at the requested buffer offset.
              */
-            __host__ __device__ inline element_type& operator[](ptrdiff_t offset) noexcept(!safe)
+            __host__ __device__ inline element_type& operator[](ptrdiff_t offset) __museqasafe__
             {
-                museqa::ensure(offset >= 0 && (size_t) offset < m_capacity, "buffer offset out of range");
-                return m_ptr[offset];
+                return *dereference(offset);
             }
 
             /**
-             * Gives access to a const-qualified element in the buffer by its offset.
-             * @param offset The requested buffer offset to be retrieved.
+             * Accesses a const-qualified element in the buffer via its offset.
+             * @param offset The requested buffer offset to be accessed.
              * @return The const-qualified element at the requested buffer offset.
              */
-            __host__ __device__ inline const element_type& operator[](ptrdiff_t offset) const noexcept(!safe)
+            __host__ __device__ inline const element_type& operator[](ptrdiff_t offset) const __museqasafe__
             {
-                museqa::ensure(offset >= 0 && (size_t) offset < m_capacity, "buffer offset out of range");
-                return m_ptr[offset];
+                return *dereference(offset);
             }
 
             /**
-             * Retrieves a slice of the buffer as a new buffer instance.
-             * @param offset The initial buffer slice offset.
-             * @param count The number of elements to slice from buffer.
-             * @return The buffer's requested slice.
+             * The buffer's initial iterator position.
+             * @return The pointer to the start of the buffer iterator.
              */
-            __host__ __device__ inline buffer slice(ptrdiff_t offset, size_t count = 0) noexcept(!safe)
+            __host__ __device__ inline pointer_type begin() noexcept
             {
-                museqa::ensure(offset >= 0 && (size_t) offset < m_capacity, "buffer offset out of range");
-                museqa::ensure((size_t) offset + count <= m_capacity, "buffer slice out of range");
-                return buffer {m_ptr.offset(offset), 0 == count ? m_capacity - (size_t) offset : count};
+                return underlying_type::unwrap();
             }
 
             /**
-             * The buffer's initial point as an iterator.
-             * @return The pointer to the first element of iterator.
+             * The buffer's initial const-qualified iterator position.
+             * @return The pointer to the start of the buffer const-qualified iterator.
              */
-            __host__ __device__ inline element_type *begin() noexcept
+            __host__ __device__ inline const pointer_type begin() const noexcept
             {
-                return (element_type*) m_ptr;
+                return underlying_type::unwrap();
             }
 
             /**
-             * The buffer's initial point as a const-qualified iterator.
-             * @return The pointer to the first element of const-qualified iterator.
+             * The buffer's final iterator position.
+             * @return The pointer to the end of the buffer iterator.
              */
-            __host__ __device__ inline const element_type *begin() const noexcept
+            __host__ __device__ inline pointer_type end() noexcept
             {
-                return (const element_type*) m_ptr;
+                return underlying_type::unwrap() + m_capacity;
             }
 
             /**
-             * The buffer's final point as an iterator.
-             * @return The pointer to the last element of iterator.
+             * The buffer's final const-qualified iterator position.
+             * @return The pointer to the end of the buffer const-qualified iterator.
              */
-            __host__ __device__ inline element_type *end() noexcept
+            __host__ __device__ inline const pointer_type end() const noexcept
             {
-                return ((element_type*) m_ptr) + m_capacity;
+                return underlying_type::unwrap() + m_capacity;
             }
 
             /**
-             * The buffer's final point as a const-qualified iterator.
-             * @return The pointer to the last element of const-qualified iterator.
+             * Unwraps and exposes the buffer's underlying pointer.
+             * @return The buffer's internal underlying pointer.
              */
-            __host__ __device__ inline const element_type *end() const noexcept
+            __host__ __device__ inline underlying_type& unwrap() noexcept
             {
-                return ((const element_type*) m_ptr) + m_capacity;
+                return *static_cast<underlying_type*>(this);
             }
 
             /**
-             * Gives access to the buffer's internal pointer.
-             * @return The buffer's internal pointer.
+             * Unwraps and exposes the buffer's underlying const-qualified pointer.
+             * @return The buffer's internal underlying const-qualified pointer.
              */
-            __host__ __device__ inline pointer_type& raw() noexcept
+            __host__ __device__ inline const underlying_type& unwrap() const noexcept
             {
-                return m_ptr;
+                return *static_cast<const underlying_type*>(this);
             }
 
             /**
-             * Gives access to the buffer's internal pointer.
-             * @return The buffer's internal const-qualified pointer.
-             */
-            __host__ __device__ inline const pointer_type& raw() const noexcept
-            {
-                return m_ptr;
-            }
-
-            /**
-             * Informs the buffer's capacity.
-             * @return The maximum number of elements in buffer.
+             * Informs the buffer's current total capacity.
+             * @return The maximum capacity of elements in buffer.
              */
             __host__ __device__ inline size_t capacity() const noexcept
             {
                 return m_capacity;
             }
-        };
 
-        /**
-         * Copies data from the source buffer to the target buffer.
-         * @tparam T The buffer's contents type.
-         * @param target The buffer to copy data into.
-         * @param source The buffer to copy data from.
-         * @param count The total number of elements to copy.
-         */
-        template <typename T>
-        inline void copy(memory::buffer<T>& target, const memory::buffer<T>& source) noexcept
-        {
-            const auto count = utility::min(target.capacity(), source.capacity());
-            memory::copy(target.begin(), source.begin(), count);
-        }
+            /**
+             * Releases the buffer ownership and returns to an empty state.
+             * @see museqa::memory::buffer::buffer
+             */
+            __host__ __device__ inline void reset() __devicesafe__
+            {
+                underlying_type::reset();
+                new (this) buffer<T> ();
+            }
 
-        /**
-         * Initializes a buffer to zero.
-         * @tparam T The buffer's contents type.
-         * @param target The target buffer to be zero-initialized.
-         */
-        template <typename T>
-        inline void zero(memory::buffer<T>& target) noexcept
-        {
-            memory::zero(target.begin(), target.capacity());
-        }
+        protected:
+            /**
+             * Retrieves a dereferentiable offset of the underlying pointer.
+             * @param offset The offset to be dereferenced by the pointer.
+             * @return The deferentiable wrapped pointer offset.
+             */
+            __host__ __device__ inline constexpr pointer_type dereference(ptrdiff_t offset) const __museqasafe__
+            {
+                museqa::require<memory::exception>(offset >= 0, "buffer cannot dereference negative offset");
+                museqa::require<memory::exception>((size_t) offset < m_capacity, "buffer offset is out of range");
+                return underlying_type::dereference(offset);
+            }
+    };
+
+    /**
+     * Copies data from a source to a target buffer.
+     * @tparam T The buffers' content type.
+     * @param target The buffer to copy data into.
+     * @param source The buffer to copy data from.
+     */
+    template <typename T = void>
+    inline void copy(memory::buffer<T>& target, const memory::buffer<T>& source) noexcept
+    {
+        const auto count = utility::min(target.capacity(), source.capacity());
+        memory::copy(target.unwrap(), source.unwrap(), count);
     }
 
-    namespace factory
+    /**
+     * Initializes a buffer with zeroes.
+     * @tparam T The buffer's content type.
+     * @param target The buffer to be zero-initialized.
+     */
+    template <typename T = void>
+    inline void zero(memory::buffer<T>& target) noexcept
     {
-        /**
-         * Allocates a new buffer with the given allocator and capacity.
-         * @tparam T The buffer's elements type.
-         * @param allocator The allocator to create the new buffer with.
-         * @param capacity The new buffer's total capacity.
-         * @return The new allocated buffer.
-         */
-        template <typename T>
-        inline auto buffer(const memory::allocator& allocator, size_t capacity = 1) noexcept -> memory::buffer<T>
-        {
-            auto raw = (T*) allocator.allocate<T>(capacity);
-            auto ptr = typename memory::buffer<T>::pointer_type {raw, allocator};
-            return memory::buffer<T> {std::move(ptr), capacity};
-        }
-
-        /**
-         * Allocates a new buffer with the requested capacity.
-         * @tparam T The buffer's elements type.
-         * @param capacity The new buffer's total capacity.
-         * @return The new allocated buffer.
-         */
-        template <typename T>
-        inline auto buffer(size_t capacity = 1) noexcept -> memory::buffer<T>
-        {
-            auto allocator = factory::allocator<T[]>();
-            return factory::buffer<T>(allocator, capacity);
-        }
-
-        /**
-         * Copies data from a raw pointer into a buffer instance.
-         * @tparam T The buffer's elements type.
-         * @param ptr The target pointer to copy data from.
-         * @param count The number of elements to be copied.
-         * @return The new buffer with copied elements. 
-         */
-        template <typename T>
-        inline auto buffer(const T *ptr, size_t count = 1) noexcept -> memory::buffer<T>
-        {
-            auto buffer = factory::buffer<T>(count);
-            memory::copy(buffer.begin(), ptr, count);
-            return buffer;
-        }
-
-        /**
-         * Creates a new buffer with the given content.
-         * @tparam T The buffer's elements type.
-         * @param list The list of elements to fill the buffer with.
-         * @return The new buffer with the given contents.
-         */
-        template <typename T>
-        inline auto buffer(std::initializer_list<T> list) noexcept -> memory::buffer<T>
-        {
-            return factory::buffer(list.begin(), list.size());
-        }
-
-        /**
-         * Copies data from an already existing buffer instance.
-         * @tparam T The buffer's elements type.
-         * @param buffer The buffer to be copied into a new instance.
-         * @return The new buffer with copied contents.
-         */
-        template <typename T>
-        inline auto buffer(const memory::buffer<T>& buffer) noexcept -> memory::buffer<T>
-        {
-            return factory::buffer(buffer.begin(), buffer.capacity());
-        }
-
-        /**
-         * Copies data from a vector instance.
-         * @tparam T The buffer's elements type.
-         * @param vector The vector to copy the contents from.
-         * @return The new buffer with the vector's contents.
-         */
-        template <typename T>
-        inline auto buffer(const std::vector<T>& vector) noexcept -> memory::buffer<T>
-        {
-            return factory::buffer(vector.data(), vector.size());
-        }
+        memory::zero(target.unwrap(), target.capacity());
     }
 }
 
-/**
- * Implements a string formatter for a generic buffer type, thus giving generic
- * buffer instances ease of printing whenever its contents type is printable.
- * @tparam T The buffer's contents type.
- * @since 1.0
- */
-template <typename T>
-class fmt::formatter<museqa::memory::buffer<T>>
+namespace factory::memory
 {
-  private:
-    typedef museqa::memory::buffer<T> target_type;
-
-  public:
     /**
-     * Evaluates the formatter's parsing context.
-     * @tparam P The parsing context type.
-     * @param ctx The parsing context instance.
-     * @return The processed and evaluated parsing context.
+     * Allocates a buffer with the given capacity using an allocator.
+     * @tparam T The buffer's elements type.
+     * @param capacity The buffer's total element capacity.
+     * @param allocator The allocator to create the new buffer with.
+     * @return The allocated buffer.
      */
-    template <typename P>
-    constexpr auto parse(P& ctx) const -> decltype(ctx.begin())
+    template <typename T>
+    inline auto buffer(size_t capacity = 1, const museqa::memory::allocator& allocator = allocator<T>())
+    -> museqa::memory::buffer<T>
     {
-        return ctx.begin();
+        return museqa::memory::buffer(pointer::shared<T>(capacity, allocator), capacity);
     }
 
     /**
-     * Formats the buffer into a printable string.
-     * @tparam F The formatting context type.
-     * @param buffer The buffer to be formatted into a string.
-     * @param ctx The formatting context instance.
-     * @return The formatting context instance.
+     * Builds a new buffer by copying data from a raw pointer.
+     * @tparam T The buffer's elements type.
+     * @param ptr The target pointer to copy data from.
+     * @param count The number of elements to be copied.
+     * @param allocator The allocator to create the new buffer with.
+     * @return The allocated buffer.
      */
-    template <typename F>
-    auto format(const target_type& buffer, F& ctx) const -> decltype(ctx.out())
+    template <typename T>
+    inline auto buffer(const T *ptr, size_t count = 1, const museqa::memory::allocator& allocator = allocator<T>())
+    -> museqa::memory::buffer<T>
     {
-        return fmt::format_to(ctx.out(), "[{}]", fmt::join(buffer.begin(), buffer.end(), ", "));
+        auto buffer = factory::memory::buffer<T>(count, allocator);
+        museqa::memory::copy<T>(buffer.unwrap(), ptr, count);
+        return buffer;
     }
-};
+
+    /**
+     * Builds a new buffer from a list of elements
+     * @tparam T The buffer's elements type.
+     * @param list The list of elements to fill the buffer with.
+     * @param allocator The allocator to create the new buffer with.
+     * @return The allocated buffer.
+     */
+    template <typename T>
+    inline auto buffer(std::initializer_list<T> list, const museqa::memory::allocator& allocator = allocator<T>())
+    -> museqa::memory::buffer<T>
+    {
+        return factory::memory::buffer<T>(list.begin(), list.size(), allocator);
+    }
+
+    /**
+     * Builds a new buffer by copying from an already existing buffer instance.
+     * @tparam T The buffer's elements type.
+     * @param buffer The buffer to copy the contents from.
+     * @param allocator The allocator to create the new buffer with.
+     * @return The allocated buffer.
+     */
+    template <typename T>
+    inline auto buffer(
+        const museqa::memory::buffer<T>& buffer
+      , const museqa::memory::allocator& allocator = allocator<T>()
+    ) -> museqa::memory::buffer<T>
+    {
+        return factory::memory::buffer<T>(buffer.unwrap(), buffer.capacity(), allocator);
+    }
+
+    /**
+     * Builds a new buffer by copying from a vector instance.
+     * @tparam T The buffer's elements type.
+     * @param vector The vector to copy the contents from.
+     * @param allocator The allocator to create the new buffer with.
+     * @return The allocated buffer.
+     */
+    template <typename T>
+    inline auto buffer(const std::vector<T>& vector, const museqa::memory::allocator& allocator = allocator<T>())
+    -> museqa::memory::buffer<T>
+    {
+        return factory::memory::buffer<T>(vector.data(), vector.size(), allocator);
+    }
+}
+
+MUSEQA_END_NAMESPACE

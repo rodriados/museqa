@@ -186,7 +186,7 @@ namespace memory::pointer
                 return m_ptr;
             }
 
-        private:
+        protected:
             /**
              * Retrieves a dereferentiable offset of the wrapped pointer.
              * @param offset The offset to be dereferenced by the pointer.
