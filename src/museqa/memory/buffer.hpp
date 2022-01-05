@@ -38,6 +38,7 @@ namespace memory
 
         private:
             typedef memory::pointer::shared<T> underlying_type;
+            typedef memory::exception exception_type;
 
         public:
             using typename underlying_type::element_type;
@@ -51,7 +52,17 @@ namespace memory
             __host__ __device__ inline buffer(const buffer&) noexcept = default;
 
             /**
-             * Builds a buffer by acquiring ownership of a buffer pointer.
+             * Builds a buffer by acquiring a shared ownership of a buffer pointer.
+             * @param ptr The pointer instance to acquire shared ownership of.
+             * @param capacity The acquired pointer's buffer capacity.
+             */
+            __host__ __device__ inline explicit buffer(const underlying_type& ptr, size_t capacity) noexcept
+              : underlying_type {ptr}
+              , m_capacity {capacity}
+            {}
+
+            /**
+             * Builds a buffer by moving the ownership of a buffer pointer.
              * @param ptr The pointer instance to acquire ownership of.
              * @param capacity The acquired pointer's buffer capacity.
              */
@@ -100,6 +111,18 @@ namespace memory
             __host__ __device__ inline const element_type& operator[](ptrdiff_t offset) const __museqasafe__
             {
                 return *dereference(offset);
+            }
+
+            /**
+             * Retrieves a slice of the buffer and shares it with a new instance.
+             * @param offset The slice offset in relation to original buffer.
+             * @param count The number of elements to slice from buffer.
+             */
+            __host__ __device__ inline buffer slice(ptrdiff_t offset, size_t count = 0) __museqasafe__
+            {
+                museqa::require<exception_type>(offset >= 0, "buffer slice cannot start from negative offset");
+                museqa::require<exception_type>((size_t) offset + count <= m_capacity, "buffer slice out of range");
+                return buffer {this->offset(offset), count ? count : m_capacity - (size_t) offset};
             }
 
             /**
@@ -183,8 +206,8 @@ namespace memory
              */
             __host__ __device__ inline constexpr pointer_type dereference(ptrdiff_t offset) const __museqasafe__
             {
-                museqa::require<memory::exception>(offset >= 0, "buffer cannot dereference negative offset");
-                museqa::require<memory::exception>((size_t) offset < m_capacity, "buffer offset is out of range");
+                museqa::require<exception_type>(offset >= 0, "buffer cannot dereference negative offset");
+                museqa::require<exception_type>((size_t) offset < m_capacity, "buffer offset is out of range");
                 return underlying_type::dereference(offset);
             }
     };

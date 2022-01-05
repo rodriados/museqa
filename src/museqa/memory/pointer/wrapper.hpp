@@ -35,6 +35,9 @@ namespace memory::pointer
             typedef T element_type;
             typedef element_type *pointer_type;
 
+        private:
+            typedef memory::pointer::exception exception_type;
+
         protected:
             pointer_type m_ptr = nullptr;
 
@@ -194,7 +197,7 @@ namespace memory::pointer
              */
             __host__ __device__ inline constexpr pointer_type dereference(ptrdiff_t offset) const __museqasafe__
             {
-                museqa::require<pointer::exception>(m_ptr != nullptr, "wrapped pointer is not dereferentiable");
+                museqa::require<exception_type>(m_ptr != nullptr, "wrapped pointer is not dereferentiable");
                 return m_ptr + offset;
             }
     };
