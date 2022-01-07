@@ -82,7 +82,7 @@ namespace memory
             template <typename T = void>
             __host__ __device__ inline T *allocate(T **ptr, size_t n = 1) const
             {
-                using target_type = typename std::conditional<std::is_void<T>::value, char, T>::type;
+                using target_type = typename std::conditional<std::is_void<T>::value, uint8_t, T>::type;
                 (m_allocator)(reinterpret_cast<void**>(ptr), sizeof(target_type), n);
                 return *ptr;
             }
@@ -147,7 +147,7 @@ namespace factory::memory
     >::type
     {
         return museqa::memory::allocator {
-            [](void **ptr, size_t, size_t n) { *ptr = operator new (n); }
+            [](void **ptr, size_t size, size_t n) { *ptr = operator new (size * n); }
           , [](void *ptr) { operator delete(ptr); }
         };
     }
