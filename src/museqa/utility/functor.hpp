@@ -8,238 +8,264 @@
 
 #include <utility>
 
-#include <museqa/utility.hpp>
+#include <museqa/environment.h>
+#include <museqa/require.hpp>
 
-namespace museqa
+#include <museqa/utility.hpp>
+#include <museqa/utility/delegate.hpp>
+#include <museqa/utility/tuple.hpp>
+
+#include <museqa/memory/pointer/shared.hpp>
+#include <museqa/memory/pointer/unmanaged.hpp>
+
+MUSEQA_BEGIN_NAMESPACE
+
+namespace utility
 {
-    namespace utility
+    /**
+     * A functor wrapper for bound or unbound functions. The wrapped function might
+     * have any function type, including as a member function pointer. If the wrapped
+     * function has member function type, an instance of the object to which the
+     * function is bound to is necessary to create a functor.
+     * @tparam F The wrapped function pointer type.
+     * @tparam O The object type to which the function might be bound to.
+     * @since 1.0
+     */
+    template <typename F, typename O = void>
+    class functor;
+
+    /**
+     * Wraps a generic non-member function, callable from any context.
+     * @tparam F The wrapped function pointer type.
+     * @since 1.0
+     */
+    template <typename F>
+    class functor<F, void> : public decltype(utility::delegate(std::declval<F>()))
+    {
+        private:
+            typedef decltype(utility::delegate(std::declval<F>())) underlying_type;
+
+        public:
+            using underlying_type::delegate;
+
+            /**
+             * Unwraps and exposes the underlying function pointer.
+             * @return The unwrapped function pointer.
+             */
+            __host__ __device__ inline constexpr F *unwrap() const
+            {
+                return this->m_function;
+            }
+    };
+
+    namespace detail
     {
         /**
-         * Wraps a general member function pointer bound to an object type.
-         * @tparam F The given member function pointer type.
-         * @tparam O The type to which the functor is bound to.
-         * @since 1.0
-         */
-        template <typename F, typename O = void>
-        class functor
-        {
-            static_assert(std::is_class<O>::value, "a method functor must be bound to a class type");
-            static_assert(std::is_member_function_pointer<F>::value, "only member functors can be bound to a type");
-
-          private:
-            struct analyzer;
-
-          protected:
-            using bound_type = O;                   /// The type the functor is bound to.
-            using function_type = F;                /// The functor's raw pointer type.
-
-          public:
-            using result_type = decltype(analyzer::get(std::declval<F>()));
-
-          protected:
-            mutable bound_type m_object;            /// A pointer to the object the functor is bound to.
-            function_type m_function = nullptr;     /// The raw functor's pointer.
-
-          public:
-            __host__ __device__ inline constexpr functor() noexcept = default;
-            __host__ __device__ inline constexpr functor(const functor&) noexcept = default;
-            __host__ __device__ inline constexpr functor(functor&&) noexcept = default;
-
-            /**
-             * Instantiates a new functor.
-             * @param object The object to which the functor is bound to.
-             * @param function The function pointer to be encapsulated by the functor.
-             */
-            __host__ __device__ inline constexpr functor(const bound_type& object, function_type function) noexcept
-              : m_object {object}
-              , m_function {function}
-            {}
-
-            __host__ __device__ inline functor& operator=(const functor&) noexcept = default;
-            __host__ __device__ inline functor& operator=(functor&&) noexcept = default;
-
-            /**
-             * The functor call operator.
-             * @tparam T The given parameter types.
-             * @param param The given functor parameters.
-             * @return The functor execution return value.
-             */
-            template <typename ...T>
-            __host__ __device__ inline result_type operator()(T&&... params) const
-            {
-                return (m_object.*m_function)(std::forward<decltype(params)>(params)...);
-            }
-
-            /**
-             * Allows the raw functor type to be directly accessed or called.
-             * @return The raw function pointer.
-             */
-            __host__ __device__ inline constexpr function_type operator*() const
-            {
-                return m_function;
-            }
-
-            /**
-             * Checks whether the functor is empty or not.
-             * @return Is the functor empty?
-             */
-            __host__ __device__ inline constexpr bool empty() const noexcept
-            {
-                return (m_function == nullptr);
-            }
-
-          private:
-            /**
-             * Auxiliary structure for extracting a function pointer's result type.
-             * @since 1.0
-             */
-            struct analyzer
-            {
-                template <typename R, typename ...P> static R get(R (O::*)(P...));
-                template <typename R, typename ...P> static R get(R (O::*)(P...) &);
-                template <typename R, typename ...P> static R get(R (O::*)(P...) &&);
-                template <typename R, typename ...P> static R get(R (O::*)(P......));
-                template <typename R, typename ...P> static R get(R (O::*)(P......) &);
-                template <typename R, typename ...P> static R get(R (O::*)(P......) &&);
-                template <typename R, typename ...P> static R get(R (O::*)(P...) const);
-                template <typename R, typename ...P> static R get(R (O::*)(P...) const &);
-                template <typename R, typename ...P> static R get(R (O::*)(P...) const &&);
-                template <typename R, typename ...P> static R get(R (O::*)(P......) const);
-                template <typename R, typename ...P> static R get(R (O::*)(P......) const &);
-                template <typename R, typename ...P> static R get(R (O::*)(P......) const &&);
-                template <typename R, typename ...P> static R get(R (O::*)(P...) volatile);
-                template <typename R, typename ...P> static R get(R (O::*)(P...) volatile &);
-                template <typename R, typename ...P> static R get(R (O::*)(P...) volatile &&);
-                template <typename R, typename ...P> static R get(R (O::*)(P......) volatile);
-                template <typename R, typename ...P> static R get(R (O::*)(P......) volatile &);
-                template <typename R, typename ...P> static R get(R (O::*)(P......) volatile &&);
-                template <typename R, typename ...P> static R get(R (O::*)(P...) const volatile);
-                template <typename R, typename ...P> static R get(R (O::*)(P...) const volatile &);
-                template <typename R, typename ...P> static R get(R (O::*)(P...) const volatile &&);
-                template <typename R, typename ...P> static R get(R (O::*)(P......) const volatile);
-                template <typename R, typename ...P> static R get(R (O::*)(P......) const volatile &);
-                template <typename R, typename ...P> static R get(R (O::*)(P......) const volatile &&);
-            };
-        };
-
-        /**
-         * Wraps a general function pointer.
-         * @tparam F The given function pointer type.
+         * Analyses whether the given type is a member function pointer and if so,
+         * isolates the member function's return type.
+         * @tparam F The member function type to be analysed.
          * @since 1.0
          */
         template <typename F>
-        class functor<F, void>
-        {
-            static_assert(std::is_function<F>::value, "a functor must have a function-like type");
+        struct analyzer : std::false_type {};
 
-          private:
-            struct analyzer;
+        /*
+         * Defines auxiliary macros for creating all possible member function types.
+         * Although quite repetitive, there's apparently no better way to do it.
+         */
+        #define __museqaanalyzer__(MF)                                         \
+          template <typename R, typename T, typename ...P>                     \
+          struct analyzer<MF> : std::true_type { typedef R result_type; };
 
-          protected:
-            using function_type = F*;               /// The functor's raw pointer type.
+        #define __museqarepeater1__(qq)                                        \
+          __museqaanalyzer__(R(T::*)(P...) qq);                                \
+          __museqaanalyzer__(R(T::*)(P......) qq);
 
-          public:
-            using result_type = decltype(analyzer::get(std::declval<F*>()));
+        #define __museqarepeater2__(qq)                                        \
+          __museqarepeater1__(qq);                                             \
+          __museqarepeater1__(const qq);                                       \
+          __museqarepeater1__(volatile qq);                                    \
+          __museqarepeater1__(const volatile qq);
 
-          protected:
-            function_type m_function = nullptr;     /// The raw functor's pointer.
+        /*
+         * Creates every possible combination of qualifiers for a member function
+         * type. Therefore, the return type of any member function can be now known.
+         */
+        __museqarepeater2__();
+        __museqarepeater2__(&);
+        __museqarepeater2__(&&);
+        __museqarepeater2__(noexcept);
+        __museqarepeater2__(& noexcept);
+        __museqarepeater2__(&& noexcept);
 
-          public:
-            __host__ __device__ inline constexpr functor() noexcept = default;
-            __host__ __device__ inline constexpr functor(const functor&) noexcept = default;
-            __host__ __device__ inline constexpr functor(functor&&) noexcept = default;
-
-            /**
-             * Instantiates a new functor.
-             * @param function The function pointer to be encapsulated by the functor.
-             */
-            __host__ __device__ inline constexpr functor(function_type function) noexcept
-              : m_function {function}
-            {}
-
-            __host__ __device__ inline functor& operator=(const functor&) noexcept = default;
-            __host__ __device__ inline functor& operator=(functor&&) noexcept = default;
-
-            /**
-             * The functor call operator.
-             * @tparam T The given parameter types.
-             * @param param The given functor parameters.
-             * @return The functor execution return value.
-             */
-            template <typename ...T>
-            __host__ __device__ inline constexpr result_type operator()(T&&... params) const
-            {
-                return (m_function)(std::forward<decltype(params)>(params)...);
-            }
-
-            /**
-             * Allows the raw functor type to be directly accessed or called.
-             * @return The raw function pointer.
-             */
-            __host__ __device__ inline constexpr function_type operator*() const
-            {
-                return m_function;
-            }
-
-            /**
-             * Checks whether the functor is empty or not.
-             * @return Is the functor empty?
-             */
-            __host__ __device__ inline constexpr bool empty() const noexcept
-            {
-                return (m_function == nullptr);
-            }
-
-          private:
-            /**
-             * Auxiliary structure for extracting a function pointer's result type.
-             * @since 1.0
-             */
-            struct analyzer
-            {
-                template <typename R, typename ...P> static R get(R (*)(P...));
-                template <typename R, typename ...P> static R get(R (*)(P......));
-            };
-        };
+        #undef __museqarepeater2__
+        #undef __museqarepeater1__
+        #undef __museqaanalyzer__
     }
 
-    namespace factory
+    /**
+     * Wraps a generic member function bound to an object instance.
+     * @tparam F The wrapped member function pointer type.
+     * @tparam O The object type to which the function is bound to.
+     * @since 1.0
+     */
+    template <typename F, typename O>
+    class functor
     {
-        /**
-         * Creates a new functor from a plain and simple function.
-         * @tparam F The given function type.
-         * @return The new functor instance.
-         */
-        template <typename F>
-        __host__ __device__ inline constexpr auto functor(const F& function) noexcept
-        -> typename std::enable_if<std::is_function<F>::value, utility::functor<F>>::type
-        {
-            return {function};
-        }
+        static_assert(std::is_class<O>::value, "functor must be bound to a class-like type");
+        static_assert(detail::analyzer<F>::value, "only member functions can be bound to type");
 
-        /**
-         * Creates a new functor from a method bound to an object type.
-         * @tparam O The object type the method is bound to.
-         * @tparam F The given method type.
-         * @return The new functor instance.
-         */
-        template <typename O, typename F>
-        __host__ __device__ inline constexpr auto functor(const O& object, const F& method) noexcept
-        -> typename std::enable_if<std::is_member_function_pointer<F>::value, utility::functor<F, O>>::type
-        {
-            return {object, method};
-        }
+        protected:
+            typedef O object_type;
+            typedef memory::pointer::shared<O> pointer_type;
 
-        /**
-         * Creates a new functor from an invokable object, such as lambdas.
-         * @tparam T The given invokable object type.
-         * @return The new functor instance.
-         */
-        template <typename T>
-        __host__ __device__ inline constexpr auto functor(const T& object) noexcept
-        -> typename std::enable_if<std::is_object<T>::value, decltype(functor(object, &T::operator()))>::type
-        {
-            return functor(object, &T::operator());
-        }
+        public:
+            typedef F function_type;
+            typedef typename detail::analyzer<F>::result_type result_type;
+
+        private:
+            mutable pointer_type m_object;
+            function_type m_function = nullptr;
+
+        public:
+            __host__ __device__ inline constexpr functor() noexcept = default;
+            __host__ __device__ inline functor(const functor&) noexcept = default;
+            __host__ __device__ inline functor(functor&&) noexcept = default;
+
+            /**
+             * Builds a function from a non-owning pointer to the bound object.
+             * @param object The object to which the member function is bound to.
+             * @param lambda The function pointer to be wrapped by the functor.
+             */
+            __host__ __device__ inline explicit functor(object_type& object, function_type lambda) noexcept
+              : functor {memory::pointer::unmanaged(&object), lambda}
+            {}
+
+            /**
+             * Builds a functor by sharing ownership of the bound object.
+             * @param object The pointer to the object the function is bound to.
+             * @param lambda The function pointer to be wrapped by the functor.
+             */
+            __host__ __device__ inline functor(const pointer_type& object, function_type lambda) noexcept
+              : m_object {object}
+              , m_function {lambda}
+            {}
+
+            /**
+             * Builds a functor by acquiring ownership of the bound object.
+             * @param object The pointer to the object the function is bound to.
+             * @param lambda The function pointer to be wrapped by the functor.
+             */
+            __host__ __device__ inline functor(pointer_type&& object, function_type lambda) noexcept
+              : m_object {std::forward<decltype(object)>(object)}
+              , m_function {lambda}
+            {}
+
+            __host__ __device__ inline functor& operator=(const functor&) __devicesafe__ = default;
+            __host__ __device__ inline functor& operator=(functor&&) __devicesafe__ = default;
+
+            /**
+             * Invokes the wrapped function and returns the produced result.
+             * @tparam P The given parameters' types.
+             * @param param The parameters' to invoke the functor with.
+             * @return The functor execution resulting value.
+             */
+            template <typename ...P>
+            __host__ __device__ inline decltype(auto) operator()(P&&... param) const
+            {
+                museqa::require(!empty(), "an empty functor cannot be invoked");
+                return ((*m_object).*m_function)(std::forward<decltype(param)>(param)...);
+            }
+
+            /**
+             * Unwraps and exposes the underlying function pointer and bound object.
+             * @return The unwrapped function pointer and bound object tuple.
+             */
+            __host__ __device__ inline constexpr decltype(auto) unwrap() const
+            {
+                return tuple<object_type&, function_type> {*m_object, m_function};
+            }
+
+            /**
+             * Checks whether the functor is callable or not.
+             * @return Is the functor callable?
+             */
+            __host__ __device__ inline constexpr bool empty() const noexcept
+            {
+                return !m_object || (m_function == nullptr);
+            }
+    };
+}
+
+namespace factory
+{
+    /**
+     * Creates a new functor from a plain unbound function.
+     * @tparam F The given function type.
+     * @param function The function to be wrapped.
+     * @return The new functor instance.
+     */
+    template <typename F>
+    __host__ __device__ inline constexpr auto functor(const F& function) noexcept
+    -> typename std::enable_if<std::is_function<F>::value, museqa::utility::functor<F>>::type
+    {
+        return {function};
+    }
+
+  #if !MUSEQA_RUNTIME_DEVICE
+    /**
+     * Creates a new functor from a method bound to an object.
+     * @tparam T The object type the method is bound to.
+     * @tparam F The given method type.
+     * @param object The object instance the functor is bound to.
+     * @param method The method to be wrapped by functor.
+     * @return The new functor instance.
+     */
+    template <typename T, typename F>
+    __host__ inline auto functor(T&& object, const F& method) -> museqa::utility::functor<F, pure<T>>
+    {
+        return museqa::utility::functor<F, pure<T>>(
+            museqa::memory::pointer::shared<pure<T>>(
+                new pure<T>(std::forward<decltype(object)>(object))
+              , [](void *ptr) { delete reinterpret_cast<pure<T>*>(ptr); })
+          , method
+        );
+    }
+
+  #else
+    /**
+     * Creates a new functor from a method bound to an object.
+     * @tparam T The object type the method is bound to.
+     * @tparam F The given method type.
+     * @param object The object instance the functor is bound to.
+     * @param method The method to be wrapped by functor.
+     * @return The new functor instance.
+     */
+    template <typename T, typename F>
+    __device__ inline auto functor(T&& object, const F& method) -> museqa::utility::functor<F, pure<T>>
+    {
+        return museqa::utility::functor<F, pure<T>>(
+            museqa::memory::pointer::unmanaged<pure<T>>(&object)
+          , method
+        );
+    }
+  #endif
+
+    /**
+     * Creates a new functor from an invokable object, such as lambdas.
+     * @tparam T The given invokable object type.
+     * @param object The invokable object instance to be wrapped.
+     * @return The new functor instance.
+     */
+    template <typename T>
+    __host__ __device__ inline auto functor(T&& object)
+    -> typename std::enable_if<
+        std::is_class<pure<T>>::value
+      , decltype(factory::functor(object, &pure<T>::operator()))
+    >::type
+    {
+        return factory::functor(std::forward<decltype(object)>(object), &pure<T>::operator());
     }
 }
+
+MUSEQA_END_NAMESPACE

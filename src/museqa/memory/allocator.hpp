@@ -130,7 +130,7 @@ namespace factory::memory
     {
         return museqa::memory::allocator {
             [](void **ptr, size_t, size_t n) { *ptr = new pure<T>[n]; }
-          , [](void *ptr) { delete[] (reinterpret_cast<pure<T>*>(ptr)); }
+          , [](void *ptr) { delete[] reinterpret_cast<pure<T>*>(ptr); }
         };
     }
 
@@ -147,7 +147,7 @@ namespace factory::memory
     >::type
     {
         return museqa::memory::allocator {
-            [](void **ptr, size_t size, size_t n) { *ptr = operator new (size * n); }
+            [](void **ptr, size_t size, size_t n) { *ptr = operator new(size * n); }
           , [](void *ptr) { operator delete(ptr); }
         };
     }
