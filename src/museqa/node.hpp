@@ -53,13 +53,13 @@ MUSEQA_END_NAMESPACE
  * @since 1.0
  */
 #if !defined(MUSEQA_AVOID_MPI)
-  #define __museqa_node__(i)    (museqa::node::rank == (i))
-  #define __museqa_master__     (__museqa_node__(museqa::node::master))
-  #define __museqa_compute__    (!__museqa_master__)
+  #define __museqanode__(i)     (museqa::node::rank == (i))
+  #define __museqamaster__      (__museqanode__(museqa::node::master))
+  #define __museqacompute__     (!__museqamaster__)
 #else
-  #define __museqa_node__(i)    (museqa::node::master == (i))
-  #define __museqa_master__     (true)
-  #define __museqa_compute__    (true)
+  #define __museqanode__(i)     (museqa::node::master == (i))
+  #define __museqamaster__      (true)
+  #define __museqacompute__     (true)
 #endif
 
 /*
@@ -67,12 +67,12 @@ MUSEQA_END_NAMESPACE
  * node currently in execution.
  * @since 1.0
  */
-#define __museqa_onlynode__(i)  if (__museqa_node__(i))
-#define __museqa_onlymaster__   if (__museqa_master__)
-#define __museqa_onlycompute__  if (__museqa_compute__)
+#define __museqaonlynode__(i)   if (__museqanode__(i))
+#define __museqaonlymaster__    if (__museqamaster__)
+#define __museqaonlycompute__   if (__museqacompute__)
 
 #if !defined(__onlynode__) && !defined(__onlymaster__) && !defined(__onlycompute__)
-  #define __onlynode__(i)   __museqa_onlynode__(i)
-  #define __onlymaster__    __museqa_onlymaster__
-  #define __onlycompute__   __museqa_onlycompute__
+  #define __onlynode__(i)   __museqaonlynode__(i)
+  #define __onlymaster__    __museqaonlymaster__
+  #define __onlycompute__   __museqaonlycompute__
 #endif
