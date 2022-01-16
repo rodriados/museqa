@@ -90,4 +90,11 @@ using pure = typename std::conditional<
       , typename std::remove_extent<T>::type
     >::type;
 
+/**
+ * A type to represent an empty return type. This is essentialy a void-like type
+ * that can be instantiated and returned by a function.
+ * @since 1.0
+ */
+struct nothing : identity<void> {};
+
 MUSEQA_END_NAMESPACE
