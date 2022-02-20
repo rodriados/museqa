@@ -10,8 +10,8 @@
 #include <utility>
 
 #include <museqa/environment.h>
-#include <museqa/require.hpp>
 #include <museqa/utility.hpp>
+#include <museqa/guard.hpp>
 
 #include <museqa/memory/pointer/exception.hpp>
 
@@ -197,7 +197,7 @@ namespace memory::pointer
              */
             __host__ __device__ inline constexpr pointer_type dereference(ptrdiff_t offset) const __museqasafe__
             {
-                museqa::require<exception_type>(m_ptr != nullptr, "wrapped pointer is not dereferentiable");
+                museqa::guard<exception_type>(m_ptr != nullptr, "wrapped pointer is not dereferentiable");
                 return m_ptr + offset;
             }
     };

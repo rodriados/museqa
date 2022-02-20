@@ -9,7 +9,7 @@
 #include <utility>
 
 #include <museqa/environment.h>
-#include <museqa/require.hpp>
+#include <museqa/guard.hpp>
 
 #include <museqa/utility.hpp>
 #include <museqa/utility/delegate.hpp>
@@ -173,7 +173,7 @@ namespace utility
             template <typename ...P>
             __host__ __device__ inline decltype(auto) operator()(P&&... param) const
             {
-                museqa::require(!empty(), "an empty functor cannot be invoked");
+                museqa::guard(!empty(), "an empty functor cannot be invoked");
                 return ((*m_object).*m_function)(std::forward<decltype(param)>(param)...);
             }
 

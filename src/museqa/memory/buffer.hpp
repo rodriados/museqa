@@ -11,8 +11,8 @@
 #include <utility>
 
 #include <museqa/environment.h>
-#include <museqa/require.hpp>
 #include <museqa/utility.hpp>
+#include <museqa/guard.hpp>
 
 #include <museqa/memory/pointer.hpp>
 #include <museqa/memory/allocator.hpp>
@@ -120,8 +120,8 @@ namespace memory
              */
             __host__ __device__ inline buffer slice(ptrdiff_t offset, size_t count = 0) __museqasafe__
             {
-                museqa::require<exception_type>(offset >= 0, "buffer slice cannot start from negative offset");
-                museqa::require<exception_type>((size_t) offset + count <= m_capacity, "buffer slice out of range");
+                museqa::guard<exception_type>(offset >= 0, "buffer slice cannot start from negative offset");
+                museqa::guard<exception_type>((size_t) offset + count <= m_capacity, "buffer slice out of range");
                 return buffer {this->offset(offset), count ? count : m_capacity - (size_t) offset};
             }
 
@@ -206,8 +206,8 @@ namespace memory
              */
             __host__ __device__ inline constexpr pointer_type dereference(ptrdiff_t offset) const __museqasafe__
             {
-                museqa::require<exception_type>(offset >= 0, "buffer cannot dereference negative offset");
-                museqa::require<exception_type>((size_t) offset < m_capacity, "buffer offset is out of range");
+                museqa::guard<exception_type>(offset >= 0, "buffer cannot dereference negative offset");
+                museqa::guard<exception_type>((size_t) offset < m_capacity, "buffer offset is out of range");
                 return underlying_type::dereference(offset);
             }
     };
