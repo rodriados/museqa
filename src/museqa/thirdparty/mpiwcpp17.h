@@ -9,5 +9,13 @@
 #include <museqa/environment.h>
 
 #if !defined(MUSEQA_AVOID_MPI)
-  #include <mpiwcpp17/mpiwcpp17.hpp>
+  #if !defined(MUSEQA_AVOID_MPIWCPP17)
+    #if MUSEQA_CPP_DIALECT >= 2017
+      #include <mpiwcpp17/mpiwcpp17.hpp>
+    #else
+      #error library MPIwCPP17 requires C++17 or later
+    #endif
+  #else
+    #include <mpi.h>
+  #endif
 #endif
