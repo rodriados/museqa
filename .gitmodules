@@ -7,3 +7,6 @@
 [submodule "thirdparty/mpiwcpp17"]
 	path = thirdparty/mpiwcpp17
 	url = https://github.com/rodriados/mpiwcpp17
+[submodule "thirdparty/cuda"]
+	path = thirdparty/cuda
+	url = https://github.com/eyalroz/cuda-api-wrappers.git
