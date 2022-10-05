@@ -6,7 +6,7 @@
  */
 #pragma once
 
-#include <museqa/config/compiler.h>
+#include <museqa/environment/compiler.h>
 
 /*
  * Since only NVCC knows how to deal with `__host__` and `__device__` annotations,

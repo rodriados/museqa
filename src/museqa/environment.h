@@ -8,11 +8,11 @@
 
 #include <museqa/version.h>
 
-#include <museqa/config/compiler.h>
-#include <museqa/config/language.h>
-#include <museqa/config/runtime.h>
-#include <museqa/config/annotations.h>
-#include <museqa/config/namespace.hpp>
+#include <museqa/environment/compiler.h>
+#include <museqa/environment/language.h>
+#include <museqa/environment/runtime.h>
+#include <museqa/environment/annotations.h>
+#include <museqa/environment/namespace.hpp>
 
 /*
  * Enumerates all possible target environment modes to which the code might be compiled
