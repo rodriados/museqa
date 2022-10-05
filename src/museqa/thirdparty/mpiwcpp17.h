@@ -11,7 +11,7 @@
 #if !defined(MUSEQA_AVOID_MPI)
   #if !defined(MUSEQA_AVOID_MPIWCPP17)
     #if MUSEQA_CPP_DIALECT >= 2017
-      #include <mpiwcpp17/mpiwcpp17.hpp>
+      #include <mpiwcpp17.h>
     #else
       #error library MPIwCPP17 requires C++17 or later
     #endif
