@@ -694,7 +694,7 @@ namespace utility
       , const B& base
       , const tuple<identity<std::index_sequence<I...>>, T...>& t
     ) {
-        return foldr(lambda, lambda(last(t), base), init(t));
+        return foldr(lambda, lambda(base, last(t)), init(t));
     }
 
     /**
@@ -800,7 +800,7 @@ namespace utility
       , const B& base
       , const tuple<identity<std::index_sequence<I...>>, T...>& t
     ) {
-        return tuple(detail::get<I>(scanr(lambda, lambda(last(t), base), init(t)))..., base);
+        return tuple(detail::get<I>(scanr(lambda, lambda(base, last(t)), init(t)))..., base);
     }
 
     /**
