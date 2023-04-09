@@ -30,7 +30,7 @@ namespace utility
      * @since 1.0
      */
     template <typename R, typename ...P>
-    class delegate;
+    class delegate_t;
 
     namespace detail
     {
@@ -40,7 +40,7 @@ namespace utility
          * a parameter to be of this type.
          * @since 1.0
          */
-        struct variadic final
+        struct variadic_t final
         {
             /**
              * Creates type of a non-variadic function with given parameter types.
@@ -49,7 +49,7 @@ namespace utility
              * @return The non-variadic function type.
              */
             template <typename R, typename ...P>
-            __host__ __device__ static constexpr auto create(tuple<P...>) -> identity<R(P...)>;
+            __host__ __device__ static constexpr auto create(tuple_t<P...>) -> identity_t<R(P...)>;
 
             /**
              * Creates type of a variadic function with given parameter types.
@@ -58,7 +58,7 @@ namespace utility
              * @return The variadic function type.
              */
             template <typename R, typename ...P>
-            __host__ __device__ static constexpr auto create(tuple<variadic, P...>) -> identity<R(P..., ...)>;
+            __host__ __device__ static constexpr auto create(tuple_t<variadic_t, P...>) -> identity_t<R(P..., ...)>;
         };
 
         /**
@@ -68,10 +68,10 @@ namespace utility
          * @tparam P The function's parameters types.
          */
         template <typename ...P>
-        using parameters = typename std::conditional<
-                std::is_same<const variadic&, decltype(last(std::declval<tuple<int, P...>>()))>::value
-              , decltype(init(std::declval<tuple<variadic, P...>>()))
-              , tuple<P...>
+        using parameters_t = typename std::conditional<
+                std::is_same<const variadic_t&, decltype(last(std::declval<tuple_t<int, P...>>()))>::value
+              , decltype(init(std::declval<tuple_t<variadic_t, P...>>()))
+              , tuple_t<P...>
             >::type;
 
         /**
@@ -81,7 +81,7 @@ namespace utility
          * @since 1.0
          */
         template <typename R, typename ...P>
-        using callable = typename decltype(variadic::create<R>(std::declval<parameters<P...>>()))::type;
+        using callable_t = typename decltype(variadic_t::create<R>(std::declval<parameters_t<P...>>()))::type;
     }
 
     /**
@@ -91,30 +91,30 @@ namespace utility
      * @since 1.0
      */
     template <typename R, typename ...P>
-    class delegate
+    class delegate_t
     {
         public:
-            using result_type = R;
-            using function_type = detail::callable<R, P...>;
+            using result_t = R;
+            using function_t = detail::callable_t<R, P...>;
 
         protected:
-            function_type *m_function = nullptr;
+            function_t *m_function = nullptr;
 
         public:
-            __host__ __device__ inline constexpr delegate() noexcept = default;
-            __host__ __device__ inline constexpr delegate(const delegate&) noexcept = default;
-            __host__ __device__ inline constexpr delegate(delegate&&) noexcept = default;
+            __host__ __device__ inline constexpr delegate_t() noexcept = default;
+            __host__ __device__ inline constexpr delegate_t(const delegate_t&) noexcept = default;
+            __host__ __device__ inline constexpr delegate_t(delegate_t&&) noexcept = default;
 
             /**
              * Wraps a function pointer into a delegate instance.
              * @param function An invokable function pointer.
              */
-            __host__ __device__ inline constexpr delegate(function_type *function) noexcept
+            __host__ __device__ inline constexpr delegate_t(function_t *function) noexcept
               : m_function {function}
             {}
 
-            __host__ __device__ inline constexpr delegate& operator=(const delegate&) noexcept = default;
-            __host__ __device__ inline constexpr delegate& operator=(delegate&&) noexcept = default;
+            __host__ __device__ inline constexpr delegate_t& operator=(const delegate_t&) noexcept = default;
+            __host__ __device__ inline constexpr delegate_t& operator=(delegate_t&&) noexcept = default;
 
             /**
              * Invokes the wrapped function with the given parameters.
@@ -133,7 +133,7 @@ namespace utility
              * Implicitly converts the delegate into its wrapped function pointer.
              * @return The wrapped function pointer.
              */
-            __host__ __device__ inline constexpr operator function_type*() const
+            __host__ __device__ inline constexpr operator function_t*() const
             {
                 return m_function;
             }
@@ -152,8 +152,8 @@ namespace utility
      * Deduction guides for generic function delegates.
      * @since 1.0
      */
-    template <typename R, typename ...P> delegate(R(P...)) -> delegate<R, P...>;
-    template <typename R, typename ...P> delegate(R(P..., ...)) -> delegate<R, P..., detail::variadic>;
+    template <typename R, typename ...P> delegate_t(R(P...)) -> delegate_t<R, P...>;
+    template <typename R, typename ...P> delegate_t(R(P..., ...)) -> delegate_t<R, P..., detail::variadic_t>;
 }
 
 MUSEQA_END_NAMESPACE

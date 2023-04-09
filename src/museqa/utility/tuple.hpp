@@ -26,18 +26,18 @@ namespace utility
      * @since 1.0
      */
     template <typename ...T>
-    class tuple : public tuple<identity<std::make_index_sequence<sizeof...(T)>>, T...>
+    class tuple_t : public tuple_t<identity_t<std::make_index_sequence<sizeof...(T)>>, T...>
     {
         public:
             static constexpr size_t count = sizeof...(T);
 
         private:
-            typedef identity<std::make_index_sequence<count>> identity_type;
-            typedef tuple<identity_type, T...> underlying_type;
+            typedef museqa::identity_t<std::make_index_sequence<count>> identity_t;
+            typedef tuple_t<identity_t, T...> underlying_t;
 
         public:
-            using underlying_type::tuple;
-            using underlying_type::operator=;
+            using underlying_t::tuple_t;
+            using underlying_t::operator=;
     };
 
     namespace detail
@@ -49,20 +49,20 @@ namespace utility
          * @since 1.0
          */
         template <size_t I, typename T>
-        struct leaf
+        struct leaf_t
         {
-            typedef T element_type;
-            element_type value;
+            typedef T element_t;
+            element_t value;
 
-            __host__ __device__ inline constexpr leaf() = default;
-            __host__ __device__ inline constexpr leaf(const leaf&) = default;
-            __host__ __device__ inline constexpr leaf(leaf&&) = default;
+            __host__ __device__ inline constexpr leaf_t() = default;
+            __host__ __device__ inline constexpr leaf_t(const leaf_t&) = default;
+            __host__ __device__ inline constexpr leaf_t(leaf_t&&) = default;
 
             /**
              * Constructs a new tuple leaf.
              * @param value The value to be contained by the leaf.
              */
-            __host__ __device__ inline constexpr leaf(const element_type& value)
+            __host__ __device__ inline constexpr leaf_t(const element_t& value)
               : value (value)
             {}
 
@@ -72,7 +72,7 @@ namespace utility
              * @param value The foreign value to be moved into the leaf.
              */
             template <typename U>
-            __host__ __device__ inline constexpr leaf(U&& value)
+            __host__ __device__ inline constexpr leaf_t(U&& value)
               : value (std::forward<decltype(value)>(value))
             {}
 
@@ -82,7 +82,7 @@ namespace utility
              * @param other The leaf to copy from.
              */
             template <typename U>
-            __host__ __device__ inline constexpr leaf(const leaf<I, U>& other)
+            __host__ __device__ inline constexpr leaf_t(const leaf_t<I, U>& other)
               : value (other.value)
             {}
 
@@ -92,12 +92,12 @@ namespace utility
              * @param other The leaf to move from.
              */
             template <typename U>
-            __host__ __device__ inline constexpr leaf(leaf<I, U>&& other)
+            __host__ __device__ inline constexpr leaf_t(leaf_t<I, U>&& other)
               : value (std::forward<decltype(other.value)>(other.value))
             {}
 
-            __host__ __device__ inline leaf& operator=(const leaf&) = default;
-            __host__ __device__ inline leaf& operator=(leaf&&) = default;
+            __host__ __device__ inline leaf_t& operator=(const leaf_t&) = default;
+            __host__ __device__ inline leaf_t& operator=(leaf_t&&) = default;
 
             /**
              * Copies the contents of a foreign tuple's leaf.
@@ -106,7 +106,7 @@ namespace utility
              * @return The current leaf instance.
              */
             template <typename U>
-            __host__ __device__ inline leaf& operator=(const leaf<I, U>& other)
+            __host__ __device__ inline leaf_t& operator=(const leaf_t<I, U>& other)
             {
                 return swallow(*this, value = other.value);
             }
@@ -118,7 +118,7 @@ namespace utility
              * @return The current leaf instance.
              */
             template <typename U>
-            __host__ __device__ inline leaf& operator=(leaf<I, U>&& other)
+            __host__ __device__ inline leaf_t& operator=(leaf_t<I, U>&& other)
             {
                 return swallow(*this, value = std::forward<decltype(other.value)>(other.value));
             }
@@ -132,7 +132,7 @@ namespace utility
          * @return The leaf's value.
          */
         template <size_t I, typename T>
-        __host__ __device__ inline constexpr T& get(leaf<I, T>& leaf) noexcept
+        __host__ __device__ inline constexpr T& get(leaf_t<I, T>& leaf) noexcept
         {
             return leaf.value;
         }
@@ -145,7 +145,7 @@ namespace utility
          * @return The const-qualified leaf's value.
          */
         template <size_t I, typename T>
-        __host__ __device__ inline constexpr const T& get(const leaf<I, T>& leaf) noexcept
+        __host__ __device__ inline constexpr const T& get(const leaf_t<I, T>& leaf) noexcept
         {
             return leaf.value;
         }
@@ -158,7 +158,7 @@ namespace utility
          * @return The leaf value's move reference.
          */
         template <size_t I, typename T>
-        __host__ __device__ inline constexpr auto get(leaf<I, T>&& leaf) noexcept
+        __host__ __device__ inline constexpr auto get(leaf_t<I, T>&& leaf) noexcept
         {
             return std::forward<decltype(leaf.value)>(leaf.value);
         }
@@ -171,7 +171,7 @@ namespace utility
          * @param value The value to move into the leaf.
          */
         template <size_t I, typename T, typename U>
-        __host__ __device__ inline void set(leaf<I, T>& leaf, U&& value)
+        __host__ __device__ inline void set(leaf_t<I, T>& leaf, U&& value)
         {
             leaf.value = std::forward<decltype(value)>(value);
         }
@@ -183,7 +183,7 @@ namespace utility
          */
         template <typename T, size_t ...I>
         __host__ __device__ constexpr auto repeater(std::index_sequence<I...>) noexcept
-        -> tuple<typename identity<T, I>::type...>;
+        -> tuple_t<typename identity_t<T, I>::type...>;
 
         /**
          * Accesses the internal declared type of a tuple leaf.
@@ -191,8 +191,8 @@ namespace utility
          * @tparam T The extracted tuple element type.
          */
         template <size_t I, typename T>
-        __host__ __device__ constexpr auto type(leaf<I, T>) noexcept
-        -> typename leaf<I, T>::element_type;
+        __host__ __device__ constexpr auto type(leaf_t<I, T>) noexcept
+        -> typename leaf_t<I, T>::element_t;
     }
 
     /**
@@ -202,10 +202,10 @@ namespace utility
      * @since 1.0
      */
     template <size_t ...I, typename ...T>
-    class tuple<identity<std::index_sequence<I...>>, T...> : public detail::leaf<I, T>...
+    class tuple_t<identity_t<std::index_sequence<I...>>, T...> : public detail::leaf_t<I, T>...
     {
         private:
-            typedef identity<std::index_sequence<I...>> identity_type;
+            typedef museqa::identity_t<std::index_sequence<I...>> identity_t;
 
         public:
             /**
@@ -214,12 +214,12 @@ namespace utility
              * @since 1.0
              */
             template <size_t J>
-            using element = decltype(detail::type<J>(std::declval<tuple>()));
+            using element_t = decltype(detail::type<J>(std::declval<tuple_t>()));
 
         public:
-            __host__ __device__ inline constexpr tuple() = default;
-            __host__ __device__ inline constexpr tuple(const tuple&) = default;
-            __host__ __device__ inline constexpr tuple(tuple&&) = default;
+            __host__ __device__ inline constexpr tuple_t() = default;
+            __host__ __device__ inline constexpr tuple_t(const tuple_t&) = default;
+            __host__ __device__ inline constexpr tuple_t(tuple_t&&) = default;
 
             /**
              * Creates a new tuple instance from a list of foreign values.
@@ -230,8 +230,8 @@ namespace utility
                 typename ...U
               , typename std::enable_if<sizeof...(U) == sizeof...(T), int>::type = 0
             >
-            __host__ __device__ inline constexpr tuple(U&&... value)
-              : detail::leaf<I, T> (std::forward<decltype(value)>(value))...
+            __host__ __device__ inline constexpr tuple_t(U&&... value)
+              : detail::leaf_t<I, T> (std::forward<decltype(value)>(value))...
             {}
 
             /**
@@ -240,8 +240,8 @@ namespace utility
              * @param other The foreign tuple which values must be copied from.
              */
             template <typename ...U>
-            __host__ __device__ inline constexpr tuple(const tuple<identity_type, U...>& other)
-              : detail::leaf<I, T> (static_cast<const detail::leaf<I, U>&>(other))...
+            __host__ __device__ inline constexpr tuple_t(const tuple_t<identity_t, U...>& other)
+              : detail::leaf_t<I, T> (static_cast<const detail::leaf_t<I, U>&>(other))...
             {}
 
             /**
@@ -250,12 +250,12 @@ namespace utility
              * @param other The foreign tuple which values must be moved from.
              */
             template <typename ...U>
-            __host__ __device__ inline constexpr tuple(tuple<identity_type, U...>&& other)
-              : detail::leaf<I, T> (std::forward<detail::leaf<I, U>>(other))...
+            __host__ __device__ inline constexpr tuple_t(tuple_t<identity_t, U...>&& other)
+              : detail::leaf_t<I, T> (std::forward<detail::leaf_t<I, U>>(other))...
             {}
 
-            __host__ __device__ inline tuple& operator=(const tuple&) = default;
-            __host__ __device__ inline tuple& operator=(tuple&&) = default;
+            __host__ __device__ inline tuple_t& operator=(const tuple_t&) = default;
+            __host__ __device__ inline tuple_t& operator=(tuple_t&&) = default;
 
             /**
              * Copies the values from a foreign tuple instance.
@@ -264,9 +264,9 @@ namespace utility
              * @return The current tuple instance.
              */
             template <typename ...U>
-            __host__ __device__ inline tuple& operator=(const tuple<identity_type, U...>& other)
+            __host__ __device__ inline tuple_t& operator=(const tuple_t<identity_t, U...>& other)
             {
-                return swallow(*this, detail::leaf<I, T>::operator=(other)...);
+                return swallow(*this, detail::leaf_t<I, T>::operator=(other)...);
             }
 
             /**
@@ -276,9 +276,9 @@ namespace utility
              * @return The current tuple instance.
              */
             template <typename ...U>
-            __host__ __device__ inline tuple& operator=(tuple<identity_type, U...>&& other)
+            __host__ __device__ inline tuple_t& operator=(tuple_t<identity_t, U...>&& other)
             {
-                return swallow(*this, detail::leaf<I, T>::operator=(std::forward<decltype(other)>(other))...);
+                return swallow(*this, detail::leaf_t<I, T>::operator=(std::forward<decltype(other)>(other))...);
             }
 
             /**
@@ -324,19 +324,16 @@ namespace utility
      * @since 1.0
      */
     template <typename T, size_t N>
-    class ntuple : public decltype(detail::repeater<T>(std::make_index_sequence<N>()))
+    class ntuple_t : public decltype(detail::repeater<T>(std::make_index_sequence<N>()))
     {
         private:
-            typedef std::make_index_sequence<N> indexer_type;
-            typedef decltype(detail::repeater<T>(indexer_type())) underlying_type;
+            typedef std::make_index_sequence<N> indexer_t;
+            typedef decltype(detail::repeater<T>(indexer_t())) underlying_t;
 
         public:
-            typedef T element_type;
-
-        public:
-            __host__ __device__ inline constexpr ntuple() noexcept = default;
-            __host__ __device__ inline constexpr ntuple(const ntuple&) = default;
-            __host__ __device__ inline constexpr ntuple(ntuple&&) = default;
+            __host__ __device__ inline constexpr ntuple_t() noexcept = default;
+            __host__ __device__ inline constexpr ntuple_t(const ntuple_t&) = default;
+            __host__ __device__ inline constexpr ntuple_t(ntuple_t&&) = default;
 
             /**
              * Creates a new tuple from a raw foreign array.
@@ -350,8 +347,8 @@ namespace utility
                     std::is_array<typename std::remove_reference<U>::type>()
                 >::type
             >
-            __host__ __device__ inline constexpr ntuple(U&& array)
-              : ntuple {indexer_type(), array}
+            __host__ __device__ inline constexpr ntuple_t(U&& array)
+              : ntuple_t {indexer_t(), array}
             {}
 
             /**
@@ -360,16 +357,16 @@ namespace utility
              * @param array The array to move into the tuple's values.
              */
             template <typename U>
-            __host__ __device__ inline constexpr ntuple(U (&&array)[N])
-              : ntuple {indexer_type(), std::forward<decltype(array)>(array)}
+            __host__ __device__ inline constexpr ntuple_t(U (&&array)[N])
+              : ntuple_t {indexer_t(), std::forward<decltype(array)>(array)}
             {}
 
-            using underlying_type::tuple;
+            using underlying_t::tuple_t;
 
-            __host__ __device__ inline ntuple& operator=(const ntuple&) = default;
-            __host__ __device__ inline ntuple& operator=(ntuple&&) = default;
+            __host__ __device__ inline ntuple_t& operator=(const ntuple_t&) = default;
+            __host__ __device__ inline ntuple_t& operator=(ntuple_t&&) = default;
 
-            using underlying_type::operator=;
+            using underlying_t::operator=;
 
         private:
             /**
@@ -379,8 +376,8 @@ namespace utility
              * @param array The array to inline.
              */
             template <typename U, size_t ...I>
-            __host__ __device__ inline constexpr ntuple(std::index_sequence<I...>, U&& array)
-              : underlying_type {array[I]...}
+            __host__ __device__ inline constexpr ntuple_t(std::index_sequence<I...>, U&& array)
+              : underlying_t {array[I]...}
             {}
 
             /**
@@ -390,8 +387,8 @@ namespace utility
              * @param array The array to be moved.
              */
             template <typename U, size_t ...I>
-            __host__ __device__ inline constexpr ntuple(std::index_sequence<I...>, U (&&array)[N])
-              : underlying_type {std::move(array[I])...}
+            __host__ __device__ inline constexpr ntuple_t(std::index_sequence<I...>, U (&&array)[N])
+              : underlying_t {std::move(array[I])...}
             {}
     };
 
@@ -403,22 +400,22 @@ namespace utility
      * @since 1.0
      */
     template <typename T, typename U>
-    class pair : public tuple<T, U>
+    class pair_t : public tuple_t<T, U>
     {
         private:
-            typedef tuple<T, U> underlying_type;
+            typedef tuple_t<T, U> underlying_t;
 
         public:
-            __host__ __device__ inline constexpr pair() noexcept = default;
-            __host__ __device__ inline constexpr pair(const pair&) = default;
-            __host__ __device__ inline constexpr pair(pair&&) = default;
+            __host__ __device__ inline constexpr pair_t() noexcept = default;
+            __host__ __device__ inline constexpr pair_t(const pair_t&) = default;
+            __host__ __device__ inline constexpr pair_t(pair_t&&) = default;
 
-            using underlying_type::tuple;
+            using underlying_t::tuple_t;
 
-            __host__ __device__ inline pair& operator=(const pair&) = default;
-            __host__ __device__ inline pair& operator=(pair&&) = default;
+            __host__ __device__ inline pair_t& operator=(const pair_t&) = default;
+            __host__ __device__ inline pair_t& operator=(pair_t&&) = default;
 
-            using underlying_type::operator=;
+            using underlying_t::operator=;
 
             /**
              * Retrieves the first element of the pair.
@@ -446,16 +443,16 @@ namespace utility
      * @since 1.0
      */
     template <typename T, size_t I>
-    using tuple_element = typename T::template element<I>;
+    using tuple_element_t = typename T::template element_t<I>;
 
     /*
      * Deduction guides for generic tuple types.
      * @since 1.0
      */
-    template <typename ...T> tuple(T...) -> tuple<T...>;
-    template <typename T, typename U> pair(T, U) -> pair<T, U>;
-    template <typename T, size_t N> ntuple(const T(&)[N]) -> ntuple<T, N>;
-    template <typename T, size_t N> ntuple(T(&&)[N]) -> ntuple<T, N>;
+    template <typename ...T> tuple_t(T...) -> tuple_t<T...>;
+    template <typename T, typename U> pair_t(T, U) -> pair_t<T, U>;
+    template <typename T, size_t N> ntuple_t(const T(&)[N]) -> ntuple_t<T, N>;
+    template <typename T, size_t N> ntuple_t(T(&&)[N]) -> ntuple_t<T, N>;
 
     /**
      * Gathers variables references into a tuple instance, allowing them to capture
@@ -465,7 +462,7 @@ namespace utility
      * @return The new tuple of references.
      */
     template <typename ...T>
-    __host__ __device__ inline constexpr auto tie(T&... ref) noexcept -> tuple<T&...>
+    __host__ __device__ inline constexpr auto tie(T&... ref) noexcept -> tuple_t<T&...>
     {
         return {ref...};
     }
@@ -479,7 +476,7 @@ namespace utility
      * @return The new tuple of references.
      */
     template <typename T, size_t N>
-    __host__ __device__ inline constexpr auto tie(T (&ref)[N]) noexcept -> ntuple<T&, N>
+    __host__ __device__ inline constexpr auto tie(T (&ref)[N]) noexcept -> ntuple_t<T&, N>
     {
         return {ref};
     }
@@ -493,7 +490,7 @@ namespace utility
      * @return The new tuple of move-references.
      */
     template <typename T, size_t N>
-    __host__ __device__ inline constexpr auto tie(T (&&ref)[N]) noexcept -> ntuple<T&&, N>
+    __host__ __device__ inline constexpr auto tie(T (&&ref)[N]) noexcept -> ntuple_t<T&&, N>
     {
         return {std::forward<decltype(ref)>(ref)};
     }
@@ -507,7 +504,7 @@ namespace utility
      */
     template <size_t ...I, typename ...T>
     __host__ __device__ inline constexpr decltype(auto) head(
-        const tuple<identity<std::index_sequence<I...>>, T...>& t
+        const tuple_t<identity_t<std::index_sequence<I...>>, T...>& t
     ) noexcept {
         return detail::get<0>(t);
     }
@@ -521,7 +518,7 @@ namespace utility
      */
     template <size_t ...I, typename ...T>
     __host__ __device__ inline constexpr decltype(auto) last(
-        const tuple<identity<std::index_sequence<I...>>, T...>& t
+        const tuple_t<identity_t<std::index_sequence<I...>>, T...>& t
     ) noexcept {
         return detail::get<sizeof...(T) - 1>(t);
     }
@@ -534,8 +531,8 @@ namespace utility
      * @return The new tuple with removed end.
      */
     template <size_t ...I, typename ...T>
-    __host__ __device__ inline constexpr auto init(const tuple<identity<std::index_sequence<0, I...>>, T...>& t)
-    -> tuple<tuple_element<tuple<T...>, I - 1>...>
+    __host__ __device__ inline constexpr auto init(const tuple_t<identity_t<std::index_sequence<0, I...>>, T...>& t)
+    -> tuple_t<tuple_element_t<tuple_t<T...>, I - 1>...>
     {
         return {detail::get<I - 1>(t)...};
     }
@@ -548,8 +545,8 @@ namespace utility
      * @return The new tuple with removed head.
      */
     template <size_t ...I, typename ...T>
-    __host__ __device__ inline constexpr auto tail(const tuple<identity<std::index_sequence<0, I...>>, T...>& t)
-    -> tuple<tuple_element<tuple<T...>, I>...>
+    __host__ __device__ inline constexpr auto tail(const tuple_t<identity_t<std::index_sequence<0, I...>>, T...>& t)
+    -> tuple_t<tuple_element_t<tuple_t<T...>, I>...>
     {
         return {detail::get<I>(t)...};
     }
@@ -562,8 +559,8 @@ namespace utility
      * @return The resulting concatenated tuple.
      */
     template <size_t ...I, typename ...T>
-    __host__ __device__ inline constexpr auto concat(const tuple<identity<std::index_sequence<I...>>, T...>& t)
-    -> tuple<T...>
+    __host__ __device__ inline constexpr auto concat(const tuple_t<identity_t<std::index_sequence<I...>>, T...>& t)
+    -> tuple_t<T...>
     {
         return {detail::get<I>(t)...};
     }
@@ -582,11 +579,11 @@ namespace utility
      */
     template <size_t ...I, size_t ...J, typename ...T, typename ...U, typename ...R>
     __host__ __device__ inline constexpr auto concat(
-        const tuple<identity<std::index_sequence<I...>>, T...>& a
-      , const tuple<identity<std::index_sequence<J...>>, U...>& b
+        const tuple_t<identity_t<std::index_sequence<I...>>, T...>& a
+      , const tuple_t<identity_t<std::index_sequence<J...>>, U...>& b
       , const R&... tail
     ) {
-        return concat(tuple<T..., U...>(detail::get<I>(a)..., detail::get<J>(b)...), tail...);
+        return concat(tuple_t<T..., U...>(detail::get<I>(a)..., detail::get<J>(b)...), tail...);
     }
 
     /**
@@ -602,10 +599,10 @@ namespace utility
     template <typename F, typename ...A, size_t ...I, typename ...T>
     __host__ __device__ inline constexpr auto apply(
         F&& lambda
-      , const tuple<identity<std::index_sequence<I...>>, T...>& t
+      , const tuple_t<identity_t<std::index_sequence<I...>>, T...>& t
       , const A&... args
     ) {
-        return tuple(lambda(detail::get<I>(t), args...)...);
+        return tuple_t(lambda(detail::get<I>(t), args...)...);
     }
 
     /**
@@ -619,7 +616,7 @@ namespace utility
     __host__ __device__ inline constexpr B foldl(
         F&&
       , const B& base
-      , const tuple<identity<std::index_sequence<>>>&
+      , const tuple_t<identity_t<std::index_sequence<>>>&
     ) {
         return base;
     }
@@ -639,7 +636,7 @@ namespace utility
     __host__ __device__ inline constexpr B foldl(
         F&& lambda
       , const B& base
-      , const tuple<identity<std::index_sequence<I...>>, T...>& t
+      , const tuple_t<identity_t<std::index_sequence<I...>>, T...>& t
     ) {
         return foldl(lambda, lambda(base, head(t)), tail(t));
     }
@@ -656,7 +653,7 @@ namespace utility
     template <typename F, size_t ...I, typename ...T>
     __host__ __device__ inline constexpr auto foldl1(
         F&& lambda
-      , const tuple<identity<std::index_sequence<0, I...>>, T...>& t
+      , const tuple_t<identity_t<std::index_sequence<0, I...>>, T...>& t
     ) {
         return foldl(lambda, head(t), tail(t));
     }
@@ -672,7 +669,7 @@ namespace utility
     __host__ __device__ inline constexpr B foldr(
         F&&
       , const B& base
-      , const tuple<identity<std::index_sequence<>>>&
+      , const tuple_t<identity_t<std::index_sequence<>>>&
     ) {
         return base;
     }
@@ -692,7 +689,7 @@ namespace utility
     __host__ __device__ inline constexpr B foldr(
         F&& lambda
       , const B& base
-      , const tuple<identity<std::index_sequence<I...>>, T...>& t
+      , const tuple_t<identity_t<std::index_sequence<I...>>, T...>& t
     ) {
         return foldr(lambda, lambda(base, last(t)), init(t));
     }
@@ -709,7 +706,7 @@ namespace utility
     template <typename F, size_t ...I, typename ...T>
     __host__ __device__ inline constexpr auto foldr1(
         F&& lambda
-      , const tuple<identity<std::index_sequence<0, I...>>, T...>& t
+      , const tuple_t<identity_t<std::index_sequence<0, I...>>, T...>& t
     ) {
         return foldr(lambda, last(t), init(t));
     }
@@ -725,9 +722,9 @@ namespace utility
     __host__ __device__ inline constexpr auto scanl(
         F&&
       , const B& base
-      , const tuple<identity<std::index_sequence<>>>&
+      , const tuple_t<identity_t<std::index_sequence<>>>&
     ) {
-        return tuple(base);
+        return tuple_t(base);
     }
 
     /**
@@ -745,9 +742,9 @@ namespace utility
     __host__ __device__ inline constexpr auto scanl(
         F&& lambda
       , const B& base
-      , const tuple<identity<std::index_sequence<I...>>, T...>& t
+      , const tuple_t<identity_t<std::index_sequence<I...>>, T...>& t
     ) {
-        return tuple(base, detail::get<I>(scanl(lambda, lambda(base, head(t)), tail(t)))...);
+        return tuple_t(base, detail::get<I>(scanl(lambda, lambda(base, head(t)), tail(t)))...);
     }
 
     /**
@@ -762,7 +759,7 @@ namespace utility
     template <typename F, size_t ...I, typename ...T>
     __host__ __device__ inline constexpr auto scanl1(
         F&& lambda
-      , const tuple<identity<std::index_sequence<0, I...>>, T...>& t
+      , const tuple_t<identity_t<std::index_sequence<0, I...>>, T...>& t
     ) {
         return scanl(lambda, head(t), tail(t));
     }
@@ -778,9 +775,9 @@ namespace utility
     __host__ __device__ inline constexpr auto scanr(
         F&&
       , const B& base
-      , const tuple<identity<std::index_sequence<>>>&
+      , const tuple_t<identity_t<std::index_sequence<>>>&
     ) {
-        return tuple(base);
+        return tuple_t(base);
     }
 
     /**
@@ -798,9 +795,9 @@ namespace utility
     __host__ __device__ inline constexpr auto scanr(
         F&& lambda
       , const B& base
-      , const tuple<identity<std::index_sequence<I...>>, T...>& t
+      , const tuple_t<identity_t<std::index_sequence<I...>>, T...>& t
     ) {
-        return tuple(detail::get<I>(scanr(lambda, lambda(base, last(t)), init(t)))..., base);
+        return tuple_t(detail::get<I>(scanr(lambda, lambda(base, last(t)), init(t)))..., base);
     }
 
     /**
@@ -815,7 +812,7 @@ namespace utility
     template <typename F, size_t ...I, typename ...T>
     __host__ __device__ inline constexpr auto scanr1(
         F&& lambda
-      , const tuple<identity<std::index_sequence<0, I...>>, T...>& t
+      , const tuple_t<identity_t<std::index_sequence<0, I...>>, T...>& t
     ) {
         return scanr(lambda, last(t), init(t));
     }
@@ -832,10 +829,10 @@ namespace utility
      */
     template <size_t ...I, typename ...T, typename ...U>
     __host__ __device__ inline constexpr auto zip(
-        const tuple<identity<std::index_sequence<I...>>, T...>& a
-      , const tuple<identity<std::index_sequence<I...>>, U...>& b
+        const tuple_t<identity_t<std::index_sequence<I...>>, T...>& a
+      , const tuple_t<identity_t<std::index_sequence<I...>>, U...>& b
     ) {
-        return tuple(pair(detail::get<I>(a), detail::get<I>(b))...);
+        return tuple_t(pair(detail::get<I>(a), detail::get<I>(b))...);
     }
 
     /**
@@ -853,10 +850,10 @@ namespace utility
     template <typename F, size_t ...I, typename ...T, typename ...U>
     __host__ __device__ inline constexpr auto zipwith(
         F&& lambda
-      , const tuple<identity<std::index_sequence<I...>>, T...>& a
-      , const tuple<identity<std::index_sequence<I...>>, U...>& b
+      , const tuple_t<identity_t<std::index_sequence<I...>>, T...>& a
+      , const tuple_t<identity_t<std::index_sequence<I...>>, U...>& b
     ) {
-        return tuple(lambda(detail::get<I>(a), detail::get<I>(b))...);
+        return tuple_t(lambda(detail::get<I>(a), detail::get<I>(b))...);
     }
 }
 
@@ -868,8 +865,8 @@ MUSEQA_END_NAMESPACE
  * @since 1.0
  */
 template <typename ...T>
-struct std::tuple_size<museqa::utility::tuple<T...>>
-  : std::integral_constant<size_t, museqa::utility::tuple<T...>::count> {};
+struct std::tuple_size<museqa::utility::tuple_t<T...>>
+  : std::integral_constant<size_t, museqa::utility::tuple_t<T...>::count> {};
 
 /**
  * Informs the size of a generic pair, allowing it to be deconstructed.
@@ -878,8 +875,8 @@ struct std::tuple_size<museqa::utility::tuple<T...>>
  * @since 1.0
  */
 template <typename T, typename U>
-struct std::tuple_size<museqa::utility::pair<T, U>>
-  : std::tuple_size<museqa::utility::tuple<T, U>> {};
+struct std::tuple_size<museqa::utility::pair_t<T, U>>
+  : std::tuple_size<museqa::utility::tuple_t<T, U>> {};
 
 /**
  * Informs the size of a generic n-tuple, allowing it to be deconstructed.
@@ -888,7 +885,7 @@ struct std::tuple_size<museqa::utility::pair<T, U>>
  * @since 1.0
  */
 template <typename T, size_t N>
-struct std::tuple_size<museqa::utility::ntuple<T, N>>
+struct std::tuple_size<museqa::utility::ntuple_t<T, N>>
   : std::integral_constant<size_t, N> {};
 
 /**
@@ -898,8 +895,8 @@ struct std::tuple_size<museqa::utility::ntuple<T, N>>
  * @since 1.0
  */
 template <size_t I, typename ...T>
-struct std::tuple_element<I, museqa::utility::tuple<T...>>
-  : museqa::identity<museqa::utility::tuple_element<museqa::utility::tuple<T...>, I>> {};
+struct std::tuple_element<I, museqa::utility::tuple_t<T...>>
+  : museqa::identity_t<museqa::utility::tuple_element_t<museqa::utility::tuple_t<T...>, I>> {};
 
 /**
  * Retrieves the deconstruction type of a pair's element.
@@ -909,8 +906,8 @@ struct std::tuple_element<I, museqa::utility::tuple<T...>>
  * @since 1.0
  */
 template <size_t I, typename T, typename U>
-struct std::tuple_element<I, museqa::utility::pair<T, U>>
-  : std::tuple_element<I, museqa::utility::tuple<T, U>> {};
+struct std::tuple_element<I, museqa::utility::pair_t<T, U>>
+  : std::tuple_element<I, museqa::utility::tuple_t<T, U>> {};
 
 /**
  * Retrieves the deconstruction type of a n-tuple's element.
@@ -920,5 +917,5 @@ struct std::tuple_element<I, museqa::utility::pair<T, U>>
  * @since 1.0
  */
 template <size_t I, typename T, size_t N>
-struct std::tuple_element<I, museqa::utility::ntuple<T, N>>
-  : museqa::identity<typename museqa::utility::ntuple<T, N>::element_type> {};
+struct std::tuple_element<I, museqa::utility::ntuple_t<T, N>>
+  : museqa::identity_t<museqa::utility::tuple_element_t<museqa::utility::ntuple_t<T, N>, I>> {};

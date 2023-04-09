@@ -50,7 +50,7 @@ namespace utility
      * @since 1.0
      */
     template <typename T>
-    class reflector;
+    class reflector_t;
 
     /**
      * Extracts and manages references to each member property of the target type,
@@ -60,27 +60,27 @@ namespace utility
      * @since 1.0
      */
     template <typename T>
-    class reflection : public reflector<T>::reference_tuple
+    class reflection_t : public reflector_t<T>::reference_tuple_t
     {
         protected:
-            typedef reflector<T> reflector_type;
-            typedef typename reflector_type::reference_tuple underlying_tuple;
+            typedef utility::reflector_t<T> reflector_t;
+            typedef typename reflector_t::reference_tuple_t underlying_tuple_t;
 
         public:
-            __host__ __device__ inline reflection() noexcept = delete;
-            __host__ __device__ inline reflection(const reflection&) noexcept = default;
-            __host__ __device__ inline reflection(reflection&&) noexcept = default;
+            __host__ __device__ inline reflection_t() noexcept = delete;
+            __host__ __device__ inline reflection_t(const reflection_t&) noexcept = default;
+            __host__ __device__ inline reflection_t(reflection_t&&) noexcept = default;
 
             /**
              * Reflects over an instance and gathers refereces to its members.
              * @param target The target instance to get references from.
              */
-            __host__ __device__ inline reflection(T& target) noexcept
-              : underlying_tuple {extract(*this, target)}
+            __host__ __device__ inline reflection_t(T& target) noexcept
+              : underlying_tuple_t {extract(*this, target)}
             {}
 
-            __host__ __device__ inline reflection& operator=(const reflection&) = default;
-            __host__ __device__ inline reflection& operator=(reflection&&) = default;
+            __host__ __device__ inline reflection_t& operator=(const reflection_t&) = default;
+            __host__ __device__ inline reflection_t& operator=(reflection_t&&) = default;
 
         private:
             /**
@@ -92,10 +92,10 @@ namespace utility
              */
             template <typename ...U, size_t ...I>
             __host__ __device__ inline static auto extract(
-                tuple<identity<std::index_sequence<I...>>, U...>&, T& target
-            ) noexcept -> underlying_tuple
+                tuple_t<identity_t<std::index_sequence<I...>>, U...>&, T& target
+            ) noexcept -> underlying_tuple_t
             {
-                return {reflector_type::template member<I>(target)...};
+                return {reflector_t::template member<I>(target)...};
             }
     };
 
@@ -108,9 +108,9 @@ namespace utility
          * @since 1.0
          */
         template <typename T, size_t N>
-        struct tag
+        struct tag_t
         {
-            friend auto latch(tag<T, N>) noexcept;
+            friend auto latch(tag_t<T, N>) noexcept;
         };
 
         /**
@@ -121,7 +121,7 @@ namespace utility
          * @since 1.0
          */
         template <typename T, typename U, size_t N>
-        struct injector
+        struct injector_t
         {
             /**
              * Binds the extracted member type to its index within the target reflection
@@ -129,7 +129,7 @@ namespace utility
              * used, but only its return type.
              * @return The extracted type bound to the member index.
              */
-            friend inline auto latch(tag<T, N>) noexcept
+            friend inline auto latch(tag_t<T, N>) noexcept
             {
                 return typename std::remove_all_extents<U>::type {};
             }
@@ -144,7 +144,7 @@ namespace utility
          * @since 1.0
          */
         template <typename T, size_t N>
-        struct decoy
+        struct decoy_t
         {
             /**
              * Injects the extracted member type into a latch if it has not yet
@@ -153,7 +153,7 @@ namespace utility
              * @tparam M The index of the property member being processed.
              */
             template <typename U, size_t M>
-            static constexpr auto inject(...) -> injector<T, U, M>;
+            static constexpr auto inject(...) -> injector_t<T, U, M>;
 
             /**
              * Validates whether the type member being processed has already been
@@ -161,7 +161,7 @@ namespace utility
              * @tparam M The index of the property member being processed.
              */
             template <typename, size_t M>
-            static constexpr auto inject(int) -> decltype(latch(tag<T, M>()));
+            static constexpr auto inject(int) -> decltype(latch(tag_t<T, M>()));
 
             /**
              * Morphs the decoy into the required type for constructing the target
@@ -182,7 +182,7 @@ namespace utility
         inline constexpr auto count(...) noexcept
         -> size_t { return sizeof...(I) - 1; }
 
-        template <typename T, size_t ...I, size_t = sizeof(T{decoy<T, I>()...})>
+        template <typename T, size_t ...I, size_t = sizeof(T{decoy_t<T, I>()...})>
         inline constexpr auto count(int) noexcept
         -> size_t { return count<T, I..., sizeof...(I)>(0); }
         /**#@-*/
@@ -193,9 +193,9 @@ namespace utility
          * @tparam T The target type for reflection processing.
          * @return The tuple of extracted types.
          */
-        template <typename T, size_t ...I, typename = decltype(T{decoy<T, I>()...})>
+        template <typename T, size_t ...I, typename = decltype(T{decoy_t<T, I>()...})>
         inline constexpr auto loophole(std::index_sequence<I...>) noexcept
-        -> tuple<decltype(latch(tag<T, I>()))...>;
+        -> tuple_t<decltype(latch(tag_t<T, I>()))...>;
 
         /**
          * Retrieves the tuple of extracted property member types of the given target
@@ -212,16 +212,16 @@ namespace utility
          * @tparam T The tuple's type list.
          */
         template <typename ...T>
-        inline constexpr auto reference(tuple<T...>) noexcept
-        -> tuple<T&...>;
+        inline constexpr auto reference(tuple_t<T...>) noexcept
+        -> tuple_t<T&...>;
 
         /**
          * Transforms each member type of a tuple into an aligned storage.
          * @tparam T The tuple's type list.
          */
         template <typename ...T>
-        inline constexpr auto storage(tuple<T...>) noexcept
-        -> tuple<museqa::storage<sizeof(T), alignof(T)>...>;
+        inline constexpr auto storage(tuple_t<T...>) noexcept
+        -> tuple_t<storage_t<sizeof(T), alignof(T)>...>;
     }
 
     /**
@@ -231,21 +231,21 @@ namespace utility
      * @since 1.0
      */
     template <typename T>
-    class reflector
+    class reflector_t
     {
         static_assert(!std::is_union<T>::value, "union types cannot be reflected");
         static_assert(std::is_trivial<T>::value, "reflected type must be trivial");
 
         private:
             template <typename A, typename B>
-            using compatible = std::integral_constant<bool, sizeof(A) == sizeof(B) && alignof(A) == alignof(B)>;
+            using is_compatible = std::integral_constant<bool, sizeof(A) == sizeof(B) && alignof(A) == alignof(B)>;
 
         public:
-            using reflection_tuple = decltype(detail::loophole<T>());
-            using reference_tuple = decltype(detail::reference(std::declval<reflection_tuple>()));
-            using storage_tuple = decltype(detail::storage(std::declval<reflection_tuple>()));
+            using reflection_tuple_t = decltype(detail::loophole<T>());
+            using reference_tuple_t = decltype(detail::reference(std::declval<reflection_tuple_t>()));
+            using storage_tuple_t = decltype(detail::storage(std::declval<reflection_tuple_t>()));
 
-        static_assert(compatible<reflection_tuple, T>(), "reflection tuple is not compatible with type");
+        static_assert(is_compatible<reflection_tuple_t, T>::value, "reflection tuple is not compatible with type");
 
         public:
             /**
@@ -254,7 +254,7 @@ namespace utility
              */
             __host__ __device__ inline static constexpr auto count() noexcept -> size_t
             {
-                return reflection_tuple::count;
+                return reflection_tuple_t::count;
             }
 
             /**
@@ -265,7 +265,7 @@ namespace utility
             template <size_t N>
             __host__ __device__ inline static constexpr auto offset() noexcept -> ptrdiff_t
             {
-                return offset<N>(storage_tuple());
+                return offset<N>(storage_tuple_t());
             }
 
             /**
@@ -278,11 +278,11 @@ namespace utility
             template <size_t N, typename U>
             __host__ __device__ inline static constexpr auto member(U& target) noexcept
             -> typename std::enable_if<
-                compatible<reflection_tuple, U>::value
-              , tuple_element<reference_tuple, N>
+                is_compatible<reflection_tuple_t, U>::value
+              , tuple_element_t<reference_tuple_t, N>
             >::type
             {
-                using E = tuple_element<reflection_tuple, N>;
+                using E = tuple_element_t<reflection_tuple_t, N>;
                 return *reinterpret_cast<E*>(reinterpret_cast<uint8_t*>(&target) + offset<N>());
             }
 
@@ -294,7 +294,7 @@ namespace utility
              * @return The member property's offset.
              */
             template <size_t N>
-            __host__ __device__ inline static constexpr auto offset(const storage_tuple& tuple) noexcept
+            __host__ __device__ inline static constexpr auto offset(const storage_tuple_t& tuple) noexcept
             -> ptrdiff_t
             {
                 return &tuple.template get<N>().storage[0] - &tuple.template get<0>().storage[0];
@@ -310,8 +310,8 @@ MUSEQA_END_NAMESPACE
  * @since 1.0
  */
 template <typename T>
-struct std::tuple_size<museqa::utility::reflection<T>>
-  : std::integral_constant<size_t, museqa::utility::reflection<T>::count> {};
+struct std::tuple_size<museqa::utility::reflection_t<T>>
+  : std::integral_constant<size_t, museqa::utility::reflection_t<T>::count> {};
 
 /**
  * Retrieves the deconstruction type of a reflection tuple's element.
@@ -320,8 +320,8 @@ struct std::tuple_size<museqa::utility::reflection<T>>
  * @since 1.0
  */
 template <size_t I, typename T>
-struct std::tuple_element<I, museqa::utility::reflection<T>>
-  : museqa::identity<museqa::utility::tuple_element<museqa::utility::reflection<T>, I>> {};
+struct std::tuple_element<I, museqa::utility::reflection_t<T>>
+  : museqa::identity_t<museqa::utility::tuple_element_t<museqa::utility::reflection_t<T>, I>> {};
 
 MUSEQA_DISABLE_GCC_WARNING_END("-Wnon-template-friend")
 MUSEQA_DISABLE_NVCC_WARNING_END(1301)

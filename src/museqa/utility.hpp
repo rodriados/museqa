@@ -50,7 +50,7 @@ enum : bool {
  * @since 1.0
  */
 template <typename T, size_t = 0>
-struct identity
+struct identity_t
 {
     using type = T;
 };
@@ -62,7 +62,7 @@ struct identity
  * @since 1.0
  */
 template <size_t S, size_t A = 8>
-struct alignas(A) storage
+struct alignas(A) storage_t
 {
     alignas(A) uint8_t storage[S];
 };
@@ -73,7 +73,7 @@ struct alignas(A) storage
  * @since 1.0
  */
 template <typename T = int>
-struct range
+struct range_t
 {
     T offset, total;
 };
@@ -84,7 +84,7 @@ struct range
  * @since 1.0
  */
 template <typename T>
-using pure = typename std::conditional<
+using pure_t = typename std::conditional<
         !std::is_array<T>::value || std::extent<T>::value
       , typename std::remove_reference<T>::type
       , typename std::remove_extent<T>::type
@@ -95,6 +95,6 @@ using pure = typename std::conditional<
  * that can be instantiated and returned by a function.
  * @since 1.0
  */
-struct nothing : identity<void> {};
+struct nothing_t : identity_t<void> {};
 
 MUSEQA_END_NAMESPACE
