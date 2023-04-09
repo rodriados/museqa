@@ -44,10 +44,10 @@ MUSEQA_BEGIN_NAMESPACE
  * @param fact The condition that is expected to be a fact, to be true.
  * @param params The assertion exception's parameters.
  */
-template <typename E = museqa::exception, typename ...T>
+template <typename E = museqa::exception_t, typename ...T>
 __host__ __device__ inline constexpr void guard(bool fact, T&&... params) __museqasafe__
 {
-    static_assert(std::is_base_of<museqa::exception, E>::value, "only exception types are throwable");
+    static_assert(std::is_base_of<museqa::exception_t, E>::value, "only exception types are throwable");
 
   #if !defined(MUSEQA_MODE_UNSAFE)
     if MUSEQA_UNLIKELY (!fact) {

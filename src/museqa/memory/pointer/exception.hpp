@@ -18,9 +18,9 @@ namespace memory::pointer
      * should inherit from this object in order to be caught and correctly treated.
      * @since 1.0
      */
-    struct exception : public museqa::memory::exception
+    struct exception_t : public museqa::memory::exception_t
     {
-        using museqa::memory::exception::exception;
+        using museqa::memory::exception_t::exception_t;
     };
 }
 

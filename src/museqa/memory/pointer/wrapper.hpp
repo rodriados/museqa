@@ -27,41 +27,41 @@ namespace memory::pointer
      * @since 1.0
      */
     template <typename T>
-    class wrapper
+    class wrapper_t
     {
         static_assert(std::is_object<T>::value, "pointers can only point to object types");
 
         public:
-            typedef T element_type;
-            typedef element_type *pointer_type;
+            typedef T element_t;
+            typedef element_t *pointer_t;
 
         private:
-            typedef memory::pointer::exception exception_type;
+            typedef memory::pointer::exception_t exception_t;
 
         protected:
-            pointer_type m_ptr = nullptr;
+            pointer_t m_ptr = nullptr;
 
         public:
-            __host__ __device__ inline constexpr wrapper() noexcept = default;
-            __host__ __device__ inline constexpr wrapper(const wrapper&) noexcept = default;
-            __host__ __device__ inline constexpr wrapper(wrapper&&) noexcept = default;
+            __host__ __device__ inline constexpr wrapper_t() noexcept = default;
+            __host__ __device__ inline constexpr wrapper_t(const wrapper_t&) noexcept = default;
+            __host__ __device__ inline constexpr wrapper_t(wrapper_t&&) noexcept = default;
 
             /**
              * Instantiates a new wrapper from a raw pointer.
              * @param ptr The pointer to be wrapped.
              */
-            __host__ __device__ inline constexpr wrapper(pointer_type ptr) noexcept
-              : m_ptr {ptr}
+            __host__ __device__ inline constexpr wrapper_t(pointer_t ptr) noexcept
+              : m_ptr (ptr)
             {}
 
-            __host__ __device__ inline constexpr wrapper& operator=(const wrapper&) noexcept = default;
-            __host__ __device__ inline constexpr wrapper& operator=(wrapper&&) noexcept = default;
+            __host__ __device__ inline constexpr wrapper_t& operator=(const wrapper_t&) noexcept = default;
+            __host__ __device__ inline constexpr wrapper_t& operator=(wrapper_t&&) noexcept = default;
 
             /**
              * Dereferences the pointer and exposes the target object via a reference.
              * @return A reference to the target object.
              */
-            __host__ __device__ inline constexpr element_type& operator*() __museqasafe__
+            __host__ __device__ inline constexpr element_t& operator*() __museqasafe__
             {
                 return *dereference(0);
             }
@@ -70,7 +70,7 @@ namespace memory::pointer
              * Dereferences the pointer and exposes the target object via a const-reference.
              * @return A const-qualified reference to the target object.
              */
-            __host__ __device__ inline constexpr const element_type& operator*() const __museqasafe__
+            __host__ __device__ inline constexpr const element_t& operator*() const __museqasafe__
             {
                 return *dereference(0);
             }
@@ -79,7 +79,7 @@ namespace memory::pointer
              * Unwraps the internal pointer by a structure derefenrence operator.
              * @return The wrapped pointer.
              */
-            __host__ __device__ inline constexpr pointer_type operator->() __museqasafe__
+            __host__ __device__ inline constexpr pointer_t operator->() __museqasafe__
             {
                 return dereference(0);
             }
@@ -88,7 +88,7 @@ namespace memory::pointer
              * Unwraps the internal pointer by a const-qualified dereference operator.
              * @return The const-qualified wrapped pointer.
              */
-            __host__ __device__ inline constexpr const pointer_type operator->() const __museqasafe__
+            __host__ __device__ inline constexpr const pointer_t operator->() const __museqasafe__
             {
                 return dereference(0);
             }
@@ -98,7 +98,7 @@ namespace memory::pointer
              * @param offset The pointer offset to be dereferenced.
              * @return A reference to an offset target object.
              */
-            __host__ __device__ inline constexpr element_type& operator[](ptrdiff_t offset) __museqasafe__
+            __host__ __device__ inline constexpr element_t& operator[](ptrdiff_t offset) __museqasafe__
             {
                 return *dereference(offset);
             }
@@ -108,7 +108,7 @@ namespace memory::pointer
              * @param offset The pointer offset to be dereferenced.
              * @return A const-qualified reference to an offset target object.
              */
-            __host__ __device__ inline constexpr const element_type& operator[](ptrdiff_t offset) const __museqasafe__
+            __host__ __device__ inline constexpr const element_t& operator[](ptrdiff_t offset) const __museqasafe__
             {
                 return *dereference(offset);
             }
@@ -117,7 +117,7 @@ namespace memory::pointer
              * Unwraps the internal pointer by an implicit conversion operator.
              * @return The wrapped pointer.
              */
-            __host__ __device__ inline constexpr operator pointer_type() noexcept
+            __host__ __device__ inline constexpr operator pointer_t() noexcept
             {
                 return m_ptr;
             }
@@ -126,7 +126,7 @@ namespace memory::pointer
              * Unwraps the internal pointer by a const-qualified conversion operator.
              * @return The const-qualified wrapped pointer.
              */
-            __host__ __device__ inline constexpr operator const pointer_type() const noexcept
+            __host__ __device__ inline constexpr operator const pointer_t() const noexcept
             {
                 return m_ptr;
             }
@@ -166,7 +166,7 @@ namespace memory::pointer
              * Swaps the wrapped pointer with another pointer wrapper instance.
              * @param other The wrapper to swap pointers with.
              */
-            __host__ __device__ inline constexpr void swap(wrapper& other) noexcept
+            __host__ __device__ inline constexpr void swap(wrapper_t& other) noexcept
             {
                 utility::swap(m_ptr, other.m_ptr);
             }
@@ -175,7 +175,7 @@ namespace memory::pointer
              * Unwraps and exposes the internal pointer.
              * @return The wrapped pointer.
              */
-            __host__ __device__ inline constexpr pointer_type unwrap() noexcept
+            __host__ __device__ inline constexpr pointer_t unwrap() noexcept
             {
                 return m_ptr;
             }
@@ -184,7 +184,7 @@ namespace memory::pointer
              * Unwraps and exposes the const-qualified internal pointer.
              * @return The const-qualified wrapped pointer.
              */
-            __host__ __device__ inline constexpr const pointer_type unwrap() const noexcept
+            __host__ __device__ inline constexpr const pointer_t unwrap() const noexcept
             {
                 return m_ptr;
             }
@@ -195,9 +195,9 @@ namespace memory::pointer
              * @param offset The offset to be dereferenced by the pointer.
              * @return The deferentiable wrapped pointer offset.
              */
-            __host__ __device__ inline constexpr pointer_type dereference(ptrdiff_t offset) const __museqasafe__
+            __host__ __device__ inline constexpr pointer_t dereference(ptrdiff_t offset) const __museqasafe__
             {
-                museqa::guard<exception_type>(m_ptr != nullptr, "wrapped pointer is not dereferentiable");
+                museqa::guard<exception_t>(m_ptr != nullptr, "wrapped pointer is not dereferentiable");
                 return m_ptr + offset;
             }
     };
@@ -207,36 +207,36 @@ namespace memory::pointer
      * @since 1.0
      */
     template <>
-    class wrapper<void>
+    class wrapper_t<void>
     {
         public:
-            typedef void element_type;
-            typedef element_type *pointer_type;
+            typedef void element_t;
+            typedef element_t *pointer_t;
 
         protected:
-            pointer_type m_ptr = nullptr;
+            pointer_t m_ptr = nullptr;
 
         public:
-            __host__ __device__ inline constexpr wrapper() noexcept = default;
-            __host__ __device__ inline constexpr wrapper(const wrapper&) noexcept = default;
-            __host__ __device__ inline constexpr wrapper(wrapper&&) noexcept = default;
+            __host__ __device__ inline constexpr wrapper_t() noexcept = default;
+            __host__ __device__ inline constexpr wrapper_t(const wrapper_t&) noexcept = default;
+            __host__ __device__ inline constexpr wrapper_t(wrapper_t&&) noexcept = default;
 
             /**
              * Instantiates a new wrapper from a raw pointer.
              * @param ptr The pointer to be wrapped.
              */
-            __host__ __device__ inline constexpr wrapper(pointer_type ptr) noexcept
-              : m_ptr {ptr}
+            __host__ __device__ inline constexpr wrapper_t(pointer_t ptr) noexcept
+              : m_ptr (ptr)
             {}
 
-            __host__ __device__ inline constexpr wrapper& operator=(const wrapper&) noexcept = default;
-            __host__ __device__ inline constexpr wrapper& operator=(wrapper&&) noexcept = default;
+            __host__ __device__ inline constexpr wrapper_t& operator=(const wrapper_t&) noexcept = default;
+            __host__ __device__ inline constexpr wrapper_t& operator=(wrapper_t&&) noexcept = default;
 
             /**
              * Unwraps the internal pointer by an implicit conversion operator.
              * @return The wrapped pointer.
              */
-            __host__ __device__ inline constexpr operator pointer_type() noexcept
+            __host__ __device__ inline constexpr operator pointer_t() noexcept
             {
                 return m_ptr;
             }
@@ -245,7 +245,7 @@ namespace memory::pointer
              * Unwraps the internal pointer by a const-qualified conversion operator.
              * @return The const-qualified wrapped pointer.
              */
-            __host__ __device__ inline constexpr operator const pointer_type() const noexcept
+            __host__ __device__ inline constexpr operator const pointer_t() const noexcept
             {
                 return m_ptr;
             }
@@ -285,7 +285,7 @@ namespace memory::pointer
              * Swaps the wrapped pointer with another pointer wrapper instance.
              * @param other The wrapper to swap pointers with.
              */
-            __host__ __device__ inline constexpr void swap(wrapper& other) noexcept
+            __host__ __device__ inline constexpr void swap(wrapper_t& other) noexcept
             {
                 utility::swap(m_ptr, other.m_ptr);
             }
@@ -294,7 +294,7 @@ namespace memory::pointer
              * Unwraps and exposes the internal pointer.
              * @return The wrapped pointer.
              */
-            __host__ __device__ inline constexpr pointer_type unwrap() noexcept
+            __host__ __device__ inline constexpr pointer_t unwrap() noexcept
             {
                 return m_ptr;
             }
@@ -303,7 +303,7 @@ namespace memory::pointer
              * Unwraps and exposes the const-qualified internal pointer.
              * @return The const-qualified wrapped pointer.
              */
-            __host__ __device__ inline constexpr const pointer_type unwrap() const noexcept
+            __host__ __device__ inline constexpr const pointer_t unwrap() const noexcept
             {
                 return m_ptr;
             }
@@ -319,8 +319,8 @@ namespace memory::pointer
      */
     template <typename T, typename U>
     __host__ __device__ inline constexpr bool operator==(
-        const wrapper<T>& a
-      , const wrapper<U>& b
+        const wrapper_t<T>& a
+      , const wrapper_t<U>& b
     ) noexcept {
         return static_cast<void*>(a) == static_cast<void*>(b);
     }
@@ -335,8 +335,8 @@ namespace memory::pointer
      */
     template <typename T, typename U>
     __host__ __device__ inline constexpr bool operator!=(
-        const wrapper<T>& a
-      , const wrapper<U>& b
+        const wrapper_t<T>& a
+      , const wrapper_t<U>& b
     ) noexcept {
         return static_cast<void*>(a) != static_cast<void*>(b);
     }

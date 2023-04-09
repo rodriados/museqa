@@ -32,7 +32,7 @@ namespace utility
      * @since 1.0
      */
     template <typename F, typename O = void>
-    class functor;
+    class functor_t;
 
     /**
      * Wraps a generic non-member function, callable from any context.
@@ -40,13 +40,13 @@ namespace utility
      * @since 1.0
      */
     template <typename F>
-    class functor<F, void> : public decltype(utility::delegate(std::declval<F>()))
+    class functor_t<F, void> : public decltype(utility::delegate_t(std::declval<F>()))
     {
         private:
-            typedef decltype(utility::delegate(std::declval<F>())) underlying_type;
+            typedef decltype(utility::delegate_t(std::declval<F>())) underlying_t;
 
         public:
-            using underlying_type::delegate;
+            using underlying_t::delegate_t;
 
             /**
              * Unwraps and exposes the underlying function pointer.
@@ -67,7 +67,7 @@ namespace utility
          * @since 1.0
          */
         template <typename F>
-        struct analyzer : std::false_type {};
+        struct analyzer_t : std::false_type {};
 
         /*
          * Defines auxiliary macros for creating all possible member function types.
@@ -75,7 +75,7 @@ namespace utility
          */
         #define __museqaanalyzer__(MF)                                         \
           template <typename R, typename T, typename ...P>                     \
-          struct analyzer<MF> : std::true_type { typedef R result_type; };
+          struct analyzer_t<MF> : std::true_type { typedef R result_t; };
 
         #define __museqarepeater1__(qq)                                        \
           __museqaanalyzer__(R(T::*)(P...) qq);                                \
@@ -110,35 +110,35 @@ namespace utility
      * @since 1.0
      */
     template <typename F, typename O>
-    class functor
+    class functor_t
     {
         static_assert(std::is_class<O>::value, "functor must be bound to a class-like type");
-        static_assert(detail::analyzer<F>::value, "only member functions can be bound to type");
+        static_assert(detail::analyzer_t<F>::value, "only member functions can be bound to type");
 
         protected:
-            typedef O object_type;
-            typedef memory::pointer::shared<O> pointer_type;
+            typedef O object_t;
+            typedef memory::pointer::shared_t<O> pointer_t;
 
         public:
-            typedef F function_type;
-            typedef typename detail::analyzer<F>::result_type result_type;
+            typedef F function_t;
+            typedef typename detail::analyzer_t<F>::result_t result_t;
 
         private:
-            mutable pointer_type m_object;
-            function_type m_function = nullptr;
+            mutable pointer_t m_object;
+            function_t m_function = nullptr;
 
         public:
-            __host__ __device__ inline constexpr functor() noexcept = default;
-            __host__ __device__ inline functor(const functor&) noexcept = default;
-            __host__ __device__ inline functor(functor&&) noexcept = default;
+            __host__ __device__ inline constexpr functor_t() noexcept = default;
+            __host__ __device__ inline functor_t(const functor_t&) noexcept = default;
+            __host__ __device__ inline functor_t(functor_t&&) noexcept = default;
 
             /**
              * Builds a function from a non-owning pointer to the bound object.
              * @param object The object to which the member function is bound to.
              * @param lambda The function pointer to be wrapped by the functor.
              */
-            __host__ __device__ inline explicit functor(object_type& object, function_type lambda) noexcept
-              : functor {memory::pointer::unmanaged(&object), lambda}
+            __host__ __device__ inline explicit functor_t(object_t& object, function_t lambda) noexcept
+              : functor_t {memory::pointer::unmanaged_t(&object), lambda}
             {}
 
             /**
@@ -146,7 +146,7 @@ namespace utility
              * @param object The pointer to the object the function is bound to.
              * @param lambda The function pointer to be wrapped by the functor.
              */
-            __host__ __device__ inline functor(const pointer_type& object, function_type lambda) noexcept
+            __host__ __device__ inline functor_t(const pointer_t& object, function_t lambda) noexcept
               : m_object {object}
               , m_function {lambda}
             {}
@@ -156,13 +156,13 @@ namespace utility
              * @param object The pointer to the object the function is bound to.
              * @param lambda The function pointer to be wrapped by the functor.
              */
-            __host__ __device__ inline functor(pointer_type&& object, function_type lambda) noexcept
+            __host__ __device__ inline functor_t(pointer_t&& object, function_t lambda) noexcept
               : m_object {std::forward<decltype(object)>(object)}
               , m_function {lambda}
             {}
 
-            __host__ __device__ inline functor& operator=(const functor&) __devicesafe__ = default;
-            __host__ __device__ inline functor& operator=(functor&&) __devicesafe__ = default;
+            __host__ __device__ inline functor_t& operator=(const functor_t&) __devicesafe__ = default;
+            __host__ __device__ inline functor_t& operator=(functor_t&&) __devicesafe__ = default;
 
             /**
              * Invokes the wrapped function and returns the produced result.
@@ -183,7 +183,7 @@ namespace utility
              */
             __host__ __device__ inline constexpr decltype(auto) unwrap() const
             {
-                return tuple<object_type&, function_type> {*m_object, m_function};
+                return tuple_t<object_t&, function_t> {*m_object, m_function};
             }
 
             /**
@@ -207,7 +207,7 @@ namespace factory
      */
     template <typename F>
     __host__ __device__ inline constexpr auto functor(const F& function) noexcept
-    -> typename std::enable_if<std::is_function<F>::value, museqa::utility::functor<F>>::type
+    -> typename std::enable_if<std::is_function<F>::value, museqa::utility::functor_t<F>>::type
     {
         return {function};
     }
@@ -222,12 +222,12 @@ namespace factory
      * @return The new functor instance.
      */
     template <typename T, typename F>
-    __host__ inline auto functor(T&& object, const F& method) -> museqa::utility::functor<F, pure<T>>
+    __host__ inline auto functor(T&& object, const F& method) -> museqa::utility::functor_t<F, pure_t<T>>
     {
-        return museqa::utility::functor<F, pure<T>>(
-            museqa::memory::pointer::shared<pure<T>>(
-                new pure<T>(std::forward<decltype(object)>(object))
-              , [](void *ptr) { delete reinterpret_cast<pure<T>*>(ptr); })
+        return museqa::utility::functor_t<F, pure_t<T>>(
+            museqa::memory::pointer::shared_t<pure_t<T>>(
+                new pure_t<T>(std::forward<decltype(object)>(object))
+              , [](void *ptr) { delete reinterpret_cast<pure_t<T>*>(ptr); })
           , method
         );
     }
@@ -242,10 +242,10 @@ namespace factory
      * @return The new functor instance.
      */
     template <typename T, typename F>
-    __device__ inline auto functor(T&& object, const F& method) -> museqa::utility::functor<F, pure<T>>
+    __device__ inline auto functor(T&& object, const F& method) -> museqa::utility::functor_t<F, pure_t<T>>
     {
-        return museqa::utility::functor<F, pure<T>>(
-            museqa::memory::pointer::unmanaged<pure<T>>(&object)
+        return museqa::utility::functor_t<F, pure_t<T>>(
+            museqa::memory::pointer::unmanaged_t<pure_t<T>>(&object)
           , method
         );
     }
@@ -260,11 +260,14 @@ namespace factory
     template <typename T>
     __host__ __device__ inline auto functor(T&& object)
     -> typename std::enable_if<
-        std::is_class<pure<T>>::value
-      , decltype(factory::functor(object, &pure<T>::operator()))
+        std::is_class<pure_t<T>>::value
+      , decltype(factory::functor(object, &pure_t<T>::operator()))
     >::type
     {
-        return factory::functor(std::forward<decltype(object)>(object), &pure<T>::operator());
+        return factory::functor(
+            std::forward<decltype(object)>(object)
+          , &pure_t<T>::operator()
+        );
     }
 }
 

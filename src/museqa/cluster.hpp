@@ -17,7 +17,7 @@ namespace cluster
      * The type of a process identifier within the cluster of MPI processes.
      * @since 1.0
      */
-    using pid = int32_t;
+    using pid_t = int32_t;
 
     /**#@+
      * Keeps track of the current process identifier and the total number of processes
@@ -26,10 +26,10 @@ namespace cluster
      * @since 1.0
      */
   #if !defined(MUSEQA_AVOID_MPI)
-    extern const cluster::pid& rank;
+    extern const cluster::pid_t& rank;
     extern const int32_t& size;
   #else
-    enum : cluster::pid { rank = 0 };
+    enum : cluster::pid_t { rank = 0 };
     enum : int32_t { size = 1 };
   #endif
     /**#@-*/
@@ -39,14 +39,14 @@ namespace cluster
      * to change the master process's PID, as no other PID is guaranteed to exist.
      * @since 1.0
      */
-    enum : cluster::pid { master = 0 };
+    enum : cluster::pid_t { master = 0 };
 
     /**
      * Evaluates whether the current process is the one with the given PID.
      * @param pid The PID to check whether corresponds to the current process.
      * @return Does the current process match the requested PID?
      */
-    inline constexpr bool onlyprocess(cluster::pid pid) noexcept
+    inline constexpr bool onlyprocess(cluster::pid_t pid) noexcept
     {
       #if !defined(MUSEQA_AVOID_MPI)
         return pid == cluster::rank;

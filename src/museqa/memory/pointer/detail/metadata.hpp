@@ -25,15 +25,15 @@ namespace memory::pointer::detail
      * deallocator is automatically called and the memory is released.
      * @since 1.0
      */
-    class metadata
+    class metadata_t
     {
         private:
-            typedef memory::allocator allocator_type;
-            typedef memory::pointer::wrapper<void> pointer_type;
+            typedef memory::allocator_t allocator_t;
+            typedef memory::pointer::wrapper_t<void> pointer_t;
 
         private:
-            pointer_type m_ptr = nullptr;
-            const allocator_type m_allocator {};
+            pointer_t m_ptr = nullptr;
+            const allocator_t m_allocator {};
             uint64_t m_counter = 0;
 
         public:
@@ -43,9 +43,9 @@ namespace memory::pointer::detail
              * @param allocator The pointer's allocator.
              * @return The new pointer's metadata instance.
              */
-            inline static metadata *acquire(pointer_type ptr, const allocator_type& allocator) noexcept
+            inline static metadata_t *acquire(pointer_t ptr, const allocator_t& allocator) noexcept
             {
-                return new metadata {ptr, allocator};
+                return new metadata_t {ptr, allocator};
             }
 
             /**
@@ -53,10 +53,12 @@ namespace memory::pointer::detail
              * @param meta The metadata instance of pointer to be acquired.
              * @return The acquired metadata pointer.
              */
-            __host__ __device__ inline static metadata *acquire(metadata *meta) noexcept
+            __host__ __device__ inline static metadata_t *acquire(metadata_t *meta) noexcept
             {
               #if MUSEQA_RUNTIME_HOST
-                if (meta != nullptr) { ++meta->m_counter; } return meta;
+                if (meta != nullptr)
+                    ++meta->m_counter;
+                return meta;
               #else
                 return nullptr;
               #endif
@@ -67,10 +69,11 @@ namespace memory::pointer::detail
              * memory resources when the reference counter reaches zero.
              * @param meta The metadata of a pointer to be released.
              */
-            __host__ __device__ inline static void release(metadata *meta) __devicesafe__
+            __host__ __device__ inline static void release(metadata_t *meta) __devicesafe__
             {
               #if MUSEQA_RUNTIME_HOST
-                if (meta != nullptr && --meta->m_counter <= 0) { delete meta; }
+                if (meta != nullptr && --meta->m_counter <= 0)
+                    delete meta;
               #endif
             }
 
@@ -80,19 +83,20 @@ namespace memory::pointer::detail
              * @param ptr The raw pointer to acquire ownership of.
              * @param allocator The pointer's allocator instance.
              */
-            inline explicit metadata(pointer_type ptr, const allocator_type& allocator) noexcept
-              : m_ptr {ptr}
-              , m_allocator {allocator}
-              , m_counter {1}
+            inline explicit metadata_t(pointer_t ptr, const allocator_t& allocator) noexcept
+              : m_ptr (ptr)
+              , m_allocator (allocator)
+              , m_counter (1)
             {}
 
             /**
              * Releases ownership and frees the resources allocated by the pointer.
              * @see museqa::memory::pointer::detail::metadata::release
              */
-            inline ~metadata()
+            inline ~metadata_t()
             {
-                if (m_ptr != nullptr) { m_allocator.deallocate(static_cast<void*>(m_ptr)); }
+                if (m_ptr != nullptr)
+                    m_allocator.deallocate(static_cast<void*>(m_ptr));
             }
     };
 }

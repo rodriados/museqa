@@ -18,9 +18,9 @@ namespace memory
      * should inherit from this object in order to be caught and correctly treated.
      * @since 1.0
      */
-    struct exception : public museqa::exception
+    struct exception_t : public museqa::exception_t
     {
-        using museqa::exception::exception;
+        using museqa::exception_t::exception_t;
     };
 }
 

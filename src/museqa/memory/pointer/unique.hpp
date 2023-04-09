@@ -26,40 +26,40 @@ namespace memory::pointer
      * @since 1.0
      */
     template <typename T>
-    class unique : public memory::pointer::wrapper<T>
+    class unique_t : public memory::pointer::wrapper_t<T>
     {
-        template <typename> friend class unique;
+        template <typename> friend class unique_t;
 
         private:
-            typedef memory::pointer::wrapper<T> underlying_type;
-            typedef memory::pointer::detail::metadata metadata_type;
-            typedef memory::allocator allocator_type;
+            typedef memory::pointer::wrapper_t<T> underlying_t;
+            typedef memory::pointer::detail::metadata_t metadata_t;
+            typedef memory::allocator_t allocator_t;
 
         public:
-            using typename underlying_type::element_type;
-            using typename underlying_type::pointer_type;
+            using typename underlying_t::element_t;
+            using typename underlying_t::pointer_t;
 
         private:
-            metadata_type *m_meta = nullptr;
+            metadata_t *m_meta = nullptr;
 
         public:
-            __host__ __device__ inline constexpr unique() noexcept = default;
-            __host__ __device__ inline constexpr unique(const unique&) noexcept = delete;
+            __host__ __device__ inline constexpr unique_t() noexcept = default;
+            __host__ __device__ inline constexpr unique_t(const unique_t&) noexcept = delete;
 
             /**
              * Builds a new unique pointer from a raw pointer and its allocator.
              * @param ptr The raw pointer to be wrapped.
              * @param allocator The given pointer's allocator.
              */
-            inline explicit unique(pointer_type ptr, const allocator_type& allocator) noexcept
-              : unique {ptr, metadata_type::acquire(ptr, allocator)}
+            inline explicit unique_t(pointer_t ptr, const allocator_t& allocator) noexcept
+              : unique_t (ptr, metadata_t::acquire(ptr, allocator))
             {}
 
             /**
              * The unique pointer's move constructor.
              * @param other The instance to be moved.
              */
-            __host__ __device__ inline unique(unique&& other) noexcept
+            __host__ __device__ inline unique_t(unique_t&& other) noexcept
             {
                 other.swap(*this);
             }
@@ -70,32 +70,32 @@ namespace memory::pointer
              * @param other The foreign pointer instance to be moved.
              */
             template <typename U>
-            __host__ __device__ inline unique(unique<U>&& other) noexcept
-              : unique {static_cast<pointer_type>(other.m_ptr), metadata_type::acquire(other.m_meta)}
+            __host__ __device__ inline unique_t(unique_t<U>&& other) noexcept
+              : unique_t (static_cast<pointer_t>(other.m_ptr), metadata_t::acquire(other.m_meta))
             {
                 other.reset();
             }
 
             /**
              * Releases the ownership of the acquired pointer reference.
-             * @see museqa::memory::pointer::unique::unique
+             * @see museqa::memory::pointer::unique_t::unique_t
              */
-            __host__ __device__ inline ~unique() __devicesafe__
+            __host__ __device__ inline ~unique_t() __devicesafe__
             {
-                metadata_type::release(m_meta);
+                metadata_t::release(m_meta);
             }
 
-            __host__ __device__ inline unique& operator=(const unique&) noexcept = delete;
+            __host__ __device__ inline unique_t& operator=(const unique_t&) noexcept = delete;
 
             /**
              * The move-assignment operator.
              * @param other The instance to be moved.
              * @return This pointer object.
              */
-            __host__ __device__ inline unique& operator=(unique&& other) __devicesafe__
+            __host__ __device__ inline unique_t& operator=(unique_t&& other) __devicesafe__
             {
                 if (other.m_ptr == this->m_ptr) { other.reset(); return *this; }
-                metadata_type::release(m_meta); return *new (this) unique {std::forward<decltype(other)>(other)};
+                metadata_t::release(m_meta); return *new (this) unique_t (std::forward<decltype(other)>(other));
             }
 
             /**
@@ -105,27 +105,27 @@ namespace memory::pointer
              * @return This pointer object.
              */
             template <typename U>
-            __host__ __device__ inline unique& operator=(unique<U>&& other) __devicesafe__
+            __host__ __device__ inline unique_t& operator=(unique_t<U>&& other) __devicesafe__
             {
                 if (other.m_ptr == this->m_ptr) { other.reset(); return *this; }
-                metadata_type::release(m_meta); return *new (this) unique {std::forward<decltype(other)>(other)};
+                metadata_t::release(m_meta); return *new (this) unique_t (std::forward<decltype(other)>(other));
             }
 
             /**
              * Releases the pointer ownership and returns to an empty state.
-             * @see museqa::memory::pointer::unique::unique
+             * @see museqa::memory::pointer::unique_t::unique_t
              */
             __host__ __device__ inline void reset() __devicesafe__
             {
-                metadata_type::release(m_meta);
-                new (this) unique {nullptr, nullptr};
+                metadata_t::release(m_meta);
+                new (this) unique_t (nullptr, nullptr);
             }
 
             /**
              * Swaps ownership with another pointer instance.
              * @param other The instance to swap with.
              */
-            __host__ __device__ inline void swap(unique& other) noexcept
+            __host__ __device__ inline void swap(unique_t& other) noexcept
             {
                 utility::swap(this->m_ptr, other.m_ptr);
                 utility::swap(m_meta, other.m_meta);
@@ -137,8 +137,8 @@ namespace memory::pointer
              * @param ptr The raw pointer object.
              * @param meta The pointer's metadata instance.
              */
-            __host__ __device__ inline explicit unique(pointer_type ptr, metadata_type *meta) noexcept
-              : underlying_type {ptr}
+            __host__ __device__ inline explicit unique_t(pointer_t ptr, metadata_t *meta) noexcept
+              : underlying_t {ptr}
               , m_meta {meta}
             {}
     };
@@ -147,8 +147,8 @@ namespace memory::pointer
      * Deduction guides for a generic unique pointer.
      * @since 1.0
      */
-    template <typename T> unique(T*) -> unique<T>;
-    template <typename T> unique(T*, const memory::allocator&) -> unique<T>;
+    template <typename T> unique_t(T*) -> unique_t<T>;
+    template <typename T> unique_t(T*, const memory::allocator_t&) -> unique_t<T>;
 }
 
 namespace factory::memory::pointer
@@ -161,13 +161,13 @@ namespace factory::memory::pointer
      * @return The allocated unique memory pointer.
      */
     template <typename T = void>
-    inline auto unique(size_t count = 1, const museqa::memory::allocator& allocator = allocator<T>())
+    inline auto unique(size_t count = 1, const museqa::memory::allocator_t& allocator = allocator<T>())
     -> typename std::enable_if<
         !std::is_reference<T>::value
-      , museqa::memory::pointer::unique<T>
+      , museqa::memory::pointer::unique_t<T>
     >::type
     {
-        return museqa::memory::pointer::unique<T>(allocator.allocate<T>(count), allocator);
+        return museqa::memory::pointer::unique_t<T>(allocator.allocate<T>(count), allocator);
     }
 }
 

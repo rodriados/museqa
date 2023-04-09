@@ -22,55 +22,55 @@ namespace memory
      * of generic types and located in generic memory spaces.
      * @since 1.0
      */
-    class allocator
+    class allocator_t
     {
         public:
-            using allocator_type = utility::delegate<void, void**, size_t, size_t>;
-            using deleter_type = utility::delegate<void, void*>;
+            using allocf_t = utility::delegate_t<void, void**, size_t, size_t>;
+            using deletef_t = utility::delegate_t<void, void*>;
 
         protected:
-            allocator_type m_allocator {};
-            deleter_type m_deleter {};
+            allocf_t m_alloc {};
+            deletef_t m_delete {};
 
         public:
-            __host__ __device__ inline constexpr allocator() noexcept = default;
-            __host__ __device__ inline constexpr allocator(const allocator&) noexcept = default;
-            __host__ __device__ inline constexpr allocator(allocator&&) noexcept = default;
+            __host__ __device__ inline constexpr allocator_t() noexcept = default;
+            __host__ __device__ inline constexpr allocator_t(const allocator_t&) noexcept = default;
+            __host__ __device__ inline constexpr allocator_t(allocator_t&&) noexcept = default;
 
             /**
              * Instantiates a new allocator with the given delegates.
-             * @param falloc The allocation delegate.
-             * @param fdelete The deletion delegate.
+             * @param allocf The allocation delegate.
+             * @param deletef The deletion delegate.
              */
-            __host__ __device__ inline constexpr allocator(allocator_type falloc, deleter_type fdelete) noexcept
-              : m_allocator {falloc}
-              , m_deleter {fdelete}
+            __host__ __device__ inline constexpr allocator_t(allocf_t allocf, deletef_t deletef) noexcept
+              : m_alloc (allocf)
+              , m_delete (deletef)
             {}
 
             /**
              * Instantiates a new allocator from given lambdas.
              * @tparam A The allocation lambda type.
              * @tparam D The deletion lambda type.
-             * @param falloc The allocation lambda.
-             * @param fdelete The deletion lambda.
+             * @param allocf The allocation lambda.
+             * @param deletef The deletion lambda.
              */
             template <typename A, typename D>
-            __host__ __device__ inline constexpr allocator(const A& falloc, const D& fdelete) noexcept
-              : allocator {allocator_type(falloc), deleter_type(fdelete)}
+            __host__ __device__ inline constexpr allocator_t(const A& allocf, const D& deletef) noexcept
+              : allocator_t (allocf_t(allocf), deletef_t(deletef))
             {}
 
             /**
              * Instantiates a new allocator containing only a deleter.
              * @tparam D The deletion lambda type.
-             * @param fdelete The deletion lambda.
+             * @param deletef The deletion lambda.
              */
             template <typename D>
-            __host__ __device__ inline constexpr allocator(const D& fdelete) noexcept
-              : allocator {nullptr, deleter_type(fdelete)}
+            __host__ __device__ inline constexpr allocator_t(const D& deletef) noexcept
+              : allocator_t (nullptr, deletef_t(deletef))
             {}
 
-            __host__ __device__ inline allocator& operator=(const allocator&) noexcept = default;
-            __host__ __device__ inline allocator& operator=(allocator&&) noexcept = default;
+            __host__ __device__ inline allocator_t& operator=(const allocator_t&) noexcept = default;
+            __host__ __device__ inline allocator_t& operator=(allocator_t&&) noexcept = default;
 
             /**
              * Invokes the allocator and allocates the given pointer.
@@ -80,10 +80,10 @@ namespace memory
              * @return The newly allocated pointer.
              */
             template <typename T = void>
-            __host__ __device__ inline T *allocate(T **ptr, size_t n = 1) const
+            __host__ __device__ inline T* allocate(T** ptr, size_t n = 1) const
             {
-                using target_type = typename std::conditional<std::is_void<T>::value, uint8_t, T>::type;
-                (m_allocator)(reinterpret_cast<void**>(ptr), sizeof(target_type), n);
+                using target_t = typename std::conditional<std::is_void<T>::value, uint8_t, T>::type;
+                (m_alloc)(reinterpret_cast<void**>(ptr), sizeof(target_t), n);
                 return *ptr;
             }
 
@@ -94,7 +94,7 @@ namespace memory
              * @return The newly allocated pointer.
              */
             template <typename T = void>
-            __host__ __device__ inline T *allocate(size_t n = 1) const
+            __host__ __device__ inline T* allocate(size_t n = 1) const
             {
                 T *ptr;
                 return allocate<T>(&ptr, n);
@@ -106,9 +106,9 @@ namespace memory
              * @param ptr The pointer of which memory must be freed.
              */
             template <typename T = void>
-            __host__ __device__ inline void deallocate(T *ptr) const
+            __host__ __device__ inline void deallocate(T* ptr) const
             {
-                (m_deleter)(reinterpret_cast<void*>(ptr));
+                (m_delete)(reinterpret_cast<void*>(ptr));
             }
     };
 }
@@ -125,12 +125,12 @@ namespace factory::memory
     __host__ __device__ inline constexpr auto allocator() noexcept
     -> typename std::enable_if<
         std::is_default_constructible<T>::value
-      , museqa::memory::allocator
+      , museqa::memory::allocator_t
     >::type
     {
-        return museqa::memory::allocator {
-            [](void **ptr, size_t, size_t n) { *ptr = new pure<T>[n]; }
-          , [](void *ptr) { delete[] reinterpret_cast<pure<T>*>(ptr); }
+        return museqa::memory::allocator_t {
+            [](void **ptr, size_t, size_t n) { *ptr = new pure_t<T>[n]; }
+          , [](void *ptr) { delete[] reinterpret_cast<pure_t<T>*>(ptr); }
         };
     }
 
@@ -143,10 +143,10 @@ namespace factory::memory
     __host__ __device__ inline constexpr auto allocator() noexcept
     -> typename std::enable_if<
         std::is_void<T>::value
-      , museqa::memory::allocator
+      , museqa::memory::allocator_t
     >::type
     {
-        return museqa::memory::allocator {
+        return museqa::memory::allocator_t {
             [](void **ptr, size_t size, size_t n) { *ptr = operator new(size * n); }
           , [](void *ptr) { operator delete(ptr); }
         };

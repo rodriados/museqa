@@ -32,6 +32,7 @@ namespace memory
     template <typename T = void>
     inline void copy(T *target, const T *source, size_t count = 1) noexcept
     {
+        static_assert(std::is_trivially_copyable<T>::value, "cannot copy non-trivially-copyable types");
         using U = typename std::conditional<std::is_void<T>::value, uint8_t, T>::type;
         std::memmove(target, source, count * sizeof(U));
     }

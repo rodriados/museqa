@@ -18,28 +18,28 @@ MUSEQA_BEGIN_NAMESPACE
  * a message about the error that was raised.
  * @since 1.0
  */
-class exception : public std::exception
+class exception_t : public std::exception
 {
     private:
         const std::string m_msg;
 
     public:
-        inline exception() = delete;
-        inline exception(const exception&) = default;
-        inline exception(exception&&) = default;
+        inline exception_t() = delete;
+        inline exception_t(const exception_t&) = default;
+        inline exception_t(exception_t&&) = default;
 
         /**
          * Builds a new exception instance.
          * @param msg The exception's error message.
          */
-        inline explicit exception(const std::string& msg)
+        inline explicit exception_t(const std::string& msg)
           : m_msg {msg}
         {}
 
-        inline virtual ~exception() noexcept = default;
+        inline virtual ~exception_t() noexcept = default;
 
-        inline exception& operator=(const exception&) = delete;
-        inline exception& operator=(exception&&) = delete;
+        inline exception_t& operator=(const exception_t&) = delete;
+        inline exception_t& operator=(exception_t&&) = delete;
 
         /**
          * Returns the exception's explanatory string.

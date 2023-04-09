@@ -28,40 +28,40 @@ namespace memory::pointer
      * @since 1.0
      */
     template <typename T>
-    class shared : public memory::pointer::wrapper<T>
+    class shared_t : public memory::pointer::wrapper_t<T>
     {
-        template <typename> friend class shared;
+        template <typename> friend class shared_t;
 
         private:
-            typedef memory::pointer::wrapper<T> underlying_type;
-            typedef memory::pointer::detail::metadata metadata_type;
-            typedef memory::allocator allocator_type;
+            typedef memory::pointer::wrapper_t<T> underlying_t;
+            typedef memory::pointer::detail::metadata_t metadata_t;
+            typedef memory::allocator_t allocator_t;
 
         public:
-            using typename underlying_type::element_type;
-            using typename underlying_type::pointer_type;
+            using typename underlying_t::element_t;
+            using typename underlying_t::pointer_t;
 
         private:
-            metadata_type *m_meta = nullptr;
+            metadata_t *m_meta = nullptr;
 
         public:
-            __host__ __device__ inline constexpr shared() noexcept = default;
+            __host__ __device__ inline constexpr shared_t() noexcept = default;
 
             /**
              * Builds a new managed pointer from a raw pointer and its allocator.
              * @param ptr The raw pointer to be wrapped.
              * @param allocator The given pointer's allocator.
              */
-            inline explicit shared(pointer_type ptr, const allocator_type& allocator) noexcept
-              : shared {ptr, metadata_type::acquire(ptr, allocator)}
+            inline explicit shared_t(pointer_t ptr, const allocator_t& allocator) noexcept
+              : shared_t (ptr, metadata_t::acquire(ptr, allocator))
             {}
 
             /**
              * The shared pointer's copy constructor.
              * @param other The instance to be copied.
              */
-            __host__ __device__ inline shared(const shared& other) noexcept
-              : shared {other.m_ptr, metadata_type::acquire(other.m_meta)}
+            __host__ __device__ inline shared_t(const shared_t& other) noexcept
+              : shared_t (other.m_ptr, metadata_t::acquire(other.m_meta))
             {}
 
             /**
@@ -70,16 +70,16 @@ namespace memory::pointer
              * @param other The foreign pointer instance to be copied.
              */
             template <typename U>
-            __host__ __device__ inline shared(const shared<U>& other) noexcept
-              : shared {static_cast<pointer_type>(other.m_ptr), metadata_type::acquire(other.m_meta)}
+            __host__ __device__ inline shared_t(const shared_t<U>& other) noexcept
+              : shared_t (static_cast<pointer_t>(other.m_ptr), metadata_t::acquire(other.m_meta))
             {}
 
             /**
              * The shared pointer's move constructor.
              * @param other The instance to be moved.
              */
-            __host__ __device__ inline shared(shared&& other) noexcept
-              : shared {other.m_ptr, metadata_type::acquire(other.m_meta)}
+            __host__ __device__ inline shared_t(shared_t&& other) noexcept
+              : shared_t (other.m_ptr, metadata_t::acquire(other.m_meta))
             {
                 other.reset();
             }
@@ -90,19 +90,19 @@ namespace memory::pointer
              * @param other The foreign pointer instance to be moved.
              */
             template <typename U>
-            __host__ __device__ inline shared(shared<U>&& other) noexcept
-              : shared {static_cast<pointer_type>(other.m_ptr), metadata_type::acquire(other.m_meta)}
+            __host__ __device__ inline shared_t(shared_t<U>&& other) noexcept
+              : shared_t (static_cast<pointer_t>(other.m_ptr), metadata_t::acquire(other.m_meta))
             {
                 other.reset();
             }
 
             /**
              * Releases the ownership of the acquired pointer reference.
-             * @see museqa::memory::pointer::shared::shared
+             * @see museqa::memory::pointer::shared_t::shared_t
              */
-            __host__ __device__ inline ~shared() __devicesafe__
+            __host__ __device__ inline ~shared_t() __devicesafe__
             {
-                metadata_type::release(m_meta);
+                metadata_t::release(m_meta);
             }
 
             /**
@@ -110,10 +110,10 @@ namespace memory::pointer
              * @param other The instance to be copied.
              * @return This pointer object.
              */
-            __host__ __device__ inline shared& operator=(const shared& other) __devicesafe__
+            __host__ __device__ inline shared_t& operator=(const shared_t& other) __devicesafe__
             {
                 if (other.m_ptr == this->m_ptr) return *this;
-                metadata_type::release(m_meta); return *new (this) shared {other};
+                metadata_t::release(m_meta); return *new (this) shared_t (other);
             }
 
             /**
@@ -123,10 +123,10 @@ namespace memory::pointer
              * @return This pointer object.
              */
             template <typename U>
-            __host__ __device__ inline shared& operator=(const shared<U>& other) __devicesafe__
+            __host__ __device__ inline shared_t& operator=(const shared_t<U>& other) __devicesafe__
             {
                 if (other.m_ptr == this->m_ptr) return *this;
-                metadata_type::release(m_meta); return *new (this) shared {other};
+                metadata_t::release(m_meta); return *new (this) shared_t (other);
             }
 
             /**
@@ -134,10 +134,10 @@ namespace memory::pointer
              * @param other The instance to be moved.
              * @return This pointer object.
              */
-            __host__ __device__ inline shared& operator=(shared&& other) __devicesafe__
+            __host__ __device__ inline shared_t& operator=(shared_t&& other) __devicesafe__
             {
                 if (other.m_ptr == this->m_ptr) { other.reset(); return *this; }
-                metadata_type::release(m_meta); return *new (this) shared {std::forward<decltype(other)>(other)};
+                metadata_t::release(m_meta); return *new (this) shared_t (std::forward<decltype(other)>(other));
             }
 
             /**
@@ -147,10 +147,10 @@ namespace memory::pointer
              * @return This pointer object.
              */
             template <typename U>
-            __host__ __device__ inline shared& operator=(shared<U>&& other) __devicesafe__
+            __host__ __device__ inline shared_t& operator=(shared_t<U>&& other) __devicesafe__
             {
                 if (other.m_ptr == this->m_ptr) { other.reset(); return *this; }
-                metadata_type::release(m_meta); return *new (this) shared {std::forward<decltype(other)>(other)};
+                metadata_t::release(m_meta); return *new (this) shared_t (std::forward<decltype(other)>(other));
             }
 
             /**
@@ -158,26 +158,26 @@ namespace memory::pointer
              * @param offset The requested offset.
              * @return The new offset pointer instance.
              */
-            __host__ __device__ inline shared offset(ptrdiff_t offset) noexcept
+            __host__ __device__ inline shared_t offset(ptrdiff_t offset) noexcept
             {
-                return shared {this->m_ptr + offset, metadata_type::acquire(m_meta)};
+                return shared_t (this->m_ptr + offset, metadata_t::acquire(m_meta));
             }
 
             /**
              * Releases the pointer ownership and returns to an empty state.
-             * @see museqa::memory::pointer::shared::shared
+             * @see museqa::memory::pointer::shared_t::shared_t
              */
             __host__ __device__ inline void reset() __devicesafe__
             {
-                metadata_type::release(m_meta);
-                new (this) shared {nullptr, nullptr};
+                metadata_t::release(m_meta);
+                new (this) shared_t (nullptr, nullptr);
             }
 
             /**
              * Swaps ownership with another pointer instance.
              * @param other The instance to swap with.
              */
-            __host__ __device__ inline void swap(shared& other) noexcept
+            __host__ __device__ inline void swap(shared_t& other) noexcept
             {
                 utility::swap(this->m_ptr, other.m_ptr);
                 utility::swap(m_meta, other.m_meta);
@@ -189,8 +189,8 @@ namespace memory::pointer
              * @param ptr The raw pointer object.
              * @param meta The pointer's metadata instance.
              */
-            __host__ __device__ inline explicit shared(pointer_type ptr, metadata_type *meta) noexcept
-              : underlying_type {ptr}
+            __host__ __device__ inline explicit shared_t(pointer_t ptr, metadata_t *meta) noexcept
+              : underlying_t {ptr}
               , m_meta {meta}
             {}
     };
@@ -199,8 +199,8 @@ namespace memory::pointer
      * Deduction guides for a generic shared pointer.
      * @since 1.0
      */
-    template <typename T> shared(T*) -> shared<T>;
-    template <typename T> shared(T*, const memory::allocator&) -> shared<T>;
+    template <typename T> shared_t(T*) -> shared_t<T>;
+    template <typename T> shared_t(T*, const memory::allocator_t&) -> shared_t<T>;
 }
 
 namespace factory::memory::pointer
@@ -213,13 +213,13 @@ namespace factory::memory::pointer
      * @return The allocated shared memory pointer.
      */
     template <typename T = void>
-    inline auto shared(size_t count = 1, const museqa::memory::allocator& allocator = allocator<T>())
+    inline auto shared(size_t count = 1, const museqa::memory::allocator_t& allocator = allocator<T>())
     -> typename std::enable_if<
         !std::is_reference<T>::value
-      , museqa::memory::pointer::shared<T>
+      , museqa::memory::pointer::shared_t<T>
     >::type
     {
-        return museqa::memory::pointer::shared<T>(allocator.allocate<T>(count), allocator);
+        return museqa::memory::pointer::shared_t<T>(allocator.allocate<T>(count), allocator);
     }
 }
 
