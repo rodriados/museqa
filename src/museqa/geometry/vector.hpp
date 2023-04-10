@@ -29,13 +29,13 @@ namespace geometry
      * @since 1.0
      */
     template <size_t D, typename T = int64_t>
-    struct vector : public geometry::point<D, T>
+    struct vector_t : public geometry::point_t<D, T>
     {
-        __host__ __device__ inline constexpr vector() noexcept = default;
-        __host__ __device__ inline constexpr vector(const vector&) noexcept = default;
-        __host__ __device__ inline constexpr vector(vector&&) noexcept = default;
+        __host__ __device__ inline constexpr vector_t() noexcept = default;
+        __host__ __device__ inline constexpr vector_t(const vector_t&) noexcept = default;
+        __host__ __device__ inline constexpr vector_t(vector_t&&) noexcept = default;
 
-        using geometry::point<D, T>::point;
+        using geometry::point_t<D, T>::point_t;
 
         /**
          * Instantiates a new vector from a point instance.
@@ -43,21 +43,21 @@ namespace geometry
          * @param point The foreign point instance to create a new vector from.
          */
         template <typename U>
-        __host__ __device__ inline constexpr vector(const geometry::point<D, U>& point) noexcept
-          : geometry::point<D, T> {point}
+        __host__ __device__ inline constexpr vector_t(const geometry::point_t<D, U>& point) noexcept
+          : geometry::point_t<D, T> (point)
         {}
 
-        __host__ __device__ inline vector& operator=(const vector&) noexcept = default;
-        __host__ __device__ inline vector& operator=(vector&&) noexcept = default;
+        __host__ __device__ inline vector_t& operator=(const vector_t&) noexcept = default;
+        __host__ __device__ inline vector_t& operator=(vector_t&&) noexcept = default;
     };
 
     /*
      * Deduction guides for generic vector types.
      * @since 1.0
      */
-    template <typename T, typename ...U> vector(T, U...) -> vector<sizeof...(U) + 1, T>;
-    template <typename T, typename ...U> vector(utility::tuple<T, U...>) -> vector<sizeof...(U) + 1, T>;
-    template <typename T, size_t N> vector(utility::ntuple<T, N>) -> vector<N, T>;
+    template <typename T, typename ...U> vector_t(T, U...) -> vector_t<sizeof...(U) + 1, T>;
+    template <typename T, typename ...U> vector_t(utility::tuple_t<T, U...>) -> vector_t<sizeof...(U) + 1, T>;
+    template <typename T, size_t N> vector_t(utility::ntuple_t<T, N>) -> vector_t<N, T>;
 
     /**
      * The operator for the sum of two vectors.
@@ -70,9 +70,10 @@ namespace geometry
      */
     template <size_t D, typename T, typename U>
     __host__ __device__ inline constexpr auto operator+(
-        const vector<D, T>& a, const vector<D, U>& b
+        const vector_t<D, T>& a
+      , const vector_t<D, U>& b
     ) noexcept {
-        return vector(utility::zipwith(utility::add, utility::tie(a.value), utility::tie(b.value)));
+        return vector_t(utility::zipwith(utility::add, utility::tie(a.value), utility::tie(b.value)));
     }
 
     /**
@@ -86,9 +87,10 @@ namespace geometry
      */
     template <size_t D, typename T, typename U>
     __host__ __device__ inline constexpr auto operator-(
-        const vector<D, T>& a, const vector<D, U>& b
+        const vector_t<D, T>& a
+      , const vector_t<D, U>& b
     ) noexcept {
-        return vector(utility::zipwith(utility::sub, utility::tie(a.value), utility::tie(b.value)));
+        return vector_t(utility::zipwith(utility::sub, utility::tie(a.value), utility::tie(b.value)));
     }
 
     /**
@@ -102,9 +104,10 @@ namespace geometry
      */
     template <size_t D, typename T, typename S>
     __host__ __device__ inline constexpr auto operator*(
-        const vector<D, T>& v, const S& scalar
+        const vector_t<D, T>& v
+      , const S& scalar
     ) noexcept {
-        return vector(utility::apply(utility::mul, utility::tie(v.value), scalar));
+        return vector_t(utility::apply(utility::mul, utility::tie(v.value), scalar));
     }
 
     /**
@@ -118,9 +121,10 @@ namespace geometry
      */
     template <typename S, size_t D, typename T>
     __host__ __device__ inline constexpr auto operator*(
-        const S& scalar, const vector<D, T>& v
+        const S& scalar
+      , const vector_t<D, T>& v
     ) noexcept {
-        return vector(utility::apply(utility::rmul, utility::tie(v.value), scalar));
+        return vector_t(utility::apply(utility::rmul, utility::tie(v.value), scalar));
     }
 
     /**
@@ -134,10 +138,11 @@ namespace geometry
      */
     template <size_t D, typename T, typename U>
     __host__ __device__ inline constexpr auto dot(
-        const vector<D, T>& a, const vector<D, U>& b
+        const vector_t<D, T>& a
+      , const vector_t<D, U>& b
     ) noexcept {
         return utility::foldl(
-            utility::add, 0
+            utility::add, T(0)
           , utility::zipwith(utility::mul, utility::tie(a.value), utility::tie(b.value))
         );
     }
@@ -152,9 +157,10 @@ namespace geometry
      */
     template <typename T, typename U>
     __host__ __device__ inline constexpr auto cross(
-        const vector<3, T>& a, const vector<3, U>& b
+        const vector_t<3, T>& a
+      , const vector_t<3, U>& b
     ) noexcept {
-        return vector {
+        return vector_t {
             (a.y * b.z - a.z * b.y)
           , (a.z * b.x - a.x * b.z)
           , (a.x * b.y - a.y * b.x)
@@ -169,10 +175,10 @@ namespace geometry
      * @return The resulting length value.
      */
     template <size_t D, typename T>
-    __host__ __device__ inline constexpr double length(const vector<D, T>& v) noexcept
+    __host__ __device__ inline constexpr double length(const vector_t<D, T>& v) noexcept
     {
         return sqrt(utility::foldl(
-            utility::add, 0.0
+            utility::add, double(0)
           , utility::apply(pow, utility::tie(v.value), 2.0)
         ));
     }
@@ -185,9 +191,9 @@ namespace geometry
      * @return The resulting normalized vector.
      */
     template <size_t D, typename T>
-    __host__ __device__ inline constexpr auto normalize(const vector<D, T>& v) noexcept
+    __host__ __device__ inline constexpr auto normalize(const vector_t<D, T>& v) noexcept
     {
-        return vector(utility::apply(
+        return vector_t(utility::apply(
             [](double value, double length) { return length > 0.0 ? (value / length) : 0.0; }
           , utility::tie(v.value)
           , geometry::length(v)
@@ -205,8 +211,8 @@ namespace geometry
  * @since 1.0
  */
 template <size_t D, typename T>
-class utility::reflector<geometry::vector<D, T>>
-  : public utility::reflector<geometry::coordinate<D, T>> {};
+class utility::reflector_t<geometry::vector_t<D, T>>
+  : public utility::reflector_t<geometry::coordinate_t<D, T>> {};
 
 #endif
 
@@ -222,7 +228,7 @@ MUSEQA_END_NAMESPACE
  * @since 1.0
  */
 template <size_t D, typename T>
-struct fmt::formatter<museqa::geometry::vector<D, T>>
-  : fmt::formatter<museqa::geometry::coordinate<D, T>> {};
+struct fmt::formatter<museqa::geometry::vector_t<D, T>>
+  : fmt::formatter<museqa::geometry::coordinate_t<D, T>> {};
 
 #endif

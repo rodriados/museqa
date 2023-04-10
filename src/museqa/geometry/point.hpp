@@ -30,19 +30,19 @@ namespace geometry
      * @since 1.0
      */
     template <size_t D, typename T = int64_t>
-    class point : public geometry::coordinate<D, T>
+    class point_t : public geometry::coordinate_t<D, T>
     {
         private:
-            typedef geometry::coordinate<D, T> underlying_type;
+            typedef geometry::coordinate_t<D, T> underlying_t;
 
         public:
-            using typename underlying_type::coordinate_type;
-            using underlying_type::dimensionality;
+            using typename underlying_t::dimension_t;
+            using underlying_t::dimensionality;
 
         public:
-            __host__ __device__ inline constexpr point() noexcept = default;
-            __host__ __device__ inline constexpr point(const point&) noexcept = default;
-            __host__ __device__ inline constexpr point(point&&) noexcept = default;
+            __host__ __device__ inline constexpr point_t() noexcept = default;
+            __host__ __device__ inline constexpr point_t(const point_t&) noexcept = default;
+            __host__ __device__ inline constexpr point_t(point_t&&) noexcept = default;
 
             /**
              * Instantiates a new point from a general list of coordinate values.
@@ -52,12 +52,12 @@ namespace geometry
             template <
                 class ...U
               , class = typename std::enable_if<utility::all(
-                    std::is_convertible<U, coordinate_type>{}...
-                  , dimensionality == sizeof...(U)
+                    std::is_convertible<U, dimension_t>::value...
+                  , underlying_t::dimensionality == sizeof...(U)
                 )>::type
             >
-            __host__ __device__ inline constexpr point(const U&... value)
-              : underlying_type {static_cast<coordinate_type>(value)...}
+            __host__ __device__ inline constexpr point_t(const U&... value)
+              : underlying_t {static_cast<dimension_t>(value)...}
             {}
 
             /**
@@ -67,9 +67,9 @@ namespace geometry
              * @param tuple The tuple to build a point from.
              */
             template <size_t ...I, typename ...U>
-            __host__ __device__ inline constexpr point(
-                const utility::tuple<identity<std::index_sequence<I...>>, U...>& tuple
-            ) : point {tuple.template get<I>()...}
+            __host__ __device__ inline constexpr point_t(
+                const utility::tuple_t<identity_t<std::index_sequence<I...>>, U...>& tuple
+            ) : point_t (tuple.template get<I>()...)
             {}
 
             /**
@@ -78,19 +78,19 @@ namespace geometry
              * @param other The foreign point instance.
              */
             template <typename U>
-            __host__ __device__ inline constexpr point(const point<D, U>& other)
-              : point {std::make_index_sequence<D>(), other}
+            __host__ __device__ inline constexpr point_t(const point_t<D, U>& other)
+              : point_t (std::make_index_sequence<D>(), other)
             {}
 
-            __host__ __device__ inline point& operator=(const point&) noexcept = default;
-            __host__ __device__ inline point& operator=(point&&) noexcept = default;
+            __host__ __device__ inline point_t& operator=(const point_t&) noexcept = default;
+            __host__ __device__ inline point_t& operator=(point_t&&) noexcept = default;
 
             /**
              * Gives direct access to a point's coordinate value.
              * @param offset The requested point coordinate offset.
              * @return The point's requested coordinate value.
              */
-            __host__ __device__ inline coordinate_type& operator[](ptrdiff_t offset) __museqasafe__
+            __host__ __device__ inline dimension_t& operator[](ptrdiff_t offset) __museqasafe__
             {
                 museqa::guard((size_t) offset < dimensionality, "point coordinate out of range");
                 return this->value[offset];
@@ -101,7 +101,7 @@ namespace geometry
              * @param offset The requested point coordinate offset.
              * @return The point's requested const-qualified coordinate value.
              */
-            __host__ __device__ inline const coordinate_type& operator[](ptrdiff_t offset) const __museqasafe__
+            __host__ __device__ inline const dimension_t& operator[](ptrdiff_t offset) const __museqasafe__
             {
                 museqa::guard((size_t) offset < dimensionality, "point coordinate out of range");
                 return this->value[offset];
@@ -115,8 +115,8 @@ namespace geometry
              * @param other The foreign point to build a new point from.
              */
             template <size_t ...I, typename P>
-            __host__ __device__ inline constexpr point(std::index_sequence<I...>, const P& other)
-              : point {other.value[I]...}
+            __host__ __device__ inline constexpr point_t(std::index_sequence<I...>, const P& other)
+              : point_t (other.value[I]...)
             {}
     };
 
@@ -124,9 +124,9 @@ namespace geometry
      * Deduction guides for generic point types.
      * @since 1.0
      */
-    template <typename T, typename ...U> point(T, U...) -> point<sizeof...(U) + 1, T>;
-    template <typename T, typename ...U> point(utility::tuple<T, U...>) -> point<sizeof...(U) + 1, T>;
-    template <typename T, size_t N> point(utility::ntuple<T, N>) -> point<N, T>;
+    template <typename T, typename ...U> point_t(T, U...) -> point_t<sizeof...(U) + 1, T>;
+    template <typename T, typename ...U> point_t(utility::tuple_t<T, U...>) -> point_t<sizeof...(U) + 1, T>;
+    template <typename T, size_t N> point_t(utility::ntuple_t<T, N>) -> point_t<N, T>;
 
     /**
      * The distance operator for two generic points.
@@ -138,8 +138,10 @@ namespace geometry
      * @return The Euclidean distance between the points.
      */
     template <size_t D, typename T, typename U>
-    __host__ __device__ inline constexpr double distance(const point<D, T>& a, const point<D, U>& b) noexcept
-    {
+    __host__ __device__ inline constexpr double distance(
+        const point_t<D, T>& a
+      , const point_t<D, U>& b
+    ) noexcept {
         return sqrt(utility::foldl(
             utility::add, double(0)
           , utility::zipwith(
@@ -161,8 +163,8 @@ namespace geometry
  * @since 1.0
  */
 template <size_t D, typename T>
-class utility::reflector<geometry::point<D, T>>
-  : public utility::reflector<geometry::coordinate<D, T>> {};
+class utility::reflector_t<geometry::point_t<D, T>>
+  : public utility::reflector_t<geometry::coordinate_t<D, T>> {};
 
 #endif
 
@@ -178,7 +180,7 @@ MUSEQA_END_NAMESPACE
  * @since 1.0
  */
 template <size_t D, typename T>
-struct fmt::formatter<museqa::geometry::point<D, T>>
-  : fmt::formatter<museqa::geometry::coordinate<D, T>> {};
+struct fmt::formatter<museqa::geometry::point_t<D, T>>
+  : fmt::formatter<museqa::geometry::coordinate_t<D, T>> {};
 
 #endif

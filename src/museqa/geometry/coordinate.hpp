@@ -29,16 +29,16 @@ namespace geometry
      * @since 1.0
      */
     template <size_t D, typename T = int64_t>
-    struct coordinate
+    struct coordinate_t
     {
-        typedef T coordinate_type;
+        typedef T dimension_t;
         inline static constexpr size_t dimensionality = D;
 
         static_assert(dimensionality > 0, "a coordinate must be at least 1-dimensional");
-        static_assert(std::is_arithmetic<coordinate_type>(), "a coordinate must have arithmetic type");
+        static_assert(std::is_arithmetic<dimension_t>::value, "a coordinate must have arithmetic type");
 
         union {
-            coordinate_type value[D] {};
+            dimension_t value[D] {};
         };
     };
 
@@ -50,18 +50,18 @@ namespace geometry
      * @since 1.0
      */
     template <typename T>
-    struct coordinate<1, T>
+    struct coordinate_t<1, T>
     {
-        typedef T coordinate_type;
+        typedef T dimension_t;
         inline static constexpr size_t dimensionality = 1;
 
-        static_assert(std::is_arithmetic<coordinate_type>(), "a coordinate must have arithmetic type");
+        static_assert(std::is_arithmetic<dimension_t>::value, "a coordinate must have arithmetic type");
 
         union {
-            coordinate_type value[1] {};
-            struct { coordinate_type a; };
-            struct { coordinate_type i; };
-            struct { coordinate_type x; };
+            dimension_t value[1] {};
+            struct { dimension_t a; };
+            struct { dimension_t i; };
+            struct { dimension_t x; };
         };
 
         /**
@@ -69,7 +69,7 @@ namespace geometry
          * possible only 1-dimensional coordinate systems.
          * @return The point's 1-dimensional scalar value.
          */
-        __host__ __device__ inline operator coordinate_type() const noexcept
+        __host__ __device__ inline operator dimension_t() const noexcept
         {
             return value;
         }
@@ -83,18 +83,18 @@ namespace geometry
      * @since 1.0
      */
     template <typename T>
-    struct coordinate<2, T>
+    struct coordinate_t<2, T>
     {
-        typedef T coordinate_type;
+        typedef T dimension_t;
         inline static constexpr size_t dimensionality = 2;
 
-        static_assert(std::is_arithmetic<coordinate_type>(), "a coordinate must have arithmetic type");
+        static_assert(std::is_arithmetic<dimension_t>::value, "a coordinate must have arithmetic type");
 
         union {
-            coordinate_type value[2];
-            struct { coordinate_type a, b; };
-            struct { coordinate_type i, j; };
-            struct { coordinate_type x, y; };
+            dimension_t value[2] {};
+            struct { dimension_t a, b; };
+            struct { dimension_t i, j; };
+            struct { dimension_t x, y; };
         };
     };
 
@@ -106,18 +106,18 @@ namespace geometry
      * @since 1.0
      */
     template <typename T>
-    struct coordinate<3, T>
+    struct coordinate_t<3, T>
     {
-        typedef T coordinate_type;
+        typedef T dimension_t;
         inline static constexpr size_t dimensionality = 3;
 
-        static_assert(std::is_arithmetic<coordinate_type>(), "a coordinate must have arithmetic type");
+        static_assert(std::is_arithmetic<dimension_t>::value, "a coordinate must have arithmetic type");
 
         union {
-            coordinate_type value[3];
-            struct { coordinate_type a, b, c; };
-            struct { coordinate_type i, j, k; };
-            struct { coordinate_type x, y, z; };
+            dimension_t value[3] {};
+            struct { dimension_t a, b, c; };
+            struct { dimension_t i, j, k; };
+            struct { dimension_t x, y, z; };
         };
     };
 
@@ -125,8 +125,8 @@ namespace geometry
      * Deduction guides for generic coordinate types.
      * @since 1.0
      */
-    template <typename T, typename ...U> coordinate(T, U...)
-        -> coordinate<sizeof...(U) + 1, T>;
+    template <typename T, typename ...U> coordinate_t(T, U...)
+        -> coordinate_t<sizeof...(U) + 1, T>;
 
     /**
      * The equality operator for two coordinates of equal dimensionalities.
@@ -139,7 +139,7 @@ namespace geometry
      */
     template <size_t D, typename T, typename U>
     __host__ __device__ inline constexpr bool operator==(
-        const coordinate<D, T>& a, const coordinate<D, U>& b
+        const coordinate_t<D, T>& a, const coordinate_t<D, U>& b
     ) noexcept {
         return utility::foldl(
             utility::andl, true
@@ -157,7 +157,7 @@ namespace geometry
      */
     template <size_t A, size_t B, typename T, typename U>
     __host__ __device__ inline constexpr bool operator==(
-        const coordinate<A, T>&, const coordinate<B, U>&
+        const coordinate_t<A, T>&, const coordinate_t<B, U>&
     ) noexcept {
         return false;
     }
@@ -174,7 +174,7 @@ namespace geometry
      */
     template <size_t A, size_t B, typename T, typename U>
     __host__ __device__ inline constexpr bool operator!=(
-        const coordinate<A, T>& a, const coordinate<B, U>& b
+        const coordinate_t<A, T>& a, const coordinate_t<B, U>& b
     ) noexcept {
         return !geometry::operator==(a, b);
     }
@@ -190,8 +190,8 @@ namespace geometry
  * @since 1.0
  */
 template <size_t D, typename T>
-class utility::reflector<geometry::coordinate<D, T>>
-  : public utility::reflector<decltype(geometry::coordinate<D, T>::value)> {};
+class utility::reflector_t<geometry::coordinate_t<D, T>>
+  : public utility::reflector_t<decltype(geometry::coordinate_t<D, T>::value)> {};
 
 #endif
 
@@ -207,10 +207,10 @@ MUSEQA_END_NAMESPACE
  * @since 1.0
  */
 template <size_t D, typename T>
-struct fmt::formatter<museqa::geometry::coordinate<D, T>>
+struct fmt::formatter<museqa::geometry::coordinate_t<D, T>>
 {
-    typedef museqa::geometry::coordinate<D, T> target_type;
-    inline static constexpr size_t count = target_type::dimensionality;
+    typedef museqa::geometry::coordinate_t<D, T> target_t;
+    inline static constexpr size_t count = target_t::dimensionality;
 
     /**
      * Evaluates the formatter's parsing context.
@@ -232,7 +232,7 @@ struct fmt::formatter<museqa::geometry::coordinate<D, T>>
      * @return The formatting context instance.
      */
     template <typename F>
-    auto format(const target_type& coordinate, F& ctx) const -> decltype(ctx.out())
+    auto format(const target_t& coordinate, F& ctx) const -> decltype(ctx.out())
     {
         return fmt::format_to(
             ctx.out(), "({})"
