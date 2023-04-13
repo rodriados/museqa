@@ -107,26 +107,26 @@ namespace memory::pointer
 
             /**
              * The copy-assignment operator.
-             * @param other The instance to be copied.
+             * @param other The instance to be shared.
              * @return This pointer object.
              */
             __host__ __device__ inline shared_t& operator=(const shared_t& other) __devicesafe__
             {
-                if (other.m_ptr == this->m_ptr) return *this;
-                metadata_t::release(m_meta); return *new (this) shared_t (other);
+                share(other);
+                return *this;
             }
 
             /**
              * The copy-assignment operator from a foreign pointer type.
-             * @tparam U The foreign pointer type to be copied.
-             * @param other The foreign pointer instance to be copied.
+             * @tparam U The foreign pointer type to be shared.
+             * @param other The foreign pointer instance to be shared.
              * @return This pointer object.
              */
             template <typename U>
             __host__ __device__ inline shared_t& operator=(const shared_t<U>& other) __devicesafe__
             {
-                if (other.m_ptr == this->m_ptr) return *this;
-                metadata_t::release(m_meta); return *new (this) shared_t (other);
+                share(other);
+                return *this;
             }
 
             /**
@@ -136,8 +136,8 @@ namespace memory::pointer
              */
             __host__ __device__ inline shared_t& operator=(shared_t&& other) __devicesafe__
             {
-                if (other.m_ptr == this->m_ptr) { other.reset(); return *this; }
-                metadata_t::release(m_meta); return *new (this) shared_t (std::forward<decltype(other)>(other));
+                transfer(std::forward<decltype(other)>(other));
+                return *this;
             }
 
             /**
@@ -149,8 +149,8 @@ namespace memory::pointer
             template <typename U>
             __host__ __device__ inline shared_t& operator=(shared_t<U>&& other) __devicesafe__
             {
-                if (other.m_ptr == this->m_ptr) { other.reset(); return *this; }
-                metadata_t::release(m_meta); return *new (this) shared_t (std::forward<decltype(other)>(other));
+                transfer(std::forward<decltype(other)>(other));
+                return *this;
             }
 
             /**
@@ -169,8 +169,8 @@ namespace memory::pointer
              */
             __host__ __device__ inline void reset() __devicesafe__
             {
-                metadata_t::release(m_meta);
-                new (this) shared_t (nullptr, nullptr);
+                metadata_t::release(utility::exchange(m_meta, nullptr));
+                underlying_t::reset();
             }
 
             /**
@@ -190,10 +190,48 @@ namespace memory::pointer
              * @param meta The pointer's metadata instance.
              */
             __host__ __device__ inline explicit shared_t(pointer_t ptr, metadata_t *meta) noexcept
-              : underlying_t {ptr}
-              , m_meta {meta}
+              : underlying_t (ptr)
+              , m_meta (meta)
             {}
+
+        private:
+            template <typename U> __host__ __device__ inline void share(const shared_t<U>&) __devicesafe__;
+            template <typename U> __host__ __device__ inline void transfer(shared_t<U>&&) __devicesafe__;
     };
+
+    /**
+     * Acquires shared ownership from a pointer instance of generic type.
+     * @tparam T The type of the target wrapped pointer.
+     * @tparam U The foreign pointer type to be shared.
+     * @param other The foreign pointer instance to be shared.
+     */
+    template <typename T> template <typename U>
+    __host__ __device__ inline void shared_t<T>::share(const shared_t<U>& other) __devicesafe__
+    {
+        if (this->m_ptr != other.m_ptr) {
+            metadata_t::release(m_meta);
+            this->m_ptr  = other.m_ptr;
+            this->m_meta = metadata_t::acquire(other.m_meta);
+        }
+    }
+
+    /**
+     * Transfers ownership from a pointer instance of generic type.
+     * @tparam T The type of the target wrapped pointer.
+     * @tparam U The foreign pointer type to be moved.
+     * @param other The foreign pointer instance to be moved.
+     */
+    template <typename T> template <typename U>
+    __host__ __device__ inline void shared_t<T>::transfer(shared_t<U>&& other) __devicesafe__
+    {
+        if (this->m_ptr != other.m_ptr) {
+            metadata_t::release(m_meta);
+            this->m_ptr  = utility::exchange(other.m_ptr, nullptr);
+            this->m_meta = utility::exchange(other.m_meta, nullptr);
+        } else {
+            other.reset();
+        }
+    }
 
     /*
      * Deduction guides for a generic shared pointer.

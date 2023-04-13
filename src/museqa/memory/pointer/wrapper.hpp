@@ -163,6 +163,15 @@ namespace memory::pointer
             }
 
             /**
+             * Erases the wrapped pointer and set it back to the default value.
+             * @see museqa::memory::pointer::wrapper_t::wrapper_t
+             */
+            __host__ __device__ inline constexpr void reset() noexcept
+            {
+                utility::exchange(m_ptr, nullptr);
+            }
+
+            /**
              * Swaps the wrapped pointer with another pointer wrapper instance.
              * @param other The wrapper to swap pointers with.
              */
@@ -197,7 +206,7 @@ namespace memory::pointer
              */
             __host__ __device__ inline constexpr pointer_t dereference(ptrdiff_t offset) const __museqasafe__
             {
-                museqa::guard<exception_t>(m_ptr != nullptr, "wrapped pointer is not dereferentiable");
+                museqa::guard<exception_t>(m_ptr != nullptr, "null pointer is not dereferentiable");
                 return m_ptr + offset;
             }
     };
@@ -279,6 +288,15 @@ namespace memory::pointer
             __host__ __device__ inline constexpr operator bool() const noexcept
             {
                 return (nullptr != m_ptr);
+            }
+
+            /**
+             * Erases the wrapped pointer and set it back to the default value.
+             * @see museqa::memory::pointer::wrapper_t::wrapper_t
+             */
+            __host__ __device__ inline constexpr void reset() noexcept
+            {
+                utility::exchange(m_ptr, nullptr);
             }
 
             /**
