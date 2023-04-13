@@ -57,6 +57,25 @@ namespace utility
     }
 
     /**
+     * Sets the variable with a new value and returns the old one.
+     * @tparam T The target variable's type.
+     * @tparam U The new value's type.
+     * @param a The object whose value must be replaced.
+     * @param b The value to assign to the object.
+     * @return The previous value of the object.
+     */
+    template <typename T, typename U>
+    __host__ __device__ inline constexpr auto exchange(T& a, U&& b) noexcept(
+        std::is_nothrow_move_constructible<T>::value &&
+        std::is_nothrow_assignable<T&, U>::value
+    ) -> typename std::enable_if<std::is_convertible<U, T>::value, T>::type
+    {
+        T x = std::move(a);
+          a = std::forward<U>(b);
+        return x;
+    }
+
+    /**
      * Swaps the contents of two variables of same type
      * @tparam T The variables' type.
      * @param a The first variable to have its contents swapped.
