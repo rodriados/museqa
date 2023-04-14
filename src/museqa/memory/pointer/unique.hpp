@@ -61,7 +61,7 @@ namespace memory::pointer
              */
             __host__ __device__ inline unique_t(unique_t&& other) noexcept
             {
-                other.swap(*this);
+                transfer(std::forward<decltype(other)>(other));
             }
 
             /**
@@ -71,9 +71,8 @@ namespace memory::pointer
              */
             template <typename U>
             __host__ __device__ inline unique_t(unique_t<U>&& other) noexcept
-              : unique_t (static_cast<pointer_t>(other.m_ptr), metadata_t::acquire(other.m_meta))
             {
-                other.reset();
+                transfer(std::forward<decltype(other)>(other));
             }
 
             /**
@@ -94,8 +93,7 @@ namespace memory::pointer
              */
             __host__ __device__ inline unique_t& operator=(unique_t&& other) __devicesafe__
             {
-                if (other.m_ptr == this->m_ptr) { other.reset(); return *this; }
-                metadata_t::release(m_meta); return *new (this) unique_t (std::forward<decltype(other)>(other));
+                transfer(std::forward<decltype(other)>(other)); return *this;
             }
 
             /**
@@ -107,8 +105,7 @@ namespace memory::pointer
             template <typename U>
             __host__ __device__ inline unique_t& operator=(unique_t<U>&& other) __devicesafe__
             {
-                if (other.m_ptr == this->m_ptr) { other.reset(); return *this; }
-                metadata_t::release(m_meta); return *new (this) unique_t (std::forward<decltype(other)>(other));
+                transfer(std::forward<decltype(other)>(other)); return *this;
             }
 
             /**
@@ -117,8 +114,8 @@ namespace memory::pointer
              */
             __host__ __device__ inline void reset() __devicesafe__
             {
-                metadata_t::release(m_meta);
-                new (this) unique_t (nullptr, nullptr);
+                metadata_t::release(utility::exchange(m_meta, nullptr));
+                underlying_t::reset();
             }
 
             /**
@@ -138,10 +135,33 @@ namespace memory::pointer
              * @param meta The pointer's metadata instance.
              */
             __host__ __device__ inline explicit unique_t(pointer_t ptr, metadata_t *meta) noexcept
-              : underlying_t {ptr}
-              , m_meta {meta}
+              : underlying_t (ptr)
+              , m_meta (meta)
             {}
+
+        private:
+            template <typename U> __host__ __device__ inline void transfer(unique_t<U>&&) __devicesafe__;
     };
+
+    /**
+     * Captures the ownership from a pointer instance of generic type.
+     * @tparam T The type of the target wrapped pointer.
+     * @tparam U The foreign pointer type to be moved.
+     * @param other The foreign pointer instance to be moved.
+     */
+    template <typename T> template <typename U>
+    __host__ __device__ inline void unique_t<T>::transfer(unique_t<U>&& other) __devicesafe__
+    {
+        static_assert(std::is_convertible<U*, T*>::value, "pointer types are not convertible");
+
+        if (this->m_ptr != other.m_ptr) {
+            metadata_t::release(m_meta);
+            this->m_ptr  = utility::exchange(other.m_ptr, nullptr);
+            this->m_meta = utility::exchange(other.m_meta, nullptr);
+        } else {
+            other.reset();
+        }
+    }
 
     /*
      * Deduction guides for a generic unique pointer.

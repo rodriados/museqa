@@ -61,8 +61,9 @@ namespace memory::pointer
              * @param other The instance to be copied.
              */
             __host__ __device__ inline shared_t(const shared_t& other) noexcept
-              : shared_t (other.m_ptr, metadata_t::acquire(other.m_meta))
-            {}
+            {
+                share(other);
+            }
 
             /**
              * The copy constructor from a foreign pointer type.
@@ -71,17 +72,17 @@ namespace memory::pointer
              */
             template <typename U>
             __host__ __device__ inline shared_t(const shared_t<U>& other) noexcept
-              : shared_t (static_cast<pointer_t>(other.m_ptr), metadata_t::acquire(other.m_meta))
-            {}
+            {
+                share(other);
+            }
 
             /**
              * The shared pointer's move constructor.
              * @param other The instance to be moved.
              */
             __host__ __device__ inline shared_t(shared_t&& other) noexcept
-              : shared_t (other.m_ptr, metadata_t::acquire(other.m_meta))
             {
-                other.reset();
+                transfer(std::forward<decltype(other)>(other));
             }
 
             /**
@@ -91,9 +92,8 @@ namespace memory::pointer
              */
             template <typename U>
             __host__ __device__ inline shared_t(shared_t<U>&& other) noexcept
-              : shared_t (static_cast<pointer_t>(other.m_ptr), metadata_t::acquire(other.m_meta))
             {
-                other.reset();
+                transfer(std::forward<decltype(other)>(other));
             }
 
             /**
@@ -112,8 +112,7 @@ namespace memory::pointer
              */
             __host__ __device__ inline shared_t& operator=(const shared_t& other) __devicesafe__
             {
-                share(other);
-                return *this;
+                share(other); return *this;
             }
 
             /**
@@ -125,8 +124,7 @@ namespace memory::pointer
             template <typename U>
             __host__ __device__ inline shared_t& operator=(const shared_t<U>& other) __devicesafe__
             {
-                share(other);
-                return *this;
+                share(other); return *this;
             }
 
             /**
@@ -136,8 +134,7 @@ namespace memory::pointer
              */
             __host__ __device__ inline shared_t& operator=(shared_t&& other) __devicesafe__
             {
-                transfer(std::forward<decltype(other)>(other));
-                return *this;
+                transfer(std::forward<decltype(other)>(other)); return *this;
             }
 
             /**
@@ -149,8 +146,7 @@ namespace memory::pointer
             template <typename U>
             __host__ __device__ inline shared_t& operator=(shared_t<U>&& other) __devicesafe__
             {
-                transfer(std::forward<decltype(other)>(other));
-                return *this;
+                transfer(std::forward<decltype(other)>(other)); return *this;
             }
 
             /**
@@ -208,6 +204,8 @@ namespace memory::pointer
     template <typename T> template <typename U>
     __host__ __device__ inline void shared_t<T>::share(const shared_t<U>& other) __devicesafe__
     {
+        static_assert(std::is_convertible<U*, T*>::value, "pointer types are not convertible");
+
         if (this->m_ptr != other.m_ptr) {
             metadata_t::release(m_meta);
             this->m_ptr  = other.m_ptr;
@@ -224,6 +222,8 @@ namespace memory::pointer
     template <typename T> template <typename U>
     __host__ __device__ inline void shared_t<T>::transfer(shared_t<U>&& other) __devicesafe__
     {
+        static_assert(std::is_convertible<U*, T*>::value, "pointer types are not convertible");
+
         if (this->m_ptr != other.m_ptr) {
             metadata_t::release(m_meta);
             this->m_ptr  = utility::exchange(other.m_ptr, nullptr);
