@@ -78,25 +78,25 @@ namespace utility
           struct analyzer_t<MF> : std::true_type { typedef R result_t; };
 
         #define __museqarepeater1__(qq)                                        \
-          __museqaanalyzer__(R(T::*)(P...) qq);                                \
-          __museqaanalyzer__(R(T::*)(P......) qq);
+          __museqaanalyzer__(R(T::*)(P...) qq)                                 \
+          __museqaanalyzer__(R(T::*)(P......) qq)
 
         #define __museqarepeater2__(qq)                                        \
-          __museqarepeater1__(qq);                                             \
-          __museqarepeater1__(const qq);                                       \
-          __museqarepeater1__(volatile qq);                                    \
-          __museqarepeater1__(const volatile qq);
+          __museqarepeater1__(qq)                                              \
+          __museqarepeater1__(const qq)                                        \
+          __museqarepeater1__(volatile qq)                                     \
+          __museqarepeater1__(const volatile qq)
 
         /*
          * Creates every possible combination of qualifiers for a member function
          * type. Therefore, the return type of any member function can be now known.
          */
-        __museqarepeater2__();
-        __museqarepeater2__(&);
-        __museqarepeater2__(&&);
-        __museqarepeater2__(noexcept);
-        __museqarepeater2__(& noexcept);
-        __museqarepeater2__(&& noexcept);
+        __museqarepeater2__()
+        __museqarepeater2__(&)
+        __museqarepeater2__(&&)
+        __museqarepeater2__(noexcept)
+        __museqarepeater2__(& noexcept)
+        __museqarepeater2__(&& noexcept)
 
         #undef __museqarepeater2__
         #undef __museqarepeater1__
@@ -138,7 +138,7 @@ namespace utility
              * @param lambda The function pointer to be wrapped by the functor.
              */
             __host__ __device__ inline explicit functor_t(object_t& object, function_t lambda) noexcept
-              : functor_t {memory::pointer::unmanaged_t(&object), lambda}
+              : functor_t (memory::pointer::unmanaged_t(&object), lambda)
             {}
 
             /**
@@ -147,8 +147,8 @@ namespace utility
              * @param lambda The function pointer to be wrapped by the functor.
              */
             __host__ __device__ inline functor_t(const pointer_t& object, function_t lambda) noexcept
-              : m_object {object}
-              , m_function {lambda}
+              : m_object (object)
+              , m_function (lambda)
             {}
 
             /**
@@ -157,8 +157,8 @@ namespace utility
              * @param lambda The function pointer to be wrapped by the functor.
              */
             __host__ __device__ inline functor_t(pointer_t&& object, function_t lambda) noexcept
-              : m_object {std::forward<decltype(object)>(object)}
-              , m_function {lambda}
+              : m_object (std::forward<decltype(object)>(object))
+              , m_function (lambda)
             {}
 
             __host__ __device__ inline functor_t& operator=(const functor_t&) __devicesafe__ = default;

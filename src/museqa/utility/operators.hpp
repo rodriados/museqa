@@ -255,7 +255,7 @@ namespace utility
     __host__ __device__ inline static constexpr struct {
         template <typename ...X>
         __host__ __device__ inline constexpr auto operator()
-            (const X&... x) const -> bool { return (bool(x) && ... && true); };
+            (const X&... x) const -> bool { return (bool(x) && ... && true); }
     } all;
 
     /**
@@ -266,7 +266,7 @@ namespace utility
     __host__ __device__ inline static constexpr struct {
         template <typename ...X>
         __host__ __device__ inline constexpr auto operator()
-            (const X&... x) const -> bool { return (bool(x) || ... || false); };
+            (const X&... x) const -> bool { return (bool(x) || ... || false); }
     } any;
 
     /**
@@ -277,7 +277,7 @@ namespace utility
     __host__ __device__ inline static constexpr struct {
         template <typename ...X>
         __host__ __device__ inline constexpr auto operator()
-            (const X&... x) const -> bool { return !any(x...); };
+            (const X&... x) const -> bool { return !any(x...); }
     } none;
 }
 
