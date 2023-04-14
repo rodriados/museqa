@@ -49,14 +49,14 @@ namespace memory
 
         public:
             __host__ __device__ inline buffer_t() noexcept = default;
-            __host__ __device__ inline buffer_t(const buffer_t&) noexcept = default;
+            __host__ __device__ inline buffer_t(const buffer_t&) __devicesafe__ = default;
 
             /**
              * Builds a buffer by acquiring a shared ownership of a buffer pointer.
              * @param ptr The pointer instance to acquire shared ownership of.
              * @param capacity The acquired pointer's buffer capacity.
              */
-            __host__ __device__ inline explicit buffer_t(const underlying_t& ptr, size_t capacity) noexcept
+            __host__ __device__ inline explicit buffer_t(const underlying_t& ptr, size_t capacity) __devicesafe__
               : underlying_t (ptr)
               , m_capacity (capacity)
             {}
@@ -66,7 +66,7 @@ namespace memory
              * @param ptr The pointer instance to acquire ownership of.
              * @param capacity The acquired pointer's buffer capacity.
              */
-            __host__ __device__ inline explicit buffer_t(underlying_t&& ptr, size_t capacity) noexcept
+            __host__ __device__ inline explicit buffer_t(underlying_t&& ptr, size_t capacity) __devicesafe__
               : underlying_t (std::forward<decltype(ptr)>(ptr))
               , m_capacity (capacity)
             {}
@@ -75,10 +75,9 @@ namespace memory
              * The buffer's move constructor.
              * @param other The instance to be moved.
              */
-            __host__ __device__ inline buffer_t(buffer_t&& other) noexcept
-              : buffer_t (std::forward<decltype(other)>(other), other.m_capacity)
+            __host__ __device__ inline buffer_t(buffer_t&& other) __devicesafe__
             {
-                other.reset();
+                transfer(std::forward<decltype(other)>(other));
             }
 
             __host__ __device__ inline buffer_t& operator=(const buffer_t&) __devicesafe__ = default;
@@ -90,7 +89,7 @@ namespace memory
              */
             __host__ __device__ inline buffer_t& operator=(buffer_t&& other) __devicesafe__
             {
-                reset(); return *new (this) buffer_t (std::forward<decltype(other)>(other));
+                transfer(std::forward<decltype(other)>(other)); return *this;
             }
 
             /**
@@ -120,7 +119,7 @@ namespace memory
              */
             __host__ __device__ inline buffer_t slice(ptrdiff_t offset, size_t count = 0) __museqasafe__
             {
-                museqa::guard<exception_t>(offset >= 0, "buffer slice cannot start from negative offset");
+                museqa::guard<exception_t>(offset >= 0, "buffer slice index offset is invalid");
                 museqa::guard<exception_t>((size_t) offset + count <= m_capacity, "buffer slice out of range");
                 return buffer_t (this->offset(offset), count ? count : m_capacity - (size_t) offset);
             }
@@ -149,7 +148,7 @@ namespace memory
              */
             __host__ __device__ inline pointer_t end() noexcept
             {
-                return underlying_t::unwrap() + m_capacity;
+                return m_capacity + underlying_t::unwrap();
             }
 
             /**
@@ -158,7 +157,7 @@ namespace memory
              */
             __host__ __device__ inline const pointer_t end() const noexcept
             {
-                return underlying_t::unwrap() + m_capacity;
+                return m_capacity + underlying_t::unwrap();
             }
 
             /**
@@ -167,7 +166,7 @@ namespace memory
              */
             __host__ __device__ inline underlying_t& unwrap() noexcept
             {
-                return *static_cast<underlying_t*>(this);
+                return static_cast<underlying_t&>(*this);
             }
 
             /**
@@ -176,7 +175,7 @@ namespace memory
              */
             __host__ __device__ inline const underlying_t& unwrap() const noexcept
             {
-                return *static_cast<const underlying_t*>(this);
+                return static_cast<const underlying_t&>(*this);
             }
 
             /**
@@ -194,8 +193,8 @@ namespace memory
              */
             __host__ __device__ inline void reset() __devicesafe__
             {
+                utility::exchange(m_capacity, 0);
                 underlying_t::reset();
-                new (this) buffer_t<T> ();
             }
 
         protected:
@@ -206,9 +205,20 @@ namespace memory
              */
             __host__ __device__ inline constexpr pointer_t dereference(ptrdiff_t offset) const __museqasafe__
             {
-                museqa::guard<exception_t>(offset >= 0, "buffer cannot dereference negative offset");
+                museqa::guard<exception_t>(offset >= 0, "cannot access buffer negative offset");
                 museqa::guard<exception_t>((size_t) offset < m_capacity, "buffer offset is out of range");
                 return underlying_t::dereference(offset);
+            }
+
+        private:
+            /**
+             * Acquires ownership of a buffer instance.
+             * @param other The buffer instance to acquire ownership of.
+             */
+            __host__ __device__ inline void transfer(buffer_t&& other) __devicesafe__
+            {
+                m_capacity = utility::exchange(other.m_capacity, 0);
+                underlying_t::operator=(std::forward<decltype(other)>(other));
             }
     };
 

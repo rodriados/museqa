@@ -44,7 +44,7 @@ namespace memory::pointer
 
         public:
             __host__ __device__ inline constexpr unique_t() noexcept = default;
-            __host__ __device__ inline constexpr unique_t(const unique_t&) noexcept = delete;
+            __host__ __device__ inline constexpr unique_t(const unique_t&) = delete;
 
             /**
              * Builds a new unique pointer from a raw pointer and its allocator.
@@ -59,7 +59,7 @@ namespace memory::pointer
              * The unique pointer's move constructor.
              * @param other The instance to be moved.
              */
-            __host__ __device__ inline unique_t(unique_t&& other) noexcept
+            __host__ __device__ inline unique_t(unique_t&& other) __devicesafe__
             {
                 transfer(std::forward<decltype(other)>(other));
             }
@@ -70,7 +70,7 @@ namespace memory::pointer
              * @param other The foreign pointer instance to be moved.
              */
             template <typename U>
-            __host__ __device__ inline unique_t(unique_t<U>&& other) noexcept
+            __host__ __device__ inline unique_t(unique_t<U>&& other) __devicesafe__
             {
                 transfer(std::forward<decltype(other)>(other));
             }
@@ -84,7 +84,7 @@ namespace memory::pointer
                 metadata_t::release(m_meta);
             }
 
-            __host__ __device__ inline unique_t& operator=(const unique_t&) noexcept = delete;
+            __host__ __device__ inline unique_t& operator=(const unique_t&) = delete;
 
             /**
              * The move-assignment operator.

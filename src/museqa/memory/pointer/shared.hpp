@@ -60,7 +60,7 @@ namespace memory::pointer
              * The shared pointer's copy constructor.
              * @param other The instance to be copied.
              */
-            __host__ __device__ inline shared_t(const shared_t& other) noexcept
+            __host__ __device__ inline shared_t(const shared_t& other) __devicesafe__
             {
                 share(other);
             }
@@ -71,7 +71,7 @@ namespace memory::pointer
              * @param other The foreign pointer instance to be copied.
              */
             template <typename U>
-            __host__ __device__ inline shared_t(const shared_t<U>& other) noexcept
+            __host__ __device__ inline shared_t(const shared_t<U>& other) __devicesafe__
             {
                 share(other);
             }
@@ -80,7 +80,7 @@ namespace memory::pointer
              * The shared pointer's move constructor.
              * @param other The instance to be moved.
              */
-            __host__ __device__ inline shared_t(shared_t&& other) noexcept
+            __host__ __device__ inline shared_t(shared_t&& other) __devicesafe__
             {
                 transfer(std::forward<decltype(other)>(other));
             }
@@ -91,7 +91,7 @@ namespace memory::pointer
              * @param other The foreign pointer instance to be moved.
              */
             template <typename U>
-            __host__ __device__ inline shared_t(shared_t<U>&& other) noexcept
+            __host__ __device__ inline shared_t(shared_t<U>&& other) __devicesafe__
             {
                 transfer(std::forward<decltype(other)>(other));
             }
