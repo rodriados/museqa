@@ -265,7 +265,7 @@ namespace memory::pointer
              * @return The foreign-typed wrapped pointer.
              */
             template <typename T>
-            __host__ __device__ inline constexpr explicit operator T*() noexcept
+            __host__ __device__ inline constexpr operator T*() noexcept
             {
                 return static_cast<T*>(m_ptr);
             }
@@ -276,7 +276,7 @@ namespace memory::pointer
              * @return The const-qualified foreign-typed wrapped pointer.
              */
             template <typename T>
-            __host__ __device__ inline constexpr explicit operator const T*() const noexcept
+            __host__ __device__ inline constexpr operator const T*() const noexcept
             {
                 return static_cast<T*>(m_ptr);
             }
