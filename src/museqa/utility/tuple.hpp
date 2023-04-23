@@ -11,7 +11,9 @@
 #include <utility>
 
 #include <museqa/environment.h>
+
 #include <museqa/utility.hpp>
+#include <museqa/utility/detail/lambda.hpp>
 
 MUSEQA_BEGIN_NAMESPACE
 
@@ -462,9 +464,9 @@ namespace utility
      * @return The new tuple of references.
      */
     template <typename ...T>
-    __host__ __device__ inline constexpr auto tie(T&... ref) noexcept -> tuple_t<T&...>
+    __host__ __device__ inline constexpr decltype(auto) tie(T&... ref) noexcept
     {
-        return {ref...};
+        return tuple_t<T&...>(ref...);
     }
 
     /**
@@ -476,23 +478,23 @@ namespace utility
      * @return The new tuple of references.
      */
     template <typename T, size_t N>
-    __host__ __device__ inline constexpr auto tie(T (&ref)[N]) noexcept -> ntuple_t<T&, N>
+    __host__ __device__ inline constexpr decltype(auto) tie(T (&ref)[N]) noexcept
     {
-        return {ref};
+        return ntuple_t<T&, N>(ref);
     }
 
     /**
      * Gathers move-references from an array's elements into a tuple instance, allowing
-     * them to be mvoed directly into other variables.
+     * them to be moved directly into other variables.
      * @tparam T The array's elements' type.
      * @tparam N The size of the given array.
      * @param ref The target array's move-reference.
      * @return The new tuple of move-references.
      */
     template <typename T, size_t N>
-    __host__ __device__ inline constexpr auto tie(T (&&ref)[N]) noexcept -> ntuple_t<T&&, N>
+    __host__ __device__ inline constexpr decltype(auto) tie(T (&&ref)[N]) noexcept
     {
-        return {std::forward<decltype(ref)>(ref)};
+        return ntuple_t<T&&, N>(std::forward<decltype(ref)>(ref));
     }
 
     /**
@@ -531,10 +533,10 @@ namespace utility
      * @return The new tuple with removed end.
      */
     template <size_t ...I, typename ...T>
-    __host__ __device__ inline constexpr auto init(const tuple_t<identity_t<std::index_sequence<0, I...>>, T...>& t)
-    -> tuple_t<tuple_element_t<tuple_t<T...>, I - 1>...>
-    {
-        return {detail::get<I - 1>(t)...};
+    __host__ __device__ inline constexpr decltype(auto) init(
+        const tuple_t<identity_t<std::index_sequence<0, I...>>, T...>& t
+    ) {
+        return tuple_t<tuple_element_t<tuple_t<T...>, I-1>...>(detail::get<I-1>(t)...);
     }
 
     /**
@@ -545,10 +547,44 @@ namespace utility
      * @return The new tuple with removed head.
      */
     template <size_t ...I, typename ...T>
-    __host__ __device__ inline constexpr auto tail(const tuple_t<identity_t<std::index_sequence<0, I...>>, T...>& t)
-    -> tuple_t<tuple_element_t<tuple_t<T...>, I>...>
-    {
-        return {detail::get<I>(t)...};
+    __host__ __device__ inline constexpr decltype(auto) tail(
+        const tuple_t<identity_t<std::index_sequence<0, I...>>, T...>& t
+    ) {
+        return tuple_t<tuple_element_t<tuple_t<T...>, I>...>(detail::get<I>(t)...);
+    }
+
+    /**
+     * Appends an elements to the end of a tuple.
+     * @tparam E The type of the element to append to tuple.
+     * @tparam I The tuple sequence indeces to match from tuple.
+     * @tparam T The list of tuple's element members types.
+     * @param t The tuple to have an element appended to.
+     * @param element The element to append to the tuple.
+     * @return The resulting tuple.
+     */
+    template <typename E, size_t ...I, typename ...T>
+    __host__ __device__ inline constexpr decltype(auto) append(
+        const tuple_t<identity_t<std::index_sequence<I...>>, T...>& t
+      , E&& element
+    ) {
+        return tuple_t<T..., E>(detail::get<I>(t)..., std::forward<decltype(element)>(element));
+    }
+
+    /**
+     * Prepends an elements to the end of a tuple.
+     * @tparam E The type of the element to prepend to tuple.
+     * @tparam I The tuple sequence indeces to match from tuple.
+     * @tparam T The list of tuple's element members types.
+     * @param t The tuple to have an element prepended to.
+     * @param element The element to prepend to the tuple.
+     * @return The resulting tuple.
+     */
+    template <typename E, size_t ...I, typename ...T>
+    __host__ __device__ inline constexpr decltype(auto) prepend(
+        const tuple_t<identity_t<std::index_sequence<I...>>, T...>& t
+      , E&& element
+    ) {
+        return tuple_t<E, T...>(std::forward<decltype(element)>(element), detail::get<I>(t)...);
     }
 
     /**
@@ -559,10 +595,10 @@ namespace utility
      * @return The resulting concatenated tuple.
      */
     template <size_t ...I, typename ...T>
-    __host__ __device__ inline constexpr auto concat(const tuple_t<identity_t<std::index_sequence<I...>>, T...>& t)
-    -> tuple_t<T...>
-    {
-        return {detail::get<I>(t)...};
+    __host__ __device__ inline constexpr decltype(auto) concat(
+        const tuple_t<identity_t<std::index_sequence<I...>>, T...>& t
+    ) {
+        return tuple_t<T...>(detail::get<I>(t)...);
     }
 
     /**
@@ -578,12 +614,27 @@ namespace utility
      * @return The resulting concatenated tuple.
      */
     template <size_t ...I, size_t ...J, typename ...T, typename ...U, typename ...R>
-    __host__ __device__ inline constexpr auto concat(
+    __host__ __device__ inline constexpr decltype(auto) concat(
         const tuple_t<identity_t<std::index_sequence<I...>>, T...>& a
       , const tuple_t<identity_t<std::index_sequence<J...>>, U...>& b
       , const R&... tail
     ) {
         return concat(tuple_t<T..., U...>(detail::get<I>(a)..., detail::get<J>(b)...), tail...);
+    }
+
+    /**
+     * Reverses the tuple.
+     * @tparam I The tuple sequence indeces.
+     * @tparam T The tuple's element members types.
+     * @param t The tuple to be reversed.
+     * @return The reversed tuple.
+     */
+    template <size_t ...I, typename ...T>
+    __host__ __device__ inline constexpr decltype(auto) reverse(
+        const tuple_t<identity_t<std::index_sequence<I...>>, T...>& t
+    ) {
+        constexpr size_t J = sizeof...(I);
+        return tuple_t<tuple_element_t<tuple_t<T...>, J-I-1>...>(detail::get<J-I-1>(t)...);
     }
 
     /**
@@ -594,31 +645,60 @@ namespace utility
      * @tparam T The tuple's types.
      * @param lambda The functor to apply to the tuple.
      * @param t The tuple to apply functor to.
+     * @param args The remaining functor arguments.
      * @return The new transformed tuple.
      */
     template <typename F, typename ...A, size_t ...I, typename ...T>
-    __host__ __device__ inline constexpr auto apply(
+    __host__ __device__ inline constexpr decltype(auto) apply(
         F&& lambda
       , const tuple_t<identity_t<std::index_sequence<I...>>, T...>& t
-      , const A&... args
+      , A&&... args
     ) {
-        return tuple_t(lambda(detail::get<I>(t), args...)...);
+        return tuple_t(detail::polymorphic_call(lambda, detail::get<I>(t), args...)...);
     }
 
     /**
-     * The recursion base for a left-fold reduction.
-     * @tparam F The functor type to combine the values with.
-     * @tparam B The folding base and result value type.
-     * @param base The folding base value.
-     * @return The reduction base value.
+     * Iterates over a tuple's elements using a functor.
+     * @tparam F The functor type to apply.
+     * @tparam A The types of extra arguments.
+     * @tparam I The tuple's indeces.
+     * @tparam T The tuple's types.
+     * @param lambda The functor to apply to the tuple.
+     * @param t The tuple to iterate over.
+     * @param args The remaining functor arguments.
      */
-    template <typename F, typename B>
-    __host__ __device__ inline constexpr B foldl(
-        F&&
-      , const B& base
-      , const tuple_t<identity_t<std::index_sequence<>>>&
+    template <typename F, typename ...A, size_t ...I, typename ...T>
+    __host__ __device__ inline constexpr void foreach(
+        F&& lambda
+      , const tuple_t<identity_t<std::index_sequence<I...>>, T...>& t
+      , A&&... args
     ) {
-        return base;
+        if constexpr (sizeof...(I) > 0) {
+            detail::polymorphic_call(lambda, head(t), args...);
+            foreach(lambda, tail(t), args...);
+        }
+    }
+
+    /**
+     * Iterates over a tuple's elements, in reverse, using a functor.
+     * @tparam F The functor type to apply.
+     * @tparam A The types of extra arguments.
+     * @tparam I The tuple's indeces.
+     * @tparam T The tuple's types.
+     * @param lambda The functor to apply to the tuple.
+     * @param t The tuple to iterate over.
+     * @param args The remaining functor arguments.
+     */
+    template <typename F, typename ...A, size_t ...I, typename ...T>
+    __host__ __device__ inline constexpr void rforeach(
+        F&& lambda
+      , const tuple_t<identity_t<std::index_sequence<I...>>, T...>& t
+      , A&&... args
+    ) {
+        if constexpr (sizeof...(I) > 0) {
+            detail::polymorphic_call(lambda, last(t), args...);
+            rforeach(lambda, init(t), args...);
+        }
     }
 
     /**
@@ -635,10 +715,14 @@ namespace utility
     template <typename F, typename B, size_t ...I, typename ...T>
     __host__ __device__ inline constexpr B foldl(
         F&& lambda
-      , const B& base
+      , B&& base
       , const tuple_t<identity_t<std::index_sequence<I...>>, T...>& t
     ) {
-        return foldl(lambda, lambda(base, head(t)), tail(t));
+        if constexpr (sizeof...(I) > 0) {
+            return foldl(lambda, detail::polymorphic_call(lambda, base, head(t)), tail(t));
+        } else {
+            return base;
+        }
     }
 
     /**
@@ -651,27 +735,11 @@ namespace utility
      * @return The reduction resulting value.
      */
     template <typename F, size_t ...I, typename ...T>
-    __host__ __device__ inline constexpr auto foldl1(
+    __host__ __device__ inline constexpr decltype(auto) foldl1(
         F&& lambda
       , const tuple_t<identity_t<std::index_sequence<0, I...>>, T...>& t
     ) {
         return foldl(lambda, head(t), tail(t));
-    }
-
-    /**
-     * The recursion base for a right-fold reduction.
-     * @tparam F The functor type to combine the values with.
-     * @tparam B The folding base and result value type.
-     * @param base The folding base value.
-     * @return The reduction base value.
-     */
-    template <typename F, typename B>
-    __host__ __device__ inline constexpr B foldr(
-        F&&
-      , const B& base
-      , const tuple_t<identity_t<std::index_sequence<>>>&
-    ) {
-        return base;
     }
 
     /**
@@ -688,10 +756,14 @@ namespace utility
     template <typename F, typename B, size_t ...I, typename ...T>
     __host__ __device__ inline constexpr B foldr(
         F&& lambda
-      , const B& base
+      , B&& base
       , const tuple_t<identity_t<std::index_sequence<I...>>, T...>& t
     ) {
-        return foldr(lambda, lambda(base, last(t)), init(t));
+        if constexpr (sizeof...(I) > 0) {
+            return foldr(lambda, detail::polymorphic_call(lambda, base, last(t)), init(t));
+        } else {
+            return base;
+        }
     }
 
     /**
@@ -704,27 +776,11 @@ namespace utility
      * @return The reduction resulting value.
      */
     template <typename F, size_t ...I, typename ...T>
-    __host__ __device__ inline constexpr auto foldr1(
+    __host__ __device__ inline constexpr decltype(auto) foldr1(
         F&& lambda
       , const tuple_t<identity_t<std::index_sequence<0, I...>>, T...>& t
     ) {
         return foldr(lambda, last(t), init(t));
-    }
-
-    /**
-     * The recursion base for a left-scan fold reduction.
-     * @tparam F The functor type to combine the values with.
-     * @tparam B The folding base and result value type.
-     * @param base The folding base value.
-     * @return The reduction base tuple.
-     */
-    template <typename F, typename B>
-    __host__ __device__ inline constexpr auto scanl(
-        F&&
-      , const B& base
-      , const tuple_t<identity_t<std::index_sequence<>>>&
-    ) {
-        return tuple_t(base);
     }
 
     /**
@@ -739,12 +795,19 @@ namespace utility
      * @return The resulting fold tuple.
      */
     template <typename F, typename B, size_t ...I, typename ...T>
-    __host__ __device__ inline constexpr auto scanl(
+    __host__ __device__ inline constexpr decltype(auto) scanl(
         F&& lambda
-      , const B& base
+      , B&& base
       , const tuple_t<identity_t<std::index_sequence<I...>>, T...>& t
     ) {
-        return tuple_t(base, detail::get<I>(scanl(lambda, lambda(base, head(t)), tail(t)))...);
+        if constexpr (sizeof...(I) > 0) {
+            return prepend(
+                scanl(lambda, detail::polymorphic_call(lambda, base, head(t)), tail(t))
+              , std::forward<decltype(base)>(base)
+            );
+        } else {
+            return tuple_t(base);
+        }
     }
 
     /**
@@ -757,27 +820,11 @@ namespace utility
      * @return The resulting fold tuple.
      */
     template <typename F, size_t ...I, typename ...T>
-    __host__ __device__ inline constexpr auto scanl1(
+    __host__ __device__ inline constexpr decltype(auto) scanl1(
         F&& lambda
       , const tuple_t<identity_t<std::index_sequence<0, I...>>, T...>& t
     ) {
         return scanl(lambda, head(t), tail(t));
-    }
-
-    /**
-     * The recursion base for a right-scan fold reduction.
-     * @tparam F The functor type to combine the values with.
-     * @tparam B The folding base and result value type.
-     * @param base The folding base value.
-     * @return The reduction base tuple.
-     */
-    template <typename F, typename B>
-    __host__ __device__ inline constexpr auto scanr(
-        F&&
-      , const B& base
-      , const tuple_t<identity_t<std::index_sequence<>>>&
-    ) {
-        return tuple_t(base);
     }
 
     /**
@@ -792,12 +839,19 @@ namespace utility
      * @return The resulting fold tuple.
      */
     template <typename F, typename B, size_t ...I, typename ...T>
-    __host__ __device__ inline constexpr auto scanr(
+    __host__ __device__ inline constexpr decltype(auto) scanr(
         F&& lambda
-      , const B& base
+      , B&& base
       , const tuple_t<identity_t<std::index_sequence<I...>>, T...>& t
     ) {
-        return tuple_t(detail::get<I>(scanr(lambda, lambda(base, last(t)), init(t)))..., base);
+        if constexpr (sizeof...(I) > 0) {
+            return append(
+                scanr(lambda, detail::polymorphic_call(lambda, base, last(t)), init(t))
+              , std::forward<decltype(base)>(base)
+            );
+        } else {
+            return tuple_t(base);
+        }
     }
 
     /**
@@ -810,7 +864,7 @@ namespace utility
      * @return The resulting fold tuple.
      */
     template <typename F, size_t ...I, typename ...T>
-    __host__ __device__ inline constexpr auto scanr1(
+    __host__ __device__ inline constexpr decltype(auto) scanr1(
         F&& lambda
       , const tuple_t<identity_t<std::index_sequence<0, I...>>, T...>& t
     ) {
@@ -828,11 +882,11 @@ namespace utility
      * @return The resulting zipped tuple.
      */
     template <size_t ...I, typename ...T, typename ...U>
-    __host__ __device__ inline constexpr auto zip(
+    __host__ __device__ inline constexpr decltype(auto) zip(
         const tuple_t<identity_t<std::index_sequence<I...>>, T...>& a
       , const tuple_t<identity_t<std::index_sequence<I...>>, U...>& b
     ) {
-        return tuple_t(pair(detail::get<I>(a), detail::get<I>(b))...);
+        return tuple_t(pair_t<T, U>(detail::get<I>(a), detail::get<I>(b))...);
     }
 
     /**
@@ -848,12 +902,12 @@ namespace utility
      * @return The resulting tuple.
      */
     template <typename F, size_t ...I, typename ...T, typename ...U>
-    __host__ __device__ inline constexpr auto zipwith(
+    __host__ __device__ inline constexpr decltype(auto) zipwith(
         F&& lambda
       , const tuple_t<identity_t<std::index_sequence<I...>>, T...>& a
       , const tuple_t<identity_t<std::index_sequence<I...>>, U...>& b
     ) {
-        return tuple_t(lambda(detail::get<I>(a), detail::get<I>(b))...);
+        return tuple_t(detail::polymorphic_call(lambda, detail::get<I>(a), detail::get<I>(b))...);
     }
 }
 
