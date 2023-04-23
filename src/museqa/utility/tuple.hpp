@@ -713,7 +713,7 @@ namespace utility
      * @return The reduction resulting value.
      */
     template <typename F, typename B, size_t ...I, typename ...T>
-    __host__ __device__ inline constexpr B foldl(
+    __host__ __device__ inline constexpr decltype(auto) foldl(
         F&& lambda
       , B&& base
       , const tuple_t<identity_t<std::index_sequence<I...>>, T...>& t
@@ -754,7 +754,7 @@ namespace utility
      * @return The reduction resulting value.
      */
     template <typename F, typename B, size_t ...I, typename ...T>
-    __host__ __device__ inline constexpr B foldr(
+    __host__ __device__ inline constexpr decltype(auto) foldr(
         F&& lambda
       , B&& base
       , const tuple_t<identity_t<std::index_sequence<I...>>, T...>& t
