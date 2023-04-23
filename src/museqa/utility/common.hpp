@@ -117,6 +117,41 @@ namespace utility
     {
         return target;
     }
+
+    /**
+     * Invokes a functor that takes no arguments.
+     * @tparam F The functor type.
+     * @param lambda The functor instance to be invoked.
+     * @return The functor invokation result.
+     */
+    template <typename F>
+    __host__ __device__ inline constexpr decltype(auto) invoke(const F& lambda) {
+        return (lambda)();
+    }
+
+    /**
+     * Seamlessly invokes a functor depending on whether its a free function,
+     * a lambda or an unbound member function pointer.
+     * @tparam F The functor type.
+     * @tparam O The first invoking parameter type or object type to bind to.
+     * @tparam A The remaining invoking arguments types.
+     * @param lambda The functor instance to be invoked.
+     * @param object The possible object instance to bind the functor to.
+     * @param args The remaining invoking arguments.
+     * @return The functor invokation result.
+     */
+    template <typename F, typename O, typename ...A>
+    __host__ __device__ inline constexpr decltype(auto) invoke(const F& lambda, O&& object, A&&... args)
+    {
+        if constexpr (std::is_member_function_pointer<F>::value) {
+            return (object.*lambda)(std::forward<decltype(args)>(args)...);
+        } else {
+            return (lambda)(
+                std::forward<decltype(object)>(object)
+              , std::forward<decltype(args)>(args)...
+            );
+        }
+    }
 }
 
 MUSEQA_END_NAMESPACE

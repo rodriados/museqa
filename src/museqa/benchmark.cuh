@@ -56,40 +56,42 @@ namespace benchmark
         // First and foremost, let us discover what is the type returned by the
         // functor when given the parameters we have received. This is essential
         // to figure out what type we must also return.
-        using result_type = decltype((functor)(std::forward<decltype(params)>(params)...));
+        using result_t = decltype(
+            utility::invoke(functor, std::forward<decltype(params)>(params)...)
+        );
 
         // Now that the resulting type of the functor is well known, we can allocate
         // a variable to the its return value. If the functor happens to not return
         // anything, then we must return nothing.
         typename std::conditional<
-                std::is_void<result_type>::value
-              , museqa::nothing
-              , result_type
+                std::is_void<result_t>::value
+              , museqa::nothing_t
+              , result_t
             >::type result;
 
         // Run the functor with the given parameters and store its result if it
         // produces any. Otherwise, ignore the result and simply execute it. The
         // functor invokation and its result's copying operation must be the only
         // computation within the benchmark scope.
-        if constexpr (!std::is_void<result_type>::value) {
-            result = (functor)(std::forward<decltype(params)>(params)...);
+        if constexpr (!std::is_void<result_t>::value) {
+            result = utility::invoke(functor, std::forward<decltype(params)>(params)...);
         } else {
-            (functor)(std::forward<decltype(params)>(params)...);
+            utility::invoke(functor, std::forward<decltype(params)>(params)...);
         }
 
         // Now that the functor has already been executed, we must build a duration
         // type known at the current runtime and with the requested time period.
       #if !MUSEQA_RUNTIME_DEVICE
-        using duration_type = std::chrono::duration<double, typename D::period>;
+        using duration_t = std::chrono::duration<double, typename D::period>;
       #else
-        using duration_type = ::cuda::std::chrono::duration<double, typename D::period>;
+        using duration_t = ::cuda::std::chrono::duration<double, typename D::period>;
       #endif
 
         // Finally, we can calculate the total time spent by the functor to perform
         // its computation. At this point, we are ready to return the results.
-        const duration_type duration = C::now() - start;
+        const duration_t duration = C::now() - start;
 
-        return utility::tuple(result, duration.count());
+        return utility::tuple_t(result, duration.count());
     }
 }
 

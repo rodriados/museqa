@@ -13,7 +13,6 @@
 #include <museqa/environment.h>
 
 #include <museqa/utility.hpp>
-#include <museqa/utility/detail/lambda.hpp>
 
 MUSEQA_BEGIN_NAMESPACE
 
@@ -654,7 +653,7 @@ namespace utility
       , const tuple_t<identity_t<std::index_sequence<I...>>, T...>& t
       , A&&... args
     ) {
-        return tuple_t(detail::polymorphic_call(lambda, detail::get<I>(t), args...)...);
+        return tuple_t(invoke(lambda, detail::get<I>(t), args...)...);
     }
 
     /**
@@ -674,7 +673,7 @@ namespace utility
       , A&&... args
     ) {
         if constexpr (sizeof...(I) > 0) {
-            detail::polymorphic_call(lambda, head(t), args...);
+            invoke(lambda, head(t), args...);
             foreach(lambda, tail(t), args...);
         }
     }
@@ -696,7 +695,7 @@ namespace utility
       , A&&... args
     ) {
         if constexpr (sizeof...(I) > 0) {
-            detail::polymorphic_call(lambda, last(t), args...);
+            invoke(lambda, last(t), args...);
             rforeach(lambda, init(t), args...);
         }
     }
@@ -719,7 +718,7 @@ namespace utility
       , const tuple_t<identity_t<std::index_sequence<I...>>, T...>& t
     ) {
         if constexpr (sizeof...(I) > 0) {
-            return foldl(lambda, detail::polymorphic_call(lambda, base, head(t)), tail(t));
+            return foldl(lambda, invoke(lambda, base, head(t)), tail(t));
         } else {
             return base;
         }
@@ -760,7 +759,7 @@ namespace utility
       , const tuple_t<identity_t<std::index_sequence<I...>>, T...>& t
     ) {
         if constexpr (sizeof...(I) > 0) {
-            return foldr(lambda, detail::polymorphic_call(lambda, base, last(t)), init(t));
+            return foldr(lambda, invoke(lambda, base, last(t)), init(t));
         } else {
             return base;
         }
@@ -802,7 +801,7 @@ namespace utility
     ) {
         if constexpr (sizeof...(I) > 0) {
             return prepend(
-                scanl(lambda, detail::polymorphic_call(lambda, base, head(t)), tail(t))
+                scanl(lambda, invoke(lambda, base, head(t)), tail(t))
               , std::forward<decltype(base)>(base)
             );
         } else {
@@ -846,7 +845,7 @@ namespace utility
     ) {
         if constexpr (sizeof...(I) > 0) {
             return append(
-                scanr(lambda, detail::polymorphic_call(lambda, base, last(t)), init(t))
+                scanr(lambda, invoke(lambda, base, last(t)), init(t))
               , std::forward<decltype(base)>(base)
             );
         } else {
@@ -907,7 +906,7 @@ namespace utility
       , const tuple_t<identity_t<std::index_sequence<I...>>, T...>& a
       , const tuple_t<identity_t<std::index_sequence<I...>>, U...>& b
     ) {
-        return tuple_t(detail::polymorphic_call(lambda, detail::get<I>(a), detail::get<I>(b))...);
+        return tuple_t(invoke(lambda, detail::get<I>(a), detail::get<I>(b))...);
     }
 }
 
