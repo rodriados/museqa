@@ -86,6 +86,21 @@
 #endif
 
 /*
+ * Macro for pushing compiling options for GCC. These allow certain compiler behaviors
+ * to be modified for the code within the block of changed settings.
+ */
+#if (MUSEQA_HOST_COMPILER == MUSEQA_HOST_COMPILER_GCC) && !defined(__CUDA_ARCH__)
+  #define MUSEQA_PUSH_GCC_OPTION_BEGIN(x)                 \
+    MUSEQA_EMIT_PRAGMA_CALL(GCC push_options)             \
+    MUSEQA_EMIT_PRAGMA_CALL(GCC x)
+  #define MUSEQA_PUSH_GCC_OPTION_END(x)                   \
+    MUSEQA_EMIT_PRAGMA_CALL(GCC pop_options)
+#else
+  #define MUSEQA_PUSH_GCC_OPTION_BEGIN(x)
+  #define MUSEQA_PUSH_GCC_OPTION_END(x)
+#endif
+
+/*
  * Macro for disabling warnings when compiling device code with NVCC. This is useful
  * for hiding buggy compiler warnings or intentional compiler exploits.
  */
