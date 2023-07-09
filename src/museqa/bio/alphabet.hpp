@@ -22,6 +22,13 @@ namespace bio::alphabet
     using symbol_t = uint8_t;
 
     /**
+     * Indicates the minimum number of bits required by the alphabet to express
+     * all of the symbols that it may represent.
+     * @since 1.0
+     */
+    inline constexpr size_t symbol_bits = 5;
+
+    /**
      * The enumeration of biological sequences' alphabet symbols. This enumeration
      * maps all possible symbols to their internal representation values.
      * @since 1.0
