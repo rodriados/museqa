@@ -180,7 +180,7 @@ MUSEQA_END_NAMESPACE
  * @since 1.0
  */
 template <size_t D, typename T>
-struct fmt::formatter<museqa::geometry::point_t<D, T>>
-  : fmt::formatter<museqa::geometry::coordinate_t<D, T>> {};
+struct fmt::formatter<MUSEQA_NAMESPACE::geometry::point_t<D, T>>
+  : fmt::formatter<MUSEQA_NAMESPACE::geometry::coordinate_t<D, T>> {};
 
 #endif
