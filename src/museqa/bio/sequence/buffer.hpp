@@ -14,6 +14,7 @@
 #include <museqa/bio/alphabet.hpp>
 #include <museqa/bio/sequence/block.hpp>
 #include <museqa/memory/buffer.hpp>
+#include <museqa/memory/allocator.hpp>
 
 #include <museqa/thirdparty/fmtlib.h>
 
@@ -70,8 +71,8 @@ namespace bio::sequence
               , m_length (length)
             {}
 
-        friend buffer_t encode(const char*, size_t);
-        friend buffer_t encode(const std::string&);
+        friend buffer_t encode(const char*, const size_t, const memory::allocator_t&);
+        friend buffer_t encode(const std::string&, const memory::allocator_t&);
         friend std::string decode(const buffer_t&);
     };
 
@@ -80,14 +81,18 @@ namespace bio::sequence
      * internal compressed sequence buffer format.
      * @param buffer The symbol characters of the sequence to be encoded.
      * @param length The number of symbols within the target sequence.
+     * @param allocator The memory allocator to use for encoded sequence.
      * @return The compressed sequence buffer.
      */
-    inline buffer_t encode(const char *buffer, size_t length)
-    {
+    inline buffer_t encode(
+        const char *buffer
+      , const size_t length
+      , const memory::allocator_t& allocator = factory::memory::allocator<block_t>()
+    ) {
         const bool has_padding = length % buffer_t::symbols_by_block > 0;
         const auto block_count = has_padding + length / buffer_t::symbols_by_block;
 
-        auto encoded = factory::memory::buffer<block_t>(block_count);
+        auto encoded = factory::memory::buffer<block_t>(block_count, allocator);
 
         for (size_t i = 0, n = 0; i < block_count; ++i) {
             auto current_block = block_t (0);
@@ -109,13 +114,17 @@ namespace bio::sequence
      * Encodes a biological sequence from its string representation into the internal
      * compressed sequence buffer format.
      * @param buffer The sequence string to be encoded.
+     * @param allocator The memory allocator to use for encoded sequence.
      * @return The compressed sequence buffer.
      */
-    inline buffer_t encode(const std::string& buffer)
-    {
+    inline buffer_t encode(
+        const std::string& buffer
+      , const memory::allocator_t& allocator = factory::memory::allocator<block_t>()
+    ) {
         return encode(
             buffer.data()
           , buffer.size()
+          , allocator
         );
     }
 
