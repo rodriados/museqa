@@ -22,6 +22,7 @@ namespace bio::sequence
   #if !defined(MUSEQA_BLOCK_LENGTH)
     // By default, the sequence block length is set to 16. This is the minimum length
     // needed for a block to be able to store more than one symbol.
+    #define MUSEQA_BLOCK_LENGTH 16
     using block_t = uint16_t;
 
   #elif MUSEQA_BLOCK_LENGTH == 8
