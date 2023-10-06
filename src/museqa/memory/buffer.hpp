@@ -188,6 +188,15 @@ namespace memory
             }
 
             /**
+             * Informs whether the buffer is empty and therefore has zero capacity.
+             * @return Is the buffer empty?
+             */
+            __host__ __device__ inline bool empty() const noexcept
+            {
+                return m_capacity == 0;
+            }
+
+            /**
              * Releases the buffer ownership and returns to an empty state.
              * @see museqa::memory::buffer_t::buffer_t
              */

@@ -60,6 +60,8 @@ namespace bio::sequence
                 return m_length;
             }
 
+            using underlying_t::empty;
+
         protected:
             /**
              * Initializes a new sequence buffer from an existing buffer.
