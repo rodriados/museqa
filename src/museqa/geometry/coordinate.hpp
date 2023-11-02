@@ -18,6 +18,12 @@
 
 MUSEQA_BEGIN_NAMESPACE
 
+// Ignoring warning for anonymous structs which are prohibited by ISO C++ standard,
+// but is supported by all major compilers. We exploit these anonymous structs to
+// allow coordinates to be accessed by their different axis-names within distinct
+// coordinated systems at the same time.
+MUSEQA_DISABLE_GCC_WARNING_BEGIN("-Wpedantic")
+
 namespace geometry
 {
     /**
@@ -179,6 +185,8 @@ namespace geometry
         return !geometry::operator==(a, b);
     }
 }
+
+MUSEQA_DISABLE_GCC_WARNING_END("-Wpedantic")
 
 #if !defined(MUSEQA_AVOID_REFLECTION)
 
