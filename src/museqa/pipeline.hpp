@@ -21,49 +21,57 @@ MUSEQA_BEGIN_NAMESPACE
 namespace pipeline
 {
     /**
-     * A pipe is a connector between modules that are executed within a pipeline.
-     * It is responsible for carrying stateful data down the pipeline chain.
+     * The state of a pipeline is a generic container that carries stateful data
+     * between different modules and middlewares during the execution of the pipeline.
      * @since 1.0
      */
-    class pipe_t : private std::unordered_map<std::string, memory::pointer::shared_t<void>>
+    class state_t
     {
         private:
-            using entry_t = memory::pointer::shared_t<void>;
-            using underlying_t = std::unordered_map<std::string, entry_t>;
+            typedef memory::pointer::shared_t<void> entry_t;
+            typedef std::unordered_map<std::string, entry_t> context_t;
+
+        private:
+            context_t m_context = {};
 
         public:
-            inline pipe_t() = default;
-            inline pipe_t(const pipe_t&) = default;
-            inline pipe_t(pipe_t&&) = default;
+            inline explicit state_t() = default;
+            inline explicit state_t(const state_t&) = default;
+            inline explicit state_t(state_t&&) = default;
 
-            inline pipe_t& operator=(const pipe_t&) = default;
-            inline pipe_t& operator=(pipe_t&&) = default;
+            inline state_t& operator=(const state_t&) = default;
+            inline state_t& operator=(state_t&&) = default;
 
             /**
-             * Retrieves data referenced by the given key from the pipe.
+             * Retrieves data referenced by the given key from the context.
              * @tparam T The type of data to retrieve.
-             * @param key The key to be requested from or created in the pipe.
-             * @return The data retrieved from the pipe.
+             * @param key The key to be requested from or created within the context.
+             * @return The data retrieved from the context.
              */
             template <typename T = void>
-            inline memory::pointer::shared_t<T>& retrieve(const std::string& key)
+            inline memory::pointer::shared_t<T>& get(const std::string& key)
             {
-                return reinterpret_cast<memory::pointer::shared_t<T>&>(
-                    underlying_t::operator[](key)
-                );
+                return reinterpret_cast<memory::pointer::shared_t<T>&>(m_context[key]);
             }
 
             /**
-             * Removes data referenced by a given key from the pipe. No errors or
-             * exceptions will be raised if key is not found in the pipe.
-             * @param key The key to be removed from the pipe.
+             * Removes data referenced by a given key from the context. No errors
+             * or exceptions will be raised if key is not found in the context.
+             * @param key The key to be removed from the context.
              * @return Has the key been found and removed?
              */
             inline bool remove(const std::string& key)
             {
-                return (bool) underlying_t::erase(key);
+                return (bool) m_context.erase(key);
             }
     };
+
+    /**
+     * The pipe connector responsible for carrying stateful data between modules
+     * and middlewares down the execution chain of a pipeline.
+     * @since 1.0
+     */
+    using pipe_t = memory::pointer::shared_t<state_t>;
 
     /**
      * The abstract base of a pipeline module. Modules are chained in a pipeline
@@ -80,21 +88,21 @@ namespace pipeline
          * can perform validations or initialize state before before the core logic.
          * @param pipe The pipeline's transitive state instance.
          */
-        virtual void before(memory::pointer::shared_t<pipe_t>& pipe) const { }
+        virtual void before(pipe_t& pipe) const { }
 
         /**
          * The method to execute the module's core logic. After the pipeline has
          * been successfully initialized, the module's core logic is can be run.
          * @param pipe The pipeline's transitive state instance.
          */
-        virtual void run(memory::pointer::shared_t<pipe_t>& pipe) const = 0;
+        virtual void run(pipe_t& pipe) const = 0;
 
         /**
          * The method to run after the module's core logic. Within a pipeline, modules
          * have this method called in the opposite order to which they are defined.
          * @param pipe The pipeline's transitive state instance.
          */
-        virtual void after(memory::pointer::shared_t<pipe_t>& pipe) const { }
+        virtual void after(pipe_t& pipe) const { }
     };
 
     /**
@@ -106,34 +114,34 @@ namespace pipeline
      * @since 1.0
      */
     template <typename ...M>
-    struct middleware_t : public pipeline::module_t
+    class middleware_t : public pipeline::module_t
     {
         public:
-            using sequence_t = utility::tuple_t<M...>;
+            typedef utility::tuple_t<M...> sequence_t;
 
         protected:
-            sequence_t m_sequence = {};
+            const sequence_t m_sequence = {};
 
         static_assert(
             utility::all(std::is_base_of<pipeline::module_t, M>::value...)
-          , "pipeline can only run types that inherit from a module"
+          , "every pipeline step must ultimately inherit from a module"
         );
 
         public:
             inline constexpr middleware_t() = default;
             inline constexpr middleware_t(const middleware_t&) = default;
-            inline constexpr middleware_t(middleware_t&&) = default;
+            inline constexpr middleware_t(middleware_t&&) = delete;
 
             /**
              * Configures a new pipeline middleware with the modules it must execute.
              * @param modules The middleware's modules instance list.
              */
-            inline constexpr explicit middleware_t(M&&... modules)
+            inline constexpr middleware_t(M&&... modules)
               : m_sequence (std::forward<decltype(modules)>(modules)...)
             {}
 
             inline middleware_t& operator=(const middleware_t&) = default;
-            inline middleware_t& operator=(middleware_t&&) = default;
+            inline middleware_t& operator=(middleware_t&&) = delete;
 
             /**
              * Executes the validation or initialization logic of all modules referenced
@@ -141,7 +149,7 @@ namespace pipeline
              * the order in which they are declared.
              * @param pipe The pipeline's transitive state instance.
              */
-            inline virtual void before(memory::pointer::shared_t<pipe_t>& pipe) const override
+            inline virtual void before(pipe_t& pipe) const override
             {
                 utility::foreach(&module_t::before, m_sequence, pipe);
             }
@@ -152,7 +160,7 @@ namespace pipeline
              * the modules are declared.
              * @param pipe The pipeline's transitive state instance.
              */
-            inline virtual void run(memory::pointer::shared_t<pipe_t>& pipe) const override
+            inline virtual void run(pipe_t& pipe) const override
             {
                 utility::foreach(&module_t::run, m_sequence, pipe);
             }
@@ -163,58 +171,58 @@ namespace pipeline
              * method guarantees that modules are called in opposite order.
              * @param pipe The pipeline's transitive state instance.
              */
-            inline virtual void after(memory::pointer::shared_t<pipe_t>& pipe) const override
+            inline virtual void after(pipe_t& pipe) const override
             {
                 utility::rforeach(&module_t::after, m_sequence, pipe);
             }
     };
 
     /**
-     * Manages the execution of a pipeline of modules and middlewares.
+     * Configures a pipeline composed of modules and middlewares, and allows for
+     * stateless, concurrent and thread-safe executions.
      * @tparam M The list of module types that are to execute.
      * @since 1.0
      */
     template <typename ...M>
-    class runner_t final : private middleware_t<M...>
+    class runner_t
     {
-        private:
-            using underlying_t = middleware_t<M...>;
-
         public:
-            using sequence_t = typename underlying_t::sequence_t;
+            typedef pipeline::middleware_t<M...> executor_t;
+            typedef typename executor_t::sequence_t sequence_t;
+
+        protected:
+            const executor_t m_executor = {};
 
         public:
             inline constexpr runner_t() = default;
             inline constexpr runner_t(const runner_t&) = default;
-            inline constexpr runner_t(runner_t&&) = default;
+            inline constexpr runner_t(runner_t&&) = delete;
 
             /**
              * Configures a new pipeline runner with the modules it must execute.
              * @param modules The runner's modules instance list.
              */
-            inline constexpr explicit runner_t(M&&... modules)
-              : underlying_t (std::forward<decltype(modules)>(modules)...)
+            inline constexpr runner_t(M&&... modules)
+              : m_executor (std::forward<decltype(modules)>(modules)...)
             {}
 
             inline runner_t& operator=(const runner_t&) = default;
-            inline runner_t& operator=(runner_t&&) = default;
+            inline runner_t& operator=(runner_t&&) = delete;
 
             /**
              * Runs the pipeline and returns the resulting objects.
              * @param pipe An optional pipeline's transitive state instance.
              * @return The resulting pipeline state.
              */
-            inline auto run(const memory::pointer::shared_t<pipe_t>& pipe = {}) const
-            -> memory::pointer::shared_t<pipe_t>
+            inline auto run(const pipe_t& pipe = {}) const -> pipe_t
             {
-                memory::pointer::shared_t<pipe_t> result = pipe ? pipe :
-                    factory::memory::pointer::shared<pipe_t>();
+                pipe_t state = pipe ? pipe : factory::memory::pointer::shared<state_t>();
 
-                underlying_t::before(result);
-                underlying_t::run(result);
-                underlying_t::after(result);
+                m_executor.before(state);
+                m_executor.run(state);
+                m_executor.after(state);
 
-                return result;
+                return state;
             }
     };
 }
