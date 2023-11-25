@@ -123,7 +123,7 @@ namespace pipeline
             const sequence_t m_sequence = {};
 
         static_assert(
-            utility::all(std::is_base_of<pipeline::module_t, M>::value...)
+            utility::all(std::is_base_of<pipeline::module_t, pure_t<M>>::value...)
           , "every pipeline step must ultimately inherit from a module"
         );
 
@@ -140,7 +140,7 @@ namespace pipeline
               : m_sequence (std::forward<decltype(modules)>(modules)...)
             {}
 
-            inline middleware_t& operator=(const middleware_t&) = default;
+            inline middleware_t& operator=(const middleware_t&) = delete;
             inline middleware_t& operator=(middleware_t&&) = delete;
 
             /**
@@ -206,7 +206,7 @@ namespace pipeline
               : m_executor (std::forward<decltype(modules)>(modules)...)
             {}
 
-            inline runner_t& operator=(const runner_t&) = default;
+            inline runner_t& operator=(const runner_t&) = delete;
             inline runner_t& operator=(runner_t&&) = delete;
 
             /**
@@ -225,6 +225,13 @@ namespace pipeline
                 return state;
             }
     };
+
+    /*
+     * Deduction guides for pipeline middlewares.
+     * @since 1.0
+     */
+    template <typename ...M> middleware_t(M&&...) -> middleware_t<M...>;
+    template <typename ...M> runner_t(M&&...) -> runner_t<M...>;
 }
 
 MUSEQA_END_NAMESPACE
