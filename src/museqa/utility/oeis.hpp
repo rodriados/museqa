@@ -48,7 +48,7 @@ namespace utility
          */
         __host__ __device__ inline auto a002024(int32_t n) noexcept -> int32_t
         {
-            return floor(.5f * sqrt(n * 2));
+            return floor(.5f + sqrt(n * 2));
         }
     }
 }

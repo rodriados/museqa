@@ -10,6 +10,7 @@
 #include <utility>
 
 #include <museqa/environment.h>
+#include <museqa/utility/oeis.hpp>
 
 MUSEQA_BEGIN_NAMESPACE
 
@@ -54,6 +55,19 @@ namespace utility
     -> typename std::enable_if<std::is_floating_point<T>::value, T>::type
     {
         return static_cast<T>(std::stold(value));
+    }
+
+    /**
+     * Calculates the number of pair combinations for a collection of given size.
+     * @tparam T The given integral type.
+     * @param n The total number of elements within a collection.
+     * @return The total number of possible pair combinations.
+     */
+    template <typename T>
+    __host__ __device__ inline auto nchoose(T n) noexcept
+    -> typename std::enable_if<std::is_integral<T>::value, T>::type
+    {
+        return oeis::a000217(n - 1);
     }
 
     /**
