@@ -25,7 +25,7 @@ namespace heuristic::algorithm::pairwise
      * At last, the matrix is the resulting object produced by the module.
      * @since 1.0
      */
-    class matrix : protected memory::buffer_t<pairwise::score_t>
+    class matrix_t : protected memory::buffer_t<pairwise::score_t>
     {
         protected:
             typedef memory::buffer_t<pairwise::score_t> underlying_t;
@@ -34,16 +34,16 @@ namespace heuristic::algorithm::pairwise
             size_t m_count = 0;
 
         public:
-            inline matrix() noexcept = default;
-            inline matrix(const matrix&) noexcept = default;
-            inline matrix(matrix&&) noexcept = default;
+            inline matrix_t() noexcept = default;
+            inline matrix_t(const matrix_t&) = default;
+            inline matrix_t(matrix_t&&) = default;
 
             /**
              * Initializes a new distance matrix from a buffer linearly containing
              * pairwise distances between a set of sequences.
              * @param buffer The linear distances' buffer to copy into the matrix.
              */
-            inline matrix(const underlying_t& buffer) __museqasafe__
+            inline matrix_t(const underlying_t& buffer) __museqasafe__
               : underlying_t (buffer)
               , m_count (utility::oeis::a002024(m_capacity))
             {
@@ -53,8 +53,8 @@ namespace heuristic::algorithm::pairwise
                 );
             }
 
-            inline matrix& operator=(const matrix&) noexcept = default;
-            inline matrix& operator=(matrix&&) noexcept = default;
+            inline matrix_t& operator=(const matrix_t&) = default;
+            inline matrix_t& operator=(matrix_t&&) = default;
 
             /**
              * Retrieves the pairwise distance of a sequence pair on the matrix.
