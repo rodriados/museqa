@@ -55,6 +55,18 @@ namespace pipeline
             }
 
             /**
+             * Sets a new key or re-assigns a key with the given value in the context.
+             * @tparam T The type of data to be assigned to key.
+             * @param key The key to be assigned within the context.
+             * @param value The value to assign to the key in the context.
+             */
+            template <typename T = void>
+            inline void set(const std::string& key, memory::pointer::shared_t<T>& value)
+            {
+                m_context.insert_or_assign(key, reinterpret_cast<entry_t&>(value));
+            }
+
+            /**
              * Removes data referenced by a given key from the context. No errors
              * or exceptions will be raised if key is not found in the context.
              * @param key The key to be removed from the context.
