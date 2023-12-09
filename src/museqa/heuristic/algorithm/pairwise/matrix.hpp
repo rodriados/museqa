@@ -13,7 +13,7 @@
 #include <museqa/guard.hpp>
 
 #include <museqa/memory/buffer.hpp>
-#include <museqa/heuristic/algorithm/pairwise.cuh>
+#include <museqa/heuristic/algorithm/pairwise/common.hpp>
 #include <museqa/heuristic/algorithm/pairwise/exception.hpp>
 
 MUSEQA_BEGIN_NAMESPACE

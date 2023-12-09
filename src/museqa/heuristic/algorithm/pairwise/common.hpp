@@ -1,6 +1,6 @@
 /**
  * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
- * @file Definitions and implementations for the pairwise-alignment heuristic step.
+ * @file Common type definitions for the pairwise-alignment heuristic step.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2018-present Rodrigo Siqueira
  */
