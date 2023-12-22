@@ -13,8 +13,8 @@
 #include <museqa/utility.hpp>
 #include <museqa/bio/alphabet.hpp>
 #include <museqa/bio/sequence/block.hpp>
-#include <museqa/memory/buffer.hpp>
 #include <museqa/memory/allocator.hpp>
+#include <museqa/memory/pointer/shared.hpp>
 
 #include <museqa/thirdparty/fmtlib.h>
 
@@ -29,10 +29,10 @@ namespace bio::sequence
      * and stored within memory blocks that are contiguous and easily decompressible.
      * @since 1.0
      */
-    class buffer_t : protected memory::buffer_t<block_t>
+    class buffer_t : protected memory::pointer::shared_t<block_t>
     {
         private:
-            typedef memory::buffer_t<block_t> underlying_t;
+            typedef memory::pointer::shared_t<block_t> underlying_t;
 
         protected:
             size_t m_length = 0;
@@ -60,16 +60,23 @@ namespace bio::sequence
                 return m_length;
             }
 
-            using underlying_t::empty;
+            /**
+             * Informs whether the sequence buffer is empty and has zero elements.
+             * @return Is the sequence buffer empty?
+             */
+            __host__ __device__ inline bool empty() const noexcept
+            {
+                return m_length == 0;
+            }
 
         protected:
             /**
-             * Initializes a new sequence buffer from an existing buffer.
-             * @param buffer The buffer to initialize sequence buffer from.
+             * Initializes a new sequence buffer from an existing buffer pointer.
+             * @param ptr The buffer pointer to initialize sequence buffer from.
              * @param length The number of symbols contained by the sequence.
              */
-            __host__ __device__ inline buffer_t(const underlying_t& buffer, size_t length) __devicesafe__
-              : underlying_t (buffer)
+            __host__ __device__ inline buffer_t(const underlying_t& ptr, size_t length) __devicesafe__
+              : underlying_t (ptr)
               , m_length (length)
             {}
 
@@ -94,7 +101,7 @@ namespace bio::sequence
         const bool has_padding = length % buffer_t::symbols_by_block > 0;
         const auto block_count = has_padding + length / buffer_t::symbols_by_block;
 
-        auto encoded = factory::memory::buffer<block_t>(block_count, allocator);
+        auto encoded = factory::memory::pointer::shared<block_t>(block_count, allocator);
 
         for (size_t i = 0, n = 0; i < block_count; ++i) {
             auto current_block = block_t (0);
