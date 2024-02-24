@@ -40,7 +40,7 @@ namespace heuristic::module
             struct algorithm_t;
 
         public:
-            inline static constexpr const char *k_matrix = "pairwise::matrix";
+            inline static constexpr auto matrix = pipeline::key<matrix_t>("pairwise::matrix");
 
         protected:
             parameters_t m_params = {};

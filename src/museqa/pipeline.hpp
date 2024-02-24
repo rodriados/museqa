@@ -31,6 +31,16 @@ namespace pipeline
             typedef memory::pointer::shared_t<void> entry_t;
             typedef std::unordered_map<std::string, entry_t> context_t;
 
+        public:
+            /**
+             * The representation of a state key, which is used externally to search
+             * for an entry within the state date. The key joins the data type with
+             * its corresponding entry id.
+             * @since 1.0
+             */
+            template <typename T>
+            struct statekey_t { const char *id = nullptr; };
+
         private:
             context_t m_context = {};
 
@@ -48,10 +58,10 @@ namespace pipeline
              * @param key The key to be requested from or created within the context.
              * @return The data retrieved from the context.
              */
-            template <typename T = void>
-            inline memory::pointer::shared_t<T>& get(const std::string& key)
+            template <typename T>
+            inline memory::pointer::shared_t<T>& get(const statekey_t<T>& key)
             {
-                return reinterpret_cast<memory::pointer::shared_t<T>&>(m_context[key]);
+                return reinterpret_cast<memory::pointer::shared_t<T>&>(m_context[key.id]);
             }
 
             /**
@@ -60,23 +70,38 @@ namespace pipeline
              * @param key The key to be assigned within the context.
              * @param value The value to assign to the key in the context.
              */
-            template <typename T = void>
-            inline void set(const std::string& key, memory::pointer::shared_t<T>& value)
+            template <typename T>
+            inline void set(const statekey_t<T>& key, memory::pointer::shared_t<T>& value)
             {
-                m_context.insert_or_assign(key, reinterpret_cast<entry_t&>(value));
+                m_context.insert_or_assign(key.id, reinterpret_cast<entry_t&>(value));
             }
 
             /**
              * Removes data referenced by a given key from the context. No errors
              * or exceptions will be raised if key is not found in the context.
+             * @tparam T The type of data to be removed from state.
              * @param key The key to be removed from the context.
              * @return Has the key been found and removed?
              */
-            inline bool remove(const std::string& key)
+            template <typename T>
+            inline bool remove(const statekey_t<T>& key)
             {
-                return (bool) m_context.erase(key);
+                return (bool) m_context.erase(key.id);
             }
     };
+
+    /**
+     * Creates a new pipeline state key from its type and id. This function serves
+     * as a shortcut to easen a pipeline state key creation.
+     * @tparam T The type attached to the pipeline state key.
+     * @param id The key string identification.
+     * @return The new pipeline state key instance.
+     */
+    template <typename T = void>
+    inline constexpr auto key(const char *id) noexcept -> const state_t::statekey_t<T>
+    {
+        return state_t::statekey_t<T> {id};
+    }
 
     /**
      * The pipe connector responsible for carrying stateful data between modules
@@ -244,6 +269,19 @@ namespace pipeline
      */
     template <typename ...M> middleware_t(M&&...) -> middleware_t<M...>;
     template <typename ...M> runner_t(M&&...) -> runner_t<M...>;
+}
+
+namespace factory::pipeline
+{
+    /**
+     * Initializes a new pipeline state pipe.
+     * @return The new pipeline state pipe instance.
+     */
+    inline auto pipe() -> museqa::pipeline::pipe_t
+    {
+        using state_t = museqa::pipeline::state_t;
+        return factory::memory::pointer::shared<state_t>();
+    }
 }
 
 MUSEQA_END_NAMESPACE

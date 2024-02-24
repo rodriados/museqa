@@ -53,7 +53,7 @@ namespace heuristic::module
         auto result = factory::memory::pointer::shared<matrix_t>();
             *result = worker->run(context);
 
-        pipe->set(pairwise_t::k_matrix, result);
+        pipe->set(pairwise_t::matrix, result);
     } catch (const std::out_of_range& e) {
         throw pairwise::exception_t("unknown pairwise algorithm: " + m_params.input.algorithm);
     }
