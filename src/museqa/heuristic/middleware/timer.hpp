@@ -6,6 +6,8 @@
  */
 #pragma once
 
+#include <vector>
+
 #include <museqa/environment.h>
 #include <museqa/benchmark.cuh>
 #include <museqa/pipeline.hpp>
@@ -19,6 +21,7 @@ namespace heuristic::middleware
     /**
      * The pipeline middleware for measuring the time elapsed during the execution
      * of the wrapped modules. The measured duration is stored within the module.
+     * If executed more than once, the duration is stored in different runs.
      * @tparam M The list of modules to measure execution time.
      * @since 1.0
      */
@@ -29,7 +32,7 @@ namespace heuristic::middleware
             typedef pipeline::middleware_t<M...> underlying_t;
 
         protected:
-            mutable double m_duration = 0.f;
+            mutable std::vector<double> m_duration;
 
         public:
             using underlying_t::middleware_t;
@@ -42,16 +45,20 @@ namespace heuristic::middleware
             inline void run(pipeline::pipe_t& pipe) const override
             {
                 const auto lambda = [&]{ underlying_t::run(pipe); };
-                m_duration = utility::last(benchmark::run(lambda));
+                const auto duration = utility::last(benchmark::run(lambda));
+                m_duration.push_back(duration);
             }
 
             /**
              * Retrieves the time measurement for the referenced modules' execution.
+             * @param run The index of the requested execution run.
              * @return The total amount of time elapsed during the modules' execution.
              */
-            inline auto duration() const -> double
+            inline auto duration(size_t run = 0) const -> double
             {
-                return m_duration;
+                return run < m_duration.size()
+                    ? m_duration[run]
+                    : 0.f;
             }
     };
 
