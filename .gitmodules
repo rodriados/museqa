@@ -7,6 +7,14 @@
 [submodule "thirdparty/mpiwcpp17"]
 	path = thirdparty/mpiwcpp17
 	url = https://github.com/rodriados/mpiwcpp17
+	fetchRecurseSubmodules = no
 [submodule "thirdparty/cuda"]
 	path = thirdparty/cuda
 	url = https://github.com/eyalroz/cuda-api-wrappers.git
+[submodule "thirdparty/reflector"]
+	path = thirdparty/reflector
+	url = https://github.com/rodriados/reflector
+	fetchRecurseSubmodules = no
+[submodule "thirdparty/supertuple"]
+	path = thirdparty/supertuple
+	url = https://github.com/rodriados/supertuple
