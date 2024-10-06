@@ -15,7 +15,5 @@
     #else
       #error library MPIwCPP17 requires C++17 or later
     #endif
-  #else
-    #include <mpi.h>
   #endif
 #endif
