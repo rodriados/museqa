@@ -9,10 +9,10 @@
 #include <utility>
 
 #include <museqa/environment.h>
-
 #include <museqa/guard.hpp>
 #include <museqa/utility.hpp>
-#include <museqa/utility/tuple.hpp>
+
+#include <museqa/thirdparty/supertuple.h>
 
 MUSEQA_BEGIN_NAMESPACE
 
@@ -34,6 +34,8 @@ namespace utility
 
     namespace detail
     {
+        using namespace supertuple;
+
         /**
          * Auxiliary type for marking a variadic function delegate. As this type
          * is hidden from the library's public API, a function must never expect

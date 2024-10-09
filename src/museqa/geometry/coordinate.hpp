@@ -11,10 +11,9 @@
 
 #include <museqa/environment.h>
 #include <museqa/utility.hpp>
-#include <museqa/utility/tuple.hpp>
-#include <museqa/utility/reflection.hpp>
 
 #include <museqa/thirdparty/fmtlib.h>
+#include <museqa/thirdparty/supertuple.h>
 
 MUSEQA_BEGIN_NAMESPACE
 
@@ -147,9 +146,12 @@ namespace geometry
     __host__ __device__ inline constexpr bool operator==(
         const coordinate_t<D, T>& a, const coordinate_t<D, U>& b
     ) noexcept {
-        return utility::foldl(
-            utility::andl, true
-          , utility::zipwith(utility::equ, utility::tie(a.value), utility::tie(b.value))
+        return supertuple::foldl(
+            supertuple::zipwith(
+                supertuple::tie(a.value)
+              , supertuple::tie(b.value)
+              , utility::equ)
+          , utility::andl, true
         );
     }
 

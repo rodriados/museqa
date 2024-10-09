@@ -16,7 +16,7 @@
 #endif
 
 #include <museqa/utility.hpp>
-#include <museqa/utility/tuple.hpp>
+#include <museqa/thirdparty/supertuple.h>
 
 MUSEQA_BEGIN_NAMESPACE
 
@@ -91,7 +91,7 @@ namespace benchmark
         // its computation. At this point, we are ready to return the results.
         const duration_t duration = C::now() - start;
 
-        return utility::tuple_t(result, duration.count());
+        return supertuple::tuple_t(result, duration.count());
     }
 }
 

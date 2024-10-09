@@ -13,11 +13,10 @@
 #include <museqa/environment.h>
 #include <museqa/guard.hpp>
 #include <museqa/utility.hpp>
-#include <museqa/utility/tuple.hpp>
-#include <museqa/utility/reflection.hpp>
 #include <museqa/geometry/coordinate.hpp>
 
 #include <museqa/thirdparty/fmtlib.h>
+#include <museqa/thirdparty/supertuple.h>
 
 MUSEQA_BEGIN_NAMESPACE
 
@@ -62,14 +61,12 @@ namespace geometry
 
             /**
              * Instantiates a new point from a tuple.
-             * @tparam I The sequence tuple's indeces.
              * @tparam U The tuple's contents types.
              * @param tuple The tuple to build a point from.
              */
-            template <size_t ...I, typename ...U>
-            __host__ __device__ inline constexpr point_t(
-                const utility::tuple_t<identity_t<std::index_sequence<I...>>, U...>& tuple
-            ) : point_t (tuple.template get<I>()...)
+            template <typename ...U>
+            __host__ __device__ inline constexpr point_t(const supertuple::tuple_t<U...>& t)
+              : point_t (t, std::make_index_sequence<sizeof...(U)>())
             {}
 
             /**
@@ -79,7 +76,7 @@ namespace geometry
              */
             template <typename U>
             __host__ __device__ inline constexpr point_t(const point_t<D, U>& other)
-              : point_t (std::make_index_sequence<D>(), other)
+              : point_t (other, std::make_index_sequence<D>())
             {}
 
             __host__ __device__ inline point_t& operator=(const point_t&) noexcept = default;
@@ -109,14 +106,29 @@ namespace geometry
 
         private:
             /**
+             * Instantiates a new point from a tuple and an indexer helper.
+             * @tparam U The tuple's dimensions' types.
+             * @tparam I The helper sequence indeces.
+             * @param t The tuple to build a new point from.
+             */
+            template <typename ...U, size_t ...I>
+            __host__ __device__ inline constexpr point_t(
+                const supertuple::tuple_t<U...>& t
+              , std::index_sequence<I...>
+            ) : point_t (supertuple::get<I>(t)...)
+            {}
+
+            /**
              * Instantiates a new point from a foreign point and an indexer helper.
-             * @tparam I The foreign point's coordinates sequence indeces.
-             * @tparam P The foreign point's instance type.
+             * @tparam U The foreign point's instance type.
+             * @tparam I The helper sequence indeces.
              * @param other The foreign point to build a new point from.
              */
-            template <size_t ...I, typename P>
-            __host__ __device__ inline constexpr point_t(std::index_sequence<I...>, const P& other)
-              : point_t (other.value[I]...)
+            template <typename U, size_t ...I>
+            __host__ __device__ inline constexpr point_t(
+                const point_t<D, U>& other
+              , std::index_sequence<I...>
+            ) : point_t (other.value[I]...)
             {}
     };
 
@@ -125,8 +137,8 @@ namespace geometry
      * @since 1.0
      */
     template <typename T, typename ...U> point_t(T, U...) -> point_t<sizeof...(U) + 1, T>;
-    template <typename T, typename ...U> point_t(utility::tuple_t<T, U...>) -> point_t<sizeof...(U) + 1, T>;
-    template <typename T, size_t N> point_t(utility::ntuple_t<T, N>) -> point_t<N, T>;
+    template <typename T, typename ...U> point_t(supertuple::tuple_t<T, U...>) -> point_t<sizeof...(U) + 1, T>;
+    template <typename T, size_t N> point_t(supertuple::ntuple_t<T, N>) -> point_t<N, T>;
 
     /**
      * The distance operator for two generic points.
@@ -142,13 +154,12 @@ namespace geometry
         const point_t<D, T>& a
       , const point_t<D, U>& b
     ) noexcept {
-        return sqrt(utility::foldl(
-            utility::add, double(0)
-          , utility::zipwith(
-                [](const T& a, const U& b) { return pow(b - a, 2.0); }
-              , utility::tie(a.value)
-              , utility::tie(b.value)
-            )
+        return sqrt(supertuple::foldl(
+            supertuple::zipwith(
+                supertuple::tie(a.value)
+              , supertuple::tie(b.value)
+              , [](const T& a, const U& b) { return pow(b - a, 2.0); })
+          , utility::add, double(0)
         ));
     }
 }

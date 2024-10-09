@@ -12,7 +12,7 @@
 #include <museqa/benchmark.cuh>
 #include <museqa/pipeline.hpp>
 
-#include <museqa/utility/tuple.hpp>
+#include <museqa/thirdparty/supertuple.h>
 
 MUSEQA_BEGIN_NAMESPACE
 
@@ -45,7 +45,7 @@ namespace heuristic::middleware
             inline void run(pipeline::pipe_t& pipe) const override
             {
                 const auto lambda = [&]{ underlying_t::run(pipe); };
-                const auto duration = utility::last(benchmark::run(lambda));
+                const auto duration = supertuple::last(benchmark::run(lambda));
                 m_duration.push_back(duration);
             }
 

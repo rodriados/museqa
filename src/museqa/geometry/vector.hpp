@@ -11,12 +11,11 @@
 
 #include <museqa/environment.h>
 #include <museqa/utility.hpp>
-#include <museqa/utility/tuple.hpp>
-#include <museqa/utility/reflection.hpp>
 #include <museqa/geometry/coordinate.hpp>
 #include <museqa/geometry/point.hpp>
 
 #include <museqa/thirdparty/fmtlib.h>
+#include <museqa/thirdparty/supertuple.h>
 
 MUSEQA_BEGIN_NAMESPACE
 
@@ -56,8 +55,8 @@ namespace geometry
      * @since 1.0
      */
     template <typename T, typename ...U> vector_t(T, U...) -> vector_t<sizeof...(U) + 1, T>;
-    template <typename T, typename ...U> vector_t(utility::tuple_t<T, U...>) -> vector_t<sizeof...(U) + 1, T>;
-    template <typename T, size_t N> vector_t(utility::ntuple_t<T, N>) -> vector_t<N, T>;
+    template <typename T, typename ...U> vector_t(supertuple::tuple_t<T, U...>) -> vector_t<sizeof...(U) + 1, T>;
+    template <typename T, size_t N> vector_t(supertuple::ntuple_t<T, N>) -> vector_t<N, T>;
 
     /**
      * The operator for the sum of two vectors.
@@ -73,7 +72,11 @@ namespace geometry
         const vector_t<D, T>& a
       , const vector_t<D, U>& b
     ) noexcept {
-        return vector_t(utility::zipwith(utility::add, utility::tie(a.value), utility::tie(b.value)));
+        return vector_t(supertuple::zipwith(
+            supertuple::tie(a.value)
+          , supertuple::tie(b.value)
+          , utility::add
+        ));
     }
 
     /**
@@ -90,7 +93,11 @@ namespace geometry
         const vector_t<D, T>& a
       , const vector_t<D, U>& b
     ) noexcept {
-        return vector_t(utility::zipwith(utility::sub, utility::tie(a.value), utility::tie(b.value)));
+        return vector_t(supertuple::zipwith(
+            supertuple::tie(a.value)
+          , supertuple::tie(b.value)
+          , utility::sub
+        ));
     }
 
     /**
@@ -107,7 +114,10 @@ namespace geometry
         const vector_t<D, T>& v
       , const S& scalar
     ) noexcept {
-        return vector_t(utility::apply(utility::mul, utility::tie(v.value), scalar));
+        return vector_t(supertuple::apply(
+            supertuple::tie(v.value)
+          , utility::mul, scalar
+        ));
     }
 
     /**
@@ -124,7 +134,10 @@ namespace geometry
         const S& scalar
       , const vector_t<D, T>& v
     ) noexcept {
-        return vector_t(utility::apply(utility::rmul, utility::tie(v.value), scalar));
+        return vector_t(supertuple::apply(
+            supertuple::tie(v.value)
+          , utility::rmul, scalar
+        ));
     }
 
     /**
@@ -141,9 +154,13 @@ namespace geometry
         const vector_t<D, T>& a
       , const vector_t<D, U>& b
     ) noexcept {
-        return utility::foldl(
-            utility::add, T(0)
-          , utility::zipwith(utility::mul, utility::tie(a.value), utility::tie(b.value))
+        return supertuple::foldl(
+            supertuple::zipwith(
+                supertuple::tie(a.value)
+              , supertuple::tie(b.value)
+              , utility::mul)
+          , utility::add
+          , T(0)
         );
     }
 
@@ -177,9 +194,12 @@ namespace geometry
     template <size_t D, typename T>
     __host__ __device__ inline constexpr double length(const vector_t<D, T>& v) noexcept
     {
-        return sqrt(utility::foldl(
-            utility::add, double(0)
-          , utility::apply(pow, utility::tie(v.value), 2.0)
+        return sqrt(supertuple::foldl(
+            supertuple::apply(
+                supertuple::tie(v.value)
+              , pow, 2.0)
+          , utility::add
+          , double(0)
         ));
     }
 
@@ -193,10 +213,10 @@ namespace geometry
     template <size_t D, typename T>
     __host__ __device__ inline constexpr auto normalize(const vector_t<D, T>& v) noexcept
     {
-        return vector_t(utility::apply(
-            [](double value, double length) { return length > 0.0 ? (value / length) : 0.0; }
-          , utility::tie(v.value)
-          , geometry::length(v)
+        constexpr auto f = [](double v, double len) { return len > 0.0 ? (v / len) : 0.0; };
+        return vector_t(supertuple::apply(
+            supertuple::tie(v.value)
+          , f, geometry::length(v)
         ));
     }
 }

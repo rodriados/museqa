@@ -12,9 +12,9 @@
 
 #include <museqa/environment.h>
 #include <museqa/utility.hpp>
-
 #include <museqa/memory/pointer.hpp>
-#include <museqa/utility/tuple.hpp>
+
+#include <museqa/thirdparty/supertuple.h>
 
 MUSEQA_BEGIN_NAMESPACE
 
@@ -154,7 +154,7 @@ namespace pipeline
     class middleware_t : public pipeline::module_t
     {
         public:
-            typedef utility::tuple_t<M...> sequence_t;
+            typedef supertuple::tuple_t<M...> sequence_t;
 
         protected:
             const sequence_t m_sequence = {};
@@ -188,7 +188,7 @@ namespace pipeline
              */
             inline virtual void before(pipe_t& pipe) const override
             {
-                utility::foreach(&module_t::before, m_sequence, pipe);
+                supertuple::foreach(m_sequence, &module_t::before, pipe);
             }
 
             /**
@@ -199,7 +199,7 @@ namespace pipeline
              */
             inline virtual void run(pipe_t& pipe) const override
             {
-                utility::foreach(&module_t::run, m_sequence, pipe);
+                supertuple::foreach(m_sequence, &module_t::run, pipe);
             }
 
             /**
@@ -210,7 +210,7 @@ namespace pipeline
              */
             inline virtual void after(pipe_t& pipe) const override
             {
-                utility::rforeach(&module_t::after, m_sequence, pipe);
+                supertuple::rforeach(m_sequence, &module_t::after, pipe);
             }
     };
 
@@ -253,7 +253,8 @@ namespace pipeline
              */
             inline auto run(const pipe_t& pipe = {}) const -> pipe_t
             {
-                pipe_t state = pipe ? pipe : factory::memory::pointer::shared<state_t>();
+                pipe_t state = pipe ? pipe :
+                    factory::memory::pointer::shared<state_t>();
 
                 m_executor.before(state);
                 m_executor.run(state);

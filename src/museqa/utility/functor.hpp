@@ -13,10 +13,10 @@
 
 #include <museqa/utility.hpp>
 #include <museqa/utility/delegate.hpp>
-#include <museqa/utility/tuple.hpp>
-
 #include <museqa/memory/pointer/shared.hpp>
 #include <museqa/memory/pointer/unmanaged.hpp>
+
+#include <museqa/thirdparty/supertuple.h>
 
 MUSEQA_BEGIN_NAMESPACE
 
@@ -183,7 +183,7 @@ namespace utility
              */
             __host__ __device__ inline constexpr decltype(auto) unwrap() const
             {
-                return tuple_t<object_t&, function_t> {*m_object, m_function};
+                return supertuple::tuple_t<object_t&, function_t> {*m_object, m_function};
             }
 
             /**
