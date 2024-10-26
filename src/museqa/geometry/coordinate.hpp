@@ -13,6 +13,7 @@
 #include <museqa/utility.hpp>
 
 #include <museqa/thirdparty/fmtlib.h>
+#include <museqa/thirdparty/reflector.h>
 #include <museqa/thirdparty/supertuple.h>
 
 MUSEQA_BEGIN_NAMESPACE
@@ -189,23 +190,33 @@ namespace geometry
 }
 
 MUSEQA_DISABLE_GCC_WARNING_END("-Wpedantic")
+MUSEQA_END_NAMESPACE
 
-#if !defined(MUSEQA_AVOID_REFLECTION)
+#if !defined(MUSEQA_AVOID_REFLECTOR)
 
 /**
- * Explicitly defines the reflector for a coordinate. Although a trivial type, a
- * coordinate cannot be automatically reflected over due to its internal union.
+ * Explicitly defines the reflection for a coordinate. Although a trivial type,
+ * a coordinate cannot be automatically reflected due to its internal union.
  * @tparam D The coordinate's dimensionality.
  * @tparam T The coordinate's dimensions' type.
  * @since 1.0
  */
 template <size_t D, typename T>
-class utility::reflector_t<geometry::coordinate_t<D, T>>
-  : public utility::reflector_t<decltype(geometry::coordinate_t<D, T>::value)> {};
+struct reflector::provider_t<MUSEQA_NAMESPACE::geometry::coordinate_t<D, T>>
+{
+    typedef MUSEQA_NAMESPACE::geometry::coordinate_t<D, T> target_t;
+
+    /**
+     * Provides the internal members of a coordinate for reflection.
+     * @return The coordinate members reflection.
+     */
+    constexpr static auto provide() noexcept
+    {
+        return reflector::provide(&target_t::value);
+    }
+};
 
 #endif
-
-MUSEQA_END_NAMESPACE
 
 #if !defined(MUSEQA_AVOID_FMTLIB)
 

@@ -27,7 +27,7 @@ NVARCH ?= sm_30
 # Defining macros inside code at compile time. This can be used to enable or disable
 # certain features on code or affect the projects compilation.
 FLAGS ?=
-GCPPFLAGS ?= -std=$(STDCPP) -I$(DSTDIR) -I$(TESTDIR) $(FLAGS)
+GCPPFLAGS ?= -std=$(STDCPP) -I$(DSTDIR) -I$(INCDIR) $(FLAGS)
 LINKFLAGS ?= $(FLAGS)
 
 # The operational system check. At least for now, we assume that we are always running
@@ -52,6 +52,8 @@ all: distribute
 prepare-distribute:
 	@mkdir -p $(DSTDIR)
 
+export DISTRIBUTE_DESTINATION ?= $(shell realpath $(DSTDIR))
+
 distribute: prepare-distribute thirdparty-distribute
 no-thirdparty-distribute: prepare-distribute
 
@@ -63,16 +65,15 @@ clean: clean-distribute
 	@rm -rf $(OBJDIR)
 
 .PHONY: all clean
-.PHONY: prepare-distribute distribute no-thirdparty-distribute
+.PHONY: prepare-distribute distribute no-thirdparty-distribute clean-distribute
 
 # The target path for third party dependencies' distribution files. As each dependency
 # may allow different settings, a variable for each one is needed.
-export SUPERTUPLE_DIST_TARGET ?= $(DSTDIR)/supertuple.hpp
-export REFLECTOR_DIST_TARGET  ?= $(DSTDIR)/reflector.hpp
-export MPIWCPP17_DIST_TARGET  ?= $(DSTDIR)/mpiwcpp17.hpp
+THIRDPARTY_IGNORE ?=
+THIRDPARTY_DEPENDENCIES = mpiwcpp17 reflector supertuple
 
-THIRDPARTY_DEPENDENCIES ?= supertuple reflector mpiwcpp17
-THIRDPARTY_TARGETS = $(SUPERTUPLE_DIST_TARGET) $(REFLECTOR_DIST_TARGET) $(MPIWCPP17_DIST_TARGET)
+THIRDPARTY_TARGETS := $(filter-out $(THIRDPARTY_IGNORE),$(THIRDPARTY_DEPENDENCIES))
+THIRDPARTY_TARGETS := $(THIRDPARTY_TARGETS:%=$(DISTRIBUTE_DESTINATION)/%.h)
 
 thirdparty-distribute: prepare-distribute $(THIRDPARTY_TARGETS)
 thirdparty-install:    $(THIRDPARTY_DEPENDENCIES:%=thirdparty-install-%)
@@ -82,26 +83,13 @@ thirdparty-clean:      $(THIRDPARTY_DEPENDENCIES:%=thirdparty-clean-%)
 ifndef MUSEQA_DIST_STANDALONE
 
 export SUPERTUPLE_DIST_STANDALONE = 1
-export REFLECTOR_DIST_STANDALONE = 1
-export MPIWCPP17_DIST_STANDALONE = 1
+export REFLECTOR_DIST_STANDALONE  = 1
+export MPIWCPP17_DIST_STANDALONE  = 1
 
-ifndef SKIP_SUPERTUPLE_DISTRIBUTE
-$(SUPERTUPLE_DIST_TARGET):
-	@$(MAKE) --no-print-directory -C $(PT3DIR)/supertuple distribute
-	cp $(PT3DIR)/supertuple/$@ $@
-endif
+thirdparty-distribute-%: $(DISTRIBUTE_DESTINATION)/%.h
 
-ifndef SKIP_REFLECTOR_DISTRIBUTE
-$(REFLECTOR_DIST_TARGET):
-	@$(MAKE) --no-print-directory -C $(PT3DIR)/reflector distribute
-	cp $(PT3DIR)/reflector/$@ $@
-endif
-
-ifndef SKIP_MPIWCPP17_DISTRIBUTE
-$(MPIWCPP17_DIST_TARGET):
-	@$(MAKE) --no-print-directory -C $(PT3DIR)/mpiwcpp17 distribute
-	cp $(PT3DIR)/mpiwcpp17/$@ $@
-endif
+$(DISTRIBUTE_DESTINATION)/%.h: %
+	@$(MAKE) --no-print-directory -C $(PT3DIR)/$< distribute
 
 thirdparty-install-%: %
 	@$(MAKE) --no-print-directory -C $(PT3DIR)/$< install

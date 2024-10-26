@@ -16,6 +16,7 @@
 #include <museqa/geometry/coordinate.hpp>
 
 #include <museqa/thirdparty/fmtlib.h>
+#include <museqa/thirdparty/reflector.h>
 #include <museqa/thirdparty/supertuple.h>
 
 MUSEQA_BEGIN_NAMESPACE
@@ -164,22 +165,22 @@ namespace geometry
     }
 }
 
-#if !defined(MUSEQA_AVOID_REFLECTION)
+MUSEQA_END_NAMESPACE
+
+#if !defined(MUSEQA_AVOID_REFLECTOR)
 
 /**
- * Explicitly defines the reflector for a point. Although a trivial type, a point
+ * Explicitly defines the reflection for a point. Although a trivial type, a point
  * cannot be automatically reflected over due to its customized constructors.
  * @tparam D The point's dimensionality.
  * @tparam T The point's coordinates' type.
  * @since 1.0
  */
 template <size_t D, typename T>
-class utility::reflector_t<geometry::point_t<D, T>>
-  : public utility::reflector_t<geometry::coordinate_t<D, T>> {};
+struct reflector::provider_t<MUSEQA_NAMESPACE::geometry::point_t<D, T>>
+  : reflector::provider_t<MUSEQA_NAMESPACE::geometry::coordinate_t<D, T>> {};
 
 #endif
-
-MUSEQA_END_NAMESPACE
 
 #if !defined(MUSEQA_AVOID_FMTLIB)
 
