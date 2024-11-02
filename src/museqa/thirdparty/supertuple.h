@@ -9,5 +9,5 @@
 #include <museqa/environment.h>
 
 #if !defined(MUSEQA_AVOID_SUPERTUPLE)
-  #include <supertuple.hpp>
+  #include <supertuple.h>
 #endif

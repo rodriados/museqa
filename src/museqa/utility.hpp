@@ -49,29 +49,6 @@ struct identity_t
 };
 
 /**
- * A general memory storage container.
- * @tparam S The number of bytes in storage.
- * @tparam A The byte alignment the storage should use.
- * @since 1.0
- */
-template <size_t S, size_t A = 8>
-struct alignas(A) storage_t
-{
-    alignas(A) uint8_t storage[S];
-};
-
-/**
- * A general range container.
- * @tparam T The range's elements type.
- * @since 1.0
- */
-template <typename T = int>
-struct range_t
-{
-    T offset, total;
-};
-
-/**
  * Purifies the type to its base, removing all extents it might have.
  * @tparam T The type to be purified.
  * @since 1.0
