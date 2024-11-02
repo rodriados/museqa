@@ -178,9 +178,10 @@
   #endif
   #define MUSEQA_DISABLE_NVCC_WARNING_BEGIN(x)            \
     MUSEQA_EMIT_PRAGMA_CALL(push)                         \
-    MUSEQA_EMIT_PRAGMA_CALL(diag_suppress = x)
+    MUSEQA_EMIT_PRAGMA_CALL(nv_diag_suppress = x)
   #define MUSEQA_DISABLE_NVCC_WARNING_END(x)              \
-    MUSEQA_EMIT_PRAGMA_CALL(diag_default = x)
+    MUSEQA_EMIT_PRAGMA_CALL(nv_diag_default = x)          \
+    MUSEQA_EMIT_PRAGMA_CALL(pop)
 #else
   #define MUSEQA_EMIT_NVCC_WARNING(x)
   #define MUSEQA_DISABLE_NVCC_WARNING_BEGIN(x)
@@ -276,8 +277,10 @@
  * compilers will have `inline` and `constexpr` implemented.
  */
 #define MUSEQA_CUDA_ENABLED __host__ __device__
-#define MUSEQA_INLINE MUSEQA_CUDA_ENABLED inline
+#define MUSEQA_INLINE inline
 #define MUSEQA_CONSTEXPR MUSEQA_INLINE constexpr
+#define MUSEQA_CUDA_INLINE MUSEQA_CUDA_ENABLED MUSEQA_INLINE
+#define MUSEQA_CUDA_CONSTEXPR MUSEQA_CUDA_ENABLED MUSEQA_CONSTEXPR
 
 /**
  * Defines the namespace in which the library lives. This might be overriden if

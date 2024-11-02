@@ -24,28 +24,28 @@ class exception_t : public std::exception
         const std::string m_msg;
 
     public:
-        inline exception_t() = delete;
-        inline exception_t(const exception_t&) = default;
-        inline exception_t(exception_t&&) = default;
+        MUSEQA_INLINE exception_t() = delete;
+        MUSEQA_INLINE exception_t(const exception_t&) = default;
+        MUSEQA_INLINE exception_t(exception_t&&) = default;
 
         /**
          * Builds a new exception instance.
          * @param msg The exception's error message.
          */
-        inline explicit exception_t(const std::string& msg)
+        MUSEQA_INLINE explicit exception_t(const std::string& msg)
           : m_msg {msg}
         {}
 
-        inline virtual ~exception_t() noexcept = default;
+        MUSEQA_INLINE virtual ~exception_t() noexcept = default;
 
-        inline exception_t& operator=(const exception_t&) = delete;
-        inline exception_t& operator=(exception_t&&) = delete;
+        MUSEQA_INLINE exception_t& operator=(const exception_t&) = delete;
+        MUSEQA_INLINE exception_t& operator=(exception_t&&) = delete;
 
         /**
          * Returns the exception's explanatory string.
          * @return The exception message.
          */
-        inline virtual const char *what() const noexcept
+        MUSEQA_INLINE virtual const char *what() const noexcept
         {
             return m_msg.c_str();
         }

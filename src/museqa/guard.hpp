@@ -9,10 +9,9 @@
 #include <utility>
 
 #include <museqa/environment.h>
+
 #include <museqa/utility.hpp>
 #include <museqa/exception.hpp>
-
-MUSEQA_DISABLE_GCC_WARNING_BEGIN("-Wattributes")
 
 /*
  * Creates an annotation for an signalling a cold-path to be taken by an if-statement.
@@ -22,12 +21,17 @@ MUSEQA_DISABLE_GCC_WARNING_BEGIN("-Wattributes")
  * branch predictions in exchange to a slight performance improvement when everything
  * goes as expected, the great majority of times.
  */
-#if defined(__has_cpp_attribute) && __has_cpp_attribute(unlikely)
+#if defined(__has_cpp_attribute) && __has_cpp_attribute(unlikely) &&           \
+    MUSEQA_HOST_COMPILER == MUSEQA_OPT_HOST_COMPILER_CLANG  /* GCC bug */
   #define MUSEQA_UNLIKELY(condition)                                           \
     ((condition)) [[unlikely]]
-#elif MUSEQA_HOST_COMPILER == MUSEQA_HOST_COMPILER_GCC
+
+#elif (MUSEQA_HOST_COMPILER == MUSEQA_OPT_HOST_COMPILER_GCC                    \
+    || MUSEQA_HOST_COMPILER == MUSEQA_OPT_HOST_COMPILER_CLANG                  \
+    || MUSEQA_HOST_COMPILER == MUSEQA_OPT_HOST_COMPILER_NVCC)
   #define MUSEQA_UNLIKELY(condition)                                           \
-    (__builtin_expect((condition), 0))
+    (__builtin_expect(!!(condition), 0))
+
 #else
   #define MUSEQA_UNLIKELY(condition)                                           \
     ((condition))
@@ -45,11 +49,11 @@ MUSEQA_BEGIN_NAMESPACE
  * @param params The assertion exception's parameters.
  */
 template <typename E = museqa::exception_t, typename ...T>
-__host__ __device__ inline constexpr void guard(bool fact, T&&... params) __museqasafe__
+MUSEQA_CUDA_CONSTEXPR void guard(bool fact, T&&... params) MUSEQA_SAFE
 {
-    static_assert(std::is_base_of<museqa::exception_t, E>::value, "only exception types are throwable");
+    static_assert(std::is_base_of_v<museqa::exception_t, E>, "only exception types are throwable");
 
-  #if !defined(MUSEQA_MODE_UNSAFE)
+  #if MUSEQA_RUNTIME_HOST && !defined(MUSEQA_MODE_UNSAFE)
     if MUSEQA_UNLIKELY (!fact) {
         throw E (std::forward<decltype(params)>(params)...);
     }
@@ -57,6 +61,3 @@ __host__ __device__ inline constexpr void guard(bool fact, T&&... params) __muse
 }
 
 MUSEQA_END_NAMESPACE
-
-#undef MUSEQA_UNLIKELY
-MUSEQA_DISABLE_GCC_WARNING_END("-Wattributes")

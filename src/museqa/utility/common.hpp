@@ -23,8 +23,8 @@ namespace utility
      * @return The parsed value to the requested type.
      */
     template <typename T>
-    inline auto parse(const std::string& value)
-    -> typename std::enable_if<std::is_convertible<std::string, T>::value, T>::type
+    MUSEQA_INLINE auto parse(const std::string& value)
+    -> std::enable_if_t<std::is_convertible_v<std::string, T>, T>
     {
         return T (value);
     }
@@ -37,8 +37,8 @@ namespace utility
      * @throw std::exception Error detected during operation.
      */
     template <typename T>
-    inline auto parse(const std::string& value)
-    -> typename std::enable_if<std::is_integral<T>::value, T>::type
+    MUSEQA_INLINE auto parse(const std::string& value)
+    -> std::enable_if_t<std::is_integral_v<T>, T>
     {
         return static_cast<T>(std::stoull(value));
     }
@@ -51,21 +51,18 @@ namespace utility
      * @throw std::exception Error detected during operation.
      */
     template <typename T>
-    inline auto parse(const std::string& value)
-    -> typename std::enable_if<std::is_floating_point<T>::value, T>::type
+    MUSEQA_INLINE auto parse(const std::string& value)
+    -> std::enable_if_t<std::is_floating_point_v<T>, T>
     {
         return static_cast<T>(std::stold(value));
     }
 
     /**
      * Calculates the number of pair combinations for a collection of given size.
-     * @tparam T The given integral type.
      * @param n The total number of elements within a collection.
      * @return The total number of possible pair combinations.
      */
-    template <typename T>
-    __host__ __device__ inline auto nchoose(T n) noexcept
-    -> typename std::enable_if<std::is_integral<T>::value, T>::type
+    MUSEQA_CUDA_INLINE int32_t nchoose(int32_t n) noexcept
     {
         return oeis::a000217(n - 1);
     }
@@ -78,12 +75,14 @@ namespace utility
      * @param b The value to assign to the object.
      * @return The previous value of the object.
      */
-    template <typename T, typename U>
-    __host__ __device__ inline constexpr auto exchange(T& a, U&& b) noexcept(
-        std::is_nothrow_move_constructible<T>::value &&
-        std::is_nothrow_assignable<T&, U>::value
-    ) -> typename std::enable_if<std::is_convertible<U, T>::value, T>::type
-    {
+    template <
+        typename T
+      , typename U
+      , typename = std::enable_if_t<std::is_convertible_v<U, T>>>
+    MUSEQA_CUDA_CONSTEXPR T exchange(T& a, U&& b) noexcept(
+        std::is_nothrow_move_constructible_v<T> &&
+        std::is_nothrow_assignable_v<T&, U>
+    ) {
         T x = std::move(a);
           a = std::forward<U>(b);
         return x;
@@ -96,9 +95,9 @@ namespace utility
      * @param b The second variable to have its contents swapped.
      */
     template <typename T>
-    __host__ __device__ inline constexpr void swap(T& a, T& b) noexcept(
-        std::is_nothrow_move_constructible<T>::value &&
-        std::is_nothrow_move_assignable<T>::value
+    MUSEQA_CUDA_CONSTEXPR void swap(T& a, T& b) noexcept(
+        std::is_nothrow_move_constructible_v<T> &&
+        std::is_nothrow_move_assignable_v<T>
     ) {
         T x = std::move(a);
           a = std::move(b);
@@ -113,23 +112,10 @@ namespace utility
      * @param b The second array to have its elements swapped.
      */
     template <typename T, size_t N>
-    __host__ __device__ inline constexpr void swap(T (&a)[N], T (&b)[N]) noexcept(noexcept(swap(*a, *b)))
+    MUSEQA_CUDA_CONSTEXPR void swap(T (&a)[N], T (&b)[N]) noexcept(noexcept(swap(*a, *b)))
     {
         for(size_t i = 0; i < N; ++i)
             swap(a[i], b[i]);
-    }
-
-    /**
-     * Swallows a variadic list of parameters and returns the first one. This
-     * functions is useful when dealing with type-packs.
-     * @tparam T The type of the value to be returned.
-     * @tparam U The type of the values to ignore.
-     * @return The given return value.
-     */
-    template <typename T, typename ...U>
-    __host__ __device__ inline constexpr T swallow(T&& target, U&&...) noexcept
-    {
-        return target;
     }
 
     /**
@@ -139,7 +125,8 @@ namespace utility
      * @return The functor invokation result.
      */
     template <typename F>
-    __host__ __device__ inline constexpr decltype(auto) invoke(const F& lambda) {
+    MUSEQA_CUDA_CONSTEXPR decltype(auto) invoke(const F& lambda)
+    {
         return (lambda)();
     }
 
@@ -155,9 +142,9 @@ namespace utility
      * @return The functor invokation result.
      */
     template <typename F, typename O, typename ...A>
-    __host__ __device__ inline constexpr decltype(auto) invoke(const F& lambda, O&& object, A&&... args)
+    MUSEQA_CUDA_CONSTEXPR decltype(auto) invoke(const F& lambda, O&& object, A&&... args)
     {
-        if constexpr (std::is_member_function_pointer<F>::value) {
+        if constexpr (std::is_member_function_pointer_v<F>) {
             return (object.*lambda)(std::forward<decltype(args)>(args)...);
         } else {
             return (lambda)(

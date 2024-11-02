@@ -33,7 +33,7 @@ namespace utility
          * @return The requested sequence element.
          * @link http://oeis.org/A000217
          */
-        __host__ __device__ inline auto a000217(int32_t n) noexcept -> int32_t
+        MUSEQA_CUDA_INLINE int32_t a000217(int32_t n) noexcept
         {
             return (n * (n + 1)) / 2;
         }
@@ -46,9 +46,9 @@ namespace utility
          * @return The requested sequence element.
          * @link https://oeis.org/A002024
          */
-        __host__ __device__ inline auto a002024(int32_t n) noexcept -> int32_t
+        MUSEQA_CUDA_INLINE int32_t a002024(int32_t n) noexcept
         {
-            return floor(.5f + sqrt(n * 2));
+            return floor(.5f + sqrt(n * 2.f));
         }
     }
 }

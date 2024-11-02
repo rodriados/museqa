@@ -34,14 +34,7 @@ enum : bool {
  * safe mode, but that will not perform checks when safe mode is disabled.
  * @since 1.0
  */
-#define __museqasafe__ noexcept(!museqa::safe)
-
-/**
- * Annotation for functions and methods that may throw exceptions when running on
- * host code, but that are exception-free when running on device.
- * @since 1.0
- */
-#define __devicesafe__ noexcept(MUSEQA_RUNTIME_DEVICE)
+#define MUSEQA_SAFE noexcept(!museqa::safe || MUSEQA_RUNTIME_DEVICE)
 
 /**
  * Returns the type unchanged. This is useful to produce a repeating list of the
@@ -84,17 +77,16 @@ struct range_t
  * @since 1.0
  */
 template <typename T>
-using pure_t = typename std::conditional<
-        !std::is_array<T>::value || std::extent<T>::value
-      , typename std::remove_reference<T>::type
-      , typename std::remove_extent<T>::type
-    >::type;
+using pure_t = std::conditional_t<
+    !std::is_array_v<T> || std::extent_v<T>
+  , std::remove_reference_t<T>
+  , std::remove_extent_t<T>>;
 
 /**
  * A type to represent an empty return type. This is essentialy a void-like type
  * that can be instantiated and returned by a function.
  * @since 1.0
  */
-struct nothing_t : identity_t<void> {};
+struct nothing_t : public identity_t<void> {};
 
 MUSEQA_END_NAMESPACE
