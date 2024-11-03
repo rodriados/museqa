@@ -33,30 +33,32 @@ namespace memory
     template <typename T>
     class buffer_t : protected memory::pointer::shared_t<T>
     {
-        static_assert(!std::is_array<T>::value, "buffer element cannot be an array");
-        static_assert(!std::is_reference<T>::value, "buffer element cannot have reference type");
+        static_assert(!std::is_array_v<T>, "buffer element cannot be an array");
+        static_assert(!std::is_reference_v<T>, "buffer element cannot have reference type");
+
+        public:
+            typedef T element_t;
+            typedef T *pointer_t;
 
         private:
             typedef memory::pointer::shared_t<T> underlying_t;
             typedef memory::exception_t exception_t;
 
-        public:
-            using typename underlying_t::element_t;
-            using typename underlying_t::pointer_t;
-
         protected:
             size_t m_capacity = 0;
 
         public:
-            __host__ __device__ inline buffer_t() noexcept = default;
-            __host__ __device__ inline buffer_t(const buffer_t&) __devicesafe__ = default;
+            MUSEQA_INLINE buffer_t() noexcept = default;
+            MUSEQA_INLINE buffer_t(const buffer_t&) MUSEQA_SAFE_EXCEPT = default;
+
+            MUSEQA_INLINE buffer_t& operator=(const buffer_t&) MUSEQA_SAFE_EXCEPT = default;
 
             /**
              * Builds a buffer by acquiring a shared ownership of a buffer pointer.
              * @param ptr The pointer instance to acquire shared ownership of.
              * @param capacity The acquired pointer's buffer capacity.
              */
-            __host__ __device__ inline explicit buffer_t(const underlying_t& ptr, size_t capacity) __devicesafe__
+            MUSEQA_CUDA_INLINE explicit buffer_t(const underlying_t& ptr, size_t capacity) MUSEQA_SAFE_EXCEPT
               : underlying_t (ptr)
               , m_capacity (capacity)
             {}
@@ -66,7 +68,7 @@ namespace memory
              * @param ptr The pointer instance to acquire ownership of.
              * @param capacity The acquired pointer's buffer capacity.
              */
-            __host__ __device__ inline explicit buffer_t(underlying_t&& ptr, size_t capacity) __devicesafe__
+            MUSEQA_CUDA_INLINE explicit buffer_t(underlying_t&& ptr, size_t capacity) MUSEQA_SAFE_EXCEPT
               : underlying_t (std::forward<decltype(ptr)>(ptr))
               , m_capacity (capacity)
             {}
@@ -75,21 +77,19 @@ namespace memory
              * The buffer's move constructor.
              * @param other The instance to be moved.
              */
-            __host__ __device__ inline buffer_t(buffer_t&& other) __devicesafe__
+            MUSEQA_CUDA_INLINE buffer_t(buffer_t&& other) MUSEQA_SAFE_EXCEPT
             {
-                transfer(std::forward<decltype(other)>(other));
+                acquire(std::forward<decltype(other)>(other));
             }
-
-            __host__ __device__ inline buffer_t& operator=(const buffer_t&) __devicesafe__ = default;
 
             /**
              * The move-assignment operator.
              * @param other The instance to be moved.
              * @return This buffer object.
              */
-            __host__ __device__ inline buffer_t& operator=(buffer_t&& other) __devicesafe__
+            MUSEQA_CUDA_INLINE buffer_t& operator=(buffer_t&& other) MUSEQA_SAFE_EXCEPT
             {
-                transfer(std::forward<decltype(other)>(other)); return *this;
+                acquire(std::forward<decltype(other)>(other)); return *this;
             }
 
             /**
@@ -97,9 +97,9 @@ namespace memory
              * @param offset The requested buffer offset to be accessed.
              * @return The element at the requested buffer offset.
              */
-            __host__ __device__ inline element_t& operator[](ptrdiff_t offset) __museqasafe__
+            MUSEQA_CUDA_INLINE T& operator[](ptrdiff_t offset) MUSEQA_SAFE_EXCEPT
             {
-                return *dereference(offset);
+                return *deref(offset);
             }
 
             /**
@@ -107,9 +107,9 @@ namespace memory
              * @param offset The requested buffer offset to be accessed.
              * @return The const-qualified element at the requested buffer offset.
              */
-            __host__ __device__ inline const element_t& operator[](ptrdiff_t offset) const __museqasafe__
+            MUSEQA_CUDA_INLINE const T& operator[](ptrdiff_t offset) const MUSEQA_SAFE_EXCEPT
             {
-                return *dereference(offset);
+                return *deref(offset);
             }
 
             /**
@@ -117,72 +117,42 @@ namespace memory
              * @param offset The slice offset in relation to original buffer.
              * @param count The number of elements to slice from buffer.
              */
-            __host__ __device__ inline buffer_t slice(ptrdiff_t offset, size_t count = 0) __museqasafe__
+            MUSEQA_CUDA_INLINE buffer_t slice(ptrdiff_t offset, size_t count = 0) MUSEQA_SAFE_EXCEPT
             {
-                museqa::guard<exception_t>(offset >= 0, "buffer slice index offset is invalid");
-                museqa::guard<exception_t>((size_t) offset + count <= m_capacity, "buffer slice out of range");
+                guard<exception_t>(offset >= 0, "buffer slice index offset is invalid");
+                guard<exception_t>((size_t) offset + count <= m_capacity, "buffer slice out of range");
                 return buffer_t (this->offset(offset), count ? count : m_capacity - (size_t) offset);
             }
 
-            /**
+            /**#@*
              * The buffer's initial iterator position.
              * @return The pointer to the start of the buffer iterator.
              */
-            __host__ __device__ inline pointer_t begin() noexcept
-            {
-                return underlying_t::unwrap();
-            }
+            MUSEQA_CUDA_INLINE       T *begin() noexcept       { return underlying_t::unwrap(); }
+            MUSEQA_CUDA_INLINE const T *begin() const noexcept { return underlying_t::unwrap(); }
+            /**#@-*/
 
-            /**
-             * The buffer's initial const-qualified iterator position.
-             * @return The pointer to the start of the buffer const-qualified iterator.
-             */
-            __host__ __device__ inline const pointer_t begin() const noexcept
-            {
-                return underlying_t::unwrap();
-            }
-
-            /**
+            /**#@+
              * The buffer's final iterator position.
              * @return The pointer to the end of the buffer iterator.
              */
-            __host__ __device__ inline pointer_t end() noexcept
-            {
-                return m_capacity + underlying_t::unwrap();
-            }
+            MUSEQA_CUDA_INLINE       T *end() noexcept       { return m_capacity + underlying_t::unwrap(); }
+            MUSEQA_CUDA_INLINE const T *end() const noexcept { return m_capacity + underlying_t::unwrap(); }
+            /**#@-*/
 
-            /**
-             * The buffer's final const-qualified iterator position.
-             * @return The pointer to the end of the buffer const-qualified iterator.
-             */
-            __host__ __device__ inline const pointer_t end() const noexcept
-            {
-                return m_capacity + underlying_t::unwrap();
-            }
-
-            /**
+            /**#@+
              * Unwraps and exposes the buffer's underlying pointer.
              * @return The buffer's internal underlying pointer.
              */
-            __host__ __device__ inline underlying_t& unwrap() noexcept
-            {
-                return static_cast<underlying_t&>(*this);
-            }
-
-            /**
-             * Unwraps and exposes the buffer's underlying const-qualified pointer.
-             * @return The buffer's internal underlying const-qualified pointer.
-             */
-            __host__ __device__ inline const underlying_t& unwrap() const noexcept
-            {
-                return static_cast<const underlying_t&>(*this);
-            }
+            MUSEQA_CUDA_INLINE       underlying_t& unwrap() noexcept       { return *this; }
+            MUSEQA_CUDA_INLINE const underlying_t& unwrap() const noexcept { return *this; }
+            /**#@-*/
 
             /**
              * Informs the buffer's current total capacity.
              * @return The maximum capacity of elements in buffer.
              */
-            __host__ __device__ inline size_t capacity() const noexcept
+            MUSEQA_CUDA_INLINE size_t capacity() const noexcept
             {
                 return m_capacity;
             }
@@ -191,16 +161,16 @@ namespace memory
              * Informs whether the buffer is empty and therefore has zero capacity.
              * @return Is the buffer empty?
              */
-            __host__ __device__ inline bool empty() const noexcept
+            MUSEQA_CUDA_INLINE bool empty() const noexcept
             {
-                return m_capacity == 0;
+                return m_capacity == 0 || underlying_t::empty();
             }
 
             /**
              * Releases the buffer ownership and returns to an empty state.
              * @see museqa::memory::buffer_t::buffer_t
              */
-            __host__ __device__ inline void reset() __devicesafe__
+            MUSEQA_CUDA_INLINE void reset() MUSEQA_SAFE_EXCEPT
             {
                 utility::exchange(m_capacity, 0);
                 underlying_t::reset();
@@ -212,11 +182,11 @@ namespace memory
              * @param offset The offset to be dereferenced by the pointer.
              * @return The deferentiable wrapped pointer offset.
              */
-            __host__ __device__ inline constexpr pointer_t dereference(ptrdiff_t offset) const __museqasafe__
+            MUSEQA_CUDA_CONSTEXPR T *deref(ptrdiff_t offset) const MUSEQA_SAFE_EXCEPT
             {
-                museqa::guard<exception_t>(offset >= 0, "cannot access buffer negative offset");
-                museqa::guard<exception_t>((size_t) offset < m_capacity, "buffer offset is out of range");
-                return underlying_t::dereference(offset);
+                guard<exception_t>(offset >= 0, "cannot access buffer negative offset");
+                guard<exception_t>((size_t) offset < m_capacity, "buffer offset is out of range");
+                return underlying_t::deref(offset);
             }
 
         private:
@@ -224,7 +194,7 @@ namespace memory
              * Acquires ownership of a buffer instance.
              * @param other The buffer instance to acquire ownership of.
              */
-            __host__ __device__ inline void transfer(buffer_t&& other) __devicesafe__
+            MUSEQA_CUDA_INLINE void acquire(buffer_t&& other) MUSEQA_SAFE_EXCEPT
             {
                 m_capacity = utility::exchange(other.m_capacity, 0);
                 underlying_t::operator=(std::forward<decltype(other)>(other));
@@ -238,8 +208,10 @@ namespace memory
      * @param source The buffer to copy data from.
      */
     template <typename T = void>
-    inline void copy(memory::buffer_t<T>& target, const memory::buffer_t<T>& source) noexcept
-    {
+    MUSEQA_INLINE void copy(
+        memory::buffer_t<T>& target
+      , const memory::buffer_t<T>& source
+    ) noexcept {
         const auto count = utility::min(target.capacity(), source.capacity());
         memory::copy(target.unwrap(), source.unwrap(), count);
     }
@@ -250,7 +222,7 @@ namespace memory
      * @param target The buffer to be zero-initialized.
      */
     template <typename T = void>
-    inline void zero(memory::buffer_t<T>& target) noexcept
+    MUSEQA_INLINE void zero(memory::buffer_t<T>& target) noexcept
     {
         memory::zero(target.unwrap(), target.capacity());
     }
@@ -266,10 +238,12 @@ namespace factory::memory
      * @return The allocated buffer.
      */
     template <typename T>
-    inline auto buffer(size_t capacity = 1, const museqa::memory::allocator_t& allocator = allocator<T>())
-    -> museqa::memory::buffer_t<T>
-    {
-        return museqa::memory::buffer_t(pointer::shared<T>(capacity, allocator), capacity);
+    MUSEQA_INLINE museqa::memory::buffer_t<T> buffer(
+        size_t capacity = 1
+      , const museqa::memory::allocator_t& allocator = factory::memory::allocator<T>()
+    ) {
+        auto ptr = factory::memory::pointer::shared<T>(capacity, allocator);
+        return museqa::memory::buffer_t(ptr, capacity);
     }
 
     /**
@@ -281,9 +255,11 @@ namespace factory::memory
      * @return The allocated buffer.
      */
     template <typename T>
-    inline auto buffer(const T *ptr, size_t count = 1, const museqa::memory::allocator_t& allocator = allocator<T>())
-    -> museqa::memory::buffer_t<T>
-    {
+    MUSEQA_INLINE museqa::memory::buffer_t<T> buffer(
+        const T *ptr
+      , size_t count = 1
+      , const museqa::memory::allocator_t& allocator = factory::memory::allocator<T>()
+    ) {
         auto buffer = factory::memory::buffer<T>(count, allocator);
         museqa::memory::copy<T>(buffer.unwrap(), ptr, count);
         return buffer;
@@ -297,9 +273,10 @@ namespace factory::memory
      * @return The allocated buffer.
      */
     template <typename T>
-    inline auto buffer(std::initializer_list<T> list, const museqa::memory::allocator_t& allocator = allocator<T>())
-    -> museqa::memory::buffer_t<T>
-    {
+    MUSEQA_INLINE museqa::memory::buffer_t<T> buffer(
+        const std::initializer_list<T>& list
+      , const museqa::memory::allocator_t& allocator = factory::memory::allocator<T>()
+    ) {
         return factory::memory::buffer<T>(list.begin(), list.size(), allocator);
     }
 
@@ -311,11 +288,10 @@ namespace factory::memory
      * @return The allocated buffer.
      */
     template <typename T>
-    inline auto buffer(
+    MUSEQA_INLINE museqa::memory::buffer_t<T> buffer(
         const museqa::memory::buffer_t<T>& buffer
-      , const museqa::memory::allocator_t& allocator = allocator<T>()
-    ) -> museqa::memory::buffer_t<T>
-    {
+      , const museqa::memory::allocator_t& allocator = factory::memory::allocator<T>()
+    ) {
         return factory::memory::buffer<T>(buffer.unwrap(), buffer.capacity(), allocator);
     }
 
@@ -327,9 +303,10 @@ namespace factory::memory
      * @return The allocated buffer.
      */
     template <typename T>
-    inline auto buffer(const std::vector<T>& vector, const museqa::memory::allocator_t& allocator = allocator<T>())
-    -> museqa::memory::buffer_t<T>
-    {
+    MUSEQA_INLINE museqa::memory::buffer_t<T> buffer(
+        const std::vector<T>& vector
+      , const museqa::memory::allocator_t& allocator = factory::memory::allocator<T>()
+    ) {
         return factory::memory::buffer<T>(vector.data(), vector.size(), allocator);
     }
 }

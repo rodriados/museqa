@@ -46,6 +46,8 @@ namespace memory::pointer
             MUSEQA_CONSTEXPR unique_t() noexcept = default;
             MUSEQA_CONSTEXPR unique_t(const unique_t&) = delete;
 
+            MUSEQA_INLINE unique_t& operator=(const unique_t&) = delete;
+
             /**
              * Builds a new unique pointer from a raw pointer and its allocator.
              * @param ptr The raw pointer to be wrapped.
@@ -85,8 +87,6 @@ namespace memory::pointer
                 if (!this->empty() && !m_deleter.empty())
                     m_deleter.deallocate(this->unwrap());
             }
-
-            MUSEQA_INLINE unique_t& operator=(const unique_t&) = delete;
 
             /**
              * Releases the currently owned pointer and acquires exclusive ownership

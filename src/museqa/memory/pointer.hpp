@@ -12,11 +12,11 @@
 
 #include <museqa/environment.h>
 
+#include <museqa/memory/pointer/exception.hpp>
+#include <museqa/memory/pointer/container.hpp>
 #include <museqa/memory/pointer/shared.hpp>
 #include <museqa/memory/pointer/unique.hpp>
 #include <museqa/memory/pointer/unmanaged.hpp>
-#include <museqa/memory/pointer/wrapper.hpp>
-#include <museqa/memory/pointer/exception.hpp>
 
 MUSEQA_BEGIN_NAMESPACE
 
@@ -30,10 +30,10 @@ namespace memory
      * @param count The number of elements to be copied.
      */
     template <typename T = void>
-    inline void copy(T *target, const T *source, size_t count = 1) noexcept
+    MUSEQA_INLINE void copy(T *target, const T *source, size_t count = 1) noexcept
     {
-        static_assert(std::is_trivially_copyable<T>::value, "cannot copy non-trivially-copyable types");
-        using U = typename std::conditional<std::is_void<T>::value, uint8_t, T>::type;
+        static_assert(std::is_trivially_copyable_v<T>, "cannot copy non-trivially-copyable types");
+        using U = std::conditional_t<std::is_void_v<T>, uint8_t, T>;
         std::memmove(target, source, count * sizeof(U));
     }
 
@@ -44,9 +44,9 @@ namespace memory
      * @param count The number of elements to be initialized.
      */
     template <typename T = void>
-    inline void zero(T *target, size_t count = 1) noexcept
+    MUSEQA_INLINE void zero(T *target, size_t count = 1) noexcept
     {
-        using U = typename std::conditional<std::is_void<T>::value, uint8_t, T>::type;
+        using U = std::conditional_t<std::is_void_v<T>, uint8_t, T>;
         std::memset(target, 0, count * sizeof(U));
     }
 }
