@@ -34,7 +34,7 @@ enum : bool {
  * safe mode, but that will not perform checks when safe mode is disabled.
  * @since 1.0
  */
-#define MUSEQA_SAFE noexcept(!museqa::safe || MUSEQA_RUNTIME_DEVICE)
+#define MUSEQA_SAFE_EXCEPT noexcept(!museqa::safe || MUSEQA_RUNTIME_DEVICE)
 
 /**
  * Returns the type unchanged. This is useful to produce a repeating list of the

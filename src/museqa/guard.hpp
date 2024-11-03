@@ -49,7 +49,7 @@ MUSEQA_BEGIN_NAMESPACE
  * @param params The assertion exception's parameters.
  */
 template <typename E = museqa::exception_t, typename ...T>
-MUSEQA_CUDA_CONSTEXPR void guard(bool fact, T&&... params) MUSEQA_SAFE
+MUSEQA_CUDA_CONSTEXPR void guard(bool fact, T&&... params) MUSEQA_SAFE_EXCEPT
 {
     static_assert(std::is_base_of_v<museqa::exception_t, E>, "only exception types are throwable");
 

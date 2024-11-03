@@ -13,7 +13,7 @@
 #include <museqa/utility.hpp>
 
 #include <museqa/memory/allocator.hpp>
-#include <museqa/memory/pointer/wrapper.hpp>
+#include <museqa/memory/pointer/container.hpp>
 
 MUSEQA_BEGIN_NAMESPACE
 
@@ -28,24 +28,26 @@ namespace memory::pointer::detail
     class metadata_t
     {
         private:
-            typedef memory::allocator_t allocator_t;
-            typedef memory::pointer::wrapper_t<void> pointer_t;
+            typedef memory::deleter_t deleter_t;
+            typedef memory::pointer::container_t<void> container_t;
 
         private:
-            pointer_t m_ptr = nullptr;
-            const allocator_t m_allocator {};
-            uint64_t m_counter = 0;
+            int64_t m_counter = 0;
+            container_t m_ptr = nullptr;
+            const deleter_t m_deleter {};
 
         public:
             /**
              * Creates a new pointer context metadata from given arguments.
-             * @param ptr The pointer to be tracked into the context.
-             * @param allocator The pointer's allocator.
+             * @param ptr The pointer container to be tracked in the context.
+             * @param deleter The pointer's deleter.
              * @return The new pointer's metadata instance.
              */
-            inline static metadata_t *acquire(pointer_t ptr, const allocator_t& allocator) noexcept
-            {
-                return new metadata_t {ptr, allocator};
+            MUSEQA_INLINE static metadata_t *acquire(
+                container_t ptr
+              , const deleter_t& deleter
+            ) noexcept {
+                return new metadata_t(ptr, deleter);
             }
 
             /**
@@ -53,7 +55,7 @@ namespace memory::pointer::detail
              * @param meta The metadata instance of pointer to be acquired.
              * @return The acquired metadata pointer.
              */
-            __host__ __device__ inline static metadata_t *acquire(metadata_t *meta) noexcept
+            MUSEQA_CUDA_INLINE static metadata_t *acquire(metadata_t *meta) noexcept
             {
               #if MUSEQA_RUNTIME_HOST
                 if (meta != nullptr)
@@ -69,7 +71,7 @@ namespace memory::pointer::detail
              * memory resources when the reference counter reaches zero.
              * @param meta The metadata of a pointer to be released.
              */
-            __host__ __device__ inline static void release(metadata_t *meta) __devicesafe__
+            MUSEQA_CUDA_INLINE static void release(metadata_t *meta) MUSEQA_SAFE_EXCEPT
             {
               #if MUSEQA_RUNTIME_HOST
                 if (meta != nullptr && --meta->m_counter <= 0)
@@ -80,23 +82,24 @@ namespace memory::pointer::detail
         private:
             /**
              * Creates a new pointer context metadata from a raw pointer instance.
-             * @param ptr The raw pointer to acquire ownership of.
-             * @param allocator The pointer's allocator instance.
+             * @param ptr The raw pointer container to acquire ownership of.
+             * @param deleter The pointer's deleter instance.
              */
-            inline explicit metadata_t(pointer_t ptr, const allocator_t& allocator) noexcept
-              : m_ptr (ptr)
-              , m_allocator (allocator)
-              , m_counter (1)
+            MUSEQA_INLINE explicit metadata_t(container_t ptr, const deleter_t& deleter) noexcept
+              : m_counter (1)
+              , m_ptr (ptr)
+              , m_deleter (deleter)
             {}
 
             /**
              * Releases ownership and frees the resources allocated by the pointer.
-             * @see museqa::memory::pointer::detail::metadata::release
+             * @see museqa::memory::pointer::detail::metadata_t::release
              */
-            inline ~metadata_t()
+            MUSEQA_INLINE ~metadata_t()
             {
-                if (m_ptr != nullptr)
-                    m_allocator.deallocate(static_cast<void*>(m_ptr));
+                if (!m_ptr.empty() && !m_deleter.empty()) {
+                    m_deleter.deallocate(m_ptr.unwrap());
+                }
             }
     };
 }
