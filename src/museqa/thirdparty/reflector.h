@@ -9,5 +9,5 @@
 #include <museqa/environment.h>
 
 #if !defined(MUSEQA_AVOID_REFLECTOR)
-  #include <reflector.hpp>
+  #include <reflector.h>
 #endif
