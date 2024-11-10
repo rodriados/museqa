@@ -26,7 +26,7 @@ namespace bio::alphabet
      * all of the symbols that it may represent.
      * @since 1.0
      */
-    inline constexpr size_t symbol_bits = 5;
+    MUSEQA_CONSTEXPR size_t symbol_bits = 5;
 
     /**
      * The enumeration of biological sequences' alphabet symbols. This enumeration
@@ -54,7 +54,7 @@ namespace bio::alphabet
      * @param symbol The biological symbol to be encoded.
      * @return The symbol's encoded representation.
      */
-    inline constexpr symbol_t encode(const char symbol) noexcept
+    MUSEQA_INLINE symbol_t encode(const char symbol) noexcept
     {
         switch (static_cast<char>(toupper(symbol))) {
             case 'A': return alphabet::A;   case 'N': return alphabet::N;
@@ -82,7 +82,7 @@ namespace bio::alphabet
      * @param symbol The biological symbol to be decoded into corresponding character.
      * @return The symbol's character representation.
      */
-    inline constexpr char decode(const symbol_t symbol) noexcept
+    MUSEQA_INLINE char decode(const symbol_t symbol) noexcept
     {
         switch (symbol) {
             case alphabet::A: return 'A';   case alphabet::N: return 'N';
