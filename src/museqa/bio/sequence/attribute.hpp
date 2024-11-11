@@ -6,45 +6,33 @@
  */
 #pragma once
 
-#include <map>
 #include <string>
 
 #include <museqa/environment.h>
+#include <museqa/memory/buffer.hpp>
 
 MUSEQA_BEGIN_NAMESPACE
 
-namespace bio::sequence
+namespace bio::sequence::attribute
 {
     /**
-     * Enumerates all attributes that might be extracted from a sequence input file.
-     * These attributes are not guaranteed to be known for every sequence nor to
-     * parsed by every format reader when available.
+     * A key-value pair to represent a sequence attribute. Attributes are optional
+     * and may not be available in every sequence format file or parser.
      * @since 1.0
      */
-    enum class attribute_t : uint8_t
+    struct data_t
     {
-        description = 0x01
-      , name
-      , accession
-      , locus
-      , country
-      , patent
-      , database
-      , entry
-      , chain
-      , application
-      , number
-      , quality
-      , type
+        std::string key;
+        std::string value;
     };
 
     /**
-     * The data structure responsible for holding all attributes of a sequence.
-     * As sequence description is the only attribute required, it should be elevated
+     * The structure responsible for grouping up all attributes of a sequence. As
+     * sequence description is the only required attribute, it should be elevated
      * to a special position, making its access easier.
      * @since 1.0
      */
-    using attribute_bag_t = std::map<attribute_t, std::string>;
+    using bag_t = memory::buffer_t<data_t>;
 }
 
 MUSEQA_END_NAMESPACE

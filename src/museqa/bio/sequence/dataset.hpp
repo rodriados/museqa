@@ -7,7 +7,7 @@
 #pragma once
 
 #include <string>
-#include <unordered_set>
+#include <unordered_map>
 
 #include <museqa/environment.h>
 
@@ -25,9 +25,10 @@ namespace bio::sequence
      */
     struct data_t
     {
-        std::string description;
         sequence::buffer_t buffer;
-        sequence::attribute_bag_t attribute;
+      #ifdef MUSEQA_ENABLE_SEQUENCE_ATTRIBUTES
+        sequence::attribute::bag_t attribute;
+      #endif
     };
 
     /**
@@ -36,53 +37,7 @@ namespace bio::sequence
      * a single dataset instance.
      * @since 1.0
      */
-    using dataset_t = std::unordered_set<data_t>;
+    using dataset_t = std::unordered_map<std::string, data_t>;
 }
 
 MUSEQA_END_NAMESPACE
-
-/**
- * The hash operator for a sequence data object. A sequence is always indexed by
- * its description, so that two sequences with the same description are considered
- * to be the same and will be deduplicated.
- * @since 1.0
- */
-template <>
-struct std::hash<MUSEQA_NAMESPACE::bio::sequence::data_t>
-{
-    using target_t = MUSEQA_NAMESPACE::bio::sequence::data_t;
-
-    /**
-     * Hashes a sequence data object through its description.
-     * @param sequence The sequence data to be hashed.
-     * @return The sequence description hash value.
-     */
-    MUSEQA_INLINE size_t operator()(const target_t& sequence) const noexcept
-    {
-        constexpr auto hasher = std::hash<std::string>();
-        return hasher(sequence.description);
-    }
-};
-
-/**
- * The equality operator between sequence data objects. We assume that sequences
- * always have different descriptions and, therefore, if two equal descriptions
- * are found, we consider both sequences to be the same.
- * @since 1.0
- */
-template <>
-struct std::equal_to<MUSEQA_NAMESPACE::bio::sequence::data_t>
-{
-    using target_t = MUSEQA_NAMESPACE::bio::sequence::data_t;
-
-    /**
-     * Checks whether two sequence data objects are equal.
-     * @param a The first sequence to be compared.
-     * @param b The second sequence to be compared.
-     * @return Are both sequences considered the same?
-     */
-    MUSEQA_INLINE bool operator()(const target_t& a, const target_t& b) const
-    {
-        return a.description == b.description;
-    }
-};
