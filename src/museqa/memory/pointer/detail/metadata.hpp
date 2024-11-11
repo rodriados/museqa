@@ -47,7 +47,9 @@ namespace memory::pointer::detail
                 container_t ptr
               , const deleter_t& deleter
             ) noexcept {
-                return new metadata_t(ptr, deleter);
+                return !ptr.empty()
+                    ? new metadata_t(ptr, deleter)
+                    : nullptr;
             }
 
             /**
