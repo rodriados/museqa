@@ -123,9 +123,9 @@ namespace factory::memory
      * @return An allocator for given type.
      */
     template <typename T>
-    MUSEQA_CUDA_CONSTEXPR museqa::memory::allocator_t allocator(
-        std::enable_if_t<std::is_default_constructible_v<T>, int> = 0
-    ) noexcept {
+    MUSEQA_CUDA_CONSTEXPR auto allocator() noexcept
+    -> std::enable_if_t<std::is_default_constructible_v<T>, museqa::memory::allocator_t>
+    {
         return museqa::memory::allocator_t {
             [](size_t, size_t n) { return (void*) new pure_t<T>[n]; }
           , [](void *ptr) { delete[] reinterpret_cast<pure_t<T>*>(ptr); }
@@ -138,9 +138,9 @@ namespace factory::memory
      * @return A generic type-less memory allocator.
      */
     template <typename T = void>
-    MUSEQA_CUDA_CONSTEXPR museqa::memory::allocator_t allocator(
-        std::enable_if_t<std::is_void_v<T>, int> = 0
-    ) noexcept {
+    MUSEQA_CUDA_CONSTEXPR auto allocator() noexcept
+    -> std::enable_if_t<std::is_void_v<T>, museqa::memory::allocator_t>
+    {
         return museqa::memory::allocator_t {
             [](size_t size, size_t n) { return operator new(size * n); }
           , [](void *ptr) { operator delete(ptr); }

@@ -148,9 +148,9 @@ namespace memory::pointer
         static_assert(std::is_convertible_v<U*, T*>, "pointer types are not convertible");
 
         if (this->m_ptr != other.m_ptr) {
-            utility::swap(this->m_ptr, other.m_ptr);
-            utility::swap(this->m_deleter, other.m_deleter);
-            other.reset();
+            this->reset();
+            this->m_ptr = utility::exchange(other.m_ptr, nullptr);
+            this->m_deleter = utility::exchange(other.m_deleter, nullptr);
         }
     }
 
