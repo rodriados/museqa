@@ -47,6 +47,7 @@ namespace bio::alphabet
       , gap     = 0x1C
       , extend  = 0x1D
       , unknown = 0x1B
+      , count   = 0x1B
     };
 
     /**

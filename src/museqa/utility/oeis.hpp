@@ -33,7 +33,7 @@ namespace utility
          * @return The requested sequence element.
          * @link http://oeis.org/A000217
          */
-        MUSEQA_CUDA_INLINE int32_t a000217(int32_t n) noexcept
+        MUSEQA_CUDA_CONSTEXPR int32_t a000217(int32_t n) noexcept
         {
             return (n * (n + 1)) / 2;
         }
