@@ -37,7 +37,7 @@ namespace bio::sequence
      * a single dataset instance.
      * @since 1.0
      */
-    using dataset_t = std::unordered_map<std::string, data_t>;
+    struct dataset_t : std::unordered_map<std::string, data_t> {};
 }
 
 MUSEQA_END_NAMESPACE

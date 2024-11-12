@@ -85,10 +85,11 @@ namespace bio::sequence
         const std::string& sequence
       , const memory::allocator_t& allocator = factory::memory::allocator<block_t>()
     ) {
+        const auto end  = alphabet::decode(alphabet::end);
+        const auto size = sequence.find_last_not_of(end) + 1;
         return encode(
             sequence.data()
-          , sequence.size()
-          , allocator
+          , size, allocator
         );
     }
 

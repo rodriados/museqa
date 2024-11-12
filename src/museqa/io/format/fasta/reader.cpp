@@ -4,101 +4,116 @@
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2023-present Rodrigo Siqueira
  */
-#include <map>
 #include <string>
-#include <fstream>
+#include <istream>
 
 #include <museqa/environment.h>
-#include <museqa/bio/sequence.hpp>
+#include <museqa/bio/sequence/dataset.hpp>
+#include <museqa/bio/sequence/encoder.hpp>
+#include <museqa/bio/sequence/attribute.hpp>
 #include <museqa/io/format/fasta/reader.hpp>
+
+#define TOKEN_COMMENT ';'
+#define TOKEN_DESCRIPTION '>'
 
 MUSEQA_BEGIN_NAMESPACE
 
-inline static bool is_stream_healthy(std::ifstream&);
-inline static constexpr bool is_token_comment(int);
-inline static constexpr bool is_token_description(int);
-
-/**
- * Extracts a sequence from a file stream of FASTA format.
- * @param fstream The file stream to extract a sequence from.
- * @return The extracted sequence data.
- */
-static auto extract_sequence_from_stream(std::ifstream& fstream) -> bio::sequence::data_t
+namespace
 {
-    std::string line, contents;
-
-    while (line.size() < 1 || !is_token_description(line[0])) {
-        // We must skip and ignore all lines on file until we detect one that starts
-        // with greater-than or semicolon. These symbols indicate a line for sequence
-        // description, which in this file format must always be present.
-        if (!is_stream_healthy(fstream))
-            return bio::sequence::data_t();
-        std::getline(fstream, line);
+    /**
+     * Checks whether the stream is healthy and can be read from.
+     * @param stream The stream to check if healthy.
+     * @return Is the stream healthy?
+     */
+    MUSEQA_INLINE static bool is_stream_healthy(std::istream& stream)
+    {
+        return !stream.eof() && !stream.fail();
     }
 
-    std::string description = line.substr(1);
+    /**
+     * Checks whether the given token indicates the start of a comment.
+     * @param token The token to be checked for a comment indication.
+     * @return Does the token indicate a line comment?
+     */
+    MUSEQA_INLINE static bool is_token_comment(int token)
+    {
+        return token == TOKEN_COMMENT;
+    }
 
-    // If another line starts with a semicolon, than it should be considered a comment
-    // and therefore ignored. Comments are out-dated and should be avoided, but
-    // we must support them anyway. Differently from the original file format description,
-    // we do accept lines started with semicolon as comments even though the sequence
-    // description itself might have been represented with a greater-than symbol.
-    while (is_stream_healthy(fstream) && is_token_comment(fstream.peek()))
-        std::getline(fstream, line);
+    /**
+     * Checks whether the given token indicates the start of a sequence description.
+     * @param token The token to be checked for a sequence description indication.
+     * @return Does the token indicate a sequence description line?
+     */
+    MUSEQA_INLINE static bool is_token_description(int token)
+    {
+        return token == TOKEN_DESCRIPTION || is_token_comment(token);
+    }
 
-    // Now that the description has been read and all possible comments have been
-    // ignored, we must read the sequence simply by concatenating every line until
-    // a new sequence or an empty line is detected.
-    while (is_stream_healthy(fstream) && !is_token_description(fstream.peek()))
-        if (std::getline(fstream, line); line.size() > 0)
-            contents.append(line);
+    /**
+     * Extracts a sequence from a stream of FASTA format.
+     * @param stream The stream to extract a sequence from.
+     * @return The extracted sequence data.
+     */
+    static auto read_sequence(std::istream& stream)
+    -> std::pair<std::string, bio::sequence::data_t>
+    {
+        std::string line, contents;
+
+        while (line.empty() || !is_token_description(line[0])) {
+            // We must skip and ignore all lines on stream until we detect one that
+            // starts with a description token, which must always be present.
+            if (!is_stream_healthy(stream))
+                return {};
+
+            std::getline(stream, line);
+        }
+
+        // If the stream is still healthy and a description token has been found,
+        // then we must remove the line's first character to have a sequence description.
+        std::string description = line.substr(1);
+
+        // If another line starts with a comment, than it should be ignored. Comments
+        // are outdated and should be avoided, but we must support them anyway.
+        // Differently from the original file format description, we do accept lines
+        // started with semicolon as comments even though the sequence description
+        // itself might have been represented with a greater-than symbol.
+        while (is_stream_healthy(stream) && is_token_comment(stream.peek()))
+            std::getline(stream, line);
+
+        // Now that the description has been read and all possible comments have
+        // been ignored, we must read the sequence simply by concatenating every
+        // line until a new sequence or an empty line is detected.
+        while (is_stream_healthy(stream) && !is_token_description(stream.peek()))
+            if (std::getline(stream, line); line.size() > 0)
+                contents.append(line);
+            else break;
+
+        return std::pair(description, bio::sequence::data_t {
+            bio::sequence::encode(contents)
+          #ifdef MUSEQA_ENABLE_SEQUENCE_ATTRIBUTES
+            , bio::sequence::attribute::bag_t()
+          #endif
+        });
+    }
+}
+
+/**
+ * Extracts all sequences in FASTA format from the given stream.
+ * @param stream The FASTA format stream to be parsed.
+ * @return A pointer to the parsed sequence dataset.
+ */
+auto io::format::fasta::reader_t::read_from_stream(std::istream& stream) const
+-> memory::pointer::unique_t<bio::sequence::dataset_t>
+{
+    auto dataset = factory::memory::pointer::unique<bio::sequence::dataset_t>();
+
+    while (!stream.eof() && !stream.fail())
+        if (auto [desc, sequence] = read_sequence(stream); !sequence.buffer.empty())
+            dataset->try_emplace(desc, sequence);
         else break;
 
-    return bio::sequence::data_t {
-        bio::sequence::encode(contents)
-      , std::map<bio::sequence::attribute_t, std::string> {
-            {bio::sequence::attribute_t::description, description}
-        }
-    };
-}
-
-/**
- * Checks whether the file stream is healthy and can be read from.
- * @param fstream The file stream to check if healthy.
- * @return Is the stream healthy?
- */
-inline static bool is_stream_healthy(std::ifstream& fstream)
-{
-    return !fstream.eof() && !fstream.fail();
-}
-
-/**
- * Checks whether the given token indicates the representation of a comment.
- * @param token The token to be checked for a comment indication.
- * @return Does the token indicate a comment is next to come?
- */
-inline static constexpr bool is_token_comment(int token)
-{
-    return token == ';';
-}
-
-/**
- * Checks whether the given token indicates the representation of a sequence description.
- * @param token The token to be checked for a sequence description indication.
- * @return Does the token indicate a sequence description is next to come?
- */
-inline static constexpr bool is_token_description(int token)
-{
-    return token == '>' || is_token_comment(token);
-}
-
-/**
- * Reads a sequence from the FASTA file.
- * @return The sequence extracted from file.
- */
-auto io::format::fasta::reader_t::read() -> bio::sequence::data_t
-{
-    return extract_sequence_from_stream(this->m_fstream);
+    return dataset;
 }
 
 MUSEQA_END_NAMESPACE

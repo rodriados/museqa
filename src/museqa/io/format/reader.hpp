@@ -6,13 +6,10 @@
  */
 #pragma once
 
-#include <string>
-#include <fstream>
-#include <utility>
+#include <filesystem>
 
-#include <museqa/guard.hpp>
 #include <museqa/environment.h>
-#include <museqa/io/exception.hpp>
+#include <museqa/memory/pointer/unique.hpp>
 
 MUSEQA_BEGIN_NAMESPACE
 
@@ -21,52 +18,56 @@ namespace io::format
     /**
      * The abstract base type for a format reader. Concrete reader implementations
      * may provide specific and more specialized methods for reading target type.
-     * @tparam T The target type for reader.
+     * @tparam T The expected type to be produced from reading the file.
      * @since 1.0
      */
     template <typename T>
-    class reader_t
+    struct reader_t
     {
-        protected:
-            std::ifstream m_fstream;
+        typedef T target_t;
 
-        public:
-            inline reader_t() noexcept = default;
-            inline reader_t(const reader_t&) noexcept = delete;
-            inline reader_t(reader_t&&) noexcept = default;
-
-            /**
-             * Initializes a new reader from a file name.
-             * @param fname The name of file to read from.
-             */
-            inline explicit reader_t(const std::string& fname)
-              : m_fstream (fname, std::ios::in)
-            {
-                museqa::guard<io::exception_t>(
-                    !m_fstream.fail()
-                  , "file does not exist or is not readable"
-                );
-            }
-
-            /**
-             * Initializes a new reader by acquiring ownership of a file stream.
-             * @param fstream The file stream to read from.
-             */
-            inline explicit reader_t(std::ifstream&& fstream)
-              : m_fstream (std::forward<decltype(fstream)>(fstream))
-            {}
-
-            inline reader_t& operator=(const reader_t&) noexcept = delete;
-            inline reader_t& operator=(reader_t&&) noexcept = default;
-
-            inline virtual ~reader_t() = default;
-
-            /**
-             * Reads an instance of the target type and returns it.
-             * @return The target type instance read from file.
-             */
-            virtual auto read() -> T = 0;
+        /**
+         * Parses a target type instance from a file.
+         * @param path The path of the file to be parsed.
+         * @return An instance of the target type.
+         */
+        virtual memory::pointer::unique_t<T> read(const std::filesystem::path&) const = 0;
     };
+
+    /**
+     * Parses a file and produces an instance of given type.
+     * @tparam T The target type to parse an instance of.
+     * @param path The path of the file to parse an instance from.
+     * @return A pointer to an instance of target type.
+     */
+    template <typename T>
+    MUSEQA_INLINE memory::pointer::unique_t<T> read(const std::filesystem::path&);
+}
+
+namespace factory::io::format
+{
+    /**
+     * Creates a generic format reader for the given type.
+     * @tparam T The type to get a generic reader from.
+     * @return A format reader instance for the given type.
+     */
+    template <typename T>
+    auto reader() noexcept
+    -> museqa::memory::pointer::unique_t<
+        museqa::io::format::reader_t<T>>;
+}
+
+/**
+ * Parses a file and produces an instance of given type.
+ * @tparam T The target type to parse an instance of.
+ * @param path The path of the file to parse an instance from.
+ * @return A pointer to an instance of target type.
+ */
+template <typename T>
+MUSEQA_INLINE memory::pointer::unique_t<T> io::format::read(const std::filesystem::path& path)
+{
+    const auto reader = factory::io::format::reader<T>();
+    return reader->read(path);
 }
 
 MUSEQA_END_NAMESPACE

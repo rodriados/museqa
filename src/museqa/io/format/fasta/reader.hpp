@@ -6,59 +6,49 @@
  */
 #pragma once
 
-#include <string>
-#include <vector>
+#include <fstream>
+#include <filesystem>
 
 #include <museqa/environment.h>
-#include <museqa/bio/sequence.hpp>
+#include <museqa/bio/sequence/dataset.hpp>
+#include <museqa/memory/pointer/unique.hpp>
+
+#include <museqa/io/exception.hpp>
 #include <museqa/io/format/reader.hpp>
+#include <museqa/io/format/generic/dataset.hpp>
 
 MUSEQA_BEGIN_NAMESPACE
 
 namespace io::format::fasta
 {
     /**
-     * The reader for sequence files of FASTA format. The FASTA format is a widely
-     * used format to store biological sequences: it consists simply of a sequence's
-     * description and its contents represented in plain text.
+     * The reader for sequence dataset files of FASTA format. The FASTA format is
+     * a widely used format to store biological sequences: it consists simply of
+     * a sequence's description and its contents represented in plain text.
      * @since 1.0
      */
-    class reader_t : public io::format::reader_t<bio::sequence::data_t>
+    struct reader_t : public io::format::reader_t<bio::sequence::dataset_t>
     {
-        private:
-            typedef bio::sequence::data_t target_t;
-            typedef io::format::reader_t<target_t> underlying_t;
+        /**
+         * Extracts all sequences in FASTA format from the given stream.
+         * @param stream The FASTA format stream to be parsed.
+         * @return A pointer to the parsed sequence dataset.
+         */
+        auto read_from_stream(std::istream& stream) const
+        -> memory::pointer::unique_t<bio::sequence::dataset_t>;
 
-        public:
-            inline reader_t() noexcept = default;
-            inline reader_t(const reader_t&) noexcept = delete;
-            inline reader_t(reader_t&&) noexcept = default;
-
-            using underlying_t::reader_t;
-
-            inline reader_t& operator=(const reader_t&) noexcept = delete;
-            inline reader_t& operator=(reader_t&&) noexcept = default;
-
-            /**
-             * Reads a sequence from the FASTA file.
-             * @return The sequence extracted from file.
-             */
-            auto read() -> target_t override;
-
-            /**
-             * Reads all sequences from the FASTA file.
-             * @return The vector of sequences extracted from file.
-             */
-            inline auto read_all() -> std::vector<target_t>
-            {
-                auto result = std::vector<target_t>();
-
-                while (!m_fstream.eof() && !m_fstream.fail())
-                    if (auto data = read(); !data.buffer.empty())
-                        result.push_back(data);
-
-                return result;
-            }
+        /**
+         * Parses an instance of the target type from a file.
+         * @param path The path of the file to be parsed.
+         * @return A pointer to an instance of the target type.
+         */
+        auto read(const std::filesystem::path& path) const
+        -> memory::pointer::unique_t<bio::sequence::dataset_t> override
+        {
+            if (auto fstream = std::ifstream(path); !fstream.fail())
+                return read_from_stream(fstream);
+            throw io::exception_t("file does not exist or is not readable");
+        }
     };
 }
 
