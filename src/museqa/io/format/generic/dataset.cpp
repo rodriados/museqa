@@ -9,7 +9,6 @@
 
 #include <museqa/environment.h>
 #include <museqa/bio/sequence/dataset.hpp>
-#include <museqa/memory/allocator.hpp>
 #include <museqa/memory/pointer/unique.hpp>
 
 #include <museqa/io/format/reader.hpp>
@@ -18,18 +17,19 @@
 
 MUSEQA_BEGIN_NAMESPACE
 
-using dataset_reader_t  = io::format::reader_t<bio::sequence::dataset_t>;
 using dataset_pointer_t = memory::pointer::unique_t<bio::sequence::dataset_t>;
 using lambda_reader_t   = dataset_pointer_t(const std::filesystem::path&);
 
 /**
- * Parses a sequence dataset file of FASTA format.
+ * Reads a sequence dataset file using the given reader type.
+ * @tparam The sequence dataset reader type to read file with.
  * @param path The path of the file to be parsed.
  * @return A pointer to an instance of a sequence dataset.
  */
-static dataset_pointer_t parse_fasta_format(const std::filesystem::path& path)
+template <typename R>
+static dataset_pointer_t read_format(const std::filesystem::path& path)
 {
-    auto reader = io::format::fasta::reader_t();
+    const auto reader = R();
     return reader.read(path);
 }
 
@@ -39,44 +39,24 @@ static dataset_pointer_t parse_fasta_format(const std::filesystem::path& path)
  * @since 1.0
  */
 static const std::unordered_map<std::string, lambda_reader_t*> lambda_readers = {
-    { ".fasta", &parse_fasta_format }
-  , {   ".fas", &parse_fasta_format }
-  , {   ".faa", &parse_fasta_format }
-  , {    ".fa", &parse_fasta_format }
+    { ".fasta", &read_format<io::format::fasta::reader_t> }
+  , {   ".fas", &read_format<io::format::fasta::reader_t> }
+  , {   ".faa", &read_format<io::format::fasta::reader_t> }
+  , {    ".fa", &read_format<io::format::fasta::reader_t> }
 };
 
 /**
- * A generic file format reader for biological sequences datasets. This reader uses
- * the extension of the given file paths to determine which parser must be used.
- * @since 1.0
+ * Parses a sequence dataset instance from a generic format file.
+ * @param path The path of the file to be parsed.
+ * @return A pointer to an instance of a sequence dataset.
  */
-struct generic_dataset_reader_t : dataset_reader_t
-{
-    /**
-     * Parses a sequence dataset instance from a generic format file.
-     * @param path The path of the file to be parsed.
-     * @return A pointer to an instance of a sequence dataset.
-     */
-    auto read(const std::filesystem::path& path) const
-    -> memory::pointer::unique_t<bio::sequence::dataset_t> override
-    try {
-        const auto lambda_reader = lambda_readers.at(path.extension());
-        return lambda_reader(path);
-    } catch (const std::out_of_range&) {
-        throw io::exception_t("no parser known for given file type");
-    }
-};
-
-/**
- * Creates a sequence dataset file format reader that automatically identifies the
- * file format parser to be used depending on the given file extension.
- * @return A generic format reader instance for sequence datasets.
- */
-template <>
-auto factory::io::format::reader<bio::sequence::dataset_t>() noexcept
--> museqa::memory::pointer::unique_t<dataset_reader_t>
-{
-    return factory::memory::pointer::unique<generic_dataset_reader_t>();
+dataset_pointer_t io::format::generic::dataset::reader_t::read(
+    const std::filesystem::path& path
+) const try {
+    const auto lambda = lambda_readers.at(path.extension());
+    return lambda (path);
+} catch (const std::out_of_range&) {
+    throw io::exception_t("no reader known for given file extension type");
 }
 
 MUSEQA_END_NAMESPACE
