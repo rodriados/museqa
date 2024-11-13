@@ -7,7 +7,6 @@
 #pragma once
 
 #include <museqa/environment.h>
-#include <museqa/geometry.hpp>
 #include <museqa/utility.hpp>
 #include <museqa/guard.hpp>
 
@@ -35,17 +34,19 @@ namespace bio::scoring
         public:
             /**
              * Gets the score for matching two sequences symbols.
-             * @param ref The pair of symbols to be matched.
+             * @param a The first symbol to be matched.
+             * @param b The second symbol to be matched.
              * @return The resulting match score.
              */
-            MUSEQA_CUDA_INLINE score_t& operator[](
-                geometry::point_t<2, alphabet::symbol_t> ref
+            MUSEQA_CUDA_INLINE score_t& m(
+                alphabet::symbol_t a
+              , alphabet::symbol_t b
             ) MUSEQA_SAFE_EXCEPT {
-                guard(ref.a < symbol_count && ref.b < symbol_count
+                guard(a < symbol_count && b < symbol_count
                   , "symbol has no representation in scoring matrix");
-                const auto a = utility::min(ref.a, ref.b);
-                const auto b = utility::max(ref.a, ref.b);
-                return m_matrix[a + utility::a000217(b)];
+                const auto x = utility::min(a, b);
+                const auto y = utility::max(a, b);
+                return m_matrix[x + utility::a000217(y)];
             }
     };
 }
