@@ -6,144 +6,107 @@ NAME = museqa
 
 INCDIR  = src
 SRCDIR  = src
-OBJDIR  = obj
-TGTDIR  = bin
 TESTDIR = test
 
-GCCC ?= mpicc
-GCPP ?= mpic++
-NVCC ?= nvcc
-PYPP ?= g++
-PYXC ?= cython
+DSTDIR ?= dist
+OBJDIR ?= obj
+BINDIR ?= bin
+PT3DIR ?= thirdparty
 
-OPTLEVEL = -O3
+GCCC   ?= mpicc
+GCPP   ?= mpic++
+NVCC   ?= nvcc
+STDC   ?= c99
+STDCPP ?= c++17
+STDCU  ?= c++17
 
 # Target architecture for CUDA compilation. This indicates the minimum support required
 # for the codebase but can be changed with environment variables.
 NVARCH ?= sm_30
 
-# Defining language standards to be used. These can be overriden by environment
-# variables. We recommend using the default settings, though.
-STDC   ?= c99
-STDCPP ?= c++14
-STDCU  ?= c++11
-
-MPILIBDIR ?= /usr/lib/openmpi/lib
-MPILKFLAG ?= -lmpi_cxx -lmpi
-PY3INCDIR ?= $(shell python3 -c "import sysconfig as s; print(s.get_paths()['include'])")
-
 # Defining macros inside code at compile time. This can be used to enable or disable
 # certain features on code or affect the projects compilation.
 FLAGS ?=
+GCPPFLAGS ?= -std=$(STDCPP) -I$(DSTDIR) -I$(INCDIR) $(FLAGS)
+LINKFLAGS ?= $(FLAGS)
 
-GCCCFLAGS = -std=$(STDC) -I$(INCDIR) -Wall -lm -fPIC $(OPTLEVEL) $(ENV) $(FLAGS)
-GCPPFLAGS = -std=$(STDCPP) -I$(INCDIR) -Wall -fPIC $(OPTLEVEL) $(ENV) $(FLAGS)
-NVCCFLAGS = -std=$(STDCU) -I$(INCDIR) -arch $(NVARCH) -lmpi -lcuda -lcudart -w $(OPTLEVEL) $(ENV)	\
-		-Xptxas $(OPTLEVEL) -Xcompiler $(OPTLEVEL) -D_MWAITXINTRIN_H_INCLUDED $(ENV) $(FLAGS)
-PYPPFLAGS = -std=$(STDCPP) -I$(INCDIR) -I$(PY3INCDIR) -shared -pthread -fPIC -fwrapv -O2 -Wall      \
-        -fno-strict-aliasing $(ENV) $(FLAGS)
-PYXCFLAGS = --cplus -I$(INCDIR) -3
-LINKFLAGS = -L$(MPILIBDIR) -arch $(NVARCH) $(MPILKFLAG) $(ENV) $(FLAGS)
+# The operational system check. At least for now, we assume that we are always running
+# on a Linux machine. Therefore, a disclaimer must be shown if this is not true.
+SYSTEMOS := $(shell uname)
+SYSTEMOS := $(patsubst MINGW%,Windows,$(SYSTEMOS))
+SYSTEMOS := $(patsubst MSYS%,Msys,$(SYSTEMOS))
+SYSTEMOS := $(patsubst CYGWIN%,Msys,$(SYSTEMOS))
 
-# Lists all files to be compiled and separates them according to their corresponding
-# compilers. Changes in any of these files in will trigger conditional recompilation.
-GCCCFILES := $(shell find $(SRCDIR) -name '*.c')
-GCPPFILES := $(shell find $(SRCDIR) -name '*.cpp')
-NVCCFILES := $(shell find $(SRCDIR) -name '*.cu')
-PYXCFILES := $(shell find $(SRCDIR) -name '*.pyx')
-PYFILES   := $(shell find $(SRCDIR) -name '*.py')
-
-OBJFILES     = $(GCCCFILES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)                                             \
-               $(GCPPFILES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)                                           \
-               $(NVCCFILES:$(SRCDIR)/%.cu=$(OBJDIR)/%.o)
-TESTFILES    = $(PYXCFILES:$(SRCDIR)/python/%.pyx=$(TGTDIR)/%.so)                                   \
-               $(PYFILES:$(SRCDIR)/python/%.py=$(TGTDIR)/%.py)
-STATICFILES  = $(filter $(PYXCFILES:$(SRCDIR)/python/%.pyx=$(OBJDIR)/%.a),$(OBJFILES:%.o=%.a))
-
-OBJHIERARCHY = $(sort $(dir $(OBJFILES)))
-
-all: debug
-
-install: $(OBJHIERARCHY)
-	@chmod +x src/hostfinder.sh
-	@chmod +x src/watchdog.sh
-	@chmod +x museqa
-
-production: install
-production: override ENV = -DPRODUCTION
-production: $(TGTDIR)/$(NAME)
-
-debug: install
-debug: override OPTLEVEL = -O0
-debug: override ENV = -g -DDEBUG
-debug: $(TGTDIR)/$(NAME)
-
-testing: install
-testing: override GCPP = $(PYPP)
-testing: override ENV = -g -DTESTING
-testing: override NVCCFLAGS = -std=$(STDCU) -I$(SRCDIR) -g -arch $(NVARCH) -lcuda -lcudart -w       \
-        -O3 -Xptxas -O3 -Xcompiler -O3 -D_MWAITXINTRIN_H_INCLUDED $(ENV) --compiler-options -fPIC
-testing: $(TESTFILES)
-
-clean:
-	@rm -rf $(OBJDIR)
-	@rm -rf $(SRCDIR)/*~ *~
-	@rm -rf $(TGTDIR)/*.so $(TGTDIR)/*/
-	@rm -rf .pytest_cache
-
-# Creates dependency on header files. This is valuable so that whenever a header
-# file is changed, all objects depending on it will be recompiled.
-ifneq ($(wildcard $(OBJDIR)/.),)
--include $(shell find $(OBJDIR) -name '*.d')
+ifneq ($(SYSTEMOS), Linux)
+  $(info Warning: This makefile assumes OS to be Linux.)
 endif
 
-# Creates the hierarchy of folders needed to compile the project. This rule should
-# be depended upon by every single build.
-$(OBJHIERARCHY):
-	@mkdir -p $@
+# If running an installation target, a prefix variable is used to determine where
+# the files must be copied to. In this context, a default value must be provided.
+ifeq ($(PREFIX),)
+	PREFIX := /usr/local
+endif
 
-# The step rules to generate the main production executable. These rules can be
-# parallelized to improve compiling time.
-$(TGTDIR)/$(NAME): $(OBJFILES)
-	$(NVCC) $(LINKFLAGS) $^ -o $@
+all: distribute
 
-$(OBJDIR)/%.o $(OBJDIR)/%.a: $(SRCDIR)/%.c
-	$(GCCC) $(GCCCFLAGS) -MMD -c $< -o $@
+prepare-distribute:
+	@mkdir -p $(DSTDIR)
 
-$(OBJDIR)/%.o $(OBJDIR)/%.a: $(SRCDIR)/%.cpp
-	$(GCPP) $(GCPPFLAGS) -MMD -c $< -o $@
+export DISTRIBUTE_DESTINATION ?= $(shell realpath $(DSTDIR))
 
-$(OBJDIR)/%.o $(OBJDIR)/%.a: $(SRCDIR)/%.cu
-	$(NVCC) $(NVCCFLAGS) -MMD -dc $< -o $@
+distribute: prepare-distribute thirdparty-distribute
+no-thirdparty-distribute: prepare-distribute
 
-# The step rules to build the testing environment modules. This setting will result
-# into many modules that can be directly imported used into a python module.
-$(TGTDIR)/%.so: $(OBJDIR)/%.py.so $(OBJDIR)/libmuseqa.a
-	$(NVCC) -shared -L$(OBJDIR) -lmuseqa $< -o $@
+clean-distribute: thirdparty-clean
+	@rm -rf $(DSTDIR)
 
-$(TGTDIR)/%.py: $(SRCDIR)/python/%.py
-	@mkdir -p $(dir $@)
-	cp -l $< $@
+clean: clean-distribute
+	@rm -rf $(BINDIR)
+	@rm -rf $(OBJDIR)
 
-$(OBJDIR)/%.cxx: $(SRCDIR)/python/%.pyx $(INCDIR)/python/*.pxd
-	$(PYXC) $(PYXCFLAGS) $< -o $@
+.PHONY: all clean
+.PHONY: prepare-distribute distribute no-thirdparty-distribute clean-distribute
 
-$(OBJDIR)/%.py.so: $(OBJDIR)/%.cxx
-	$(PYPP) $(PYPPFLAGS) -MMD -c $< -o $@
+# The target path for third party dependencies' distribution files. As each dependency
+# may allow different settings, a variable for each one is needed.
+THIRDPARTY_IGNORE ?=
+THIRDPARTY_DEPENDENCIES = mpiwcpp17 reflector supertuple
 
-$(OBJDIR)/libmuseqa.a: $(OBJDIR)/cuda.a
-$(OBJDIR)/libmuseqa.a: $(OBJDIR)/encoder.a
-$(OBJDIR)/libmuseqa.a: $(OBJDIR)/pairwise/table.a
-$(OBJDIR)/libmuseqa.a: $(OBJDIR)/pairwise/database.a
-$(OBJDIR)/libmuseqa.a: $(OBJDIR)/pairwise/pairwise.a
-$(OBJDIR)/libmuseqa.a: $(OBJDIR)/io/loader/database.a
-$(OBJDIR)/libmuseqa.a: $(OBJDIR)/io/loader/parser/fasta.a
-$(OBJDIR)/libmuseqa.a: $(OBJDIR)/pairwise/needleman/needleman.a
-$(OBJDIR)/libmuseqa.a: $(OBJDIR)/pairwise/needleman/impl/hybrid.a
-$(OBJDIR)/libmuseqa.a: $(OBJDIR)/pairwise/needleman/impl/sequential.a
-$(OBJDIR)/libmuseqa.a: $(STATICFILES)
-	ar rcs $@ $^
+THIRDPARTY_TARGETS := $(filter-out $(THIRDPARTY_IGNORE),$(THIRDPARTY_DEPENDENCIES))
+THIRDPARTY_TARGETS := $(THIRDPARTY_TARGETS:%=$(DISTRIBUTE_DESTINATION)/%.h)
 
-.PHONY: all install production debug testing clean
+thirdparty-distribute: prepare-distribute $(THIRDPARTY_TARGETS)
+thirdparty-install:    $(THIRDPARTY_DEPENDENCIES:%=thirdparty-install-%)
+thirdparty-uninstall:  $(THIRDPARTY_DEPENDENCIES:%=thirdparty-uninstall-%)
+thirdparty-clean:      $(THIRDPARTY_DEPENDENCIES:%=thirdparty-clean-%)
 
-.PRECIOUS: $(OBJDIR)/%.cxx $(OBJDIR)/%.a $(OBJDIR)/%.py.so
+ifndef MUSEQA_DIST_STANDALONE
+
+export SUPERTUPLE_DIST_STANDALONE = 1
+export REFLECTOR_DIST_STANDALONE  = 1
+export MPIWCPP17_DIST_STANDALONE  = 1
+
+thirdparty-distribute-%: $(DISTRIBUTE_DESTINATION)/%.h
+
+$(DISTRIBUTE_DESTINATION)/%.h: %
+	@$(MAKE) --no-print-directory -C $(PT3DIR)/$< distribute
+
+thirdparty-install-%: %
+	@$(MAKE) --no-print-directory -C $(PT3DIR)/$< install
+
+thirdparty-uninstall-%: %
+	@$(MAKE) --no-print-directory -C $(PT3DIR)/$< uninstall
+
+thirdparty-clean-%: %
+	@$(MAKE) --no-print-directory -C $(PT3DIR)/$< clean
+
+else
+.PHONY: $(THIRDPARTY_TARGETS)
+.PHONY: $(THIRDPARTY_DEPENDENCIES:%=thirdparty-distribute-%)
+.PHONY: $(THIRDPARTY_DEPENDENCIES:%=thirdparty-install-%)
+.PHONY: $(THIRDPARTY_DEPENDENCIES:%=thirdparty-uninstall-%)
+.PHONY: $(THIRDPARTY_DEPENDENCIES:%=thirdparty-clean-%)
+endif
+
+.PHONY: thirdparty-distribute thirdparty-install thirdparty-uninstall thirdparty-clean
+.PHONY: $(THIRDPARTY_DEPENDENCIES)

@@ -1,4 +1,7 @@
 obj/
+dist/
+html/
+latex/
 tex/
 .idea/
 bin/
@@ -18,7 +21,8 @@ todo.*
 *.zip
 
 run
-test.cpp
+test*.cpp
+test*.cu
 .hostfile
 .gdb_history
 *junkyard*
