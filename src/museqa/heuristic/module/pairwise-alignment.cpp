@@ -14,8 +14,8 @@
 #include <museqa/utility/functor.hpp>
 
 #include <museqa/heuristic/module/pairwise.cuh>
-#include <museqa/heuristic/algorithm/pairwise/exception.hpp>
-#include <museqa/heuristic/algorithm/pairwise/matrix.hpp>
+#include <museqa/heuristic/algorithm/pairwise-alignment/exception.hpp>
+#include <museqa/heuristic/algorithm/pairwise-alignment/matrix.hpp>
 
 MUSEQA_BEGIN_NAMESPACE
 

@@ -9,8 +9,8 @@
 #include <museqa/environment.h>
 #include <museqa/pipeline.hpp>
 
-#include <museqa/heuristic/algorithm/pairwise/matrix.hpp>
-#include <museqa/heuristic/algorithm/pairwise/parameters.hpp>
+#include <museqa/heuristic/algorithm/pairwise-alignment/matrix.hpp>
+#include <museqa/heuristic/algorithm/pairwise-alignment/parameters.hpp>
 
 /*
  * The heuristic's sequence pairwise alignment module.

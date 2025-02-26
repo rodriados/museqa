@@ -9,7 +9,7 @@
 #include <string>
 
 #include <museqa/environment.h>
-#include <museqa/heuristic/algorithm/pairwise/common.hpp>
+#include <museqa/heuristic/algorithm/pairwise-alignment/common.hpp>
 
 MUSEQA_BEGIN_NAMESPACE
 
