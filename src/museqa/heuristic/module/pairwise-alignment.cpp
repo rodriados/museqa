@@ -13,7 +13,7 @@
 #include <museqa/memory/pointer.hpp>
 #include <museqa/utility/functor.hpp>
 
-#include <museqa/heuristic/module/pairwise.cuh>
+#include <museqa/heuristic/module/pairwise-alignment.cuh>
 #include <museqa/heuristic/algorithm/pairwise-alignment/exception.hpp>
 #include <museqa/heuristic/algorithm/pairwise-alignment/matrix.hpp>
 
