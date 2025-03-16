@@ -9,7 +9,7 @@
 #include <cstdint>
 
 #include <museqa/environment.h>
-#include <museqa/geometry/point.hpp>
+#include <museqa/geometry.hpp>
 
 MUSEQA_BEGIN_NAMESPACE
 

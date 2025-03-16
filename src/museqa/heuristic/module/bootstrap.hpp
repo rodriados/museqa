@@ -10,7 +10,7 @@
 
 #include <museqa/environment.h>
 #include <museqa/pipeline.hpp>
-#include <museqa/bio/sequence.hpp>
+#include <museqa/bio/sequence/dataset.hpp>
 #include <museqa/memory/pointer.hpp>
 
 #include <museqa/heuristic/algorithm/bootstrap/functions.hpp>
@@ -32,35 +32,35 @@ namespace heuristic::module
             typedef heuristic::algorithm::bootstrap::parameters_t parameters_t;
 
         public:
-            inline static constexpr auto sequences = pipeline::key<sequences_t>("bootstrap::sequences");
+            MUSEQA_CONSTEXPR static auto sequences = pipeline::key<sequences_t>("bootstrap::sequences");
 
         protected:
             parameters_t m_params = {};
 
         public:
-            inline bootstrap_t() = default;
-            inline bootstrap_t(const bootstrap_t&) = default;
-            inline bootstrap_t(bootstrap_t&&) = default;
+            MUSEQA_INLINE bootstrap_t() = default;
+            MUSEQA_INLINE bootstrap_t(const bootstrap_t&) = default;
+            MUSEQA_INLINE bootstrap_t(bootstrap_t&&) = default;
 
             /**
              * Initializes an instance of bootstrap module with the given parameters.
              * @param params The parameters to use for module execution.
              */
-            inline bootstrap_t(const parameters_t& params) noexcept
+            MUSEQA_INLINE bootstrap_t(const parameters_t& params) noexcept
               : m_params (params)
             {}
 
-            inline bootstrap_t& operator=(const bootstrap_t&) = default;
-            inline bootstrap_t& operator=(bootstrap_t&&) = default;
+            MUSEQA_INLINE bootstrap_t& operator=(const bootstrap_t&) = default;
+            MUSEQA_INLINE bootstrap_t& operator=(bootstrap_t&&) = default;
 
             /**
              * Executes the module's task and loads sequences from source files.
              * @param pipe The pipeline's transitive state instance.
              */
-            inline void run(pipeline::pipe_t& pipe) const override
+            MUSEQA_INLINE void run(pipeline::pipe_t& pipe) const override
             {
                 auto sequences = factory::memory::pointer::shared<sequences_t>();
-                    *sequences = heuristic::algorithm::bootstrap::load_sequences(m_params.input.sequences);
+                    *sequences = heuristic::algorithm::bootstrap::load_sequences(m_params.input.sequence_files);
 
                 pipe->set(bootstrap_t::sequences, sequences);
             }

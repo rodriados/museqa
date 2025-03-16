@@ -54,11 +54,9 @@ namespace heuristic::middleware
              * @param run The index of the requested execution run.
              * @return The total amount of time elapsed during the modules' execution.
              */
-            inline auto duration(size_t run = 0) const -> double
+            inline auto get(size_t run = 0) const -> double
             {
-                return run < m_duration.size()
-                    ? m_duration[run]
-                    : 0.f;
+                return run < m_duration.size() ? m_duration[run] : -1.f;
             }
     };
 

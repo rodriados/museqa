@@ -4,6 +4,7 @@ html/
 latex/
 tex/
 .idea/
+.vscode/
 bin/
 !bin/__init__.py
 test/museqa
