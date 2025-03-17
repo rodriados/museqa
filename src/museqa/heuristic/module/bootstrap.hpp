@@ -10,8 +10,8 @@
 
 #include <museqa/environment.h>
 #include <museqa/pipeline.hpp>
-#include <museqa/bio/sequence/dataset.hpp>
 #include <museqa/memory/pointer.hpp>
+#include <museqa/bio/sequence/dataset.hpp>
 
 #include <museqa/heuristic/algorithm/bootstrap/functions.hpp>
 #include <museqa/heuristic/algorithm/bootstrap/parameters.hpp>
@@ -28,7 +28,7 @@ namespace heuristic::module
     class bootstrap_t : public pipeline::module_t
     {
         public:
-            typedef std::vector<bio::sequence::data_t> sequences_t;
+            typedef bio::sequence::dataset_t sequences_t;
             typedef heuristic::algorithm::bootstrap::parameters_t parameters_t;
 
         public:
@@ -60,7 +60,7 @@ namespace heuristic::module
             MUSEQA_INLINE void run(pipeline::pipe_t& pipe) const override
             {
                 auto sequences = factory::memory::pointer::shared<sequences_t>();
-                    *sequences = heuristic::algorithm::bootstrap::load_sequences(m_params.input.sequence_files);
+                    *sequences = heuristic::algorithm::bootstrap::load_from_files(m_params.input.sequence_files);
 
                 pipe->set(bootstrap_t::sequences, sequences);
             }
