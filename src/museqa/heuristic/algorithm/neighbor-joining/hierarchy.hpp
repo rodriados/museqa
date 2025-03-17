@@ -24,26 +24,26 @@ namespace museqa
          * and children, it's assumed an ordinary pointer will be used as usual.
          * @since 0.1.1
          */
-        using reference_type = typename std::conditional<
+        using reference_t = typename std::conditional<
                 std::is_void<R>::value
             ,   hierarchy *
             ,   R
             >::type;
 
-        static_assert(std::is_scalar<reference_type>::value, "hierarchy node reference must be scalar");
+        static_assert(std::is_scalar<reference_t>::value, "hierarchy node reference must be scalar");
 
         /**
          * Definition of an undefined or unset node reference on the hierarchy.
          * In practice, this value will default to zero or a virtual infinity.
          * @since 0.1.1
          */
-        static constexpr reference_type undefined = (reference_type) typename std::conditional<
-                !std::is_pointer<reference_type>::value
+        static constexpr reference_t undefined = (reference_t) typename std::conditional<
+                !std::is_pointer<reference_t>::value
             ,   std::integral_constant<int8_t, ~0x00>
             ,   nullptr_t
             >::type {};
 
-        reference_type parent = undefined;                  /// The node's hierarchical parent reference.
-        reference_type child[2] = {undefined, undefined};   /// The node's hierarchical children references.
+        reference_t parent = undefined;                  /// The node's hierarchical parent reference.
+        reference_t child[2] = {undefined, undefined};   /// The node's hierarchical children references.
     };
 }

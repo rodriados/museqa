@@ -117,6 +117,70 @@ namespace museqa
             {
                 return {shape.y, shape.y};
             }
+
+
+
+
+
+
+
+
+
+// template <typename T>
+// __host__ __device__ inline constexpr static geometry::point<2,T> shape(const geometry::point<2,T>& target) noexcept
+// {
+//     return {(target.y >> 1) + (target.y & 1), target.y};
+// }
+
+// template <typename T>
+// __host__ __device__ inline static geometry::point<2,T> transform(
+//         const geometry::point<2,T>& space
+//     ,   const geometry::point<2,T>& target
+//     ) noexcept
+// {
+//     const auto i = utility::max(target.x, target.y);
+//     const auto j = utility::min(target.x, target.y);
+
+//     const auto x = (i < space.x) ? i : space.y - i - 1;
+//     const auto y = (i < space.x) ? j : space.y - j - 1;
+//     return {x, y};
+// }
+
+// template <typename T>
+// __host__ __device__ inline static geometry::point<2,T> untransform(
+//         const geometry::point<2,T>& space
+//     ,   const geometry::point<2,T>& target
+//     ) noexcept
+// {
+//     const auto min = utility::min(space.x, target.x);
+
+//     const auto x = (target.y < min) ? target.x : space.y - target.x - 1;
+//     const auto y = (target.y < min) ? target.y : space.y - target.y - 1;
+
+//     return {x, y};
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         };
     }
 }
