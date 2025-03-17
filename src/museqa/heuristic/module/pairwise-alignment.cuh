@@ -86,11 +86,9 @@ namespace heuristic::module
          * will be directly accessed and used by the implemented algorithms.
          * @since 1.0
          */
-        struct context_t {
-            const parameters_t& params;
-        };
+        struct context_t {};
 
-        virtual auto run(const context_t&) -> matrix_t = 0;
+        virtual auto run(const parameters_t&, const context_t&) const -> matrix_t = 0;
     };
 }
 

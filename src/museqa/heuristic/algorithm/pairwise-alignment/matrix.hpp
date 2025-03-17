@@ -11,10 +11,10 @@
 #include <museqa/environment.h>
 #include <museqa/utility.hpp>
 #include <museqa/guard.hpp>
-
 #include <museqa/memory/buffer.hpp>
-#include <museqa/heuristic/algorithm/pairwise/common.hpp>
-#include <museqa/heuristic/algorithm/pairwise/exception.hpp>
+
+#include <museqa/heuristic/algorithm/pairwise-alignment/common.hpp>
+#include <museqa/heuristic/algorithm/pairwise-alignment/exception.hpp>
 
 MUSEQA_BEGIN_NAMESPACE
 
@@ -34,16 +34,16 @@ namespace heuristic::algorithm::pairwise
             size_t m_count = 0;
 
         public:
-            inline matrix_t() noexcept = default;
-            inline matrix_t(const matrix_t&) = default;
-            inline matrix_t(matrix_t&&) = default;
+            MUSEQA_INLINE matrix_t() noexcept = default;
+            MUSEQA_INLINE matrix_t(const matrix_t&) = default;
+            MUSEQA_INLINE matrix_t(matrix_t&&) = default;
 
             /**
              * Initializes a new distance matrix from a buffer linearly containing
              * pairwise distances between a set of sequences.
              * @param buffer The linear distances' buffer to copy into the matrix.
              */
-            inline matrix_t(const underlying_t& buffer) __museqasafe__
+            MUSEQA_INLINE matrix_t(const underlying_t& buffer) MUSEQA_SAFE_EXCEPT
               : underlying_t (buffer)
               , m_count (utility::oeis::a002024(m_capacity))
             {
@@ -53,15 +53,15 @@ namespace heuristic::algorithm::pairwise
                 );
             }
 
-            inline matrix_t& operator=(const matrix_t&) = default;
-            inline matrix_t& operator=(matrix_t&&) = default;
+            MUSEQA_INLINE matrix_t& operator=(const matrix_t&) = default;
+            MUSEQA_INLINE matrix_t& operator=(matrix_t&&) = default;
 
             /**
              * Retrieves the pairwise distance of a sequence pair on the matrix.
              * @param pair The identifier of a sequence pair.
              * @return The pairwise distance between a pair of sequences.
              */
-            inline auto operator[](const pairwise::pair_t& pair) const -> pairwise::score_t
+            MUSEQA_INLINE auto operator[](const pairwise::pair_t& pair) const -> pairwise::score_t
             {
                 const auto max = utility::max(pair.a, pair.b);
                 const auto min = utility::min(pair.a, pair.b);
@@ -75,7 +75,7 @@ namespace heuristic::algorithm::pairwise
              * Informs the total number of sequences represented on the matrix.
              * @return The number of sequences with pairwise alignments.
              */
-            inline auto count() const noexcept -> size_t
+            MUSEQA_INLINE auto count() const noexcept -> size_t
             {
                 return m_count;
             }

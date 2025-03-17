@@ -446,7 +446,13 @@ namespace
             buffer<score> result;
             size_t nsequences = ctx.db.count();
 
-            onlyslaves {
+            // onlyslaves {
+            //     auto pairs = this->generate(nsequences);
+            //     const scoring_table table = ctx.table.to_device();
+            //     result = align(pairs, ctx.db, table);
+            // }
+
+            if (mpi::node::compute) {
                 auto pairs = this->generate(nsequences);
                 const scoring_table table = ctx.table.to_device();
                 result = align(pairs, ctx.db, table);

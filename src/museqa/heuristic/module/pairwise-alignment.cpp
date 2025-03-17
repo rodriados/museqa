@@ -11,7 +11,6 @@
 #include <museqa/environment.h>
 #include <museqa/pipeline.hpp>
 #include <museqa/memory/pointer.hpp>
-#include <museqa/utility/functor.hpp>
 
 #include <museqa/heuristic/module/pairwise-alignment.cuh>
 #include <museqa/heuristic/algorithm/pairwise-alignment/exception.hpp>
@@ -28,7 +27,7 @@ namespace heuristic::module
      * The instance must inherit from pairwise-module's abstract algorithm type.
      * @since 1.0
      */
-    using factory_t = utility::functor_t<memory::pointer::shared_t<pairwise_t::algorithm_t>()>;
+    using factory_t = memory::pointer::shared_t<pairwise_t::algorithm_t>(*)();
 
     /**
      * The mapping between the module's algorithm implementations and their respective
@@ -43,15 +42,13 @@ namespace heuristic::module
      */
     void pairwise_t::run(pipeline::pipe_t& pipe) const
     try {
-        const auto context = algorithm_t::context_t {
-            m_params
-        };
+        const auto context = algorithm_t::context_t {};
 
         const factory_t& factory = factory_dispatcher.at(m_params.input.algorithm);
         const memory::pointer::shared_t<algorithm_t> worker = factory ();
 
         auto result = factory::memory::pointer::shared<matrix_t>();
-            *result = worker->run(context);
+            *result = worker->run(m_params, context);
 
         pipe->set(pairwise_t::matrix, result);
     } catch (const std::out_of_range& e) {
