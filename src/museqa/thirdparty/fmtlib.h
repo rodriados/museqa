@@ -8,7 +8,7 @@
 
 #include <museqa/environment.h>
 
-#if !defined(MUSEQA_AVOID_FMTLIB)
+#ifndef MUSEQA_AVOID_THIRDPARTY_FMTLIB
   MUSEQA_DISABLE_NVCC_WARNING_BEGIN(128)
   MUSEQA_DISABLE_NVCC_WARNING_BEGIN(2417)
     #include <fmt/format.h>

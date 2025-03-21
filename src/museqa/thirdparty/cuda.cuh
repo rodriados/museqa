@@ -8,16 +8,19 @@
 
 #include <museqa/environment.h>
 
-#if !defined(MUSEQA_AVOID_CUDA)
-  #if !defined(MUSEQA_AVOID_CUDAWRAPPERS)
-    #include <cuda/api.hpp>
-  #else
-    #include <cuda.h>
-    #include <cuda_runtime_api.h>
+#ifndef MUSEQA_AVOID_CUDA
+  #include <cuda.h>
+  #include <cuda_runtime_api.h>
+  #ifndef MUSEQA_AVOID_THIRDPARTY_CUDAWRAPPERS
+    #ifdef MUSEQA_OVERRIDE_CUDAWRAPPERS
+      #include MUSEQA_OVERRIDE_CUDAWRAPPERS
+    #else
+      #include <cuda/api.hpp>
+    #endif
   #endif
 #endif
 
-#if !defined(MUSEQA_AVOID_CUDAWRAPPERS)
+#ifndef MUSEQA_AVOID_THIRDPARTY_CUDAWRAPPERS
 
 namespace cuda::device::current
 {
@@ -26,7 +29,7 @@ namespace cuda::device::current
      * active device to conclude.
      * @see cuda::synchronize
      */
-    inline void synchronize()
+    MUSEQA_INLINE void synchronize()
     {
         auto device = cuda::device::current::get();
         cuda::synchronize(device);

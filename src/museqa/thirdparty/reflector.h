@@ -8,6 +8,14 @@
 
 #include <museqa/environment.h>
 
-#if !defined(MUSEQA_AVOID_REFLECTOR)
-  #include <reflector.h>
+#ifndef MUSEQA_AVOID_THIRDPARTY_REFLECTOR
+  #ifdef MUSEQA_OVERRIDE_REFLECTOR
+    #include MUSEQA_OVERRIDE_REFLECTOR
+  #elif __has_include(<rodriados/reflector.h>)
+    #include <rodriados/reflector.h>
+  #elif __has_include(<reflector/api.h>)
+    #include <reflector/api.h>
+  #else
+    #include <reflector.h>
+  #endif
 #endif

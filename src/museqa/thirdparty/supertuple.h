@@ -8,6 +8,14 @@
 
 #include <museqa/environment.h>
 
-#if !defined(MUSEQA_AVOID_SUPERTUPLE)
-  #include <supertuple.h>
+#ifndef MUSEQA_AVOID_THIRDPARTY_SUPERTUPLE
+  #ifdef MUSEQA_OVERRIDE_SUPERTUPLE
+    #include MUSEQA_OVERRIDE_SUPERTUPLE
+  #elif __has_include(<rodriados/supertuple.h>)
+    #include <rodriados/supertuple.h>
+  #elif __has_include(<supertuple/api.h>)
+    #include <supertuple/api.h>
+  #else
+    #include <supertuple.h>
+  #endif
 #endif
