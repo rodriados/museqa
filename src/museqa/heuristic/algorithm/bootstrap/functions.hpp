@@ -6,32 +6,33 @@
  */
 #pragma once
 
-#include <string>
-#include <vector>
-
 #include <museqa/environment.h>
 #include <museqa/bio/sequence/dataset.hpp>
-#include <museqa/io/format/generic/dataset.hpp>
+#include <museqa/memory/pointer/shared.hpp>
+
+#include <museqa/heuristic/algorithm/bootstrap/parameters.hpp>
 
 MUSEQA_BEGIN_NAMESPACE
+
+namespace heuristic::algorithm::bootstrap::impl
+{
+    /*
+     * Forward declaration of every known implementation for the bootstrap heuristic
+     * step. Ideally, these functions should load and distribute sequences, if applicable.
+     */
+    extern memory::pointer::shared_t<bio::sequence::dataset_t> load_and_distribute(const parameters_t&);
+}
 
 namespace heuristic::algorithm::bootstrap
 {
     /**
-     * Loads biological sequences from a list of source files into memory.
-     * @param filenames The source files to load sequences from.
-     * @return The dataset of loaded sequences.
+     * Executes the bootstrap pipeline step logic.
+     * @param params The bootstrap pipeline step parameters.
+     * @return The produced pipeline step result.
      */
-    MUSEQA_INLINE bio::sequence::dataset_t load_from_files(const std::vector<std::string>& filenames)
+    MUSEQA_INLINE auto run(const parameters_t& params)
     {
-        auto result = bio::sequence::dataset_t();
-        auto reader = io::format::generic::dataset::reader_t();
-
-        for (const auto& filename : filenames)
-            if (auto db = reader.read(filename); !db.empty())
-                result.merge(*db);
-
-        return result;
+        return impl::load_and_distribute(params);
     }
 }
 

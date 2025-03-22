@@ -59,10 +59,10 @@ namespace heuristic::module
              */
             MUSEQA_INLINE void run(pipeline::pipe_t& pipe) const override
             {
-                auto sequences = factory::memory::pointer::shared<sequences_t>();
-                    *sequences = heuristic::algorithm::bootstrap::load_from_files(m_params.input.sequence_files);
-
-                pipe->set(bootstrap_t::sequences, sequences);
+                pipe->set(
+                    bootstrap_t::sequences
+                  , heuristic::algorithm::bootstrap::run(m_params)
+                );
             }
     };
 }

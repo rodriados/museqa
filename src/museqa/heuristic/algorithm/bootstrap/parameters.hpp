@@ -6,10 +6,11 @@
  */
 #pragma once
 
-#include <string>
 #include <vector>
+#include <filesystem>
 
 #include <museqa/environment.h>
+#include <museqa/heuristic/algorithm/parameters.hpp>
 
 MUSEQA_BEGIN_NAMESPACE
 
@@ -23,12 +24,19 @@ namespace heuristic::algorithm::bootstrap
     struct parameters_t
     {
         /**
-         * The module's input parameters. These paremeters are indicate what are
-         * the objects and files to load data from.
+         * The global heuristic parameters. These parameters are shared between
+         * every step in a heuristic pipeline.
+         * @since 1.0
+         */
+        heuristic::algorithm::parameters_t global;
+
+        /**
+         * The module's input parameters. These paremeters indicate what are the
+         * objects or files to load sequence data from.
          * @since 1.0
          */
         struct input_t {
-            std::vector<std::string> sequence_files = {};
+            std::vector<std::filesystem::path> files = {};
         } input;
     };
 }
