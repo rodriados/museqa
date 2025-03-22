@@ -27,17 +27,17 @@ namespace io::format
         typedef T target_t;
 
         /**
-         * Parses a target type instance from a file.
-         * @param path The path of the file to be parsed.
+         * Reads a target type instance from a file.
+         * @param path The path of the file to be read.
          * @return An instance of the target type.
          */
         virtual memory::pointer::unique_t<T> read(const std::filesystem::path&) const = 0;
     };
 
     /**
-     * Parses a file and produces an instance of given type.
-     * @tparam T The target type to parse an instance of.
-     * @param path The path of the file to parse an instance from.
+     * Reads a file and produces an instance of given type.
+     * @tparam T The target type to read an instance of.
+     * @param path The path of the file to read an instance from.
      * @return A pointer to an instance of target type.
      */
     template <typename T>
@@ -52,15 +52,13 @@ namespace factory::io::format
      * @return A format reader instance for the given type.
      */
     template <typename T>
-    auto reader() noexcept
-    -> museqa::memory::pointer::unique_t<
-        museqa::io::format::reader_t<T>>;
+    museqa::memory::pointer::unique_t<museqa::io::format::reader_t<T>> reader() noexcept;
 }
 
 /**
- * Parses a file and produces an instance of given type.
- * @tparam T The target type to parse an instance of.
- * @param path The path of the file to parse an instance from.
+ * Reads a file and produces an instance of given type.
+ * @tparam T The target type to read an instance of.
+ * @param path The path of the file to read an instance from.
  * @return A pointer to an instance of target type.
  */
 template <typename T>

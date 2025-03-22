@@ -32,7 +32,13 @@ namespace bio::sequence::attribute
      * to a special position, making its access easier.
      * @since 1.0
      */
-    using bag_t = memory::buffer_t<data_t>;
+    struct bag_t
+    {
+        std::string description;
+      #ifdef MUSEQA_ENABLE_ADDITIONAL_SEQUENCE_ATTRIBUTES
+        memory::buffer_t<data_t> additional = {};
+      #endif
+    };
 }
 
 MUSEQA_END_NAMESPACE

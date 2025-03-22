@@ -1,6 +1,6 @@
 /**
  * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
- * @file The implementation of FASTA format file reader.
+ * @file The implementation of the FASTA format file reader.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2023-present Rodrigo Siqueira
  */
@@ -11,19 +11,19 @@
 #include <museqa/bio/sequence/dataset.hpp>
 #include <museqa/bio/sequence/encoder.hpp>
 #include <museqa/bio/sequence/attribute.hpp>
-#include <museqa/io/format/fasta/reader.hpp>
+#include <museqa/io/format/dataset/fasta/reader.hpp>
 
-#define TOKEN_COMMENT ';'
-#define TOKEN_DESCRIPTION '>'
+#define MUSEQA_FASTA_TOKEN_COMMENT ';'
+#define MUSEQA_FASTA_TOKEN_DESCRIPTION '>'
 
 MUSEQA_BEGIN_NAMESPACE
 
 namespace
 {
     /**
-     * Checks whether the stream is healthy and can be read from.
-     * @param stream The stream to check if healthy.
-     * @return Is the stream healthy?
+     * Checks whether the stream is healthy and ready to be read from.
+     * @param stream The stream to check if healthy and ready.
+     * @return Is the stream healthy and ready?
      */
     MUSEQA_INLINE static bool is_stream_healthy(std::istream& stream)
     {
@@ -31,41 +31,39 @@ namespace
     }
 
     /**
-     * Checks whether the given token indicates the start of a comment.
+     * Checks whether the given token indicates the start of a comment line.
      * @param token The token to be checked for a comment indication.
-     * @return Does the token indicate a line comment?
+     * @return Does the given token indicate a comment line?
      */
-    MUSEQA_INLINE static bool is_token_comment(int token)
+    MUSEQA_CONSTEXPR static bool is_token_comment(int token)
     {
-        return token == TOKEN_COMMENT;
+        return token == MUSEQA_FASTA_TOKEN_COMMENT;
     }
 
     /**
-     * Checks whether the given token indicates the start of a sequence description.
+     * Checks whether the given token indicates the start of a description line.
      * @param token The token to be checked for a sequence description indication.
      * @return Does the token indicate a sequence description line?
      */
-    MUSEQA_INLINE static bool is_token_description(int token)
+    MUSEQA_CONSTEXPR static bool is_token_description(int token)
     {
-        return token == TOKEN_DESCRIPTION || is_token_comment(token);
+        return token == MUSEQA_FASTA_TOKEN_DESCRIPTION || is_token_comment(token);
     }
 
     /**
-     * Extracts a sequence from a stream of FASTA format.
+     * Extracts a sequence from a stream in FASTA format.
      * @param stream The stream to extract a sequence from.
-     * @return The extracted sequence data.
+     * @return The sequence data read from the stream.
      */
-    static auto read_sequence(std::istream& stream)
-    -> std::pair<std::string, bio::sequence::data_t>
+    static bio::sequence::data_t read_fasta_from_stream(std::istream& stream)
     {
-        std::string line, contents;
+        std::string line, sequence;
 
         while (line.empty() || !is_token_description(line[0])) {
             // We must skip and ignore all lines on stream until we detect one that
             // starts with a description token, which must always be present.
             if (!is_stream_healthy(stream))
                 return {};
-
             std::getline(stream, line);
         }
 
@@ -86,33 +84,28 @@ namespace
         // line until a new sequence or an empty line is detected.
         while (is_stream_healthy(stream) && !is_token_description(stream.peek()))
             if (std::getline(stream, line); line.size() > 0)
-                contents.append(line);
+                sequence.append(line);
             else break;
 
-        return std::pair(description, bio::sequence::data_t {
-            bio::sequence::encode(contents)
-          #ifdef MUSEQA_ENABLE_SEQUENCE_ATTRIBUTES
-            , bio::sequence::attribute::bag_t()
-          #endif
-        });
+        return bio::sequence::data_t(
+            bio::sequence::encode(sequence)
+          , bio::sequence::attribute::bag_t { description }
+        );
     }
 }
 
 /**
- * Extracts all sequences in FASTA format from the given stream.
- * @param stream The FASTA format stream to be parsed.
- * @return A pointer to the parsed sequence dataset.
+ * Reads a sequence dataset in FASTA format from a stream.
+ * @param stream The stream to read a sequence dataset from.
+ * @return A pointer to the sequence dataset read from the stream.
  */
-auto io::format::fasta::reader_t::read_from_stream(std::istream& stream) const
--> memory::pointer::unique_t<bio::sequence::dataset_t>
+auto io::format::dataset::fasta::reader_t::read_from_stream(std::istream& stream) const -> dataset_ptr_t
 {
     auto dataset = factory::memory::pointer::unique<bio::sequence::dataset_t>();
-
     while (!stream.eof() && !stream.fail())
-        if (auto [desc, sequence] = read_sequence(stream); !sequence.buffer.empty())
-            dataset->try_emplace(desc, sequence);
+        if (auto sequence = read_fasta_from_stream(stream); !sequence.buffer.empty())
+            dataset->push_back(sequence);
         else break;
-
     return dataset;
 }
 

@@ -7,10 +7,9 @@
 #pragma once
 
 #include <string>
-#include <unordered_map>
+#include <vector>
 
 #include <museqa/environment.h>
-
 #include <museqa/bio/sequence/buffer.hpp>
 #include <museqa/bio/sequence/attribute.hpp>
 
@@ -26,9 +25,7 @@ namespace bio::sequence
     struct data_t
     {
         sequence::buffer_t buffer;
-      #ifdef MUSEQA_ENABLE_SEQUENCE_ATTRIBUTES
         sequence::attribute::bag_t attribute;
-      #endif
     };
 
     /**
@@ -37,7 +34,32 @@ namespace bio::sequence
      * a single dataset instance.
      * @since 1.0
      */
-    struct dataset_t : std::unordered_map<std::string, data_t> {};
+    struct dataset_t : std::vector<data_t> {
+        using std::vector<data_t>::vector;
+        using std::vector<data_t>::operator=;
+    };
 }
 
 MUSEQA_END_NAMESPACE
+
+/**
+ * Implements a hash operator to uniquely identify a sequence from its description.
+ * This operator may be used to deduplicate sequences from a dataset.
+ * @since 1.0
+ */
+template <>
+struct std::hash<MUSEQA_NAMESPACE::bio::sequence::data_t>
+{
+    typedef MUSEQA_NAMESPACE::bio::sequence::data_t target_t;
+
+    /**
+     * Calculates a hash for the given sequence description.
+     * @param sequence The sequence to calculate a hash for.
+     * @return The resulting hash for the given sequence.
+     */
+    MUSEQA_INLINE auto operator()(const target_t& sequence) const
+    {
+        constexpr auto hash = std::hash<std::string>();
+        return hash (sequence.attribute.description);
+    }
+};
