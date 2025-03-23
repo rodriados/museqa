@@ -8,14 +8,16 @@
 
 #include <string>
 #include <cstdint>
+#include <utility>
 
 #include <museqa/environment.h>
+#include <museqa/utility.hpp>
+
 #include <museqa/bio/alphabet.hpp>
 #include <museqa/bio/sequence/block.hpp>
 #include <museqa/bio/sequence/buffer.hpp>
 #include <museqa/memory/allocator.hpp>
-#include <museqa/memory/pointer/shared.hpp>
-
+#include <museqa/memory/buffer.hpp>
 #include <museqa/thirdparty/fmtlib.h>
 
 MUSEQA_BEGIN_NAMESPACE
@@ -43,6 +45,68 @@ namespace bio::sequence
     static_assert(symbols_by_block > 0, "at least 1 symbol must fit within a sequence block");
 
     /**
+     * Calculates the number of blocks needed to encode a sequence of given length.
+     * @param length The number of symbols within the sequence to be encoded.
+     * @return The number of sequence blocks required to encode the sequence.
+     */
+    MUSEQA_CUDA_INLINE size_t get_blocks_by_length(size_t length) noexcept
+    {
+        const bool has_padding = length % symbols_by_block > 0;
+        return has_padding + length / symbols_by_block;
+    }
+
+    /**
+     * Encodes a biological sequence from its human-readable representation into
+     * a given instance of the internal compressed sequence buffer format.
+     * @param sequence The symbol characters of the sequence to be encoded.
+     * @param length The number of symbols within the target sequence.
+     * @param target The target buffer to encode the sequence into.
+     * @return The number of blocks and symbols used to encode the sequence.
+     */
+    MUSEQA_INLINE std::pair<size_t, size_t> encode_into_buffer(
+        const char *sequence
+      , const size_t length
+      , memory::buffer_t<block_t>& target
+    ) {
+        size_t block_count = 0;
+        size_t capacity = target.capacity();
+
+        for (size_t i = 0, n = 0; n < length && i < capacity; ++i, ++block_count) {
+            block_t& current_block = target[i] = block_t(0);
+            for (size_t j = 0; j < symbols_by_block; ++j, ++n) {
+                const block_t symbol = n < length
+                    ? alphabet::encode(sequence[n])
+                    : alphabet::end;
+                current_block |= symbol << (alphabet::symbol_bits * j);
+            }
+        }
+
+        return std::make_pair(
+            block_count
+          , utility::min(length, capacity * symbols_by_block)
+        );
+    }
+
+    /**
+     * Encodes a biological sequence from a human-readable string representation
+     * into a given instance of the internal compressed sequence buffer format.
+     * @param sequence The sequence string to be encoded.
+     * @param target The target buffer to encode the sequence into.
+     * @return The number of blocks and symbols used to encode the sequence.
+     */
+    MUSEQA_INLINE std::pair<size_t, size_t> encode_into_buffer(
+        const std::string& sequence
+      , memory::buffer_t<block_t>& target
+    ) {
+        const auto z = alphabet::decode(alphabet::end);
+        return encode_into_buffer(
+            sequence.data()
+          , sequence.find_last_not_of(z) + 1
+          , target
+        );
+    }
+
+    /**
      * Encodes a biological sequence from its human-readable representation into
      * the internal compressed sequence buffer format.
      * @param sequence The symbol characters of the sequence to be encoded.
@@ -55,23 +119,10 @@ namespace bio::sequence
       , const size_t length
       , const memory::allocator_t& allocator = factory::memory::allocator<block_t>()
     ) {
-        const bool has_padding = length % symbols_by_block > 0;
-        const auto block_count = has_padding + length / symbols_by_block;
-
-        auto encoded = factory::memory::pointer::shared<block_t>(block_count, allocator);
-
-        for (size_t i = 0, n = 0; i < block_count; ++i) {
-            block_t& current_block = encoded[i] = block_t(0);
-
-            for (size_t j = 0; j < symbols_by_block; ++j, ++n) {
-                const block_t symbol = n < length
-                    ? alphabet::encode(sequence[n])
-                    : alphabet::end;
-                current_block |= symbol << (alphabet::symbol_bits * j);
-            }
-        }
-
-        return buffer_t(encoded, length);
+        auto block_count = get_blocks_by_length(length);
+        auto buffer = factory::memory::buffer<block_t>(block_count, allocator);
+        auto [_, effective_length] = encode_into_buffer(sequence, length, buffer);
+        return buffer_t(buffer.unwrap(), effective_length);
     }
 
     /**
@@ -85,11 +136,11 @@ namespace bio::sequence
         const std::string& sequence
       , const memory::allocator_t& allocator = factory::memory::allocator<block_t>()
     ) {
-        const auto end  = alphabet::decode(alphabet::end);
-        const auto size = sequence.find_last_not_of(end) + 1;
+        const auto z = alphabet::decode(alphabet::end);
         return encode(
             sequence.data()
-          , size, allocator
+          , sequence.find_last_not_of(z) + 1
+          , allocator
         );
     }
 
@@ -101,11 +152,11 @@ namespace bio::sequence
      */
     MUSEQA_INLINE std::string decode(const buffer_t& sequence)
     {
-        const auto end = alphabet::decode(alphabet::end);
+        const auto z = alphabet::decode(alphabet::end);
         const auto mask = ~(~0u << alphabet::symbol_bits);
 
         const size_t length = sequence.length();
-        auto decoded = std::string(length, end);
+        auto decoded = std::string(length, z);
 
         for (size_t i = 0, n = 0; n < length; ++i) {
             auto current_block = sequence[i];
@@ -122,7 +173,7 @@ namespace bio::sequence
 
 MUSEQA_END_NAMESPACE
 
-#ifndef MUSEQA_AVOID_FMTLIB
+#ifndef MUSEQA_AVOID_THIRDPARTY_FMTLIB
 
 /**
  * Implements a string formatter for a biological sequence buffer.

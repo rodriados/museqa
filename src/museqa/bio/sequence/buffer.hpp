@@ -24,7 +24,7 @@ namespace bio::sequence
      * stored compressed within blocks that are easily accessible and decompressible.
      * @since 1.0
      */
-    class buffer_t : protected memory::pointer::shared_t<block_t>
+    class buffer_t : public memory::pointer::shared_t<block_t>
     {
         private:
             typedef memory::pointer::shared_t<block_t> underlying_t;
@@ -70,7 +70,6 @@ namespace bio::sequence
             {}
 
         friend buffer_t encode(const char*, const size_t, const memory::allocator_t&);
-        friend buffer_t encode(const std::string&, const memory::allocator_t&);
         friend std::string decode(const buffer_t&);
     };
 }

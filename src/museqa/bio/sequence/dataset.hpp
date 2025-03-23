@@ -40,6 +40,23 @@ namespace bio::sequence
     };
 }
 
+namespace bio::sequence::dataset
+{
+    /**
+     * Joins a pair of sequence datasets into a single one.
+     * @param destination The destination dataset to join another dataset into.
+     * @param source The dataset to have its sequences copied to the destination.
+     */
+    MUSEQA_INLINE void join(dataset_t& destination, const dataset_t& source)
+    {
+        destination.insert(
+            destination.end()
+          , source.begin()
+          , source.end()
+        );
+    }
+}
+
 MUSEQA_END_NAMESPACE
 
 /**

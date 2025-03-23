@@ -36,7 +36,7 @@ namespace heuristic::algorithm::bootstrap
          * @since 1.0
          */
         struct input_t {
-            std::vector<std::filesystem::path> files = {};
+            std::vector<std::filesystem::path> filelist = {};
         } input;
     };
 }
