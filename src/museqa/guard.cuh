@@ -10,7 +10,7 @@
 
 #include <museqa/environment.h>
 
-#include <museqa/utility.hpp>
+#include <museqa/utility.cuh>
 #include <museqa/exception.hpp>
 
 /*

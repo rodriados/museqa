@@ -15,7 +15,7 @@
   #include <cuda/std/chrono>
 #endif
 
-#include <museqa/utility.hpp>
+#include <museqa/utility.cuh>
 #include <museqa/thirdparty/supertuple.h>
 
 MUSEQA_BEGIN_NAMESPACE
@@ -77,7 +77,9 @@ namespace benchmark
             r = utility::invoke(lambda, std::forward<decltype(params)>(params)...);
         } else  utility::invoke(lambda, std::forward<decltype(params)>(params)...);
 
-        const duration_t duration = C::now() - start;
+        const auto finish = C::now();
+        const duration_t duration = finish - start;
+
         return supertuple::tuple_t(r, duration.count());
     }
 }

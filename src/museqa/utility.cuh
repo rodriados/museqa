@@ -1,4 +1,4 @@
-/** 
+/**
  * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
  * @file Miscellaneous utilities and helper functions.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
@@ -10,9 +10,7 @@
 #include <utility>
 
 #include <museqa/environment.h>
-
-#include <museqa/utility/common.hpp>
-#include <museqa/utility/operators.hpp>
+#include <museqa/utility/common.cuh>
 
 MUSEQA_BEGIN_NAMESPACE
 

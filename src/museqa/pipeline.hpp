@@ -11,7 +11,7 @@
 #include <unordered_map>
 
 #include <museqa/environment.h>
-#include <museqa/utility.hpp>
+#include <museqa/utility.cuh>
 #include <museqa/memory/pointer.hpp>
 
 #include <museqa/thirdparty/supertuple.h>

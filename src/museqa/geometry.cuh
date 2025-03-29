@@ -10,8 +10,8 @@
 #include <utility>
 
 #include <museqa/environment.h>
-#include <museqa/utility.hpp>
-#include <museqa/guard.hpp>
+#include <museqa/utility.cuh>
+#include <museqa/guard.cuh>
 
 #include <museqa/thirdparty/fmtlib.h>
 #include <museqa/thirdparty/reflector.h>
@@ -502,7 +502,7 @@ MUSEQA_DISABLE_GCC_WARNING_END("-Wpedantic")
 
 MUSEQA_END_NAMESPACE
 
-#ifndef MUSEQA_AVOID_REFLECTOR
+#ifndef MUSEQA_AVOID_THIRDPARTY_REFLECTOR
 
 /**
  * Explicitly defines the reflection for a generic point.
@@ -527,7 +527,7 @@ struct reflector::provider_t<MUSEQA_NAMESPACE::geometry::point_t<P, T>>
 
 #endif
 
-#ifndef MUSEQA_AVOID_FMTLIB
+#ifndef MUSEQA_AVOID_THIRDPARTY_FMTLIB
 
 /**
  * Implements a string formatter for a generic point type.

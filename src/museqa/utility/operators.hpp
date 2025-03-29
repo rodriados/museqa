@@ -7,7 +7,7 @@
 #pragma once
 
 #include <museqa/environment.h>
-#include <museqa/utility.hpp>
+#include <museqa/utility.cuh>
 
 MUSEQA_BEGIN_NAMESPACE
 
