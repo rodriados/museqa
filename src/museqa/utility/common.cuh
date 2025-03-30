@@ -10,6 +10,7 @@
 #include <utility>
 
 #include <museqa/environment.h>
+#include <museqa/utility/oeis.cuh>
 
 MUSEQA_BEGIN_NAMESPACE
 
