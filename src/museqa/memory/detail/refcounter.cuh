@@ -26,10 +26,6 @@ namespace memory::detail
         private:
             intptr_t m_counter = 0;
 
-        private:
-            template <typename T>
-            using is_refcount_enabled_t = std::enable_if_t<std::is_base_of_v<refcounter_t, T>>;
-
         protected:
             MUSEQA_CONSTEXPR refcounter_t() noexcept = default;
             MUSEQA_CONSTEXPR refcounter_t(const refcounter_t&) = delete;
@@ -40,53 +36,67 @@ namespace memory::detail
 
             MUSEQA_INLINE virtual ~refcounter_t() = default;
 
-        public:
-            /**
-             * Creates a new instance of the given reference-counter enabled object
-             * and instantly acquires its ownership.
-             * @tparam T The reference-counter enabled type to create instance of.
-             * @tparam P The types of arguments given to create the new instance.
-             * @param args The constructor arguments for the instantiation.
-             * @return The owned pointer to the new instance.
-             */
-            template <typename T, typename ...P, typename = is_refcount_enabled_t<T>>
-            MUSEQA_INLINE static auto acquire_ownership(P&&... args) -> T*
-            {
-                return acquire_ownership(
-                    new T(std::forward<decltype(args)>(args)...)
-                );
-            }
-
-            /**
-             * Acquires ownership of a reference-counter enabled object instance.
-             * @tparam T The reference-counter enabled type to share ownership of.
-             * @param refcounter The instance to acquire ownership of.
-             * @return The owned pointer to the given instance.
-             */
-            template <typename T, typename = is_refcount_enabled_t<T>>
-            MUSEQA_CUDA_INLINE static auto acquire_ownership(T *refcounter) noexcept -> T*
-            {
-              #if MUSEQA_RUNTIME_HOST
-                if (refcounter)
-                    ++refcounter->m_counter;
-              #endif
-                return refcounter;
-            }
-
-            /**
-             * Releases ownership of a reference-counter enabled object instance.
-             * @tparam T The reference-counter enabled type to release ownership.
-             * @param refcounter The instance to release ownership of.
-             */
-            template <typename T, typename = is_refcount_enabled_t<T>>
-            MUSEQA_CUDA_INLINE static void release_ownership(T *refcounter) MUSEQA_SAFE_EXCEPT
-            {
-              #if MUSEQA_RUNTIME_HOST
-                if (refcounter && --refcounter->m_counter <= 0)
-                    delete refcounter;
-              #endif
-            }
+        template <typename T> friend auto share_ownership(T*) noexcept -> T*;
+        template <typename T> friend void release_ownership(T*) MUSEQA_SAFE_EXCEPT;
     };
+
+    /**
+     * Indicates whether the given type is reference-counter-enabled.
+     * @tparam T The type check if reference-counter-enabled.
+     * @since 1.0
+     */
+    template <typename T>
+    MUSEQA_CONSTEXPR bool is_refcounter_enabled = std::is_base_of_v<refcounter_t, T>;
+
+    /**
+     * Creates a new instance of the given reference-counter-enabled type, using
+     * the given parameters, and instantly acquires ownership of it.
+     * @tparam T The reference-counter enabled type to create a new instance of.
+     * @tparam P The types of arguments given to create the new instance.
+     * @param args The constructor arguments for the type instantiation.
+     * @return The acquired pointer to the new type instance.
+     */
+    template <typename T, typename ...P>
+    MUSEQA_INLINE auto acquire_ownership(P&&... args) -> T*
+    {
+        static_assert(is_refcounter_enabled<T>
+          , "cannot acquire ownership of type that is not reference-counter-enabled");
+        return share_ownership(new T(std::forward<decltype(args)>(args)...));
+    }
+
+    /**
+     * Acquires shared ownership of an instance of a reference-counter-enabled type.
+     * @tparam T The reference-counter-enabled type to share ownership of.
+     * @param refcounter The instance to acquire shared ownership of.
+     * @return The shared pointer to the given type instance.
+     */
+    template <typename T>
+    MUSEQA_CUDA_INLINE auto share_ownership(T *refcounter) noexcept -> T*
+    {
+        static_assert(is_refcounter_enabled<T>
+          , "cannot acquire ownership of type that is not reference-counter-enabled");
+      #if MUSEQA_RUNTIME_HOST
+        if (refcounter)
+            ++refcounter->m_counter;
+      #endif
+        return refcounter;
+    }
+
+    /**
+     * Releases ownership of an instance of a reference-counter-enabled type.
+     * @tparam T The reference-counter-enabled type to release ownership.
+     * @param refcounter The instance to release ownership of.
+     */
+    template <typename T>
+    MUSEQA_CUDA_INLINE void release_ownership(T *refcounter) MUSEQA_SAFE_EXCEPT
+    {
+        static_assert(is_refcounter_enabled<T>
+          , "cannot release ownership of type that is not reference-counter-enabled");
+      #if MUSEQA_RUNTIME_HOST
+        if (refcounter && --refcounter->m_counter <= 0)
+            delete refcounter;
+      #endif
+    }
 }
 
 MUSEQA_END_NAMESPACE
