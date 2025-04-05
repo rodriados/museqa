@@ -21,8 +21,7 @@
  * branch predictions in exchange to a slight performance improvement when everything
  * goes as expected, the great majority of times.
  */
-#if defined(__has_cpp_attribute) && __has_cpp_attribute(unlikely) &&           \
-    MUSEQA_HOST_COMPILER == MUSEQA_OPT_HOST_COMPILER_CLANG  /* GCC bug */
+#if MUSEQA_CPP_DIALECT >= 2020 && defined(__has_cpp_attribute) && __has_cpp_attribute(unlikely)
   #define MUSEQA_UNLIKELY(condition)                                           \
     ((condition)) [[unlikely]]
 

@@ -92,30 +92,30 @@ namespace utility
     }
 
     /**
-     * Swaps the contents of two variables of same type
-     * @tparam T The variables' type.
-     * @param a The first variable to have its contents swapped.
-     * @param b The second variable to have its contents swapped.
+     * Swaps the contents of two variables of mutually convertible types.
+     * @tparam T The first variable type.
+     * @tparam U The second variable type.
+     * @param a The reference to the first variable to have its contents swapped.
+     * @param b The reference to the second variable to have its contents swapped.
      */
-    template <typename T>
-    MUSEQA_CUDA_CONSTEXPR void swap(T& a, T& b) noexcept(
-        std::is_nothrow_move_constructible_v<T> &&
-        std::is_nothrow_move_assignable_v<T>
-    ) {
+    template <typename T, typename U>
+    MUSEQA_CUDA_CONSTEXPR void swap(T& a, U& b)
+    {
         T x = std::move(a);
           a = std::move(b);
           b = std::move(x);
     }
 
     /**
-     * Swaps the elements of two arrays of same type and size.
-     * @tparam T The arrays' elements' swappable type.
-     * @tparam N The arrays' size.
+     * Swaps the elements of two arrays of the same compile-time known size.
+     * @tparam T The type of the elements of the first array.
+     * @tparam U The type of the elements of the second array.
+     * @tparam N The compile-time known size of the arrays.
      * @param a The first array to have its elements swapped.
      * @param b The second array to have its elements swapped.
      */
-    template <typename T, size_t N>
-    MUSEQA_CUDA_CONSTEXPR void swap(T (&a)[N], T (&b)[N]) noexcept(noexcept(swap(*a, *b)))
+    template <typename T, typename U, size_t N>
+    MUSEQA_CUDA_CONSTEXPR void swap(T (&a)[N], U (&b)[N])
     {
         for(size_t i = 0; i < N; ++i)
             swap(a[i], b[i]);
