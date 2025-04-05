@@ -11,6 +11,8 @@
 
 MUSEQA_BEGIN_NAMESPACE
 
+#define MUSEQA_CUDA_OPERATOR_LINKAGE MUSEQA_CONSTEXPR static __device__
+
 namespace utility
 {
     /**
@@ -19,7 +21,7 @@ namespace utility
      * @param y The second operand value.
      * @return The logical-and result between operands.
      */
-    MUSEQA_CONSTEXPR struct {
+    MUSEQA_CUDA_OPERATOR_LINKAGE struct {
         template <typename X, typename Y> MUSEQA_CUDA_CONSTEXPR
         bool operator()(X&& x, Y&& y) const noexcept { return x && y; }
     } andL;
@@ -30,7 +32,7 @@ namespace utility
      * @param y The second operand value.
      * @return The logical-or result between operands.
      */
-    MUSEQA_CONSTEXPR struct {
+    MUSEQA_CUDA_OPERATOR_LINKAGE struct {
         template <typename X, typename Y> MUSEQA_CUDA_CONSTEXPR
         bool operator()(X&& x, Y&& y) const noexcept { return x || y; }
     } orL;
@@ -41,7 +43,7 @@ namespace utility
      * @param y The second operand value.
      * @return The less-than result between operands.
      */
-    MUSEQA_CONSTEXPR struct {
+    MUSEQA_CUDA_OPERATOR_LINKAGE struct {
         template <typename X, typename Y> MUSEQA_CUDA_CONSTEXPR
         bool operator()(X&& x, Y&& y) const noexcept { return x < y; }
     } lt, less;
@@ -52,7 +54,7 @@ namespace utility
      * @param y The second operand value.
      * @return The less-than-or-equal result between operands.
      */
-    MUSEQA_CONSTEXPR struct {
+    MUSEQA_CUDA_OPERATOR_LINKAGE struct {
         template <typename X, typename Y> MUSEQA_CUDA_CONSTEXPR
         bool operator()(X&& x, Y&& y) const noexcept { return x <= y; }
     } lte, less_equal;
@@ -63,7 +65,7 @@ namespace utility
      * @param y The second operand value.
      * @return The greater-than result between operands.
      */
-    MUSEQA_CONSTEXPR struct {
+    MUSEQA_CUDA_OPERATOR_LINKAGE struct {
         template <typename X, typename Y> MUSEQA_CUDA_CONSTEXPR
         bool operator()(X&& x, Y&& y) const noexcept { return x > y; }
     } gt, greater;
@@ -74,7 +76,7 @@ namespace utility
      * @param y The second operand value.
      * @return The greater-than-or-equal result between operands.
      */
-    MUSEQA_CONSTEXPR struct {
+    MUSEQA_CUDA_OPERATOR_LINKAGE struct {
         template <typename X, typename Y> MUSEQA_CUDA_CONSTEXPR
         bool operator()(X&& x, Y&& y) const noexcept { return x >= y; }
     } gte, greater_equal;
@@ -85,7 +87,7 @@ namespace utility
      * @param y The second operand value.
      * @return The equality result between operands.
      */
-    MUSEQA_CONSTEXPR struct {
+    MUSEQA_CUDA_OPERATOR_LINKAGE struct {
         template <typename X, typename Y> MUSEQA_CUDA_CONSTEXPR
         bool operator()(X&& x, Y&& y) const noexcept { return x == y; }
     } equ, equal;
@@ -96,7 +98,7 @@ namespace utility
      * @param y The second operand value.
      * @return The addition result between operands.
      */
-    MUSEQA_CONSTEXPR struct {
+    MUSEQA_CUDA_OPERATOR_LINKAGE struct {
         template <typename X, typename Y> MUSEQA_CUDA_CONSTEXPR
         auto operator()(X&& x, Y&& y) const noexcept { return x + y; }
     } add;
@@ -107,7 +109,7 @@ namespace utility
      * @param y The first operand value.
      * @return The addition result between operands.
      */
-    MUSEQA_CONSTEXPR struct {
+    MUSEQA_CUDA_OPERATOR_LINKAGE struct {
         template <typename X, typename Y> MUSEQA_CUDA_CONSTEXPR
         auto operator()(X&& x, Y&& y) const noexcept { return y + x; }
     } radd;
@@ -118,7 +120,7 @@ namespace utility
      * @param y The second operand value.
      * @return The subtraction result between operands.
      */
-    MUSEQA_CONSTEXPR struct {
+    MUSEQA_CUDA_OPERATOR_LINKAGE struct {
         template <typename X, typename Y> MUSEQA_CUDA_CONSTEXPR
         auto operator()(X&& x, Y&& y) const noexcept { return x - y; }
     } sub;
@@ -129,7 +131,7 @@ namespace utility
      * @param y The first operand value.
      * @return The subtraction result between operands.
      */
-    MUSEQA_CONSTEXPR struct {
+    MUSEQA_CUDA_OPERATOR_LINKAGE struct {
         template <typename X, typename Y> MUSEQA_CUDA_CONSTEXPR
         auto operator()(X&& x, Y&& y) const noexcept { return y - x; }
     } rsub;
@@ -140,7 +142,7 @@ namespace utility
      * @param y The second operand value.
      * @return The multiplication result between operands.
      */
-    MUSEQA_CONSTEXPR struct {
+    MUSEQA_CUDA_OPERATOR_LINKAGE struct {
         template <typename X, typename Y> MUSEQA_CUDA_CONSTEXPR
         auto operator()(X&& x, Y&& y) const noexcept { return x * y; }
     } mul;
@@ -151,7 +153,7 @@ namespace utility
      * @param y The first operand value.
      * @return The multiplication result between operands.
      */
-    MUSEQA_CONSTEXPR struct {
+    MUSEQA_CUDA_OPERATOR_LINKAGE struct {
         template <typename X, typename Y> MUSEQA_CUDA_CONSTEXPR
         auto operator()(X&& x, Y&& y) const noexcept { return y * x; }
     } rmul;
@@ -162,7 +164,7 @@ namespace utility
      * @param y The second operand value.
      * @return The division result between operands.
      */
-    MUSEQA_CONSTEXPR struct {
+    MUSEQA_CUDA_OPERATOR_LINKAGE struct {
         template <typename X, typename Y> MUSEQA_CUDA_CONSTEXPR
         auto operator()(X&& x, Y&& y) const noexcept { return x / y; }
     } div;
@@ -173,7 +175,7 @@ namespace utility
      * @param y The first operand value.
      * @return The division result between operands.
      */
-    MUSEQA_CONSTEXPR struct {
+    MUSEQA_CUDA_OPERATOR_LINKAGE struct {
         template <typename X, typename Y> MUSEQA_CUDA_CONSTEXPR
         auto operator()(X&& x, Y&& y) const noexcept { return y / x; }
     } rdiv;
@@ -184,7 +186,7 @@ namespace utility
      * @param y The second operand value.
      * @return The modulo result between operands.
      */
-    MUSEQA_CONSTEXPR struct {
+    MUSEQA_CUDA_OPERATOR_LINKAGE struct {
         template <typename X, typename Y> MUSEQA_CUDA_CONSTEXPR
         auto operator()(X&& x, Y&& y) const noexcept { return x % y; }
     } mod;
@@ -195,7 +197,7 @@ namespace utility
      * @param y The first operand value.
      * @return The modulo result between operands.
      */
-    MUSEQA_CONSTEXPR struct {
+    MUSEQA_CUDA_OPERATOR_LINKAGE struct {
         template <typename X, typename Y> MUSEQA_CUDA_CONSTEXPR
         auto operator()(X&& x, Y&& y) const noexcept { return y % x; }
     } rmod;
@@ -206,7 +208,7 @@ namespace utility
      * @param y The second operand value.
      * @return The minimum between the operands.
      */
-    MUSEQA_CONSTEXPR struct {
+    MUSEQA_CUDA_OPERATOR_LINKAGE struct {
         template <typename X, typename Y> MUSEQA_CUDA_CONSTEXPR
         auto operator()(X&& x, Y&& y) const noexcept { return x <= y ? x : y; }
     } min;
@@ -218,7 +220,7 @@ namespace utility
      * @param z The list of other operand values.
      * @return The maximum between the operands.
      */
-    MUSEQA_CONSTEXPR struct {
+    MUSEQA_CUDA_OPERATOR_LINKAGE struct {
         template <typename X, typename Y> MUSEQA_CUDA_CONSTEXPR
         auto operator()(X&& x, Y&& y) const noexcept { return x >= y ? x : y; }
     } max;
@@ -228,7 +230,7 @@ namespace utility
      * @param x The list of parameters to be checked.
      * @return Are all given values truthy?
      */
-    MUSEQA_CONSTEXPR struct {
+    MUSEQA_CUDA_OPERATOR_LINKAGE struct {
         template <typename ...X> MUSEQA_CUDA_CONSTEXPR
         bool operator()(X&&... x) const noexcept { return (x && ... && true); }
     } all;
@@ -238,7 +240,7 @@ namespace utility
      * @param x The list of parameters to be checked.
      * @return Is there at least one given value that is truth-y?
      */
-    MUSEQA_CONSTEXPR struct {
+    MUSEQA_CUDA_OPERATOR_LINKAGE struct {
         template <typename ...X> MUSEQA_CUDA_CONSTEXPR
         bool operator()(X&&... x) const noexcept { return (x || ... || false); }
     } any;
@@ -248,10 +250,12 @@ namespace utility
      * @param x The list of parameters to be checked.
      * @return Are all given values false-y?
      */
-    MUSEQA_CONSTEXPR struct {
+    MUSEQA_CUDA_OPERATOR_LINKAGE struct {
         template <typename ...X> MUSEQA_CUDA_CONSTEXPR
         bool operator()(X&&... x) const noexcept { return !any(x...); }
     } none;
 }
+
+#undef MUSEQA_CUDA_OPERATOR_LINKAGE
 
 MUSEQA_END_NAMESPACE

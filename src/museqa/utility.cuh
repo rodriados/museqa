@@ -11,6 +11,7 @@
 
 #include <museqa/environment.h>
 #include <museqa/utility/common.cuh>
+#include <museqa/utility/operators.cuh>
 
 MUSEQA_BEGIN_NAMESPACE
 
