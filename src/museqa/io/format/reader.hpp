@@ -26,6 +26,15 @@ namespace io::format
     {
         typedef T target_t;
 
+        MUSEQA_CONSTEXPR reader_t() = default;
+        MUSEQA_CONSTEXPR reader_t(const reader_t&) = default;
+        MUSEQA_CONSTEXPR reader_t(reader_t&&) = default;
+
+        MUSEQA_INLINE reader_t& operator=(const reader_t&) = default;
+        MUSEQA_INLINE reader_t& operator=(reader_t&&) = default;
+
+        MUSEQA_CONSTEXPR virtual ~reader_t() = default;
+
         /**
          * Reads a target type instance from a file.
          * @param path The path of the file to be read.
@@ -35,37 +44,25 @@ namespace io::format
     };
 
     /**
+     * Creates a generic format reader for the given type.
+     * @tparam T The type to get a generic reader from.
+     * @return A format reader instance for the given type.
+     */
+    template <typename T>
+    memory::pointer::unique_t<reader_t<T>> make_reader();
+
+    /**
      * Reads a file and produces an instance of given type.
      * @tparam T The target type to read an instance of.
      * @param path The path of the file to read an instance from.
      * @return A pointer to an instance of target type.
      */
     template <typename T>
-    MUSEQA_INLINE memory::pointer::unique_t<T> read(const std::filesystem::path&);
-}
-
-namespace factory::io::format
-{
-    /**
-     * Creates a generic format reader for the given type.
-     * @tparam T The type to get a generic reader from.
-     * @return A format reader instance for the given type.
-     */
-    template <typename T>
-    museqa::memory::pointer::unique_t<museqa::io::format::reader_t<T>> reader() noexcept;
-}
-
-/**
- * Reads a file and produces an instance of given type.
- * @tparam T The target type to read an instance of.
- * @param path The path of the file to read an instance from.
- * @return A pointer to an instance of target type.
- */
-template <typename T>
-MUSEQA_INLINE memory::pointer::unique_t<T> io::format::read(const std::filesystem::path& path)
-{
-    const auto reader = factory::io::format::reader<T>();
-    return reader->read(path);
+    MUSEQA_INLINE memory::pointer::unique_t<T> read(const std::filesystem::path& path)
+    {
+        const auto reader = make_reader<T>();
+        return reader->read(path);
+    }
 }
 
 MUSEQA_END_NAMESPACE

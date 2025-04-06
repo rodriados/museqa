@@ -34,22 +34,36 @@ namespace io::format::dataset
 
         public:
             /**
-             * Reads a sequence dataset instance from a stream.
+             * Reads a sequence dataset from a stream into an existing instance.
+             * @param dataset The dataset instance to read into from stream.
              * @param stream The stream to read a sequence dataset from.
-             * @return A pointer to the sequence dataset read from the stream.
              */
-            virtual dataset_ptr_t read_from_stream(std::istream&) const = 0;
+            virtual void read_from_stream(dataset_ptr_t&, std::istream&) const = 0;
+
+            /**
+             * Reads a sequence dataset from a file into an existing instance.
+             * @param dataset The dataset instance to read into from file.
+             * @param path The file to read a sequence dataset from.
+             */
+            MUSEQA_INLINE virtual void read_from_file(
+                dataset_ptr_t& dataset
+              , const std::filesystem::path& path
+            ) const {
+                if (auto fstream = std::ifstream(path); !fstream.fail())
+                    read_from_stream(dataset, fstream);
+                else throw io::exception_t("file does not exist or is not readable");
+            }
 
             /**
              * Reads a sequence dataset instance from a file.
              * @param path The file to read a sequence dataset from.
              * @return A pointer to the sequence dataset read from the file.
              */
-            MUSEQA_INLINE dataset_ptr_t read(const std::filesystem::path& path) const override
+            MUSEQA_INLINE dataset_ptr_t read(const std::filesystem::path& path) const final
             {
-                if (auto fstream = std::ifstream(path); !fstream.fail())
-                    return read_from_stream(fstream);
-                else throw io::exception_t("file does not exist or it not readable");
+                auto dataset = factory::memory::pointer::unique<bio::sequence::dataset_t>();
+                read_from_file(dataset, path);
+                return dataset;
             }
     };
 }

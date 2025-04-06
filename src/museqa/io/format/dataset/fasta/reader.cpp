@@ -96,17 +96,18 @@ namespace
 
 /**
  * Reads a sequence dataset in FASTA format from a stream.
+ * @param dataset The dataset instance to read into from stream.
  * @param stream The stream to read a sequence dataset from.
- * @return A pointer to the sequence dataset read from the stream.
  */
-auto io::format::dataset::fasta::reader_t::read_from_stream(std::istream& stream) const -> dataset_ptr_t
-{
-    auto dataset = factory::memory::pointer::unique<bio::sequence::dataset_t>();
-    while (!stream.eof() && !stream.fail())
+void io::format::dataset::fasta::reader_t::read_from_stream(
+    dataset_ptr_t& dataset
+  , std::istream& stream
+) const {
+    while (!stream.eof() && !stream.fail()) {
         if (auto sequence = read_fasta_from_stream(stream); !sequence.buffer.empty())
             dataset->push_back(sequence);
         else break;
-    return dataset;
+    }
 }
 
 MUSEQA_END_NAMESPACE

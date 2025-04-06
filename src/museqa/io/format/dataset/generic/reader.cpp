@@ -51,16 +51,17 @@ namespace
 }
 
 /**
- * Reads sequences from a file into an un-finalized dataset buffer.
- * @param path The path of the file to read a sequence dataset from.
- * @param buffer The sequence buffer to read new sequences to.
+ * Reads a sequence dataset from a file into an existing instance.
+ * @param dataset The dataset instance to read into from file.
+ * @param path The file to read a sequence dataset from.
  */
-auto io::format::dataset::generic::reader_t::read(
+void io::format::dataset::generic::reader_t::read_from_file(
+    dataset_ptr_t& dataset
     const std::filesystem::path& path
-) const -> dataset_ptr_t try {
+) const try {
     const auto factory = reader_factory.at(path.extension());
     const auto reader  = factory ();
-    return reader->read(path);
+    reader->read_from_file(dataset, path);
 } catch (const std::out_of_range&) {
     throw io::exception_t("no reader known for given file extension type");
 }

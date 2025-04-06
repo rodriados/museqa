@@ -25,10 +25,10 @@ namespace io::format::dataset::fasta
     {
         /**
          * Reads a sequence dataset in FASTA format from a stream.
+         * @param dataset The dataset instance to read into from stream.
          * @param stream The stream to read a sequence dataset from.
-         * @return A pointer to the sequence dataset read from the stream.
          */
-        dataset_ptr_t read_from_stream(std::istream&) const override;
+        void read_from_stream(dataset_ptr_t&, std::istream&) const override;
     };
 }
 

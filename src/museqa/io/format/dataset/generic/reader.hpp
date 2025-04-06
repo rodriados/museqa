@@ -25,38 +25,37 @@ namespace io::format::dataset::generic
      * uses the extension of files to determine which specialized reader to use.
      * @since 1.0
      */
-    struct reader_t : io::format::dataset::reader_t
+    struct reader_t final : io::format::dataset::reader_t
     {
         /**
-         * Reads a sequence dataset instance from a file.
+         * Reads a sequence dataset from a file into an existing instance.
+         * @param dataset The dataset instance to read into from file.
          * @param path The file to read a sequence dataset from.
-         * @return A pointer to the sequence dataset read from the file.
          */
-        dataset_ptr_t read(const std::filesystem::path&) const override;
+        void read_from_file(dataset_ptr_t&, const std::filesystem::path&) const override;
 
         /**
          * Rejects reading stream as the format can only be known from a file's
          * path extension. Therefore, we bail out immediately.
          * @throws The file format is unknown and stream cannot be read.
          */
-        MUSEQA_INLINE dataset_ptr_t read_from_stream(std::istream&) const override
+        MUSEQA_INLINE void read_from_stream(dataset_ptr_t&, std::istream&) const override
         {
             throw io::exception_t("unable to read stream of unknown format");
         }
     };
-}
 
-/**
- * Creates a sequence dataset reader that automatically identifies the file format
- * reader to be used depending on the given filename extension.
- * @return A generic format reader instance for sequence datasets.
- */
-template <>
-MUSEQA_INLINE auto factory::io::format::reader<bio::sequence::dataset_t>() noexcept
--> museqa::memory::pointer::unique_t<museqa::io::format::reader_t<bio::sequence::dataset_t>>
-{
-    using generic_reader_t = museqa::io::format::dataset::generic::reader_t;
-    return factory::memory::pointer::unique<generic_reader_t>();
+    /**
+     * Creates a sequence dataset reader that automatically identifies the file
+     * format reader to be used depending on the given filename extension.
+     * @return A generic format reader instance for sequence datasets.
+     */
+    template <>
+    MUSEQA_INLINE auto make_reader<bio::sequence::dataset_t>()
+    -> memory::pointer::unique_t<io::format::reader_t<bio::sequence::dataset_t>>
+    {
+        return factory::memory::pointer::unique<reader_t>();
+    }
 }
 
 MUSEQA_END_NAMESPACE
