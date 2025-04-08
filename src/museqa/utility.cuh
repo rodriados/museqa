@@ -65,4 +65,12 @@ using pure_t = std::conditional_t<
  */
 struct nothing_t : public identity_t<void> {};
 
+/**
+ * A safe expression to use for memory allocation for getting the size of a type
+ * without causing a compilation errors when void.
+ * @since 1.0
+ */
+template <typename T>
+MUSEQA_CONSTEXPR size_t size_of = sizeof(std::conditional_t<std::is_void_v<T>, uint8_t, T>);
+
 MUSEQA_END_NAMESPACE

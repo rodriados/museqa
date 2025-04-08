@@ -34,10 +34,10 @@ namespace memory::detail
             MUSEQA_INLINE refcounter_t& operator=(const refcounter_t&) = delete;
             MUSEQA_INLINE refcounter_t& operator=(refcounter_t&&) = delete;
 
-            MUSEQA_INLINE virtual ~refcounter_t() = default;
+            MUSEQA_CUDA_INLINE virtual ~refcounter_t() {}
 
-        template <typename T> friend auto share_ownership(T*) noexcept -> T*;
-        template <typename T> friend void release_ownership(T*) MUSEQA_SAFE_EXCEPT;
+        template <typename T> friend MUSEQA_CUDA_ENABLED auto share_ownership(T*) noexcept -> T*;
+        template <typename T> friend MUSEQA_CUDA_ENABLED void release_ownership(T*) MUSEQA_SAFE_EXCEPT;
     };
 
     /**
@@ -57,7 +57,7 @@ namespace memory::detail
      * @return The acquired pointer to the new type instance.
      */
     template <typename T, typename ...P>
-    MUSEQA_INLINE auto acquire_ownership(P&&... args) -> T*
+    MUSEQA_CUDA_INLINE auto acquire_ownership(P&&... args) -> T*
     {
         static_assert(is_refcounter_enabled<T>
           , "cannot acquire ownership of type that is not reference-counter-enabled");
@@ -75,10 +75,8 @@ namespace memory::detail
     {
         static_assert(is_refcounter_enabled<T>
           , "cannot acquire ownership of type that is not reference-counter-enabled");
-      #if MUSEQA_RUNTIME_HOST
         if (refcounter)
             ++refcounter->m_counter;
-      #endif
         return refcounter;
     }
 
@@ -92,10 +90,8 @@ namespace memory::detail
     {
         static_assert(is_refcounter_enabled<T>
           , "cannot release ownership of type that is not reference-counter-enabled");
-      #if MUSEQA_RUNTIME_HOST
         if (refcounter && --refcounter->m_counter <= 0)
             delete refcounter;
-      #endif
     }
 }
 

@@ -31,6 +31,8 @@ namespace memory
         using detail::allocator_t::allocate;
         using detail::deleter_t::deallocate;
 
+        static_assert(!std::is_reference_v<T>, "unable to create allocator for reference types");
+
         /**
          * Allocates memory for type T by invoking the concrete allocator implementation.
          * @param count The number of elements to allocate memory for.
@@ -38,8 +40,7 @@ namespace memory
          */
         MUSEQA_CUDA_INLINE auto allocate(size_t count) const -> element_t*
         {
-            using proxy_t = std::conditional_t<std::is_void_v<T>, uint8_t, element_t>;
-            return static_cast<element_t*>(allocate(count, sizeof(proxy_t)));
+            return static_cast<element_t*>(allocate(count, size_of<element_t>));
         }
 
         /**
@@ -54,12 +55,15 @@ namespace memory
 
     /**
      * Indicates whether the given type is an allocator for the type T.
-     * @tparam T The allocator element type.
-     * @tparam A The type to check if it is an allocator.
+     * @tparam T The allocator target element type.
+     * @tparam A The type to check if it is an allocator for type T.
      * @since 1.0
      */
     template <typename T, typename A>
-    MUSEQA_CONSTEXPR bool is_allocator = std::is_base_of_v<allocator_t<T>, A>;
+    MUSEQA_CONSTEXPR bool is_allocator = std::is_base_of_v<allocator_t<T>, A> || (
+        std::is_base_of_v<detail::allocator_t, A> &&
+        std::is_base_of_v<detail::deleter_t, A>
+    );
 
     /**
      * The default memory allocator implementation for a generic type T.
@@ -67,7 +71,7 @@ namespace memory
      * @see museqa::memory::allocator_t
      * @since 1.0
      */
-    template <typename T>
+    template <typename T = void>
     struct default_allocator_t final : allocator_t<T>
     {
         using allocator_t<T>::allocate;
