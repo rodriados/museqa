@@ -40,7 +40,7 @@ namespace memory
          */
         MUSEQA_CUDA_INLINE auto allocate(size_t count) const -> element_t*
         {
-            return static_cast<element_t*>(allocate(count, size_of<element_t>));
+            return static_cast<element_t*>(allocate(count, sizeof(nonvoid_t<element_t>)));
         }
 
         /**

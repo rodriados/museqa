@@ -20,8 +20,6 @@ MUSEQA_BEGIN_NAMESPACE
 
 namespace memory::pointer
 {
-    namespace md = memory::detail;
-
     /**
      * A generic pointer wrapper with automatic lifetime duration management that
      * guarantees unique ownership at all times.
@@ -36,7 +34,7 @@ namespace memory::pointer
 
         private:
             typedef wrapper_t<T> super_t;
-            md::refcounter_t *m_ref = nullptr;
+            memory::detail::refcounter_t *m_ref = nullptr;
 
         template <typename> friend class unique_t;
         template <typename> friend class shared_t;
@@ -55,7 +53,7 @@ namespace memory::pointer
             template <typename A>
             MUSEQA_CUDA_INLINE explicit unique_t(T *ptr, const A& allocator)
               : super_t (ptr)
-              , m_ref (md::acquire_ownership<detail::metadata_t<A>>(ptr, allocator))
+              , m_ref (memory::detail::acquire_ownership<detail::metadata_t<A>>(ptr, allocator))
             {}
 
             /**
@@ -84,7 +82,7 @@ namespace memory::pointer
              */
             MUSEQA_CUDA_INLINE ~unique_t() MUSEQA_SAFE_EXCEPT
             {
-                md::release_ownership(m_ref);
+                memory::detail::release_ownership(m_ref);
             }
 
             /**
@@ -156,24 +154,14 @@ namespace memory::pointer
      * @param allocator The allocator to create the elements with.
      * @return The new unique pointer wrapper instance.
      */
-    template <typename T = void, typename A, typename = std::enable_if_t<is_allocator<T, A>>>
-    MUSEQA_CUDA_INLINE unique_t<T> make_unique(size_t count, const A& allocator)
+    template <
+        typename T = void
+      , typename A = decltype(make_allocator<T>())
+      , typename = std::enable_if_t<is_allocator<T, A>>>
+    MUSEQA_CUDA_INLINE unique_t<T> make_unique(size_t count = 1, const A& allocator = make_allocator<T>())
     {
-        auto ptr = (T*) allocator.allocate(count, size_of<T>);
+        auto ptr = (T*) allocator.allocate(count, sizeof(nonvoid_t<T>));
         return unique_t(ptr, allocator);
-    }
-
-    /**
-     * Allocates memory for the given element type with the default allocator.
-     * @tparam T The type to be allocated into a new unique pointer wrapper.
-     * @param count The total number of elements to be allocated.
-     * @return The new unique pointer wrapper instance.
-     */
-    template <typename T = void>
-    MUSEQA_CUDA_INLINE unique_t<T> make_unique(size_t count = 1)
-    {
-        const auto allocator = make_allocator<T>();
-        return make_unique<T>(count, allocator);
     }
 }
 
