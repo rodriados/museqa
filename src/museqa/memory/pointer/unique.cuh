@@ -13,8 +13,8 @@
 
 #include <museqa/memory/allocator.cuh>
 #include <museqa/memory/detail/refcounter.cuh>
+#include <museqa/memory/detail/refmetadata.cuh>
 #include <museqa/memory/pointer/wrapper.cuh>
-#include <museqa/memory/pointer/detail/metadata.cuh>
 
 MUSEQA_BEGIN_NAMESPACE
 
@@ -34,7 +34,7 @@ namespace memory::pointer
 
         private:
             typedef wrapper_t<T> super_t;
-            memory::detail::refcounter_t *m_ref = nullptr;
+            detail::refcounter_t *m_ref = nullptr;
 
         template <typename> friend class unique_t;
         template <typename> friend class shared_t;
@@ -50,10 +50,9 @@ namespace memory::pointer
              * @param ptr The raw pointer to be wrapped.
              * @param allocator The given pointer allocator.
              */
-            template <typename A>
+            template <typename A, typename = std::enable_if_t<is_allocator<T, A>>>
             MUSEQA_CUDA_INLINE explicit unique_t(T *ptr, const A& allocator)
-              : super_t (ptr)
-              , m_ref (memory::detail::acquire_ownership<detail::metadata_t<A>>(ptr, allocator))
+              : unique_t (ptr, detail::acquire_ownership<detail::refmetadata_t<A>>(ptr, allocator))
             {}
 
             /**
@@ -131,6 +130,16 @@ namespace memory::pointer
             }
 
         private:
+            /**
+             * Instantiates a pointer wrapper from an raw pointer and reference counter.
+             * @param ptr The raw pointer to be wrapped.
+             * @param ref The reference counter to control the pointer's ownership.
+             */
+            MUSEQA_CUDA_INLINE explicit unique_t(T *ptr, detail::refcounter_t *ref)
+              : super_t (ptr)
+              , m_ref (ref)
+            {}
+
             /**
              * Captures ownership from a foreign-typed pointer wrapper.
              * @tparam U The element type of the foreign pointer wrapper.
