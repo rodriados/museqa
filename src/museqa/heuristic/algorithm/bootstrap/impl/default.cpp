@@ -1,6 +1,6 @@
 /**
  * Museqa: Multiple Sequence Aligner using hybrid parallel computing.
- * @file Declaration of bootstrap module's functions.
+ * @file Implementation of module's function for loading and distributing sequences.
  * @author Rodrigo Siqueira <rodriados@gmail.com>
  * @copyright 2025-present Rodrigo Siqueira
  */
@@ -33,25 +33,10 @@ namespace
         const io::format::dataset::reader_t& reader
       , const std::vector<std::filesystem::path>& filelist
     ) {
-        size_t sequence_count = 0;
-        size_t file_count = filelist.size();
+        auto dataset = memory::pointer::make_unique<dataset_t>();
 
-        if (file_count == 0) return factory::memory::pointer::unique<dataset_t>();
-        if (file_count == 1) return reader.read(filelist[0]);
-
-        auto file_datasets = std::vector<dataset_ptr_t>(file_count);
-
-        for (size_t i = 0; i < file_count; ++i) {
-            file_datasets[i] = reader.read(filelist[i]);
-            sequence_count += file_datasets[i]->size();
-        }
-
-        auto dataset = factory::memory::pointer::unique<dataset_t>();
-             dataset->reserve(sequence_count);
-
-        for (const auto& file_dataset : file_datasets) {
-            bio::sequence::dataset::join(*dataset, *file_dataset);
-        }
+        for (const auto& file : filelist)
+            reader.read_from_file(dataset, file);
 
         return dataset;
     }
@@ -73,7 +58,7 @@ namespace
     ) {
         auto dataset = root == mpi::communicator::rank(comm)
             ? load_from_local_file(reader, filelist)
-            : factory::memory::pointer::unique<dataset_t>();
+            : memory::pointer::make_unique<dataset_t>();
 
         // TODO: Implement cluster distribution
         return dataset;
@@ -89,7 +74,7 @@ namespace heuristic::algorithm::bootstrap::impl
      * @param params The parameters to load and distribute the sequences with.
      * @return The dataset of loaded biological sequences.
      */
-    dataset_ptr_t load_and_distribute(const parameters_t& params)
+    dataset_ptr_t run_default(const parameters_t& params)
     {
         const auto reader = io::format::dataset::generic::reader_t();
       #ifndef MUSEQA_AVOID_MPI

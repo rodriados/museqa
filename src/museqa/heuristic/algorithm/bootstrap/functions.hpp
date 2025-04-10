@@ -18,10 +18,10 @@ MUSEQA_BEGIN_NAMESPACE
 namespace heuristic::algorithm::bootstrap::impl
 {
     /*
-     * Forward declaration of every known implementation for the bootstrap heuristic
-     * step. Ideally, these functions should load and distribute sequences, if applicable.
+     * Forward declaration of the default implementation for the bootstrap pipeline
+     * step. Ideally, this function should load and distribute sequences, if applicable.
      */
-    extern memory::pointer::unique_t<bio::sequence::dataset_t> load_and_distribute(const parameters_t&);
+    extern memory::pointer::unique_t<bio::sequence::dataset_t> run_default(const parameters_t&);
 }
 
 namespace heuristic::algorithm::bootstrap
@@ -40,13 +40,13 @@ namespace heuristic::algorithm::bootstrap
         , const mpi::process_t root = mpi::process::root
       #endif
     ) {
-        heuristic::algorithm::bootstrap::parameters_t params;
+        parameters_t params;
           #ifndef MUSEQA_AVOID_MPI
             params.global.comm = comm;
             params.global.root = root;
           #endif
             params.input.filelist = filelist;
-        return impl::load_and_distribute(params);
+        return impl::run_default(params);
     }
 
     /**
@@ -56,7 +56,7 @@ namespace heuristic::algorithm::bootstrap
      */
     MUSEQA_INLINE auto run(const parameters_t& params)
     {
-        return impl::load_and_distribute(params);
+        return impl::run_default(params);
     }
 }
 
