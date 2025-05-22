@@ -6,6 +6,7 @@
  */
 #pragma once
 
+#include <atomic>
 #include <cstdint>
 
 #include <museqa/environment.h>
@@ -21,32 +22,36 @@ namespace memory::detail
      * observed, respected and replicated by its inheritors.
      * @since 1.0
      */
-    class refcounter_t
+    class reference_counter_t
     {
         private:
+          #ifndef MUSEQA_REFERENCE_COUNTER_AVOID_ATOMIC
+            std::atomic_intptr_t m_counter = 0;
+          #else
             intptr_t m_counter = 0;
+          #endif
 
         protected:
-            MUSEQA_CONSTEXPR refcounter_t() noexcept = default;
-            MUSEQA_CONSTEXPR refcounter_t(const refcounter_t&) = delete;
-            MUSEQA_CONSTEXPR refcounter_t(refcounter_t&&) = delete;
+            MUSEQA_CONSTEXPR reference_counter_t() noexcept = default;
+            MUSEQA_CONSTEXPR reference_counter_t(const reference_counter_t&) = delete;
+            MUSEQA_CONSTEXPR reference_counter_t(reference_counter_t&&) = delete;
 
-            MUSEQA_INLINE refcounter_t& operator=(const refcounter_t&) = delete;
-            MUSEQA_INLINE refcounter_t& operator=(refcounter_t&&) = delete;
+            MUSEQA_INLINE reference_counter_t& operator=(const reference_counter_t&) = delete;
+            MUSEQA_INLINE reference_counter_t& operator=(reference_counter_t&&) = delete;
 
-            MUSEQA_CUDA_INLINE virtual ~refcounter_t() {}
+            MUSEQA_INLINE virtual ~reference_counter_t() {}
 
-        template <typename T> friend MUSEQA_CUDA_ENABLED auto share_ownership(T*) noexcept -> T*;
-        template <typename T> friend MUSEQA_CUDA_ENABLED void release_ownership(T*) MUSEQA_SAFE_EXCEPT;
+        template <typename T> friend MUSEQA_CUDA_INLINE auto share_ownership(T*) noexcept -> T*;
+        template <typename T> friend MUSEQA_CUDA_INLINE void release_ownership(T*);
     };
 
     /**
-     * Indicates whether the given type is reference-counter-enabled.
-     * @tparam T The type check if reference-counter-enabled.
+     * Indicates whether the given type is a reference-counter.
+     * @tparam T The type to check if it is a reference-counter.
      * @since 1.0
      */
     template <typename T>
-    MUSEQA_CONSTEXPR bool is_refcounter_enabled = std::is_base_of_v<refcounter_t, T>;
+    MUSEQA_CONSTEXPR bool is_reference_counter = std::is_base_of_v<reference_counter_t, T>;
 
     /**
      * Creates a new instance of the given reference-counter-enabled type, using
@@ -57,10 +62,10 @@ namespace memory::detail
      * @return The acquired pointer to the new type instance.
      */
     template <typename T, typename ...P>
-    MUSEQA_CUDA_INLINE auto acquire_ownership(P&&... args) -> T*
+    MUSEQA_INLINE auto acquire_ownership(P&&... args) -> T*
     {
-        static_assert(is_refcounter_enabled<T>
-          , "cannot acquire ownership of type that is not reference-counter-enabled");
+        static_assert(is_reference_counter<T>
+          , "cannot acquire ownership of type that is not a reference-counter");
         return share_ownership(new T(std::forward<decltype(args)>(args)...));
     }
 
@@ -73,10 +78,12 @@ namespace memory::detail
     template <typename T>
     MUSEQA_CUDA_INLINE auto share_ownership(T *refcounter) noexcept -> T*
     {
-        static_assert(is_refcounter_enabled<T>
-          , "cannot acquire ownership of type that is not reference-counter-enabled");
+        static_assert(is_reference_counter<T>
+          , "cannot acquire ownership of type that is not a reference-counter");
+      #if MUSEQA_RUNTIME_HOST
         if (refcounter)
             ++refcounter->m_counter;
+      #endif
         return refcounter;
     }
 
@@ -86,12 +93,14 @@ namespace memory::detail
      * @param refcounter The instance to release ownership of.
      */
     template <typename T>
-    MUSEQA_CUDA_INLINE void release_ownership(T *refcounter) MUSEQA_SAFE_EXCEPT
+    MUSEQA_CUDA_INLINE void release_ownership(T *refcounter)
     {
-        static_assert(is_refcounter_enabled<T>
-          , "cannot release ownership of type that is not reference-counter-enabled");
+        static_assert(is_reference_counter<T>
+          , "cannot release ownership of type that is not a reference-counter");
+      #if MUSEQA_RUNTIME_HOST
         if (refcounter && --refcounter->m_counter <= 0)
             delete refcounter;
+      #endif
     }
 }
 

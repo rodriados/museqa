@@ -250,6 +250,14 @@
 #endif
 
 /*
+ * Disable parallelism within a single MPI process. If intra-process parallelism
+ * is not needed, then some thread-safety measures can be disabled to favor performance.
+ */
+#if defined(MUSEQA_DISABLE_PROCESS_PARALLELISM)
+  #define MUSEQA_REFERENCE_COUNTER_AVOID_ATOMIC
+#endif
+
+/*
  * Determines whether the software should run in unsafe mode. By default, safe mode
  * is turned off in performance builds to extract maximum possible speedup.
  */

@@ -31,7 +31,7 @@ namespace memory::pointer
             typedef T element_t;
 
         protected:
-            element_t *m_ptr = nullptr;
+            T *m_ptr = nullptr;
 
         static_assert(std::is_object_v<T>, "pointers can only point to object types");
 
@@ -85,6 +85,14 @@ namespace memory::pointer
             /**#@-*/
 
             /**#@+
+             * Checks if the wrapped pointer is not null.
+             * @return Is the wrapped pointer not null?
+             */
+            MUSEQA_CUDA_CONSTEXPR explicit operator bool() noexcept       { return m_ptr; }
+            MUSEQA_CUDA_CONSTEXPR explicit operator bool() const noexcept { return m_ptr; }
+            /**#@-*/
+
+            /**#@+
              * Explicitly unwraps the wrapped pointer.
              * @return The wrapped pointer.
              */
@@ -112,15 +120,6 @@ namespace memory::pointer
             MUSEQA_CUDA_CONSTEXPR operator const U*() const noexcept
             {
                 return static_cast<const U*>(unwrap());
-            }
-
-            /**
-             * Checks if the wrapped pointer is not null.
-             * @return Is the wrapped pointer not null?
-             */
-            MUSEQA_CUDA_CONSTEXPR operator bool() const noexcept
-            {
-                return !empty();
             }
 
             /**
@@ -175,7 +174,7 @@ namespace memory::pointer
             typedef void element_t;
 
         protected:
-            element_t *m_ptr = nullptr;
+            void *m_ptr = nullptr;
 
         public:
             MUSEQA_CONSTEXPR wrapper_t() noexcept = default;
@@ -199,6 +198,14 @@ namespace memory::pointer
              */
             MUSEQA_CUDA_CONSTEXPR operator       void*() noexcept       { return unwrap(); }
             MUSEQA_CUDA_CONSTEXPR operator const void*() const noexcept { return unwrap(); }
+            /**#@-*/
+
+            /**#@+
+             * Checks if the wrapped pointer is not null
+             * @return Is the wrapped pointer not null?
+             */
+            MUSEQA_CUDA_CONSTEXPR explicit operator bool() noexcept       { return m_ptr; }
+            MUSEQA_CUDA_CONSTEXPR explicit operator bool() const noexcept { return m_ptr; }
             /**#@-*/
 
             /**#@+
@@ -229,15 +236,6 @@ namespace memory::pointer
             MUSEQA_CUDA_CONSTEXPR operator const U*() const noexcept
             {
                 return static_cast<const U*>(unwrap());
-            }
-
-            /**
-             * Checks if the wrapped pointer is not null
-             * @return Is the wrapped pointer not null?
-             */
-            MUSEQA_CUDA_CONSTEXPR operator bool() const noexcept
-            {
-                return !empty();
             }
 
             /**
