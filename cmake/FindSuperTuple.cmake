@@ -7,7 +7,7 @@ cmake_minimum_required(VERSION 3.24)
 include(FetchContent)
 
 set(SUPERTUPLE_REPOSITORY "https://github.com/rodriados/supertuple.git")
-set(SUPERTUPLE_REPOSITORY_TAG "v1.1.4")
+set(SUPERTUPLE_REPOSITORY_TAG "v1.2.0")
 
 # Declares the remote source of the required package and allows it to be found.
 # If needed, the package will be downloaded and cached for build.
